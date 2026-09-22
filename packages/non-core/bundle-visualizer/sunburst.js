@@ -41,8 +41,6 @@ import {
   prefixedClass,
 } from "./common.js";
 
-import * as classes from "./classNames.js";
-
 // Dimensions of sunburst.
 const width = 950;
 const height = 600;
@@ -75,32 +73,32 @@ export class Sunburst {
     this.elements.main =
       this.elements.container
         .append("div")
-          .attr("class", prefixedClass("main"));
+        .attr("class", prefixedClass("main"));
 
     this.elements.pillContainer =
       this.elements.container
         .append("div")
-          .attr("class", prefixedClass("pills"));
+        .attr("class", prefixedClass("pills"));
 
     this.elements.sequence =
       this.elements.main
         .append("div")
-          .attr("class", prefixedClass("sequence"));
+        .attr("class", prefixedClass("sequence"));
 
     this.elements.chart =
       this.elements.main
         .append("div")
-          .attr("class", prefixedClass("chart"));
+        .attr("class", prefixedClass("chart"));
 
     this.elements.explanation =
       this.elements.chart
         .append("div")
-          .attr("class", prefixedClass("explanation"));
+        .attr("class", prefixedClass("explanation"));
 
     this.elements.percentage =
       this.elements.explanation
         .append("span")
-          .attr("class", prefixedClass("percentage"));
+        .attr("class", prefixedClass("percentage"));
 
     // BR between percentage and bytes.
     this.elements.explanation.append("br");
@@ -108,7 +106,7 @@ export class Sunburst {
     this.elements.bytes =
       this.elements.explanation
         .append("span")
-          .attr("class", prefixedClass("bytes"));
+        .attr("class", prefixedClass("bytes"));
 
     this.partition = d3.partition()
       .size([2 * Math.PI, radius * radius]);
@@ -182,24 +180,24 @@ export class Sunburst {
     });
   }
 
-  draw(json, i) {
+  draw(json) {
     const svg = this.elements.chart
       .append("svg:svg")
-        .attr("width", width)
-        .attr("height", height)
-        .style("display", "none");
+      .attr("width", width)
+      .attr("height", height)
+      .style("display", "none");
 
     const vis = svg
       .append("svg:g")
-        .attr("class", prefixedClass("top"))
-        .attr("transform", `translate(${width / 2},${height / 2})`)
+      .attr("class", prefixedClass("top"))
+      .attr("transform", `translate(${width / 2},${height / 2})`)
 
     // Bounding circle underneath the sunburst, to make it easier to detect
     // when the mouse leaves the parent g.
     vis
       .append("svg:circle")
-        .attr("r", radius)
-        .style("opacity", 0);
+      .attr("r", radius)
+      .style("opacity", 0);
 
     // Add the mouseleave handler to the bounding circle.
     vis.on("mouseleave", this.mouseleaveEvent());
@@ -219,12 +217,12 @@ export class Sunburst {
       .data(this.nodes)
       .enter()
       .append("svg:path")
-        .attr("display", d => d.depth ? null : "none")
-        .attr("d", this.arc)
-        .attr("fill-rule", "evenodd")
-        .style("fill", d => this.getColor(d.data))
-        .style("opacity", 1)
-        .on("mouseover", this.mouseoverEvent());
+      .attr("display", d => d.depth ? null : "none")
+      .attr("d", this.arc)
+      .attr("fill-rule", "evenodd")
+      .style("fill", d => this.getColor(d.data))
+      .style("opacity", 1)
+      .on("mouseover", this.mouseoverEvent());
 
     // // Get total size of the tree = value of root node from partition.
     const totalSize = this.path.datum().value;
@@ -268,7 +266,7 @@ export class Sunburst {
 
       const sequenceArray = d.ancestors().reverse();
       sequenceArray.shift(); // remove root node from the array
-      this.updateBreadcrumbs(sequenceArray, percentageString);
+      this.updateBreadcrumbs(sequenceArray);
 
       // Fade all the segments.
       d3.selectAll("path")
@@ -284,7 +282,7 @@ export class Sunburst {
   // Restore everything to full opacity when moving off the visualization.
   mouseleaveEvent() {
     const self = this;
-    return self.mouseleave || (self.mouseleave = function (d) {
+    return self.mouseleave || (self.mouseleave = function (_d) {
       // Hide the breadcrumb trail
       self.elements.trail
         .style("visibility", "hidden");
@@ -297,7 +295,7 @@ export class Sunburst {
         .transition()
         .duration(1000)
         .style("opacity", 1)
-        .on("end", function() {
+        .on("end", function () {
           d3.select(this).on("mouseover", self.mouseoverEvent());
         });
 
@@ -306,8 +304,8 @@ export class Sunburst {
     });
   }
 
-  // Update the breadcrumb trail to show the current sequence and percentage.
-  updateBreadcrumbs(nodeArray, percentageString) {
+  // Update the breadcrumb trail to show the current sequence.
+  updateBreadcrumbs(nodeArray) {
     // Data join; key function combines name and depth (= position in sequence).
     const trail = this.elements.trail
       .selectAll("div")
@@ -319,9 +317,9 @@ export class Sunburst {
     // Add breadcrumb and label for entering nodes.
     const entering = trail.enter()
       .append("div")
-        .attr("class", prefixedClass("trailSegment"))
-        .style("background-color", d => this.getColor(d.data))
-        .text(d => d.data.name);
+      .attr("class", prefixedClass("trailSegment"))
+      .style("background-color", d => this.getColor(d.data))
+      .text(d => d.data.name);
 
     // Merge enter and update selections; set position for all nodes.
     entering

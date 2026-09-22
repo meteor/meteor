@@ -24,6 +24,104 @@ meteor help <command>
 
 Prints detailed help about the specific command.
 
+## meteor shell-completion {#meteorshellcompletion}
+
+Install shell completion for Meteor commands in bash or zsh.
+
+```bash
+meteor shell-completion --install
+```
+
+This command writes the completion scripts to
+`~/.meteor/meteor-completion.bash` and `~/.meteor/meteor-completion.zsh`, plus a
+small `~/.meteor/meteor-completion.sh` loader that picks the right one for the
+running shell. It then adds a source line for the loader to your shell startup
+file so completion is loaded automatically in future terminal sessions.
+
+The generated script embeds the current top-level Meteor command list at install
+time for faster and more reliable first-argument completion. Re-run
+`meteor shell-completion --install` after updating your Meteor checkout to
+refresh that embedded list.
+
+### Supported Shells
+
+Meteor currently supports `zsh` and `bash`. By default, Meteor detects the
+current shell from the `SHELL` environment variable. Use `--shell` when you
+want to install completion for a different shell explicitly.
+
+```bash
+meteor shell-completion --install --shell zsh
+meteor shell-completion --install --shell bash
+```
+
+Each shell has its own script, so you can install completion for both and
+switch between them freely.
+
+### What Gets Completed
+
+- Top-level commands such as `run`, `create`, `add`, and `update`
+- Subcommands such as `help` and `admin`
+- Command options such as `--port` and `--production`
+- Selected command arguments when Meteor can infer them, including package names
+  for `meteor add` and `meteor remove`, plus mobile platforms for
+  `meteor add-platform` and `meteor remove-platform`
+
+### Activate It In The Current Terminal
+
+After installing completion, load it in your current terminal session:
+
+```bash
+source ~/.meteor/meteor-completion.sh
+```
+
+New terminal sessions will pick it up automatically from your shell startup
+file.
+
+If you define Meteor aliases in your shell before sourcing the completion
+script, Meteor will register completion for aliases that resolve to the Meteor
+CLI as well.
+
+### Startup Files Meteor Updates
+
+- `zsh`: `~/.zshrc`
+- `bash` on macOS: `~/.bash_profile`, and `~/.bashrc` if that file already exists
+- `bash` on Linux and other Unix-like systems: `~/.bashrc`
+
+### Print The Script Without Installing
+
+If you prefer to manage shell configuration yourself, print the completion
+script directly:
+
+```bash
+meteor shell-completion --script
+meteor shell-completion --script --shell zsh
+```
+
+You can redirect that output to a file or source it manually from your own shell
+configuration.
+
+If you add or change shell aliases after sourcing the script, source it again so
+those aliases are registered for completion.
+
+### Uninstall
+
+```bash
+meteor shell-completion --uninstall
+```
+
+This removes `~/.meteor/meteor-completion.sh` and the per-shell scripts next to
+it, and deletes the `# Meteor autocompletion` block that Meteor added to your
+startup files.
+
+### Troubleshooting
+
+- Run `source ~/.meteor/meteor-completion.sh` after reinstalling the script in
+  your current shell.
+- Re-run `meteor shell-completion --install` after updating your Meteor checkout
+  so the embedded top-level command list is refreshed.
+- If a custom alias still does not complete, define the alias before sourcing
+  `~/.meteor/meteor-completion.sh`, then source the file again.
+
 ## meteor run {#meteorrun}
 
 Run a meteor development server in the current project.
@@ -76,6 +174,11 @@ $env:SERVER_NODE_OPTIONS = '--inspect' | meteor run
 **Linux/macOS:**
 ```bash
 SERVER_NODE_OPTIONS=--inspect-brk meteor run
+```
+
+Quoted values are supported, which is useful when an option contains special characters:
+```bash
+SERVER_NODE_OPTIONS='--max-old-space-size=4096 --inspect' meteor run
 ```
 
 ### Port Configuration Example
@@ -244,8 +347,11 @@ If you run `meteor create` without arguments, Meteor will launch an interactive 
   Blaze     # To create an app using Blaze
   Full      # To create a more complete scaffolded app
   Minimal   # To create an app with as few Meteor packages as possible
+  Pnpm      # To create a pnpm monorepo with a Meteor app and shared packages
+  Pwa       # To create an installable Progressive Web App using Blaze
   React     # To create a basic React-based app
   Typescript # To create an app using TypeScript and React
+  Typescript-tailwind # To create an app using TypeScript, React, and Tailwind
   Vue       # To create a basic Vue3-based app
   Svelte    # To create a basic Svelte app
   Tailwind # To create an app using React and Tailwind
@@ -260,25 +366,27 @@ If you run `meteor create` without arguments, Meteor will launch an interactive 
 
 | Option | Description |
 |--------|-------------|
-| `--from <url>` | Clone a Meteor project from a URL |
-| `--example <name>` | Use a specific example template |
-| `--list` | Show list of available examples |
-| `--release <version>` | Specify Meteor version (e.g., `--release 2.8`) |
+| `--release <version>` | Specify Meteor version (e.g., `--release 3.4`) |
 | `--prototype` | Include `autopublish` and `insecure` packages for rapid prototyping (not for production) |
 
 ### Application Types
 
-| Option | Description | Tutorial / Example |
-|--------|-------------|----------|
-| `--react` | Create a React app (default) | [Meteor 3 with React](https://docs.meteor.com/tutorials/react/), [Meteor 2 with React](https://react-tutorial.meteor.com/) |
-| `--vue` | Vue 3 + Tailwind CSS + Vite | [Meteor 3 with Vue](https://docs.meteor.com/tutorials/vue/meteorjs3-vue3-vue-meteor-tracker.html), [Meteor 2 with Vue](https://vue3-tutorial.meteor.com/) |
-| `--svelte` | Svelte | [Meteor 2 with Svelte](https://svelte-tutorial.meteor.com/) |
-| `--blaze` | Basic Blaze app | [Meteor 2 with Blaze](https://blaze-tutorial.meteor.com/) |
-| `--solid` | Solid + Vite | [Meteor 2 with Solid Example](https://github.com/fredmaiaarantes/meteor-solid-app/releases/tag/milestone-2.0) |
-| `--apollo` | React + Apollo (GraphQL) | [Meteor 2 with GraphQL](https://react-tutorial.meteor.com/simple-todos-graphql/) |
-| `--typescript` | React + TypeScript | [TypeScript Guide](https://guide.meteor.com/build-tool.html#typescript) |
-| `--tailwind` | React + Tailwind CSS | - |
-| `--chakra-ui` | React + Chakra UI | [Simple Tasks Example](https://github.com/fredmaiaarantes/simpletasks) |
+| Option           | Description             | Tutorial / Example |
+|------------------|-------------------------|----------|
+| `--react`        | Create a React app (default) | [Meteor 3 with React](https://docs.meteor.com/tutorials/react/), [Meteor 2 with React](https://react-tutorial.meteor.com/) |
+| `--vue`          | Vue 3 + Tailwind CSS | [Meteor 3 with Vue](https://docs.meteor.com/tutorials/vue/meteorjs3-vue3.html), [Meteor 2 with Vue](https://vue3-tutorial.meteor.com/) |
+| `--svelte`       | Svelte                  | [Meteor 2 with Svelte](https://svelte-tutorial.meteor.com/) |
+| `--blaze`        | Basic Blaze app         | [Meteor 2 with Blaze](https://blaze-tutorial.meteor.com/) |
+| `--pwa`          | Blaze app installable as a PWA (manifest, service worker, offline page) | - |
+| `--solid`        | Solid               | [Meteor 2 with Solid Example](https://github.com/fredmaiaarantes/meteor-solid-app/releases/tag/milestone-2.0) |
+| `--apollo`       | React + Apollo (GraphQL) | [Meteor 2 with GraphQL](https://react-tutorial.meteor.com/simple-todos-graphql/) |
+| `--typescript`   | React + TypeScript      | [TypeScript Guide](/about/build-tool#typescript) |
+| `--tailwind`     | React + Tailwind CSS    | - |
+| `--typescript-tailwind` | React + TypeScript + Tailwind CSS | - |
+| `--chakra-ui`    | React + Chakra UI       | [Simple Tasks Example](https://github.com/fredmaiaarantes/simpletasks) |
+ | `--coffeescript` | CoffeeScript            | - |
+ | `--babel`        | React with Babel support | - |
+| `--angular`      | Angular + Typescript    | - |
 
 ### Project Structure Options
 
@@ -287,10 +395,23 @@ If you run `meteor create` without arguments, Meteor will launch an interactive 
 | `--minimal` | Create with minimal Meteor packages |
 | `--bare` | Create an empty app (Blaze + MongoDB) |
 | `--full` | Create a fully scaffolded app with imports-based structure (Blaze + MongoDB) |
+| `--pnpm` | Create a pnpm monorepo with a Meteor app at `apps/app` and reusable packages under `packages/` |
 | `--package` | Create a new package instead of an application |
 
+The pnpm skeleton is created and installed as one monorepo workspace:
+
+```bash
+meteor create --pnpm my-workspace
+cd my-workspace
+meteor npm start
+```
+
+pnpm owns dependency installation for this skeleton, while Meteor commands run
+against the nested `apps/app` project. The root `start` and `test` scripts route
+to that application; `meteor npm` is only used above to invoke the root script.
+
 ::: warning Prototype Mode
-The `--prototype` option adds packages that make development faster but shouldn't be used in production. See the [security checklist](https://guide.meteor.com/security.html#checklist).
+The `--prototype` option adds packages that make development faster but shouldn't be used in production. See the [security checklist](/tutorials/security/security#checklist).
 :::
 
 ### Included Packages
@@ -332,6 +453,38 @@ The `--prototype` option adds packages that make development faster but shouldn'
 </details>
 
 <details>
+<summary><strong>PWA App</strong> (--pwa)</summary>
+
+Blaze app plus a web app manifest, icons, a dependency-free service worker and an offline page.
+
+**NPM packages:**
+- `@babel/runtime`, `@swc/helpers`, `jquery`, `meteor-node-stubs`
+
+**Meteor packages:**
+- `meteor-base`, `mobile-experience`, `mongo`, `blaze-html-templates`, `jquery`, `reactive-var`, `tracker`, `standard-minifier-css`, `standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`, `hot-module-replacement`, `blaze-hot`, `rspack`
+
+**Service worker behavior:**
+
+- In development, the service worker precaches only its static offline files.
+  Application bundles, navigation requests, and other traffic stay on the
+  network so hot code push does not reuse a stale bundle.
+- In production, navigation is network-first with `offline.html` as a fallback,
+  hashed bundles use stale-while-revalidate, and images and fonts use a
+  cache-first strategy.
+- DDP traffic under `/sockjs/` and `/websocket` is never intercepted.
+
+`localhost` is a secure context, so the generated app is installable during
+local development. A browser on a phone or another device requires the app to
+be served over HTTPS before offering installation.
+
+The skeleton provides an installable app shell and offline fallback page. It
+does not synchronize Meteor data, queue methods, or replay writes while the
+application is offline; add those capabilities separately if your application
+needs them.
+
+</details>
+
+<details>
 <summary><strong>Vue App</strong> (--vue)</summary>
 
 **NPM packages:**
@@ -355,8 +508,73 @@ The `--prototype` option adds packages that make development faster but shouldn'
 </details>
 
 ::: tip File Structure
-To learn more about the recommended file structure for Meteor apps, check the [Meteor Guide](https://guide.meteor.com/structure.html#javascript-structure).
+To learn more about the recommended file structure for Meteor apps, check the [Meteor Guide](/tutorials/application-structure/#javascript-structure).
 :::
+
+### Community Examples
+
+Meteor ships with a collection of example apps that cover specific use cases, great for studying how features work in practice and drawing inspiration from more complete codebases. Official examples live in the [meteor/examples](https://github.com/meteor/examples) repository, while community-contributed ones link to their own repos.
+
+To browse available examples with descriptions, tech stack, demo links, and repository URLs:
+
+```bash
+meteor create --list
+```
+
+To create a new app from an example:
+
+```bash
+meteor create my-app --example simple-tasks
+```
+
+| Option | Description |
+|--------|-------------|
+| `--example <slug>` | Create from a community example |
+| `--list` | Show detailed list of available examples |
+
+### Create from a Git Repository
+
+You can create a new Meteor app by cloning any Git repository. Pass the source URL as a positional argument, or use `--from` explicitly:
+
+```bash
+meteor create my-app https://github.com/fredmaiaarantes/simpletasks
+
+meteor create my-app --from https://github.com/fredmaiaarantes/simpletasks
+```
+
+If you pass only the URL, Meteor derives the app directory from the repository or subdirectory name:
+
+```bash
+meteor create https://github.com/meteor/examples/tree/main/parties
+```
+
+To extract a specific subdirectory from a repository, use `--from-dir`. You can also pin to a specific branch, tag, or commit SHA with `--from-branch`:
+
+```bash
+meteor create my-app --from https://github.com/meteor/examples --from-branch main --from-dir parties
+```
+
+The source also accepts browser-style tree/src URLs from GitHub, GitLab, and Bitbucket. When you paste one, Meteor auto-detects the branch and subdirectory from the URL, so `--from-branch` and `--from-dir` become optional:
+
+```bash
+meteor create my-app https://github.com/meteor/examples/tree/main/parties
+```
+
+Supported URL patterns:
+
+- GitHub: `https://github.com/<owner>/<repo>/tree/<branch>[/<path>]`
+- GitLab: `https://gitlab.com/<owner>/<repo>/-/tree/<branch>[/<path>]`
+- Bitbucket: `https://bitbucket.org/<owner>/<repo>/src/<branch>[/<path>]`
+
+Passing `--from-branch` or `--from-dir` explicitly overrides the values parsed from the URL.
+
+GitHub shorthand such as `owner/repo` is still supported with `--from owner/repo`. Positional inference requires a full URL so paths like `apps/my-app` keep their existing meaning.
+
+| Option | Description |
+|--------|-------------|
+| `--from <url>` | Clone a Meteor project from a Git URL explicitly. Optional when a positional source is an unambiguous Git URL. Accepts GitHub shorthand and tree/src URLs from GitHub, GitLab, and Bitbucket. |
+| `--from-branch <ref>` | Git ref to check out, accepts a branch, tag, or commit SHA. Overrides the branch parsed from the URL. |
+| `--from-dir <dir>` | Extract only a subdirectory (overrides the subdirectory parsed from the URL). |
 
 ##  meteor generate  {meteorgenerate}
 
@@ -814,6 +1032,10 @@ Adds packages to your Meteor project.
 ```bash
 meteor add [package1] [package2] ...
 meteor add package@version
+meteor add                    # interactive Atmosphere search
+meteor add --search <query>   # interactive search pre-filled with <query>
+meteor add <url|user/repo>    # clone and add a package from Git
+meteor add --from <url|user/repo>
 ```
 
 **Version Constraints:**
@@ -825,6 +1047,77 @@ meteor add package@version
 - By convention, community packages include the maintainer's name (e.g., `iron:router`)
 - To remove a version constraint, run `meteor add package` without specifying a version
 
+### Interactive search {#meteor-add-interactive}
+
+Run `meteor add` without any package names to open an interactive search against the [Atmosphere](https://atmospherejs.com/) community package directory. Type to search Atmosphere, use the arrow keys to highlight a package, press Space to toggle, and press Enter to add the selected packages to your project.
+
+With no query typed, the picker shows two starter sections: a small curated **Core recommended** list of core Meteor packages (accounts, email, check, typescript, rspack, roles, react-meteor-data) followed by **Top community-maintained packages**, drawn once from Atmosphere via the `packages/mostUsed` subscription, filtered to community packages updated within the last 24 months, and capped at 10. Entries already present in the curated list are not repeated.
+
+Results are reordered to favor up-to-date packages. Anything published in the last 24 months keeps its original Atmosphere relevance ranking; older packages are pushed below them. Each row shows when its latest version was published (for example `4mo ago`, `3y ago`) so the freshness signal is visible at a glance.
+
+Press `?` while a row is highlighted to open a detail panel below the prompt with the package description, latest version, last-updated date, maintainers, and git URL. The panel uses the same local catalog data as `meteor show` and dismisses on the next keypress.
+
+Pass `--search <query>` to skip straight to results for a given query:
+
+```bash
+meteor add --search blaze
+```
+
+::: info Interactive terminal required
+Both forms require an interactive (TTY) terminal. The `--search` flag is incompatible with positional package names and Git-clone options; pass either a search query, package names, or a Git source.
+:::
+
+::: tip Non-interactive search
+For scripted searches, use [`meteor search`](#meteorsearch), which prints results to stdout and accepts a regular expression.
+:::
+
+### Clone a Package from a Git Repository
+
+You can also clone an existing Meteor package from any Git repository into your project's `packages/` directory. Pass the source URL as the only package argument, or use `--from` explicitly:
+
+```bash
+meteor add https://github.com/Meteor-Community-Packages/meteor-publish-composite
+
+meteor add --from https://github.com/Meteor-Community-Packages/meteor-publish-composite
+```
+
+The package name is read from `Package.describe` in the cloned `package.js` and registered in `.meteor/packages` automatically, so the package is ready to use after a single command.
+
+The source accepts the same input formats as [`meteor create --from`](#create-from-a-git-repository):
+
+- A full Git URL, for example `https://github.com/owner/repo`
+- A GitHub shorthand `owner/repo`, expanded to `https://github.com/owner/repo`
+- A browser-style tree/src URL from GitHub, GitLab, or Bitbucket. Branch and subdirectory are auto-detected from the URL when possible:
+
+```bash
+# GitHub shorthand
+meteor add Meteor-Community-Packages/meteor-publish-composite
+
+# tree URL with branch and subdirectory auto-detection
+meteor add https://github.com/meteor/blaze/tree/master/packages/blaze
+```
+
+Use `--from-branch` to pin a branch, tag, or commit SHA, `--from-dir` to extract a subdirectory, and `--to` to write to a custom destination relative to the project root:
+
+```bash
+meteor add --from https://github.com/meteor/blaze \
+  --from-branch master \
+  --from-dir packages/blaze \
+  --to packages/my-blaze
+```
+
+Passing `--from-branch` or `--from-dir` explicitly overrides the values parsed from the URL.
+
+If the destination already exists, Meteor prompts before overwriting. Pass `--force` to skip the prompt. The cloned directory must contain a valid `package.js` with a `Package.describe` call; otherwise the clone is rolled back and the command exits with an error.
+
+| Option | Description |
+|--------|-------------|
+| `--from <url>` | Clone a Meteor package from a Git URL explicitly. Optional when the only package argument is URL-like. Accepts GitHub shorthand and tree/src URLs from GitHub, GitLab, and Bitbucket. |
+| `--from-branch <ref>` | Git ref to check out (branch, tag, or commit SHA). Overrides the branch parsed from the URL. |
+| `--from-dir <dir>` | Extract only a subdirectory of the cloned repository. Overrides the subdirectory parsed from the URL. |
+| `--to <path>` | Destination path relative to the project root (default: `packages/<repo-name>`). |
+| `--force` | Overwrite an existing destination directory without prompting. |
+
 ## meteor remove *package* {#meteor-remove}
 
 Removes a package previously added to your Meteor project.
@@ -832,12 +1125,30 @@ Removes a package previously added to your Meteor project.
 **Usage:**
 ```bash
 meteor remove [package1] [package2] ...
+meteor remove                    # interactive picker over installed packages
+meteor remove --search <query>   # picker pre-filtered by <query>
 ```
 
 **Notes:**
 - For a list of currently used packages, run `meteor list`
 - This removes the package entirely (to only remove version constraints, use [`meteor add`](#meteor-add))
 - Transitive dependencies aren't automatically downgraded unless necessary
+
+### Interactive picker {#meteor-remove-interactive}
+
+Run `meteor remove` without any package names to open an interactive picker listing the packages currently in `.meteor/packages`. Type to filter the list, use the arrow keys to highlight a package, press Space to toggle, and press Enter to remove the selected packages.
+
+Press `?` while a row is highlighted to open a detail panel below the prompt with the description, latest version, last-updated date, and maintainers of the highlighted package, useful for double-checking what you're about to remove.
+
+Pass `--search <query>` to open the picker pre-filtered:
+
+```bash
+meteor remove --search accounts
+```
+
+::: info Interactive terminal required
+Both forms require an interactive (TTY) terminal. The `--search` flag is incompatible with positional package names; pass either a query or package names, not both.
+:::
 
 ## meteor list {#meteor-list}
 
@@ -1051,6 +1362,55 @@ meteor lint --allow-incompatible-update
 ::: warning
 Linting errors will prevent your application from being built successfully. Fixing these errors is required for deployment.
 :::
+
+## meteor types {#meteortypes}
+
+Explicitly generate native declarations for installed Meteor packages that
+publish type information.
+
+```bash
+meteor types [options]
+```
+
+### Description
+
+This command:
+
+- Builds local packages as needed
+- Generates `.meteor/types/` for projects with a `tsconfig.json` or `jsconfig.json`
+- Skips application linting, bundling, and type-checking
+- Exits successfully without generating files if neither configuration file exists
+- Exits successfully without changing provider output when the app lists `zodern:types` directly
+- Exits with a non-zero status when native generation fails
+
+::: tip CI Integration
+Run `meteor types` before the application's type-check script when the project
+has opted in to native declarations. Use a locally installed, project-compatible
+`typescript` dependency rather than allowing `npx` to download a compiler in
+CI; the [provider guide](/cli/using-core-types#check-the-application) includes a
+safe script example.
+:::
+
+Ordinary commands such as `meteor run`, `meteor build`, `meteor test`, and
+`meteor lint` do not run the native generator in Meteor 3.6. See
+[TypeScript Types for Meteor Packages](/cli/using-core-types) before changing
+providers in an existing application.
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `--allow-incompatible-update` | Allow packages to be upgraded or downgraded to potentially incompatible versions if required to satisfy all package version constraints |
+
+### Example Usage
+
+```bash
+# Generate Meteor package type declarations
+meteor types
+
+# Allow incompatible package updates during type generation
+meteor types --allow-incompatible-update
+```
 
 
 ## meteor search {#meteorsearch}

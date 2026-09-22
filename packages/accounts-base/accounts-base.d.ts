@@ -3,11 +3,20 @@ import { Meteor } from 'meteor/meteor';
 import { Configuration } from 'meteor/service-configuration';
 import { DDP } from 'meteor/ddp';
 
+/**
+ * Object containing functions that generate URLs for account-related emails.
+ * Override these to customize URLs in password reset, enrollment, and verification emails.
+ * URL methods can return either a string or a Promise that resolves to a string.
+ */
 export interface URLS {
-  resetPassword: (token: string) => string;
-  verifyEmail: (token: string) => string;
-  loginToken: (token: string) => string;
-  enrollAccount: (token: string) => string;
+  /** Generates the URL for password reset emails. Can return a Promise for async URL generation. */
+  resetPassword: (token: string, extraParams?: Record<string, string>) => string | Promise<string>;
+  /** Generates the URL for email verification emails. Can return a Promise for async URL generation. */
+  verifyEmail: (token: string, extraParams?: Record<string, string>) => string | Promise<string>;
+  /** Generates the URL for login token emails. Can return a Promise for async URL generation. */
+  loginToken: (selector: string, token: string, extraParams?: Record<string, string>) => string | Promise<string>;
+  /** Generates the URL for account enrollment emails. Can return a Promise for async URL generation. */
+  enrollAccount: (token: string, extraParams?: Record<string, string>) => string | Promise<string>;
 }
 
 export interface EmailFields {
@@ -92,7 +101,10 @@ export namespace Accounts {
     collection?: string | undefined;
     loginTokenExpirationHours?: number | undefined;
     tokenSequenceLength?: number | undefined;
-    clientStorage?: 'session' | 'local';
+  // Storage strategy for client tokens: 'local' (persist), 'session' (per-tab), or 'none' (in-memory only)
+  clientStorage?: 'session' | 'local' | 'none';
+  // Enable hybrid HttpOnly cookie + short-lived token flow
+  useHttpOnlyCookies?: boolean | undefined;
   }): void;
 
   function onLogin(
@@ -112,6 +124,8 @@ export namespace Accounts {
   function loginServicesConfigured(): boolean;
 
   function onPageLoadLogin(func: Function): void;
+
+  function loginWithTokenAsync(token: string): Promise<Meteor.LoginMethodResult>;
 }
 
 export namespace Accounts {
@@ -151,9 +165,19 @@ export namespace Accounts {
     callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
   ): Promise<void>;
 
+  function logoutAsync(): Promise<void>;
+
+  function logoutAllClients(
+    callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
+  ): Promise<void>;
+
+  function logoutAllClientsAsync(): Promise<void>;
+
   function logoutOtherClients(
     callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
   ): Promise<void>;
+
+  function logoutOtherClientsAsync(): Promise<void>;
 
   type PasswordSignupField = 'USERNAME_AND_EMAIL' | 'USERNAME_AND_OPTIONAL_EMAIL' | 'USERNAME_ONLY' | 'EMAIL_ONLY';
   type PasswordlessSignupField = 'USERNAME_AND_EMAIL' | 'EMAIL_ONLY';
@@ -275,16 +299,17 @@ export namespace Accounts {
 }
 
 export namespace Accounts {
-  function onLogout(func: Function): void;
-}
-
-export namespace Accounts {
+  function onLogout(func: Function): {
+    stop: () => void;
+  };
   function onLogout(
     func: (options: {
       user: Meteor.User;
       connection: Meteor.Connection;
     }) => void
-  ): void;
+  ): {
+    stop: () => void;
+  };
 }
 
 export namespace Accounts {
@@ -362,11 +387,11 @@ export namespace Accounts {
    * - a login method result object
    **/
   function registerLoginHandler(
-    handler: (options: any) => undefined | LoginMethodResult
+    handler: (options: any) => undefined | LoginMethodResult | Promise<undefined | LoginMethodResult>
   ): void;
   function registerLoginHandler(
     name: string,
-    handler: (options: any) => undefined | LoginMethodResult
+    handler: (options: any) => undefined | LoginMethodResult | Promise<undefined | LoginMethodResult>
   ): void;
 
   type Password =
@@ -387,7 +412,7 @@ export namespace Accounts {
   function _checkPasswordAsync(
     user: Meteor.User,
     password: Password
-  ): Promise<{ userId: string; error?: any }>
+  ): Promise<{ userId: string; error?: any }>;
 }
 
 export namespace Accounts {

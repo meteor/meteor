@@ -1,6 +1,6 @@
 Package.describe({
   name: 'hot-module-replacement',
-  version: '0.5.4',
+  version: '0.6.1-beta360.1',
   summary: 'Update code in development without reloading the page',
   documentation: 'README.md',
   debugOnly: true,
@@ -12,6 +12,7 @@ Package.onUse(function(api) {
   api.use('hot-code-push', { unordered: true });
 
   api.addAssets('hot-module-replacement.d.ts', 'server');
+  api.types('hot-module-replacement.native.d.ts');
 
   // Provides polyfills needed by Meteor.absoluteUrl in legacy browsers
   api.use('ecmascript-runtime-client', { weak: true });

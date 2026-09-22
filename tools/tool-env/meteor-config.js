@@ -13,12 +13,14 @@ export let meteorConfig;
  * @property {boolean} minifier - Whether to use the modern minifier.
  * @property {boolean} webArchOnly - Whether to use modern features only for web architecture.
  * @property {boolean} watcher - Whether to use the modern watcher.
+ * @property {boolean} cordova - Whether to use modern bundle for Cordova.
  */
 const DEFAULT_MODERN = {
   transpiler: true,
   minifier: true,
   webArchOnly: true,
   watcher: true,
+  cordova: true,
 };
 
 /**
@@ -47,14 +49,17 @@ export const normalizeModernConfig = (r = false) => Object.fromEntries(
  * @param {string|null} appDir - The application directory path. If null, only environment variables are used.
  * @returns {Object} - The initialized Meteor configuration object.
  */
-export function initMeteorConfig(appDir) {
-  const modernForced = JSON.parse(process.env.METEOR_MODERN || "false");
+export function initMeteorConfig(appDir = process.cwd()) {
+  const rawModern = process.env.METEOR_MODERN;
+  const modernForced = rawModern && rawModern !== 'undefined'
+    ? JSON.parse(rawModern)
+    : undefined;
   let packageJson;
   if (appDir) {
     const packageJsonPath = files.pathJoin(appDir, 'package.json');
     if (!files.exists(packageJsonPath)) {
       setMeteorConfig({
-        modern: normalizeModernConfig(modernForced || false),
+        modern: normalizeModernConfig(modernForced ?? true),
       });
       return meteorConfig;
     }
@@ -63,7 +68,10 @@ export function initMeteorConfig(appDir) {
   }
   setMeteorConfig({
     ...(packageJson?.meteor || {}),
-    modern: normalizeModernConfig(modernForced || packageJson?.meteor?.modern || false),
+    modern: {
+      ...normalizeModernConfig(modernForced ?? packageJson?.meteor?.modern ?? true),
+      ...(packageJson?.meteor?.verbose || packageJson?.meteor?.modern?.verbose) && { verbose: true },
+    },
   });
   return meteorConfig;
 }

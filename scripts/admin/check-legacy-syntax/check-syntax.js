@@ -35,6 +35,7 @@ const packages = {
     ignoredFiles: [
       "async_helpers.js",
       "asynchronous_queue.js",
+      "test_environment.js",
     ]
   },
   "accounts-ui": {},

@@ -1,4 +1,8 @@
 import { normalizeModernConfig, setMeteorConfig } from "./tool-env/meteor-config";
+import {
+  generateTypes,
+  removeLegacyGeneratedTypes,
+} from './isobuild/types-generator.js';
 
 var assert = require("assert");
 var _ = require('underscore');
@@ -95,6 +99,7 @@ import {
 
 import Resolver from "./isobuild/resolver";
 import { addWatchRoot } from './fs/safe-watcher';
+import compiler from "./isobuild/compiler";
 
 const CAN_DELAY_LEGACY_BUILD = ! JSON.parse(
   process.env.METEOR_DISALLOW_DELAYED_LEGACY_BUILD || "false"
@@ -136,7 +141,8 @@ var STAGE = {
   INITIALIZE_CATALOG: '_resolveConstraints',
   RESOLVE_CONSTRAINTS: '_downloadMissingPackages',
   DOWNLOAD_MISSING_PACKAGES: '_buildLocalPackages',
-  BUILD_LOCAL_PACKAGES: '_saveChangedMetadata',
+  BUILD_LOCAL_PACKAGES: '_generateTypes',
+  GENERATE_TYPES: '_saveChangedMetadata',
   SAVE_CHANGED_METADATA: 'DONE'
 };
 
@@ -416,6 +422,22 @@ Object.assign(ProjectContext.prototype, {
     return this.getProjectLocalDirectory("shell");
   },
 
+  // Force the given local package to be recompiled by the next
+  // _buildLocalPackages, wiping its cached isopack (and plugin cache)
+  // first.  Used by `meteor publish` after the tsc types rewrite mutates a
+  // package's in-memory PackageSource: nothing in the on-disk isopack
+  // buildinfo reflects that rewrite, so the ordinary up-to-date check
+  // would otherwise reuse a stale isopack built from the pre-rewrite
+  // source.
+  forceRebuildPackage: function (packageName) {
+    var self = this;
+    if (self._forceRebuildPackages === true) {
+      return;
+    }
+    self._forceRebuildPackages =
+      (self._forceRebuildPackages || []).concat([packageName]);
+  },
+
   // You can call this manually (that is, the public version without
   // an `_`) if you want to do some work before resolving constraints,
   // or you can let prepareProjectForBuild do it for you.
@@ -477,6 +499,9 @@ Object.assign(ProjectContext.prototype, {
       if (buildmessage.jobHasMessages())
         return;
 
+      if (buildmessage.jobHasMessages())
+        return;
+
       // Read .meteor/.id, creating it if necessary.
       await self._ensureAppIdentifier();
       if (buildmessage.jobHasMessages())
@@ -494,6 +519,17 @@ Object.assign(ProjectContext.prototype, {
         appDirectory: self.projectDir,
       });
       self.meteorConfig._ensureInitialized();
+
+      // Reinitialize the config
+      // The new config object is marked to be reloaded,
+      // so it will be reloaded on the next build.
+      global.reinitializeMeteorConfig = () => {
+        self.meteorConfig._ensureInitialized();
+        self.meteorConfig._needReload = {};
+        _.each(compiler.ALL_ARCHES, function (arch) {
+          self.meteorConfig._needReload[arch] = true;
+        });
+      };
 
       if (buildmessage.jobHasMessages()) {
         return;
@@ -541,7 +577,7 @@ Object.assign(ProjectContext.prototype, {
       self.platformList, self.cordovaPluginsFile].forEach(
       function (metadataFile) {
         metadataFile && watchSet.merge(metadataFile.watchSet);
-    });
+      });
 
     if (self.localCatalog) {
       watchSet.merge(self.localCatalog.packageLocationWatchSet);
@@ -692,6 +728,9 @@ Object.assign(ProjectContext.prototype, {
         self.packageMap = new packageMapModule.PackageMap(solution.answer, {
           localCatalog: self.localCatalog
         });
+
+        // Provide the packageVersionMap to plugins via global scope
+        global.packageVersionMap = self.packageMap.toVersionMap();
 
         self.packageMapDelta = new packageMapModule.PackageMapDelta({
           cachedVersions: cachedVersions,
@@ -1010,6 +1049,69 @@ Object.assign(ProjectContext.prototype, {
       return await self.isopackCache.buildLocalPackages();
     });
     self._completedStage = STAGE.BUILD_LOCAL_PACKAGES;
+  }),
+
+  _generateTypes: Profile('_generateTypes', async function () {
+    var self = this;
+    buildmessage.assertInCapture();
+
+    self.typesGenerationFailed = false;
+    self.typesGenerationSkipped = false;
+
+    if (self.originalOptions.generatePackageTypes !== true) {
+      self._completedStage = STAGE.GENERATE_TYPES;
+      return;
+    }
+
+    // `meteor types` opts into generation for projects with a tsconfig.json
+    // or jsconfig.json. Ordinary project preparation never reaches this
+    // filesystem-mutating path.
+    const hasTsConfig = files.exists(files.pathJoin(self.projectDir, 'tsconfig.json'));
+    const hasJsConfig = files.exists(files.pathJoin(self.projectDir, 'jsconfig.json'));
+
+    if ((hasTsConfig || hasJsConfig) && self.isopackCache && self.packageMap) {
+      if (self.projectConstraintsFile.getConstraint('zodern:types')) {
+        // A direct zodern:types constraint keeps ownership of generation.
+        // Skipping is deliberately non-destructive: Meteor 3.6 does not
+        // rewrite either provider tree unless the project has opted into the
+        // native provider by removing zodern:types first.
+        self.typesGenerationSkipped = true;
+        Console.warn(
+          '[types] zodern:types detected; skipping built-in type ' +
+          'generation. Run "meteor remove zodern:types" to use ' +
+          'Meteor\'s built-in generator.'
+        );
+      } else {
+        try {
+          await generateTypes({
+            isopackCache: self.isopackCache,
+            packageMap: self.packageMap,
+            projectMeteorDir: files.pathJoin(self.projectDir, '.meteor'),
+          });
+          // A previous direct zodern:types installation may have left its
+          // generated cache behind. Remove it only after native generation
+          // succeeds so old tsconfigs that include the directory cannot load
+          // both providers, while a failed native run keeps its fallback.
+          await removeLegacyGeneratedTypes({
+            projectMeteorDir: files.pathJoin(self.projectDir, '.meteor'),
+          });
+        } catch (err) {
+          // Type generation only produces editor/tsc support files under
+          // .meteor/types; it contributes nothing to the app bundle, so
+          // a failure here must never abort a build that would otherwise
+          // succeed.  Warn so the user knows types may be stale, and dump
+          // the full stack in verbose mode (--verbose) for diagnosis.
+          self.typesGenerationFailed = true;
+          Console.warn(
+            '[types] Failed to generate package type declarations: ' +
+            ((err && err.message) || String(err))
+          );
+          Console.debug((err && err.stack) || String(err));
+        }
+      }
+    }
+
+    self._completedStage = STAGE.GENERATE_TYPES;
   }),
 
   _saveChangedMetadata: Profile('_saveChangedMetadata', async function () {
@@ -1452,8 +1554,7 @@ Object.assign(exports.PlatformList.prototype, {
 
   getCordovaPlatforms: function () {
     var self = this;
-    return _.difference(self._platforms,
-                        exports.PlatformList.DEFAULT_PLATFORMS);
+    return _.intersection(self._platforms, ['ios', 'android']);
   },
 
   usesCordova: function () {
@@ -1718,7 +1819,6 @@ Object.assign(exports.ReleaseFile.prototype, {
   }
 });
 
-
 // Represents .meteor/.finished-upgraders.
 // This is only used in a few places, so we don't cache its value in memory;
 // we just read it when we need it. There's also no need to add it to a
@@ -1823,12 +1923,18 @@ export class MeteorConfig {
             },
           }),
         } : this._config;
-    const modernForced = JSON.parse(process.env.METEOR_MODERN || "false");
+    const rawModern = process.env.METEOR_MODERN;
+    const modernForced = rawModern && rawModern !== 'undefined'
+      ? JSON.parse(rawModern)
+      : undefined;
     // Reinitialize meteorConfig globally for project context
     // Updates config when package.json changes trigger rebuilds
     setMeteorConfig({
       ...(this._config || {}),
-      modern: normalizeModernConfig(modernForced || this._config?.modern || false),
+      modern: {
+        ...normalizeModernConfig(modernForced ?? this._config?.modern ?? true),
+        ...(this._config?.verbose || this._config?.modern?.verbose) && { verbose: true },
+      },
     });
 
     return this._config;

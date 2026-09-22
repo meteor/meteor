@@ -1,0 +1,16 @@
+# Folder combination patterns
+react-router*
+tests/ignored/react-router*-ignored
+tests/ignored/folder-to-ignored/
+tests/ignored/file-to-ignored.app-test.js
+**/glob-ignored/*.app-test.js
+tests/ignored/prefix-*-ignored
+tests/ignored/*-ignored-suffix
+
+# File combination patterns
+tests/ignored/specific-file-ignored.app-test.js
+tests/ignored/*.temp-ignored.app-test.js
+**/unit/*.app-test.js
+tests/ignored/integration/*-ignored.app-test.js
+tests/ignored/test-*-ignored.app-test.js
+!important.app-test.js

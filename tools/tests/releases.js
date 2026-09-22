@@ -38,7 +38,7 @@ selftest.define(
     await run.expectExit(0);
 
     // Apps are created with the latest release ...
-    run = s.run("create", "myapp", "--blaze");
+    run = s.run("create", "myapp", "--legacy");
     run.waitSecs(5);
 
     await run.expectExit(0);
@@ -53,7 +53,7 @@ selftest.define(
       .run(
         "create",
         "myapp2",
-        "--blaze",
+        "--legacy",
         "--release",
         DEFAULT_RELEASE_TRACK + "@v1"
       )
@@ -155,7 +155,7 @@ selftest.define(
     var run;
 
     // Create an app with the latest release.
-    run = s.run("create", "myapp", "--blaze");
+    run = s.run("create", "myapp", "--legacy");
     run.waitSecs(15);
     await run.expectExit(0);
     s.cd("myapp");

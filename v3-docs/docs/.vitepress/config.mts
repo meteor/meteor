@@ -1,25 +1,40 @@
 import { defineConfig } from "vitepress";
 import metadata from "../generators/meteor-versions/metadata.generated";
 import llmstxt from "vitepress-plugin-llms";
+import { checkThemeLinks } from "./check-theme-links.mjs";
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   title: "Docs",
   description: "Meteor.js Docs",
-  head: [["link", { rel: "icon", href: "/logo.png" }]],
+  head: [
+    ["link", { rel: "icon", href: "/logo.png" }],
+    ["script", {
+      defer: "",
+      "data-domain": "meteor.com",
+      src: "https://plausible.io/js/script.js"
+    }]
+  ],
   lastUpdated: true,
   sitemap: {
     hostname: "https://v3-docs.meteor.com",
   },
   ignoreDeadLinks: [/^http:\/\/localhost/],
+  buildEnd(siteConfig) {
+    checkThemeLinks({
+      themeConfig: siteConfig.site.themeConfig,
+      pages: siteConfig.pages,
+    });
+  },
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     nav: [
       {
         text: "Docs",
-        activeMatch: `^/(guide|docs|examples)/`,
+        activeMatch: `^/(guide|docs|examples|ai)/`,
         items: [
           { text: "Quick Start", link: "/about/install" },
+          { text: "Agent Skills", link: "/ai/agent-skills" },
           { text: "Examples", link: "https://github.com/meteor/examples" },
           {
             text: "Meteor.js 2 Docs",
@@ -37,8 +52,8 @@ export default defineConfig({
                 link: "/tutorials/react/index",
               },
               {
-                text: "Meteor + Vue + vue-meteor-tracker",
-                link: "/tutorials/vue/meteorjs3-vue3-vue-meteor-tracker",
+                text: "Meteor.js 3 + Vue",
+                link: "/tutorials/vue/meteorjs3-vue3",
               },
               {
                 text: "Meteor.js 3 + Solid",
@@ -55,6 +70,10 @@ export default defineConfig({
               {
                 link: "/tutorials/application-structure/index",
                 text: "Application structure",
+              },
+              {
+                link: "/tutorials/multiple-meteor-apps/index",
+                text: "Multiple Meteor apps",
               },
             ],
           },
@@ -163,10 +182,6 @@ export default defineConfig({
             text: "Roadmap",
             link: "/about/roadmap",
           },
-              {
-                text: "Contributing",
-                link: "/about/contributing",
-              }
         ],
         collapsed: true,
       },
@@ -182,26 +197,26 @@ export default defineConfig({
             link: "/about/web-apps",
           },
           {
-            text: "Cordova",
-            link: "/about/cordova",
-          },
-          {
             text: "Modern Build Stack",
             link: "/about/modern-build-stack.md",
             items: [
               {
-                text: "Transpiler: SWC",
-                link: "/about/modern-build-stack/transpiler-swc.md",
+                text: "Meteor Bundler",
+                link: "/about/modern-build-stack/meteor-bundler-optimizations.md",
               },
               {
-                text: "Bundler",
-                link: "/about/modern-build-stack/bundler.md",
-              },
-              {
-                text: "Dev Server",
-                link: "/about/modern-build-stack/dev-server.md",
+                text: "Rspack Bundler",
+                link: "/about/modern-build-stack/rspack-bundler-integration.md",
               },
             ]
+          },
+          {
+            text: "Agent Skills",
+            link: "/ai/agent-skills",
+          },
+          {
+            text: "Cordova",
+            link: "/about/cordova",
           },
         ],
         collapsed: true,
@@ -238,6 +253,10 @@ export default defineConfig({
           {
             text: "DDPRateLimiter",
             link: "/api/DDPRateLimiter",
+          },
+          {
+            text: "Instrumentation",
+            link: "/api/instrumentation",
           },
           {
             text: "Check",
@@ -305,8 +324,16 @@ export default defineConfig({
             text: "Accounts and security",
             items: [
               {
+                text: "accounts-express",
+                link: "/packages/accounts-express",
+              },
+              {
                 text: "accounts-ui",
                 link: "/packages/accounts-ui",
+              },
+              {
+                text: "accounts-ui-unstyled",
+                link: "/packages/accounts-ui-unstyled",
               },
               {
                 text: "accounts-passwordless",
@@ -315,6 +342,34 @@ export default defineConfig({
               {
                 text: "accounts-2fa",
                 link: "/packages/accounts-2fa",
+              },
+              {
+                text: "accounts-facebook",
+                link: "/packages/accounts-facebook",
+              },
+              {
+                text: "accounts-github",
+                link: "/packages/accounts-github",
+              },
+              {
+                text: "accounts-google",
+                link: "/packages/accounts-google",
+              },
+              {
+                text: "accounts-meetup",
+                link: "/packages/accounts-meetup",
+              },
+              {
+                text: "accounts-meteor-developer",
+                link: "/packages/accounts-meteor-developer",
+              },
+              {
+                text: "accounts-twitter",
+                link: "/packages/accounts-twitter",
+              },
+              {
+                text: "accounts-weibo",
+                link: "/packages/accounts-weibo",
               },
               {
                 text: "roles",
@@ -358,8 +413,8 @@ export default defineConfig({
                 link: "/packages/logging",
               },
               {
-                text: "underscore",
-                link: "/packages/underscore",
+                text: "instrumentation",
+                link: "/packages/instrumentation",
               },
               {
                 text: "autoupdate",
@@ -391,6 +446,46 @@ export default defineConfig({
                 link: "/packages/url",
               },
               {
+                text: "disable-oplog",
+                link: "/packages/disable-oplog",
+              },
+              {
+                text: "facts-base",
+                link: "/packages/facts-base",
+              },
+              {
+                text: "facts-ui",
+                link: "/packages/facts-ui",
+              },
+              {
+                text: "insecure",
+                link: "/packages/insecure",
+              },
+              {
+                text: "autopublish",
+                link: "/packages/autopublish",
+              },
+              {
+                text: "static-html",
+                link: "/packages/static-html",
+              },
+              {
+                text: "mobile-experience",
+                link: "/packages/mobile-experience",
+              },
+              {
+                text: "mobile-status-bar",
+                link: "/packages/mobile-status-bar",
+              },
+              {
+                text: "launch-screen",
+                link: "/packages/launch-screen",
+              },
+              {
+                text: "force-ssl",
+                link: "/packages/force-ssl",
+              },
+              {
                 text: "webapp",
                 link: "/packages/webapp",
               },
@@ -415,11 +510,31 @@ export default defineConfig({
                 text: "react-meteor-data",
                 link: "/packages/react-meteor-data",
               },
+              {
+                text: "typescript",
+                link: "/packages/typescript",
+              },
             ]
+          },
+          {
+            text: "Using Atmosphere packages",
+            link: "/packages/6.using-atmosphere-packages",
+          },
+          {
+            text: "Writing Atmosphere packages",
+            link: "/packages/7.writing-atmosphere-packages",
           },
           {
             link: "/packages/packages-listing",
             text: "Maintained Packages",
+          },
+          {
+            text: "Using npm packages",
+            link: "/packages/4.using-npm-packages",
+          },
+          {
+            text: "Writing npm packages",
+            link: "/packages/5.writing-npm-packages",
           },
           {
             link: "/community-packages/index",
@@ -453,6 +568,14 @@ export default defineConfig({
                 text: "jam:offline",
                 link: "/community-packages/offline",
               },
+              {
+                text: "dupontbertrand:cluster",
+                link: "/community-packages/cluster",
+              },
+              {
+                text: "dupontbertrand:mail-preview",
+                link: "/community-packages/mail-preview",
+              },
             ],
             collapsed: true,
           },
@@ -471,6 +594,10 @@ export default defineConfig({
             text: "MongoDB Connection",
             link: "/troubleshooting/mongodb-connection",
           },
+          {
+            text: "Hot Code Push",
+            link: "/troubleshooting/hot-code-push",
+          },
         ],
         collapsed: true,
       },
@@ -478,7 +605,7 @@ export default defineConfig({
         text: "Command Line",
         items: [
           { link: "/cli/", text: "CLI" },
-          { link: "/cli/using-core-types", text: "Using Core Types" },
+          { link: "/cli/using-core-types", text: "TypeScript Package Types" },
           { link: "/cli/environment-variables", text: "Environment Variables" },
         ],
         collapsed: true,
@@ -491,8 +618,8 @@ export default defineConfig({
             link: "/tutorials/react/index",
           },
           {
-            link: "/tutorials/vue/meteorjs3-vue3-vue-meteor-tracker",
-            text: "Meteor + Vue + vue-meteor-tracker",
+            text: "Meteor.js 3 + Vue",
+            link: "/tutorials/vue/meteorjs3-vue3",
           },
           {
             text: "Meteor.js 3 + Solid",
@@ -511,12 +638,75 @@ export default defineConfig({
             text: "Application structure",
           },
           {
+            link: "/tutorials/multiple-meteor-apps/index",
+            text: "Multiple Meteor apps",
+          },
+          {
+            text: "Build System",
+            link: "/about/build-tool",
+          },
+          {
+            text: "Core Concepts",
+            items: [
+              {
+                text: "Methods",
+                link: "/tutorials/methods/methods",
+              },
+              {
+                text: "Data Loading",
+                link: "/tutorials/data-loading/data-loading",
+              },
+              {
+                text: "Collections & Schemas",
+                link: "/tutorials/collections/collections",
+              },
+              {
+                text: "Accounts",
+                link: "/tutorials/accounts/accounts",
+              },
+            ]
+          },
+          {
             text: "Production",
             items:[
               {
                 text: "Security",
                 link: "/tutorials/security/security",
-              }
+              },
+              {
+                text: "Testing",
+                link: "/tutorials/testing/testing",
+              },
+              {
+                text: "Deployment",
+                link: "/tutorials/deployment/deployment",
+              },
+            ]
+          },
+          {
+            text: "Advanced Topics",
+            items: [
+              {
+                text: "Apollo & GraphQL",
+                link: "/tutorials/apollo/apollo",
+              },
+              {
+                text: "Code Style",
+                link: "/tutorials/code-style/code-style",
+              },
+            ]
+          },
+          {
+            text: "Integrations",
+            items: [
+              {
+                text: "React Native",
+                link: "/tutorials/integrations/react-native",
+              },
+              {
+                text: "Flowbite UI",
+                link: "/tutorials/integrations/flowbite",
+              },
             ]
           },
         ],
@@ -560,10 +750,37 @@ export default defineConfig({
             ],
           },
           {
+            text: "Change Streams Observer Driver",
+            link: "/performance/change-streams-observer-driver",
+          },
+          {
+            text: "DDP Transport",
+            link: "/performance/ddp-transport",
+          },
+          {
+            text: "Performance Improvements",
+            link: "/performance/performance-improvement",
+          },
+          {
             text: "WebSocket Compression",
             link: "/performance/websocket-compression",
           },
         ],
+        collapsed: true,
+      },
+      {
+        text: "Community",
+        items: [
+          {
+            text: "Contributing",
+            link: "/community/contributing",
+          },
+          {
+            text: "Contributors",
+            link: "/community/contributors",
+          },
+        ],
+        collapsed: true,
       },
     ],
 
@@ -601,7 +818,27 @@ export default defineConfig({
   vite: {
     plugins: [
       llmstxt({
-        title: "Meteor.js 3 Docs",
+        title: "Meteor.js 3 Documentation",
+        domain: "https://docs.meteor.com",
+        description: "Full-stack JavaScript platform for modern web and mobile applications.",
+        details: `
+Meteor is a full-stack JavaScript platform for developing web and mobile applications.
+
+Key capabilities:
+- Real-time data synchronization with publications and subscriptions
+- Built-in accounts and authentication system
+- Frontend agnostic (React, Vue, Solid, Blaze, Svelte)
+- Zero-config build system with modern tooling (SWC, Rspack)
+- One-command deployment to Galaxy Cloud
+- TypeScript support with full type inference
+
+Current version: Meteor ${metadata.currentVersion}.
+
+## Structured API Data
+
+For complete API documentation in machine-readable format, see:
+- [api-reference.json](/api-reference.json) - Full API reference with all functions, parameters, and types
+        `.trim(),
       }),
     ],
   },

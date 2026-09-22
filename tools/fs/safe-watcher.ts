@@ -3,8 +3,33 @@ import ParcelWatcher from "@parcel/watcher";
 import { watch as watchLegacy, addWatchRoot as addWatchRootLegacy, closeAllWatchers as closeAllWatchersLegacy } from './safe-watcher-legacy';
 
 import { Profile } from "../tool-env/profile";
-import { statOrNull, lstat, toPosixPath, convertToOSPath, pathRelative, watchFile, unwatchFile, pathResolve, pathDirname } from "./files";
+import {
+  statOrNull,
+  lstat,
+  toPosixPath,
+  convertToOSPath,
+  pathRelative,
+  watchFile,
+  unwatchFile,
+  pathResolve,
+  pathDirname,
+  pathJoin,
+  getHomeDir,
+  getCurrentToolsDir,
+  inCheckout
+} from "./files";
 import { getMeteorConfig } from "../tool-env/meteor-config";
+
+const constants = require("constants");
+
+// Both ENOSPC (inotify watch limit reached) and EINTR (interrupted system call)
+// surfaced by the native watcher mean the watch is no longer reliable, so we
+// fall back to polling. Native errors can report the condition via either a
+// string `code` or a numeric `errno`, so we check both.
+function isENOSPCorEINTR(err: any): boolean {
+  return err.code === "ENOSPC" || err.errno === constants.ENOSPC ||
+      err.code === "EINTR" || err.errno === constants.EINTR;
+}
 
 // Register process exit handlers to ensure subscriptions are properly cleaned up
 const registerExitHandlers = () => {
@@ -131,6 +156,25 @@ if (process.env.METEOR_WATCH_PRIORITIZE_CHANGED &&
 // watchLibrary.watch if available.
 const changedPaths = new Set;
 
+function getPackageWarehouseRoots(): string[] {
+  let warehouseRoot = process.env.METEOR_WAREHOUSE_DIR
+    ? toPosixPath(process.env.METEOR_WAREHOUSE_DIR)
+    : null;
+
+  if (!warehouseRoot) {
+    const baseDir = inCheckout() ? getCurrentToolsDir() : getHomeDir();
+    if (!baseDir) {
+      return [];
+    }
+    warehouseRoot = pathJoin(toPosixPath(baseDir), ".meteor");
+  }
+
+  return [
+    pathJoin(warehouseRoot, "packages"),
+    pathJoin(warehouseRoot, "packages-from-server"),
+  ];
+}
+
 function shouldIgnorePath(absPath: string): boolean {
   const posixPath = toPosixPath(absPath);
   const parts = posixPath.split('/');
@@ -138,8 +182,26 @@ function shouldIgnorePath(absPath: string): boolean {
   const cwd = toPosixPath(process.cwd());
   const isWithinCwd = absPath.startsWith(cwd);
 
+  // TODO(modern): Review support for .meteor/local/modern
+  // to hold intermediate bundler results. dot contexts are
+  // hidden and commonly ignored by tools that scan directories
+  if (isWithinCwd && absPath.includes(`.meteor/local/modern`)) {
+    return false;
+  }
+
   if (isWithinCwd && absPath.includes(`${cwd}/.meteor/local`)) {
     return true;
+  }
+
+  // Downloaded package versions are installed atomically and immutable. Watching
+  // their contents creates hundreds of native subscriptions without enabling a
+  // development workflow; package selection changes are watched in the app.
+  for (const packageWarehouseRoot of getPackageWarehouseRoots()) {
+    const relativeToWarehouse = pathRelative(packageWarehouseRoot, posixPath);
+    if (relativeToWarehouse === "" ||
+        (!relativeToWarehouse.startsWith("..") && !relativeToWarehouse.startsWith("/"))) {
+      return true;
+    }
   }
 
   // Check for .meteor: allow the .meteor directory itself,
@@ -295,7 +357,7 @@ async function ensureWatchRoot(dirPath: string): Promise<void> {
   const cwd = toPosixPath(process.cwd());
   const isWithinCwd = dirPath.startsWith(cwd);
   const ignPrefix = isWithinCwd ? "" : "**/";
-  const ignorePatterns = [`${ignPrefix}node_modules/**`, `${ignPrefix}.meteor/local/**`];
+  const ignorePatterns = [`${ignPrefix}node_modules/**`, `${ignPrefix}.meteor/local/!(modern)`];
   try {
     watchRoots.add(dirPath);
     const subscription = await ParcelWatcher.subscribe(
@@ -305,10 +367,14 @@ async function ensureWatchRoot(dirPath: string): Promise<void> {
             if (/Events were dropped/.test(err.message)) {
               return;
             }
+            if (/RootResolveError/.test(err.message) || /failed to resolve root/.test(err.message)) {
+              console.warn(`Parcel watcher root resolve error on ${osDirPath}, ignoring: ${err.message}`);
+              ignoredWatchRoots.add(dirPath);
+              watchRoots.delete(dirPath);
+              return;
+            }
             console.error(`Parcel watcher error on ${osDirPath}:`, err);
-            // Only disable native watching for critical errors (like ENOSPC).
-            // @ts-ignore
-            if (err.code === "ENOSPC" || err.errno === require("constants").ENOSPC) {
+            if (isENOSPCorEINTR(err)) {
               fallbackToPolling();
             }
             watchRoots.delete(dirPath);
@@ -333,13 +399,15 @@ async function ensureWatchRoot(dirPath: string): Promise<void> {
         (e.code === "ENOTDIR" ||
             /Not a directory/.test(e.message) ||
             e.code === "EBADF" ||
-            /Bad file descriptor/.test(e.message))
+            /Bad file descriptor/.test(e.message) ||
+            /RootResolveError/.test(e.message) ||
+            /failed to resolve root/.test(e.message))
     ) {
-      console.warn(`Skipping watcher for ${osDirPath}: not a directory`);
+      console.warn(`Skipping watcher for ${osDirPath}: ${e.message || 'not watchable'}`);
       ignoredWatchRoots.add(dirPath);
     } else {
       console.error(`Failed to start watcher for ${osDirPath}:`, e);
-      if (e.code === "ENOSPC" || e.errno === require("constants").ENOSPC) {
+      if (isENOSPCorEINTR(e)) {
         fallbackToPolling();
       }
     }

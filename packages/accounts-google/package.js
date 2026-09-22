@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Login service for Google accounts",
-  version: '1.4.1',
+  version: '1.4.2-beta360.1',
 });
 
 Package.onUse(api => {
@@ -17,4 +17,6 @@ Package.onUse(api => {
   api.addFiles("notice.js");
 
   api.addFiles("google.js");
+
+  api.types('accounts-google.d.ts');
 });

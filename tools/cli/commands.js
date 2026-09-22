@@ -16,6 +16,9 @@ var stats = require('../meteor-services/stats.js');
 var Console = require('../console/console.js').Console;
 const {
   blue,
+  bold,
+  cyan,
+  dim,
   green,
   purple,
   red,
@@ -124,7 +127,7 @@ import { ensureDevBundleDependencies } from '../cordova/index.js';
 import { CordovaRunner } from '../cordova/runner.js';
 import { iOSRunTarget, AndroidRunTarget } from '../cordova/run-targets.js';
 
-import { EXAMPLE_REPOSITORIES } from './example-repositories.js';
+import { getExamples, findExample, cloneRepo, cloneSubdirectory, isGitSourceLike, parseGitUrl, validateMeteorApp, EXAMPLES_REPO, EXAMPLES_BRANCH } from './examples.js';
 
 // The architecture used by Meteor Software's hosted servers; it's the
 // architecture used by 'meteor deploy'.
@@ -675,71 +678,95 @@ main.registerCommand({
  * Resolves into json with
  * @returns {Promise<[Skeletons, null]> | Promise<[null, Error]>}
  */
-function getExamplesJSON(){
-  return tryRun(async () => {
-    const response = await httpHelpers.request({
-      url: "https://cdn.meteor.com/static/meteor.json",
-      method: "GET",
-      useSessionHeader: true,
-      useAuthHeader: true,
-    });
-    return JSON.parse(response.body);
-  });
-}
 
 const DEFAULT_SKELETON = "react";
 export const AVAILABLE_SKELETONS = [
   "apollo",
+  "babel",
   "bare",
   "blaze",
+  "pwa",
   "full",
   "minimal",
+  "pnpm",
   DEFAULT_SKELETON,
   "typescript",
+  "typescript-tailwind",
   "vue",
   "svelte",
   "tailwind",
   "chakra-ui",
   "solid",
+  "legacy",
+  "coffeescript",
+  "angular"
 ];
 
 const SKELETON_INFO = {
   "apollo": "To create a basic Apollo + React app",
   "bare": "To create an empty app",
   "blaze": "To create an app using Blaze",
+  "pwa": "To create an installable Progressive Web App using Blaze",
   "full": "To create a more complete scaffolded app",
   "minimal": "To create an app with as few Meteor packages as possible",
+  "pnpm": "To create a pnpm monorepo with a Meteor app and shared packages",
   "react": "To create a basic React-based app",
   "typescript": "To create an app using TypeScript and React",
+  "typescript-tailwind": "To create an app using TypeScript, React, and Tailwind",
   "vue": "To create a basic Vue3-based app",
   "svelte": "To create a basic Svelte app",
   "tailwind": "To create an app using React and Tailwind",
   "chakra-ui": "To create an app Chakra UI and React",
-  "solid": "To create a basic Solid app"
-}
+  "solid": "To create a basic Solid app",
+  "coffeescript": "To create a basic CoffeeScript app",
+  "babel": "To create a React app with Babel support",
+  "angular": "To create a basic Angular app"
+};
+
+// Most skeletons are Meteor apps rooted at the created directory and use npm.
+// Entries here only describe skeletons that need a different project or install
+// root, keeping nested workspace support additive for future skeletons.
+const SKELETON_CONFIG = {
+  pnpm: {
+    appPath: "apps/app",
+    installAtRoot: true,
+    packageManager: "pnpm",
+    projectKind: "pnpm monorepo",
+    runCommand: "meteor npm start",
+  },
+};
 
 main.registerCommand({
   name: 'create',
-  maxArgs: 1,
+  maxArgs: 2,
   minArgs: 0,
   options: {
     list: { type: Boolean },
     example: { type: String },
     package: { type: Boolean },
+    babel: { type: Boolean },
     bare: { type: Boolean },
     minimal: { type: Boolean },
+    pnpm: { type: Boolean },
     full: { type: Boolean },
     blaze: { type: Boolean },
+    pwa: { type: Boolean },
     react: { type: Boolean },
     vue: { type: Boolean },
     typescript: { type: Boolean },
+    'typescript-tailwind': { type: Boolean },
     apollo: { type: Boolean },
     svelte: { type: Boolean },
     tailwind: { type: Boolean },
     'chakra-ui': { type: Boolean },
+    coffeescript: { type: Boolean },
     solid: { type: Boolean },
+    angular: { type: Boolean },
+    legacy: { type: Boolean },
     prototype: { type: Boolean },
     from: { type: String },
+    'from-dir': { type: String },
+    'from-branch': { type: String },
   },
   pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
@@ -748,6 +775,12 @@ main.registerCommand({
   // we are doing, do that first. (For example, we don't springboard to the
   // latest release to create a package if we are inside an app)
   if (options.package) {
+    if (options.args.length > 1) {
+      Console.error("Package creation expects only one package name.");
+      Console.error();
+      throw new main.ShowUsage();
+    }
+
     var packageName = options.args[0];
     if (options.prototype) {
       Console.error(
@@ -760,6 +793,11 @@ main.registerCommand({
     }
     if (options.list || options.example) {
       Console.error("No package examples exist at this time.");
+      Console.error();
+      throw new main.ShowUsage();
+    }
+    if (options.from || options['from-dir'] || options['from-branch']) {
+      Console.error("Package creation does not support --from, --from-dir, or --from-branch.");
       Console.error();
       throw new main.ShowUsage();
     }
@@ -840,7 +878,7 @@ main.registerCommand({
             return transform(f);
           },
           transformContents: async function (contents, f) {
-            if (/(\.html|\.[jt]sx?|\.css)/.test(f)) {
+            if (/(\.html|\.[jt]sx?|\.css|\.coffee)/.test(f)) {
               return Buffer.from(await transform(contents.toString()));
             } else {
               return contents;
@@ -884,27 +922,79 @@ main.registerCommand({
   }
 
   if (options.list) {
-    Console.info("Available examples:");
-    const [json, err] = await getExamplesJSON()
-    if (err) {
-      Console.error("Failed to fetch examples:", err.message);
-      Console.info("Using cached examples.json");
+    if (options.args.length > 1) {
+      Console.error("List expects at most one app path.");
+      Console.error();
+      throw new main.ShowUsage();
     }
-    const examples = err ? EXAMPLE_REPOSITORIES : json;
-    _.each(examples, function (repoInfo, name) {
-      const branchInfo = repoInfo.branch ? `/tree/${repoInfo.branch}` : "";
-      Console.info(
-        Console.command(`${name}: ${repoInfo.repo}${branchInfo}`),
-        Console.options({ indent: 2 })
-      );
-    });
 
-    Console.info();
-    Console.info(
-      "To create an example, simply",
-      Console.command("'meteor create <app-name> --example <name>'")
-    );
+    try {
+      const examples = await getExamples();
+      Console.rawInfo(`\n  ${bold`Meteor Examples`}  ${dim`${examples.length} available`}\n\n`);
+
+      examples.forEach((ex, i) => {
+        const version = ex.meteorVersion ? dim` v${ex.meteorVersion}` : '';
+        Console.rawInfo(`  ${cyan`${ex.slug}`}${version}\n`);
+        if (ex.why) {
+          Console.rawInfo(`    ${ex.why}\n`);
+        }
+        if (ex.stack && ex.stack.length) {
+          Console.rawInfo(`    ${dim`Tech:`} ${ex.stack.join(' · ')}\n`);
+        }
+        const repoUrl = ex.repositoryUrl || `${EXAMPLES_REPO}/tree/${EXAMPLES_BRANCH}/${ex.internalPath}`;
+        if (ex.demo) {
+          Console.rawInfo(`    ${dim`Demo:`} ${ex.demo}\n`);
+        }
+        if (ex.tutorial) {
+          Console.rawInfo(`    ${dim`Tutorial:`} ${ex.tutorial}\n`);
+        }
+        Console.rawInfo(`    ${dim`Repo:`} ${repoUrl}\n`);
+        if (i < examples.length - 1) {
+          Console.rawInfo('\n');
+        }
+      });
+
+      Console.rawInfo(`\n  ${dim`Usage:`} meteor create ${bold`<app>`} --example ${cyan`<slug>`}\n\n`);
+    } catch (err) {
+      Console.error(err.message);
+      return 1;
+    }
     return 0;
+  }
+
+  const defaultCreatePathFromGitSource = (source) => {
+    const parsed = parseGitUrl(source);
+    const pathSource = options['from-dir'] || parsed.dir || parsed.repoUrl;
+    const pathName = (pathSource || '').split('/').filter(Boolean).pop();
+    return (pathName || 'my-app').replace(/\.git$/, '');
+  };
+
+  if (!options.from && options.args.length > 0) {
+    const sourceIndexes = options.args
+      .map((arg, index) => (
+        isGitSourceLike(arg, { githubShorthand: false }) ? index : -1
+      ))
+      .filter(index => index !== -1);
+
+    if (sourceIndexes.length === 1) {
+      const sourceIndex = sourceIndexes[0];
+      options.from = options.args[sourceIndex];
+      options.args = options.args.length === 1
+        ? [defaultCreatePathFromGitSource(options.from)]
+        : [options.args[sourceIndex === 0 ? 1 : 0]];
+    } else if (options.args.length > 1) {
+      Console.error(
+        'Specify one app path, or one app path and one Git URL to clone from.'
+      );
+      Console.error();
+      throw new main.ShowUsage();
+    }
+  }
+
+  if (options.from && options.args.length > 1) {
+    Console.error('Cannot specify more than one path when using --from.');
+    Console.error();
+    throw new main.ShowUsage();
   }
 
   /**
@@ -1036,11 +1126,18 @@ main.registerCommand({
   }
   // Setup fn, which is called after the app is created, to print a message
   // about how to run the app.
-  async function setupMessages() {
+  async function setupMessages({
+    projectDir = appPath,
+    installDir = projectDir,
+    packageManager = "npm",
+    runCommand = "meteor",
+    runPathAsEntered = appPathAsEntered,
+    projectKind = "app",
+  } = {}) {
     // We are actually working with a new meteor project at this point, so
     // set up its context.
     var projectContext = new projectContextModule.ProjectContext({
-      projectDir: appPath,
+      projectDir,
       // Write .meteor/versions even if --release is specified.
       alwaysWritePackageMap: true,
       // examples come with a .meteor/versions file, but we shouldn't take it
@@ -1086,16 +1183,17 @@ main.registerCommand({
     // the packages (or maybe an unpredictable subset based on what happens to be
     // in the template's versions file).
 
-    // Since some of the project skeletons include npm `devDependencies`, we need
-    // to make sure they're included when running `npm install`.
-    await require("./default-npm-deps.js").install(appPath, {
+    // Since some project skeletons include `devDependencies`, make sure they
+    // are included when installing with the skeleton's package manager.
+    await require("./default-npm-deps.js").install(installDir, {
       includeDevDependencies: true,
+      packageManager,
     });
 
     var appNameToDisplay =
       appPathAsEntered === "." ? "current directory" : `'${appPathAsEntered}'`;
 
-    var message = `Created a new Meteor app in ${appNameToDisplay}`;
+    var message = `Created a new Meteor ${projectKind} in ${appNameToDisplay}`;
 
     message += ".";
 
@@ -1107,18 +1205,18 @@ main.registerCommand({
 
 
 
-    if (appPathAsEntered !== ".") {
+    if (runPathAsEntered !== ".") {
       // Wrap the app path in quotes if it contains spaces
       const appPathWithQuotesIfSpaces =
-        appPathAsEntered.indexOf(" ") === -1
-          ? appPathAsEntered
-          : `'${appPathAsEntered}'`;
+        runPathAsEntered.indexOf(" ") === -1
+          ? runPathAsEntered
+          : `'${runPathAsEntered}'`;
 
       // Don't tell people to 'cd .'
       cmd("cd " + appPathWithQuotesIfSpaces);
     }
 
-    cmd("meteor");
+    cmd(runCommand);
 
     Console.info("");
     Console.info(
@@ -1140,57 +1238,77 @@ main.registerCommand({
 
   }
 
-  /**
-   *
-   * @param {string} url
-   */
-  const setupExampleByURL = async (url) => {
-    const [ok, err] = await bash`git --version`;
-    if (err) throw new Error("git is not installed");
-    const isWindows = process.platform === "win32";
-
-    // Set GIT_TERMINAL_PROMPT=0 to disable prompting
-    process.env.GIT_TERMINAL_PROMPT = 0;
-
-    const gitCommand = isWindows
-      ? `git clone --progress ${url} "${files.convertToOSPath(appPath)}"`
-      : `git clone --progress ${url} ${appPath}`;
-    const [okClone, errClone] = await bash`${gitCommand}`;
-    const errorMessage = errClone && typeof errClone === "string" ? errClone : errClone?.message;
-    if (errorMessage && errorMessage.includes("Cloning into")) {
-      throw new Error("error cloning skeleton");
-    }
-    // remove .git folder from the example
-    await files.rm_recursive_async(files.pathJoin(appPath, ".git"));
-    await setupMessages();
-  };
-
   if (options.example) {
-    const [json, err] = await getExamplesJSON();
+    try {
+      let examples = await getExamples();
+      let example = findExample(examples, options.example);
 
-    if (err) {
-      Console.error("Failed to fetch examples:", err.message);
-      Console.info("Using cached examples.json");
-    }
+      if (!example) {
+        examples = await getExamples({ refresh: true });
+        example = findExample(examples, options.example);
+      }
 
-    const examples = err ? EXAMPLE_REPOSITORIES : json;
-    const repoInfo = examples[options.example];
-    if (!repoInfo) {
-      Console.error(`${options.example}: no such example.`);
-      Console.error(
-        "List available applications with",
-        Console.command("'meteor create --list'") + "."
-      );
+      if (!example) {
+        Console.error(`'${options.example}' is not a known example.`);
+        Console.error('Run', Console.command("'meteor create --list'"), 'to see available examples.');
+        return 1;
+      }
+
+      if (example.isInternal) {
+        await cloneSubdirectory(EXAMPLES_REPO, EXAMPLES_BRANCH, example.internalPath, appPath);
+      } else {
+        const parsed = parseGitUrl(example.repositoryUrl);
+        if (parsed.dir) {
+          await cloneSubdirectory(parsed.repoUrl, parsed.branch, parsed.dir, appPath);
+        } else {
+          await cloneRepo(parsed.repoUrl, appPath, { branch: parsed.branch });
+        }
+      }
+
+      await setupMessages();
+    } catch (err) {
+      Console.error('Error creating example:', err.message);
       return 1;
     }
-    // repoInfo.repo is the URL of the repo, and repoInfo.branch is the branch
-    await setupExampleByURL(repoInfo.repo);
     return 0;
   }
 
+  if ((options['from-dir'] || options['from-branch']) && !options.from) {
+    Console.error('--from-dir and --from-branch require --from to specify the source repository.');
+    return 1;
+  }
 
   if (options.from) {
-    await setupExampleByURL(options.from);
+    // Smart-parse the URL to extract repo, branch, and dir when possible.
+    // Explicit --from-branch / --from-dir always take precedence.
+    const parsed = parseGitUrl(options.from);
+    const branch = options['from-branch'] || parsed.branch || null;
+    const subdir = options['from-dir'] || parsed.dir || null;
+    try {
+      if (subdir) {
+        let repoUrl = parsed.repoUrl;
+        try {
+          const examples = await getExamples();
+          const example = findExample(examples, options.from);
+          if (example) {
+            repoUrl = example.repositoryUrl || EXAMPLES_REPO;
+          }
+        } catch (e) {
+          // If examples fetch fails, treat --from as a URL
+        }
+
+        await cloneSubdirectory(repoUrl, branch, subdir, appPath);
+        validateMeteorApp(appPath);
+      } else {
+        await cloneRepo(parsed.repoUrl, appPath, { branch });
+        validateMeteorApp(appPath);
+      }
+
+      await setupMessages();
+    } catch (err) {
+      Console.error(err.message);
+      return 1;
+    }
     return 0;
   }
 
@@ -1198,7 +1316,7 @@ main.registerCommand({
   if (destinationHasCodeFiles) {
     // If there is already source code in the directory, don't copy our
     // skeleton app code over it. Just create the .meteor folder and metadata
-    toIgnore.push(/(\.html|\.js|\.css)/);
+    toIgnore.push(/(\.html|\.js|\.css|\.webmanifest)/);
   }
 
   const copyFromLocalSkeleton = async () => {
@@ -1225,7 +1343,7 @@ main.registerCommand({
               return Buffer.from(contents.toString().replace(/~prototype~/g, ""));
             }
           }
-          if (/(\.html|\.[jt]sx?|\.css)/.test(f)) {
+          if (/(\.html|\.[jt]sx?|\.css|\.coffee|\.webmanifest)/.test(f)) {
             return Buffer.from(transform(contents.toString()));
           } else {
             return contents;
@@ -1260,8 +1378,8 @@ main.registerCommand({
       // using it as it was before 2.x
       if (release.explicit) throw new Error("Using release option");
 
-      // If local skeleton doesn't exist, use setupExampleByURL
-      await setupExampleByURL(`https://github.com/meteor/skel-${skeleton}`);
+      // If local skeleton doesn't exist, clone from GitHub
+      await cloneRepo(`https://github.com/meteor/skel-${skeleton}`, appPath);
     } catch (e) {
       if (
         e.message !== "Using prototype option" &&
@@ -1279,7 +1397,17 @@ main.registerCommand({
       await copyFromLocalSkeleton();
     }
   }
-  await setupMessages();
+  const skeletonConfig = SKELETON_CONFIG[skeleton] || {};
+  const projectDir = skeletonConfig.appPath
+    ? files.pathJoin(appPath, skeletonConfig.appPath)
+    : appPath;
+  await setupMessages({
+    projectDir,
+    installDir: skeletonConfig.installAtRoot ? appPath : projectDir,
+    packageManager: skeletonConfig.packageManager,
+    runCommand: skeletonConfig.runCommand,
+    projectKind: skeletonConfig.projectKind,
+  });
 
   Console.info("");
 });
@@ -1630,6 +1758,56 @@ https://guide.meteor.com/cordova.html#submitting-android
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+// types
+///////////////////////////////////////////////////////////////////////////////
+main.registerCommand({
+  name: 'types',
+  maxArgs: 0,
+  requiresApp: true,
+  options: {
+    'allow-incompatible-update': { type: Boolean }
+  },
+  catalogRefresh: new catalog.Refresh.Never()
+}, async function (options) {
+  const { appDir } = options;
+
+  const hasTsConfig = files.exists(files.pathJoin(appDir, 'tsconfig.json'));
+  const hasJsConfig = files.exists(files.pathJoin(appDir, 'jsconfig.json'));
+
+  if (! hasTsConfig && ! hasJsConfig) {
+    Console.info('=> No tsconfig.json or jsconfig.json found. Nothing to do.');
+    return 0;
+  }
+
+  const projectContext = new projectContextModule.ProjectContext({
+    projectDir: appDir,
+    serverArchitectures: [archinfo.host()],
+    allowIncompatibleUpdate: options['allow-incompatible-update'],
+    generatePackageTypes: true,
+  });
+
+  await main.captureAndExit(
+    '=> Errors prevented type generation:',
+    async () => await projectContext.prepareProjectForBuild()
+  );
+
+  if (projectContext.typesGenerationFailed) {
+    console.log(red`=> Failed to generate package type declarations.`);
+    return 1;
+  }
+
+  if (projectContext.typesGenerationSkipped) {
+    // Deliberate no-op (zodern:types owns type generation); must not
+    // break `meteor types && meteor run` pipelines.
+    Console.info('=> Skipped type generation because zodern:types is installed.');
+    return 0;
+  }
+
+  console.log(green`=> Generated package type declarations.`);
+  return 0;
+});
+
+///////////////////////////////////////////////////////////////////////////////
 // lint
 ///////////////////////////////////////////////////////////////////////////////
 main.registerCommand({
@@ -1854,47 +2032,76 @@ main.registerCommand({
                  "MONGO_URL will NOT be reset.");
   }
 
-  const resetMeteorNmCachePromise = options['skip-cache'] ? Promise.resolve() : files.rm_recursive_async(
+  // Always clean the default .meteor/local directory to prevent regressions.
+  // When METEOR_LOCAL_DIR is set, also clean the custom local directory.
+  const defaultLocalRelative = files.pathJoin('.meteor', 'local');
+  const customLocalRelative = process.env.METEOR_LOCAL_DIR || null;
+  const localDirs = [defaultLocalRelative];
+  if (customLocalRelative && customLocalRelative !== defaultLocalRelative) {
+    localDirs.push(customLocalRelative);
+  }
+
+  const resetMeteorNpmCachePromise = options['skip-cache'] ? Promise.resolve() : files.rm_recursive_async(
     files.pathJoin(options.appDir, "node_modules", ".cache", "meteor")
   );
+
+  const rspackHelpers = require('../tool-env/rspack.js');
+  const rspackAppContexts = rspackHelpers.getRspackAppContexts(options.appDir);
+  const resetRspackPromises = rspackAppContexts.map((contextPath) => files.rm_recursive_async(
+    contextPath
+  ));
 
   if (options.db) {
     // XXX detect the case where Meteor is running the app, but
     // MONGO_URL was set, so we don't see a Mongo process
     var findMongoPort = require('../runners/run-mongo.js').findMongoPort;
-    var isRunning = !! await findMongoPort(files.pathJoin(options.appDir, ".meteor", "local", "db"));
-    if (isRunning) {
-      Console.error("reset: Meteor is running.");
-      Console.error();
-      Console.error(
-        "This command does not work while Meteor is running your application.",
-        "Exit the running Meteor development server.");
-      return 1;
+    // Check all local dirs for a running Mongo instance
+    for (const localRelative of localDirs) {
+      const localDir = files.pathResolve(options.appDir, localRelative);
+      var isRunning = !! await findMongoPort(files.pathJoin(localDir, "db"));
+      if (isRunning) {
+        Console.error("reset: Meteor is running.");
+        Console.error();
+        Console.error(
+          "This command does not work while Meteor is running your application.",
+          "Exit the running Meteor development server.");
+        return 1;
+      }
     }
 
     await Promise.all([
-      files.rm_recursive_async(
-        files.pathJoin(options.appDir, ".meteor", "local")
+      ...localDirs.map((rel) =>
+        files.rm_recursive_async(files.pathResolve(options.appDir, rel))
       ),
-      resetMeteorNmCachePromise,
+      resetMeteorNpmCachePromise,
+      ...resetRspackPromises,
     ]);
 
     Console.info("Project reset.");
     return;
   }
 
-  var allExceptDb = files.getPathsInDir(files.pathJoin('.meteor', 'local'), {
-    cwd: options.appDir,
-    maxDepth: 1,
-  }).filter(function (path) {
-    return !path.includes('.meteor/local/db');
+  // Collect all paths inside each local dir except db
+  var allExceptDb = localDirs.flatMap((rel) => {
+    try {
+      return files.getPathsInDir(rel, {
+        cwd: options.appDir,
+        maxDepth: 1,
+      }).filter(function (p) {
+        return !p.includes('/db');
+      });
+    } catch (e) {
+      // Directory may not exist (e.g. default dir when only custom is used)
+      return [];
+    }
   });
 
   var allRemovePromises = [
     ...allExceptDb.map((_path) =>
       files.rm_recursive_async(files.pathJoin(options.appDir, _path))
     ),
-    resetMeteorNmCachePromise
+    resetMeteorNpmCachePromise,
+    ...resetRspackPromises,
   ];
   await Promise.all(allRemovePromises);
   Console.info("Project reset.");
@@ -2825,6 +3032,8 @@ main.registerCommand({
     headless: { type: Boolean },
     history: { type: Number },
     list: { type: Boolean },
+    // Write the filtered test list as JSON for machine consumers.
+    'list-json-out': { type: String },
     file: { type: String },
     exclude: { type: String },
     // Skip tests w/ this tag
@@ -2908,6 +3117,23 @@ main.registerCommand({
       fileRegexp: fileRegexp,
       'without-tag': options['without-tag'],
       'with-tag': options['with-tag']
+    });
+
+    return 0;
+  }
+
+  if (options['list-json-out']) {
+    await selftest.listTestsJson({
+      onlyChanged: options.changed,
+      offline: offline,
+      includeSlowTests: options.slow,
+      galaxyOnly: options.galaxy,
+      testRegexp: testRegexp,
+      fileRegexp: fileRegexp,
+      excludeRegexp: excludeRegexp,
+      'without-tag': options['without-tag'],
+      'with-tag': options['with-tag'],
+      outFile: options['list-json-out'],
     });
 
     return 0;
@@ -3423,7 +3649,7 @@ const setupBenchmarkSuite = async (profilingPath) => {
   process.env.GIT_TERMINAL_PROMPT = 0;
 
   const repoUrl = "https://github.com/meteor/performance";
-  const branch = "v3.3.0";
+  const branch = "v3.4.0";
 
   let tarFailed = false;
 

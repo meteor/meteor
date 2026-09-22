@@ -22,6 +22,7 @@ And it will prompt you to choose a project name and frontend framework.
 - Meteor supports Windows 7 / Windows Server 2008 R2 and up.
 - Apple M1 is natively supported from Meteor 2.5.1 onward (for older versions, rosetta terminal is required).
 - If you are using Meteor <= 3.0.4 and you are on a Mac M1 (Arm64 version) you need to have Rosetta 2 installed, as Meteor uses it for running MongoDB. Check how to install it [here](https://osxdaily.com/2020/12/04/how-install-rosetta-2-apple-silicon-mac/). *No longer needed in Meteor 3.1*.
+- As of Meteor 3.4.1, the dev-bundle fast path works correctly on Apple Silicon, improving startup performance on arm64 Macs.
 - Disabling antivirus (Windows Defender, etc.) will improve performance.
 - For compatibility, Linux binaries are built with CentOS 6.4 i386/amd64.
 
@@ -31,7 +32,7 @@ And it will prompt you to choose a project name and frontend framework.
 
 ## Installation
 
-Install the latest official version of Meteor.js from your terminal by running one of the commands below. You can check our [changelog](https://v3-docs.meteor.com/history.html) for the release notes.
+Install the latest official version of Meteor.js from your terminal by running one of the commands below. You can check our [changelog](/history) for the release notes.
 
 For Windows, Linux and OS X, you can run the following command:
 
@@ -51,7 +52,22 @@ if the error persists, please try to install Meteor using `npm`:
 npm install -g meteor --foreground-script
 ```
 
-Make sure you have Node.js v20 or higher installed.
+Make sure you have Node.js v24 or higher installed.
+
+#### Node.js Version Compatibility
+
+Different Meteor versions bundle different Node.js runtimes:
+
+| Meteor Version | Bundled Node.js Version |
+| -------------- | ----------------------- |
+| Meteor 3.3     | Node.js 20              |
+| Meteor 3.4     | Node.js 22              |
+| Meteor 3.5     | Node.js 24              |
+| Meteor 3.6     | Node.js 26.8.2          |
+
+Meteor 3.6's development bundle also includes npm 11.19.0. To confirm the
+runtime bundled with the Meteor release installed on your machine, run
+`meteor node -v` and `meteor npm -v`.
 
 :::
 
@@ -68,6 +84,22 @@ curl https://install.meteor.com/\?release\=2.8 | sh
 ```
 
 > Do not install the npm Meteor Tool in your project's package.json. This library is just an installer.
+
+## Build with AI coding assistants {#ai-docs}
+
+[Meteor Agent Skills](/ai/agent-skills) give compatible AI coding assistants Meteor-specific guidance for creating, debugging, testing, migrating, securing, and deploying applications. Choose and install skills interactively:
+
+```bash
+npx skills add meteor/agent-skills
+```
+
+The Agent Skills guide also covers Codex and Claude Code plugin installation, individual skills, and the complete catalog.
+
+For documentation context, Meteor also publishes [`llms.txt`](https://docs.meteor.com/llms.txt) and [`llms-full.txt`](https://docs.meteor.com/llms-full.txt). Use `llms.txt` to discover relevant pages, or download the complete documentation:
+
+```bash
+curl https://docs.meteor.com/llms-full.txt -o meteor-docs.txt
+```
 
 ## Troubleshooting {#troubleshooting}
 
@@ -125,19 +157,6 @@ If you use a node version manager that uses a separate global `node_modules` fol
 To be able to use the `meteor` command from fish it's needed to include `/home/<user>/.meteor` in `$PATH`; to do that just add this line in `/home/<user>/.config/fish/config.fish` file (replace `<user>` with your username):
 
 `set PATH /home/<user>/.meteor $PATH`
-
-## Using AI with Meteor docs {#ai-docs}
-
-Meteor docs ships with [llms.txt](https://llmstxt.org/) file, which helps language models use your website
-
-If you have [LM Studio installed](https://lmstudio.ai/docs/app) or any other LLM tool, you can use the llms.txt file to ask questions about Meteor.
-
-```bash
-curl https://docs.meteor.com/llms-full.txt  -o meteor-docs.txt
-```
-
-Then, you can use the file with your LLM tool of choice. For example, if you have LM Studio installed, you can use their [chat with documents feature](https://lmstudio.ai/docs/app/basics/rag)
-to ask questions about Meteor.
 
 ## Uninstalling Meteor {#uninstall}
 

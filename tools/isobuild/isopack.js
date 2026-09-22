@@ -21,6 +21,9 @@ var Console = require('../console/console.js').Console;
 var Profile = require('../tool-env/profile').Profile;
 import { requestGarbageCollection } from "../utils/gc.js";
 import { Unibuild } from "./unibuild.js";
+import rspackHelpers from "../tool-env/rspack";
+import { getCurrentNodeBinDir, getDevBundle } from "../fs/files";
+import { runLogInstance } from "../runners/run-log";
 
 var rejectBadPath = function (p) {
   if (p.match(/\.\./)) {
@@ -56,6 +59,24 @@ var Isopack = function () {
   self.debugOnly = false;
   self.prodOnly = false;
   self.testOnly = false;
+  self.devOnly = false;
+
+  // TypeScript type declarations entry point (set via api.types() or package-types.json).
+  self.typesEntry = null;
+
+  // Directory of TypeScript declaration files (set via the directory form
+  // of api.types()).  Null in single-file mode.  When set, typesEntry and
+  // typesModules values are full package-root-relative paths inside it.
+  self.typesDir = null;
+
+  // Optional sub-path module type declarations (set via api.types() modules option).
+  self.typesModules = null;
+
+  // The directory this isopack was loaded from (initFromPath) or saved to by
+  // the IsopackCache after a fresh build.  Null for isopacks that only exist
+  // in memory.  Used by the types generator to locate files inside the
+  // on-disk isopack, such as npm/node_modules.
+  self.isopackPath = null;
 
   // Unibuilds, an array of class Unibuild.
   self.unibuilds = [];
@@ -267,6 +288,10 @@ Object.assign(Isopack.prototype, {
     self.debugOnly = options.debugOnly;
     self.prodOnly = options.prodOnly;
     self.testOnly = options.testOnly;
+    self.devOnly = options.devOnly;
+    self.typesEntry = options.typesEntry || null;
+    self.typesDir = options.typesDir || null;
+    self.typesModules = options.typesModules || null;
     self.pluginCacheDir = options.pluginCacheDir || null;
     self.isobuildFeatures = options.isobuildFeatures;
   },
@@ -518,6 +543,16 @@ Object.assign(Isopack.prototype, {
 
       // Share the meteorConfig object as part of plugin API
       getMeteorConfig: getMeteorConfig,
+
+      // Share functions to get the dev bundle context
+      getDevBundle,
+      getCurrentNodeBinDir,
+
+      // Share the rspackHelpers as part of plugin API
+      rspackHelpers,
+
+      // Share the runLogInstance as part of plugin API
+      runLogInstance,
 
       // 'extension' is a file extension without the separation dot
       // (eg 'js', 'coffee', 'coffee.md')
@@ -844,6 +879,12 @@ Object.assign(Isopack.prototype, {
       self.pluginCacheDir = options.pluginCacheDir;
     }
 
+    // Remember where this isopack lives on disk.  We deliberately record the
+    // path as given (in the tropohouse this is a symlink that is swapped when
+    // more unibuilds are merged in), so consumers always see the current
+    // contents.
+    self.isopackPath = dir;
+
     await self._loadUnibuildsFromPath(name, dir, options);
   }),
 
@@ -909,6 +950,10 @@ Object.assign(Isopack.prototype, {
       self.debugOnly = !!mainJson.debugOnly;
       self.prodOnly = !!mainJson.prodOnly;
       self.testOnly = !!mainJson.testOnly;
+      self.devOnly = !!mainJson.devOnly;
+      self.typesEntry = mainJson.typesEntry || null;
+      self.typesDir = mainJson.typesDir || null;
+      self.typesModules = mainJson.typesModules || null;
     }
     for (const pluginMeta of mainJson.plugins) {
       rejectBadPath(pluginMeta.path);
@@ -1059,6 +1104,18 @@ Object.assign(Isopack.prototype, {
       }
       if (self.testOnly) {
         mainJson.testOnly = true;
+      }
+      if (self.devOnly) {
+        mainJson.devOnly = true;
+      }
+      if (self.typesEntry) {
+        mainJson.typesEntry = self.typesEntry;
+      }
+      if (self.typesDir) {
+        mainJson.typesDir = self.typesDir;
+      }
+      if (self.typesModules) {
+        mainJson.typesModules = self.typesModules;
       }
       if (! _.isEmpty(self.cordovaDependencies)) {
         mainJson.cordovaDependencies = self.cordovaDependencies;
@@ -1221,6 +1278,9 @@ Object.assign(Isopack.prototype, {
       var mainLegacyJson = null;
       if (writeLegacyBuilds) {
         mainLegacyJson = _.clone(mainJson);
+        delete mainLegacyJson.typesEntry;
+        delete mainLegacyJson.typesDir;
+        delete mainLegacyJson.typesModules;
         mainLegacyJson.builds = [];
 
         for (const unibuildInfo of unibuildInfos) {
@@ -1426,10 +1486,19 @@ Object.assign(Isopack.prototype, {
       'packages/meteor/flush-buffers-on-exit-in-windows.js',
     );
 
-    // Trim blank line and unnecessary examples.
+    // 1. Trim blank lines and unnecessary examples.
+    // 2. Exclude `tools/e2e-tests`: These are massive internal dummy fixture apps
+    //    that serve no purpose for end-users and would otherwise bloat the published 
+    //    meteor-tool isopack download. 
+    //    Additionally, these fixtures contain complex symlinks which, on Windows checkouts 
+    //    (where core.symlinks=false), are created as plain text files. If not excluded, 
+    //    Babel attempts to transpile those text files here and throws a SyntaxError, crashing the build.
+    // NOTE: This _writeTool method is only ever executed when compiling the `meteor-tool` 
+    // package itself from a checkout, so these exclusions have zero impact on normal Meteor apps.
     pathsToCopy = _.filter(pathsToCopy.split('\n'), function (f) {
       return f && !f.match(/^examples\/other/) &&
-        !f.match(/^examples\/unfinished/);
+        !f.match(/^examples\/unfinished/) &&
+        !f.match(/^tools\/e2e-tests/);
     });
 
     function shouldTranspile(path) {
