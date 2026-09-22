@@ -63,7 +63,8 @@ const watch = (filePath, callback = jest.fn()) => {
 beforeEach(() => {
   mockIsCheckout = false;
   delete process.env.METEOR_WAREHOUSE_DIR;
-  mockSubscribe.mockClear();
+  mockSubscribe.mockReset();
+  mockSubscribe.mockResolvedValue({ unsubscribe: mockUnsubscribe });
   mockUnsubscribe.mockClear();
   mockWatchFile.mockClear();
   mockUnwatchFile.mockClear();
@@ -130,4 +131,44 @@ test("honors METEOR_WAREHOUSE_DIR and watches local packages", async () => {
   expect(mockSubscribe).toHaveBeenCalledTimes(1);
   expect(mockSubscribe.mock.calls[0][0]).toBe("/app/packages/local-package/client");
   expect(mockWatchFile).not.toHaveBeenCalled();
+});
+
+test("treats a missing path during root subscription as transient", async () => {
+  const missingPathError = new Error(
+    "inotify_add_watch failed: No such file or directory",
+  );
+  const consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
+  mockSubscribe.mockRejectedValueOnce(missingPathError);
+
+  try {
+    watch("/app/imports/main.js");
+    await flushPromises();
+
+    expect(consoleError).not.toHaveBeenCalled();
+
+    watch("/app/imports/other.js");
+    await flushPromises();
+
+    expect(mockSubscribe).toHaveBeenCalledTimes(2);
+  } finally {
+    consoleError.mockRestore();
+  }
+});
+
+test("reports unexpected root subscription failures", async () => {
+  const subscriptionError = new Error("watcher backend failed");
+  const consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
+  mockSubscribe.mockRejectedValueOnce(subscriptionError);
+
+  try {
+    watch("/app/imports/main.js");
+    await flushPromises();
+
+    expect(consoleError).toHaveBeenCalledWith(
+      "Failed to start watcher for /app/imports:",
+      subscriptionError,
+    );
+  } finally {
+    consoleError.mockRestore();
+  }
 });

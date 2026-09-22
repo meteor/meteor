@@ -21,6 +21,7 @@ import {
 import { getMeteorConfig } from "../tool-env/meteor-config";
 
 const constants = require("constants");
+const MISSING_PATH_ERROR_MESSAGE = "No such file or directory";
 
 // Both ENOSPC (inotify watch limit reached) and EINTR (interrupted system call)
 // surfaced by the native watcher mean the watch is no longer reliable, so we
@@ -29,6 +30,17 @@ const constants = require("constants");
 function isENOSPCorEINTR(err: any): boolean {
   return err.code === "ENOSPC" || err.errno === constants.ENOSPC ||
       err.code === "EINTR" || err.errno === constants.EINTR;
+}
+
+function isMissingPathError(err: unknown): boolean {
+  if (!err || typeof err !== "object") {
+    return false;
+  }
+
+  const nativeError = err as NodeJS.ErrnoException;
+
+  return nativeError.code === "ENOENT" ||
+      nativeError.message?.includes(MISSING_PATH_ERROR_MESSAGE) === true;
 }
 
 // Register process exit handlers to ensure subscriptions are properly cleaned up
@@ -394,6 +406,15 @@ async function ensureWatchRoot(dirPath: string): Promise<void> {
     );
     dirSubscriptions.set(dirPath, subscription);
   } catch (e: any) {
+    if (isMissingPathError(e)) {
+      // npm replaces dependency trees atomically. A child can disappear after
+      // the root stat succeeds but before Parcel finishes subscribing. The
+      // per-entry polling watcher remains active, and leaving the root out of
+      // ignoredWatchRoots allows a later watch to retry the subscription.
+      watchRoots.delete(dirPath);
+      return;
+    }
+
     if (
         e &&
         (e.code === "ENOTDIR" ||
