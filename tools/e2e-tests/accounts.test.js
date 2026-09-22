@@ -631,6 +631,70 @@ function defineAccountsScenarios(storageMode, getCtx) {
         }
       });
 
+      it('does not replace a pending explicit login with a retried cookie session', async () => {
+        const { page } = getCtx();
+        await seedUser(page, { email: 'cookie-old@example.com', password: 'pw12345' });
+        const userId = await seedUser(page, {
+          email: 'cookie-new@example.com',
+          password: 'pw12345',
+        });
+        await login(page, { email: 'cookie-old@example.com' }, 'pw12345');
+        await page.evaluate(() => {
+          localStorage.removeItem('Meteor.loginToken');
+          localStorage.removeItem('Meteor.loginTokenExpires');
+          localStorage.removeItem('Meteor.userId');
+        });
+
+        // Keep the old HTTP cookie, but start with an unauthenticated DDP
+        // connection so reconnect cannot add another automatic resume.
+        await page.route('**/_accounts/cookie/refresh', route =>
+          route.fulfill({ status: 204 }), { times: 1 });
+        await page.reload();
+        await page.waitForFunction(() =>
+          window.__accountsE2E && Meteor.status().connected);
+        await expectLoggedOut(page);
+
+        let refreshCount = 0;
+        let releaseRefresh;
+        let markRetryReached;
+        const holdRefresh = new Promise(resolve => { releaseRefresh = resolve; });
+        const retryReached = new Promise(resolve => { markRetryReached = resolve; });
+        const refreshRoute = async route => {
+          refreshCount += 1;
+          if (refreshCount === 1) {
+            await route.fulfill({ status: 429 });
+          } else {
+            markRetryReached();
+            await holdRefresh;
+            await route.continue();
+          }
+        };
+        await page.route('**/_accounts/cookie/refresh', refreshRoute);
+        try {
+          const recovery = page.evaluate(() =>
+            window.__accountsE2E.Accounts.loginWithCookie());
+          await retryReached;
+          // Queue the real password login while DDP is offline. HTTP still
+          // works, allowing the retry to return the old cookie before login
+          // completes, without depending on server timing.
+          await page.evaluate(() => Meteor.disconnect());
+          const passwordLogin = login(page, { email: 'cookie-new@example.com' }, 'pw12345');
+          await page.waitForFunction(() => Meteor.loggingIn());
+          releaseRefresh();
+          await recovery;
+          await page.evaluate(() => Meteor.reconnect());
+          await passwordLogin;
+          // This method runs after any queued resume, so the assertion sees
+          // the final session rather than the first successful login.
+          await callMethod(page, '_e2e.getUser', userId);
+          await expectLoggedIn(page, userId);
+        } finally {
+          releaseRefresh();
+          await page.unroute('**/_accounts/cookie/refresh', refreshRoute);
+          await page.evaluate(() => Meteor.reconnect());
+        }
+      });
+
       it('logout clears the cookie', async () => {
         const { page } = getCtx();
         await seedUser(page, { email: 'c@example.com', password: 'pw12345' });
