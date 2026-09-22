@@ -40,6 +40,7 @@ Package.onUse((api) => {
   api.export("DDP");
   api.mainModule("client/client.js", "client");
   api.mainModule("server/server.js", "server");
+  api.types("ddp-client.d.ts");
 });
 
 Package.onTest((api) => {

@@ -467,6 +467,8 @@ export namespace Meteor {
 
   /** Pub/Sub **/
   interface SubscriptionHandle {
+    /** Identifier of the subscription on its DDP connection. */
+    subscriptionId: string;
     /** Cancel the subscription. This will typically result in the server directing the client to remove the subscription’s data from the client’s cache. */
     stop(): void;
     /** True if the server has marked the subscription as ready. A reactive data source. */
