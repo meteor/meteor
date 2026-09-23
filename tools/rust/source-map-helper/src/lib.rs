@@ -437,10 +437,37 @@ impl Composer {
         input: &MappedInput<'_>,
     ) -> Result<()> {
         let mut state = MappedCodeState::new(code);
+        let mut line_mappings = Vec::new();
+
         decode_mappings(document.mapping_reader(input.map.mappings)?, |mapping| {
-            self.emit_decoded_mapping(&mut state, mapping, input)
+            if line_mappings.first().is_some_and(|first: &DecodedMapping| {
+                first.generated_line != mapping.generated_line
+            }) {
+                self.emit_basic_map_line(&mut state, &mut line_mappings, input)?;
+            }
+
+            line_mappings.push(mapping);
+            Ok(())
         })?;
+
+        self.emit_basic_map_line(&mut state, &mut line_mappings, input)?;
         self.finish_decoded_map(&mut state, input)
+    }
+
+    fn emit_basic_map_line(
+        &mut self,
+        state: &mut MappedCodeState<'_>,
+        line_mappings: &mut Vec<DecodedMapping>,
+        input: &MappedInput<'_>,
+    ) -> Result<()> {
+        // BasicSourceMapConsumer sorts equal generated positions by the remaining fields.
+        // Buffering one line preserves that order without retaining the entire mapping stream.
+        line_mappings.sort_by(compare_decoded_mappings);
+        for mapping in line_mappings.drain(..) {
+            self.emit_decoded_mapping(state, mapping, input)?;
+        }
+
+        Ok(())
     }
 
     fn emit_decoded_mapping(
@@ -711,6 +738,24 @@ fn compare_inflated_mappings(
         .then_with(|| left.original_line.cmp(&right.original_line))
         .then_with(|| left.original_column.cmp(&right.original_column))
         .then_with(|| compare_nullable_strings(left.name.as_deref(), right.name.as_deref()))
+}
+
+fn compare_decoded_mappings(left: &DecodedMapping, right: &DecodedMapping) -> std::cmp::Ordering {
+    left.generated_column
+        .cmp(&right.generated_column)
+        .then_with(|| compare_nullable_indices(left.source, right.source))
+        .then_with(|| left.original_line.cmp(&right.original_line))
+        .then_with(|| left.original_column.cmp(&right.original_column))
+        .then_with(|| compare_nullable_indices(left.name, right.name))
+}
+
+fn compare_nullable_indices(left: Option<u32>, right: Option<u32>) -> std::cmp::Ordering {
+    match (left, right) {
+        (Some(left), Some(right)) => left.cmp(&right),
+        (Some(_), None) => std::cmp::Ordering::Less,
+        (None, Some(_)) => std::cmp::Ordering::Greater,
+        (None, None) => std::cmp::Ordering::Equal,
+    }
 }
 
 fn compare_nullable_strings(left: Option<&str>, right: Option<&str>) -> std::cmp::Ordering {
@@ -1480,5 +1525,98 @@ mod tests {
         .unwrap();
 
         assert!(SourceMapDocument::open(&path).is_err());
+    }
+
+    #[test]
+    fn basic_map_sorts_mappings_at_the_same_generated_column() {
+        let root = tempfile::tempdir().unwrap();
+        let code_path = root.path().join("input.js");
+        let map_path = root.path().join("input.js.map");
+        let output_code_path = root.path().join("output.js");
+        let output_map_path = root.path().join("output.js.map");
+        fs::write(&code_path, "a").unwrap();
+        fs::write(
+            &map_path,
+            r#"{"version":3,"sources":["a.js"],"names":[],"mappings":"AAAC,AAAD"}"#,
+        )
+        .unwrap();
+
+        execute(Request {
+            protocol_version: PROTOCOL_VERSION,
+            workspace_root: root.path().to_owned(),
+            input_roots: Vec::new(),
+            output: OutputRequest {
+                code_path: output_code_path,
+                map_path: output_map_path.clone(),
+                file: Some("output.js".to_owned()),
+                source_prefix: None,
+            },
+            pieces: vec![
+                Piece::Literal {
+                    value: "header\n(".to_owned(),
+                },
+                Piece::Mapped {
+                    code_path,
+                    map_path,
+                    relative_path: None,
+                },
+                Piece::Literal {
+                    value: ")\nfooter".to_owned(),
+                },
+            ],
+        })
+        .unwrap();
+
+        let output: serde_json::Value =
+            serde_json::from_slice(&fs::read(output_map_path).unwrap()).unwrap();
+        assert_eq!(output["mappings"], ";CAAC,C");
+    }
+
+    #[test]
+    fn basic_map_sorts_source_and_name_indices_before_inflation() {
+        let cases = [
+            (
+                r#"{"version":3,"sources":["z.js","a.js"],"names":[],"mappings":"ACAA,ADAA"}"#,
+                serde_json::json!(["a.js"]),
+                serde_json::json!([]),
+            ),
+            (
+                r#"{"version":3,"sources":["a.js"],"names":["z","a"],"mappings":"AAAAC,AAAAD"}"#,
+                serde_json::json!(["a.js"]),
+                serde_json::json!(["a"]),
+            ),
+        ];
+
+        for (map, expected_sources, expected_names) in cases {
+            let root = tempfile::tempdir().unwrap();
+            let code_path = root.path().join("input.js");
+            let map_path = root.path().join("input.js.map");
+            let output_map_path = root.path().join("output.js.map");
+            fs::write(&code_path, "a").unwrap();
+            fs::write(&map_path, map).unwrap();
+
+            execute(Request {
+                protocol_version: PROTOCOL_VERSION,
+                workspace_root: root.path().to_owned(),
+                input_roots: Vec::new(),
+                output: OutputRequest {
+                    code_path: root.path().join("output.js"),
+                    map_path: output_map_path.clone(),
+                    file: None,
+                    source_prefix: None,
+                },
+                pieces: vec![Piece::Mapped {
+                    code_path,
+                    map_path,
+                    relative_path: None,
+                }],
+            })
+            .unwrap();
+
+            let output: serde_json::Value =
+                serde_json::from_slice(&fs::read(output_map_path).unwrap()).unwrap();
+            assert_eq!(output["sources"], expected_sources);
+            assert_eq!(output["names"], expected_names);
+        }
     }
 }
