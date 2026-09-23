@@ -3,7 +3,6 @@ name: E2E Tests
 on:
   pull_request:
     paths:
-      - "scripts/ci/verify-mongodb8-bundle.cjs"
       - "meteor"
       - "package.json"
       - "package-lock.json"
@@ -26,8 +25,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Temporary MongoDB 8 validation bundle, published only to the test server.
-  USE_TEST_DEV_BUNDLE_SERVER: "1"
   TOOL_NODE_FLAGS: "--max_old_space_size=12288"
   # Generated apps run Playwright in child processes whose HOME can differ
   # from the Actions shell. Keep all browser installs in one explicit path.
@@ -142,9 +139,6 @@ jobs:
             echo "NPM_LINK_RSPACK=false" >> $GITHUB_ENV
             echo "::warning::NPM_LINK_RSPACK=false on release branch. E2E tests will install @meteorjs/rspack from npm — make sure the latest version is published or tests may fail."
           fi
-
-      - name: Verify MongoDB 8 dev bundle
-        run: node scripts/ci/verify-mongodb8-bundle.cjs
 
       - name: Prepare Meteor
         if: steps.deps-cache.outputs.cache-hit != 'true'
