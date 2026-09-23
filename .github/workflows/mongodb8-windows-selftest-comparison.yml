@@ -1,0 +1,63 @@
+name: Windows dynamic import MongoDB comparison
+on:
+  push:
+    branches: [codex/mongodb8-runtime-validation]
+    paths:
+      - .github/workflows/mongodb8-windows-selftest-comparison.yml
+permissions:
+  contents: read
+jobs:
+  compare:
+    runs-on: windows-2022
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        mongo: ['7.0.16', '8.0.29']
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      USE_TEST_DEV_BUNDLE_SERVER: '1'
+      npm_config_audit: 'false'
+      METEOR_PRETTY_OUTPUT: '0'
+      SELF_TEST_TOOL_NODE_FLAGS: ' '
+      TOOL_NODE_FLAGS: --expose-gc
+      TIMEOUT_SCALE_FACTOR: '20'
+      METEOR_HEADLESS: 'true'
+      METEOR_MODERN: 'true'
+    steps:
+      - name: Enable symlinks
+        run: git config --global core.symlinks true
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26.x
+      - name: Install dependencies and test bundle
+        run: |
+          $env:PATH = "C:\Program Files\7-Zip;$env:PATH"
+          .\scripts\windows\ci\install.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Install failed' }
+          .\meteor.bat node --version
+          if ($LASTEXITCODE -ne 0) { throw 'Bundle bootstrap failed' }
+      - name: Replace only MongoDB binaries for baseline
+        if: matrix.mongo == '7.0.16'
+        run: |
+          curl.exe -fSL https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-7.0.16.zip -o mongo7.zip
+          if ($LASTEXITCODE -ne 0) { throw 'MongoDB 7 download failed' }
+          Expand-Archive mongo7.zip mongo7
+          $mongo7Bin = Get-ChildItem mongo7 -Filter mongod.exe -Recurse | Select-Object -First 1 -ExpandProperty DirectoryName
+          Copy-Item "$mongo7Bin\mongod.exe", "$mongo7Bin\mongos.exe" dev_bundle\mongodb\bin -Force
+      - name: Run focused Windows self-tests without retries
+        run: |
+          $env:PATH = "C:\Program Files\7-Zip;$env:PATH"
+          .\dev_bundle\mongodb\bin\mongod.exe --version
+          .\meteor.bat self-test --retries 0 --junit windows-focused.xml '^dynamic import.*development|^self-test catalog scan tolerates cold official catalog$|^npm - prefetch runs speculative work on Windows$'
+          exit $LASTEXITCODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-selftest-${{ matrix.mongo }}
+          path: windows-focused.xml
