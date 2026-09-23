@@ -4126,3 +4126,47 @@ Tinytest.addAsync('minimongo - operation result fields (async)', async test => {
   const removeResult = await c.removeAsync({name: 'doc1'});
   test.equal(removeResult, 1, 'remove should return removed count');
 });
+
+Tinytest.add('minimongo - memoize - returns cached result on repeated calls', test => {
+  let callCount = 0;
+  const fn = x => { callCount++; return x * 2; };
+  const memoized = MinimongoTest.memoize(fn);
+
+  test.equal(memoized(3), 6);
+  test.equal(memoized(3), 6);
+  test.equal(callCount, 1); // fn called only once
+});
+
+Tinytest.add('minimongo - memoize - different keys produce different results', test => {
+  const memoized = MinimongoTest.memoize(x => x * 2);
+  test.equal(memoized(2), 4);
+  test.equal(memoized(5), 10);
+});
+
+Tinytest.add('minimongo - memoize - custom keyFn is used', test => {
+  let callCount = 0;
+  const fn = (key, opts = {}) => { callCount++; return key + (opts.flag ? ':flag' : ''); };
+  const memoized = MinimongoTest.memoize(fn, (key, opts = {}) => opts.flag ? key + '\0flag' : key);
+
+  memoized('a');
+  memoized('a');
+  test.equal(callCount, 1);
+
+  memoized('a', { flag: true });
+  memoized('a', { flag: true });
+  test.equal(callCount, 2); // separate cache entry for flag variant
+});
+
+Tinytest.add('minimongo - makeLookupFunction - same path returns same function reference', test => {
+  const fn1 = MinimongoTest.makeLookupFunction('a.b.c');
+  const fn2 = MinimongoTest.makeLookupFunction('a.b.c');
+  test.isTrue(fn1 === fn2, 'expected same function reference for same path');
+});
+
+Tinytest.add('minimongo - makeLookupFunction - forSort variant is cached separately', test => {
+  const fn1 = MinimongoTest.makeLookupFunction('a.b');
+  const fn2 = MinimongoTest.makeLookupFunction('a.b', { forSort: true });
+  const fn3 = MinimongoTest.makeLookupFunction('a.b', { forSort: true });
+  test.isFalse(fn1 === fn2, 'expected different references for default vs forSort');
+  test.isTrue(fn2 === fn3, 'expected same reference for repeated forSort call');
+});
