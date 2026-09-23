@@ -142,11 +142,38 @@ var identifyBrowser = function(userAgentString) {
     };
   }
   var userAgent = lookupUserAgent(userAgentString);
+
+  var major = +userAgent.major;
+  var minor = +userAgent.minor;
+  var patch = +userAgent.patch;
+
+  // iOS Mobile Safari's effective version tracks the iOS version, but the
+  // useragent library reports the (often stale) Safari `Version/` token. Prefer
+  // the OS version so, e.g., iOS 10.3.x is not mistaken for Safari 10.0 and
+  // served the legacy bundle. This is a no-op for modern iOS, where the Safari
+  // and OS versions already match.
+  //
+  // A 0.0.0 version (in-app WKWebViews, CriOS, ...) is left untouched, so those
+  // keep flowing through modern-browsers' unknownBrowsersAssumedModern gate
+  // rather than being reclassified by the OS version.
+  var hasKnownVersion = ! (major === 0 && minor === 0 && patch === 0);
+  if (hasKnownVersion &&
+      userAgent.os &&
+      userAgent.os.family === 'iOS' &&
+      /^mobile safari/i.test(userAgent.family)) {
+    var osMajor = +userAgent.os.major;
+    var osMinor = +userAgent.os.minor;
+    var osPatch = +userAgent.os.patch;
+    if (! Number.isNaN(osMajor)) major = osMajor;
+    if (! Number.isNaN(osMinor)) minor = osMinor;
+    if (! Number.isNaN(osPatch)) patch = osPatch;
+  }
+
   return {
     name: camelCase(userAgent.family),
-    major: +userAgent.major,
-    minor: +userAgent.minor,
-    patch: +userAgent.patch,
+    major: major,
+    minor: minor,
+    patch: patch,
   };
 };
 
