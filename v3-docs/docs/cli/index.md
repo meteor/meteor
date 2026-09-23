@@ -32,9 +32,11 @@ Install shell completion for Meteor commands in bash or zsh.
 meteor shell-completion --install
 ```
 
-This command writes the completion script to `~/.meteor/meteor-completion.sh`
-and adds a source line to your shell startup file so completion is loaded
-automatically in future terminal sessions.
+This command writes the completion scripts to
+`~/.meteor/meteor-completion.bash` and `~/.meteor/meteor-completion.zsh`, plus a
+small `~/.meteor/meteor-completion.sh` loader that picks the right one for the
+running shell. It then adds a source line for the loader to your shell startup
+file so completion is loaded automatically in future terminal sessions.
 
 The generated script embeds the current top-level Meteor command list at install
 time for faster and more reliable first-argument completion. Re-run
@@ -51,6 +53,9 @@ want to install completion for a different shell explicitly.
 meteor shell-completion --install --shell zsh
 meteor shell-completion --install --shell bash
 ```
+
+Each shell has its own script, so you can install completion for both and
+switch between them freely.
 
 ### What Gets Completed
 
@@ -104,8 +109,9 @@ those aliases are registered for completion.
 meteor shell-completion --uninstall
 ```
 
-This removes `~/.meteor/meteor-completion.sh` and deletes the
-`# Meteor autocompletion` block that Meteor added to your startup files.
+This removes `~/.meteor/meteor-completion.sh` and the per-shell scripts next to
+it, and deletes the `# Meteor autocompletion` block that Meteor added to your
+startup files.
 
 ### Troubleshooting
 
