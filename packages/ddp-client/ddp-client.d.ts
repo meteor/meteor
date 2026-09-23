@@ -22,8 +22,8 @@ export namespace DDP {
   }["bivarianceHack"];
 
   interface DDPStatic {
-    subscribe(name: string, ...args: Argument[]): Meteor.SubscriptionHandle;
-    subscribe(name: string, ...args: [...Argument[], SubscriptionCallback]): Meteor.SubscriptionHandle;
+    subscribe(name: string, ...args: Argument[]): Meteor.SubscriptionHandleWithId;
+    subscribe(name: string, ...args: [...Argument[], SubscriptionCallback]): Meteor.SubscriptionHandleWithId;
     call<Result extends DDP.Result = DDP.Result>(method: string, ...parameters: [...Argument[], MethodCallback<Result>]): void;
     call<Result extends DDP.Result = DDP.Result>(method: string, ...parameters: Argument[]): Result | undefined | Promise<Result>;
     callAsync<Result extends DDP.Result = DDP.Result>(method: string, ...parameters: Argument[]): Promise<Result>;
@@ -34,7 +34,7 @@ export namespace DDP {
       callback?: MethodCallback<Result>
     ): Result;
     methods<T extends {[K in keyof T]: MethodHandler }>(methods: T): void;
-    subscribe(name: string, ...rest: unknown[]): Meteor.SubscriptionHandle;
+    subscribe(name: string, ...rest: unknown[]): Meteor.SubscriptionHandleWithId;
     call<Result = unknown>(method: string, ...parameters: unknown[]): Result | undefined | Promise<Result>;
     callAsync<Result = unknown>(method: string, ...parameters: unknown[]): Promise<Result>;
     apply<Result = unknown>(method: string, ...parameters: unknown[]): Result;

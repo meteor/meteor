@@ -467,12 +467,15 @@ export namespace Meteor {
 
   /** Pub/Sub **/
   interface SubscriptionHandle {
-    /** Identifier of the subscription on its DDP connection. */
-    subscriptionId: string;
     /** Cancel the subscription. This will typically result in the server directing the client to remove the subscription’s data from the client’s cache. */
     stop(): void;
     /** True if the server has marked the subscription as ready. A reactive data source. */
     ready(): boolean;
+  }
+  /** Concrete handle returned by Meteor and DDP subscriptions. */
+  interface SubscriptionHandleWithId extends SubscriptionHandle {
+    /** Identifier of the subscription on its DDP connection. */
+    subscriptionId: string;
   }
   interface LiveQueryHandle {
     stop(): void;
@@ -593,7 +596,7 @@ export namespace Meteor {
    * argument to `onStop`. If a function is passed instead of an object, it
    * is interpreted as an `onReady` callback.
    */
-  function subscribe(name: string, ...args: (EJSONable | EJSONableProperty)[]): Meteor.SubscriptionHandle;
+  function subscribe(name: string, ...args: (EJSONable | EJSONableProperty)[]): Meteor.SubscriptionHandleWithId;
   function subscribe(
     name: string,
     ...args: [
@@ -604,15 +607,15 @@ export namespace Meteor {
         onError?: (error: Meteor.Error) => void;
       }
     ]
-  ): Meteor.SubscriptionHandle;
+  ): Meteor.SubscriptionHandleWithId;
   function subscribe(
     name: string,
     ...args: [
       ...args: (EJSONable | EJSONableProperty)[],
       onReady: () => void
     ]
-  ): Meteor.SubscriptionHandle;
-  function subscribe(name: string, ...args: unknown[]): Meteor.SubscriptionHandle;
+  ): Meteor.SubscriptionHandleWithId;
+  function subscribe(name: string, ...args: unknown[]): Meteor.SubscriptionHandleWithId;
   /** Pub/Sub **/
 }
 

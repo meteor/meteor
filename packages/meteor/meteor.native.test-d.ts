@@ -133,14 +133,17 @@ expectTypeOf<Meteor.LiveQueryHandle>().toBeObject();
 expectTypeOf(Meteor.subscribe).toBeFunction();
 
 const handle = Meteor.subscribe("subscription-handle-fixture");
+expectTypeOf(handle).toEqualTypeOf<Meteor.SubscriptionHandleWithId>();
 expectTypeOf(handle.subscriptionId).toEqualTypeOf<string>();
 
 const connectionHandle = DDP.connect("http://localhost:3000")
   .subscribe("subscription-handle-fixture");
+expectTypeOf(connectionHandle).toEqualTypeOf<Meteor.SubscriptionHandleWithId>();
 expectTypeOf(connectionHandle.subscriptionId).toEqualTypeOf<string>();
 
-// @ts-expect-error Every DDP subscription handle includes its subscription ID.
-const _missingId: Meteor.SubscriptionHandle = { ready: () => false, stop() {} };
+const _customHandle: Meteor.SubscriptionHandle = { ready: () => false, stop() {} };
+// @ts-expect-error Actual DDP handles require their subscription ID.
+const _missingId: Meteor.SubscriptionHandleWithId = { ready: () => false, stop() {} };
 // @ts-expect-error The public handle property is subscriptionId, not id.
 void handle.id;
 
