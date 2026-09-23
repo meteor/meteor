@@ -484,7 +484,6 @@ export class Connection {
         connection: self,
         remove() {
           delete this.connection._subscriptions[this.id];
-          this.ready && this.readyDeps.changed();
         },
         stop() {
           this.connection._sendQueued({ msg: 'unsub', id: id });

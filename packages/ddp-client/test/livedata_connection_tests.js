@@ -364,7 +364,7 @@ Tinytest.addAsync('livedata stub - reactive subscribe', async function (test) {
   // time.
   autorunHandle.stop();
   Tracker.flush();
-  test.isFalse(completerReady);
+  test.isFalse(completerHandle.ready());
   readyAutorunHandle.stop();
 
   test.length(stream.sent, 4);
