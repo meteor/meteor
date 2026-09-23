@@ -1,6 +1,13 @@
 require('../tool-env/install-babel.js');
 const { spawnSync } = require('node:child_process');
-const { mkdtempSync, readFileSync, writeFileSync } = require('node:fs');
+const {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} = require('node:fs');
 const { tmpdir } = require('node:os');
 const path = require('node:path');
 const { test } = require('node:test');
@@ -217,4 +224,57 @@ test(`${HELPER_IMPLEMENTATION} adapter keeps map input file-backed and rewrites 
 
   assert.equal(actual.code, expected.code);
   assert.equal(readFileSync(actual.map.path, 'utf8'), JSON.stringify(expectedMap));
+});
+
+test(`${HELPER_IMPLEMENTATION} adapter removes per-call inputs after composition`, async () => {
+  const fixture = makeFixture(1);
+  const inputRoot = mkdtempSync(path.join(tmpdir(), 'meteor-source-map-input-'));
+  const inputMapPath = path.join(inputRoot, 'input.js.map');
+  writeFileSync(inputMapPath, JSON.stringify(fixture.map));
+
+  let outputRoot;
+  try {
+    const actual = await composeSourceMapRecipe(createSourceMapRecipe([
+      { code: fixture.code, map: fixture.map },
+      {
+        code: fixture.code,
+        map: createFileBackedSourceMap({
+          path: inputMapPath,
+          byteLength: readFileSync(inputMapPath).length,
+        }),
+      },
+    ]));
+    outputRoot = path.dirname(actual.map.path);
+
+    assert.deepEqual(readdirSync(outputRoot), ['output.js.map']);
+    assert.equal(existsSync(inputMapPath), true);
+  } finally {
+    if (outputRoot) rmSync(outputRoot, { recursive: true, force: true });
+    rmSync(inputRoot, { recursive: true, force: true });
+  }
+});
+
+test(`${HELPER_IMPLEMENTATION} adapter removes its workspace after failure`, async () => {
+  const tempRoot = mkdtempSync(path.join(tmpdir(), 'meteor-source-map-failure-'));
+  const previousTmpdir = process.env.TMPDIR;
+  process.env.TMPDIR = tempRoot;
+
+  try {
+    await assert.rejects(
+      composeSourceMapRecipe(createSourceMapRecipe([{
+        code: 'broken map',
+        map: '{invalid json',
+      }])),
+      /Source-map helper failed/,
+    );
+
+    assert.deepEqual(readdirSync(tempRoot), []);
+  } finally {
+    if (previousTmpdir === undefined) {
+      delete process.env.TMPDIR;
+    } else {
+      process.env.TMPDIR = previousTmpdir;
+    }
+    rmSync(tempRoot, { recursive: true, force: true });
+  }
 });

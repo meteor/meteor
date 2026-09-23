@@ -128,63 +128,74 @@ export async function composeSourceMapRecipe(recipe, {
 
   const workspaceRoot = files.mkdtemp("meteor-source-map-");
   const inputRoots = new Set([workspaceRoot]);
+  const temporaryInputPaths = [];
   const pieces = [];
   let mappedIndex = 0;
 
-  for (const piece of recipe.pieces) {
-    if (typeof piece === "string") {
-      pieces.push({ kind: "literal", value: piece });
-      continue;
+  try {
+    for (const piece of recipe.pieces) {
+      if (typeof piece === "string") {
+        pieces.push({ kind: "literal", value: piece });
+        continue;
+      }
+
+      assert.strictEqual(typeof piece.code, "string");
+      const codePath = files.pathJoin(workspaceRoot, `input-${mappedIndex}.js`);
+      const mapPath = isFileBackedSourceMap(piece.map)
+        ? piece.map.path
+        : files.pathJoin(workspaceRoot, `input-${mappedIndex}.js.map`);
+
+      temporaryInputPaths.push(codePath);
+      files.writeFile(codePath, piece.code, "utf8");
+      if (isFileBackedSourceMap(piece.map)) {
+        inputRoots.add(files.pathDirname(piece.map.path));
+      } else {
+        const mapText = typeof piece.map === "string"
+          ? piece.map
+          : JSON.stringify(piece.map);
+        temporaryInputPaths.push(mapPath);
+        files.writeFile(mapPath, mapText, "utf8");
+      }
+
+      pieces.push({
+        kind: "mapped",
+        codePath,
+        mapPath,
+        relativePath: piece.relativePath || undefined,
+      });
+      mappedIndex += 1;
     }
 
-    assert.strictEqual(typeof piece.code, "string");
-    const codePath = files.pathJoin(workspaceRoot, `input-${mappedIndex}.js`);
-    const mapPath = isFileBackedSourceMap(piece.map)
-      ? piece.map.path
-      : files.pathJoin(workspaceRoot, `input-${mappedIndex}.js.map`);
-
-    files.writeFile(codePath, piece.code, "utf8");
-    if (isFileBackedSourceMap(piece.map)) {
-      inputRoots.add(files.pathDirname(piece.map.path));
-    } else {
-      const mapText = typeof piece.map === "string"
-        ? piece.map
-        : JSON.stringify(piece.map);
-      files.writeFile(mapPath, mapText, "utf8");
-    }
-
-    pieces.push({
-      kind: "mapped",
-      codePath,
-      mapPath,
-      relativePath: piece.relativePath || undefined,
+    const codePath = files.pathJoin(workspaceRoot, "output.js");
+    const mapPath = files.pathJoin(workspaceRoot, "output.js.map");
+    const response = await invokeHelper({
+      protocolVersion: PROTOCOL_VERSION,
+      workspaceRoot,
+      inputRoots: Array.from(inputRoots),
+      output: { codePath, mapPath, file, sourcePrefix },
+      pieces,
     });
-    mappedIndex += 1;
-  }
+    assert.strictEqual(response.protocolVersion, PROTOCOL_VERSION);
+    assert.strictEqual(response.success, true);
+    assert.strictEqual(response.codePath, codePath);
+    assert.strictEqual(response.mapPath, mapPath);
 
-  const codePath = files.pathJoin(workspaceRoot, "output.js");
-  const mapPath = files.pathJoin(workspaceRoot, "output.js.map");
-  const response = await invokeHelper({
-    protocolVersion: PROTOCOL_VERSION,
-    workspaceRoot,
-    inputRoots: Array.from(inputRoots),
-    output: { codePath, mapPath, file, sourcePrefix },
-    pieces,
-  });
-  assert.strictEqual(response.protocolVersion, PROTOCOL_VERSION);
-  assert.strictEqual(response.success, true);
-  assert.strictEqual(response.codePath, codePath);
-  assert.strictEqual(response.mapPath, mapPath);
-
-  const code = files.readFile(codePath, "utf8");
-
-  return {
-    code,
-    map: createFileBackedSourceMap({
+    const code = files.readFile(codePath, "utf8");
+    const map = createFileBackedSourceMap({
       path: mapPath,
       byteLength: response.mapBytes,
       file,
       hash: response.mapSha256,
-    }),
-  };
+    });
+
+    for (const inputPath of temporaryInputPaths) {
+      files.unlink(inputPath);
+    }
+    files.unlink(codePath);
+
+    return { code, map };
+  } catch (error) {
+    await files.freeTempDir(workspaceRoot);
+    throw error;
+  }
 }
