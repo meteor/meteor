@@ -2,6 +2,7 @@ import {
   waitForMeteorOutput,
 } from "./helpers";
 import { testMeteorRspackBundler } from './test-helpers';
+import { assertBlazeCheckout } from './helpers/blaze-helpers';
 
 describe('BasicBlaze App Bundling /', () => {
   describe('Meteor+Rspack Bundler /', testMeteorRspackBundler({
@@ -13,15 +14,17 @@ describe('BasicBlaze App Bundling /', () => {
       test: 'tests/main.js'
     },
     customAssertions: {
-      afterRun: async ({ result }) => {
+      afterRun: async ({ result, tempDir }) => {
         await waitForBlazeEnvs(result.outputLines);
+        await assertBlazeCheckout(tempDir, { phase: 'development' });
       },
       afterRunRebuildClient: async ({ allConsoleLogs }) => {
         // Check for HMR to not be enabled as incompatible with Blaze
         await waitForMeteorOutput(allConsoleLogs, /.*HMR.*Updated modules:*/, { negate: true });
       },
-      afterRunProduction: async ({ result }) => {
+      afterRunProduction: async ({ result, tempDir }) => {
         await waitForBlazeEnvs(result.outputLines);
+        await assertBlazeCheckout(tempDir, { phase: 'production' });
       },
       afterRunProductionRebuildClient: async ({ allConsoleLogs }) => {
         // Check for HMR to not be enabled as incompatible with Blaze
