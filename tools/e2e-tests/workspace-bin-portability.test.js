@@ -19,10 +19,10 @@ function isWithin(parent, child) {
     !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
 }
 
-async function assertCommand(executable) {
+async function assertCommand(executable, expected = 'portable') {
   assert.ok((await fs.stat(executable)).mode & 0o100, `${executable} must be executable`);
   const { stdout } = await execa(process.execPath, [executable], { stripFinalNewline: false });
-  expect(stdout).toBe('portable');
+  expect(stdout).toBe(expected);
 }
 
 // Search only real directories: following directory aliases could count a package
@@ -44,16 +44,24 @@ async function assertPackagedCommands(buildOutputDir, sourceDir, diagnostics) {
   expect(await fs.pathExists(sourceDir)).toBe(false);
   const bundle = await fs.realpath(path.join(buildOutputDir, 'bundle'));
   const packages = await findPackages(path.join(bundle, 'programs/server/npm'), [
-    '@example/workspace', 'portable-command',
+    '@example/workspace', '@example/other-workspace', 'portable-command',
   ]);
   for (const [name, instances] of packages) {
     assert.equal(instances.length, 1, `Expected exactly one packaged ${name}: ${instances}`);
   }
   const [workspace] = packages.get('@example/workspace');
+  const [otherWorkspace] = packages.get('@example/other-workspace');
   const [commandPackage] = packages.get('portable-command');
   const command = await fs.realpath(path.join(commandPackage, 'bin/run.js'));
+  const otherCommand = await fs.realpath(path.join(otherWorkspace, 'bin/run.js'));
   assert.ok(isWithin(bundle, command), `Command escapes bundle: ${command}`);
-  for (const name of ['relative', 'absolute']) {
+  assert.ok(isWithin(bundle, otherCommand), `Command escapes bundle: ${otherCommand}`);
+  for (const [name, expectedCommand, expectedOutput] of [
+    ['relative', command, 'portable'],
+    ['absolute', command, 'portable'],
+    ['cross-relative', otherCommand, 'cross-portable'],
+    ['cross-absolute', otherCommand, 'cross-portable'],
+  ]) {
     const executable = path.join(workspace, 'node_modules/.bin', name);
     assert.ok((await fs.lstat(executable)).isSymbolicLink(), `${executable} must remain a link`);
     const target = await fs.readlink(executable);
@@ -61,8 +69,8 @@ async function assertPackagedCommands(buildOutputDir, sourceDir, diagnostics) {
     assert.ok(!path.isAbsolute(target), `Packaged ${name} link must be relative: ${target}`);
     const resolved = await fs.realpath(executable);
     assert.ok(isWithin(bundle, resolved), `Packaged ${name} link escapes bundle: ${resolved}`);
-    assert.equal(resolved, command, `Packaged ${name} link must resolve to the packaged command`);
-    await assertCommand(executable);
+    assert.equal(resolved, expectedCommand, `Packaged ${name} link must resolve to its command`);
+    await assertCommand(executable, expectedOutput);
   }
 }
 
@@ -82,7 +90,8 @@ describePosix('Regressions / Workspace executable portability', () => {
       const commandPackage = path.join(tempDir, 'packages/portable-command');
       const packed = await execa('npm', ['pack', '--json'], { cwd: commandPackage });
       const [{ filename }] = JSON.parse(packed.stdout);
-      await execa('npm', ['install', '--save', path.join(commandPackage, filename), '../packages/workspace'], {
+      await execa('npm', ['install', '--save', path.join(commandPackage, filename),
+        '../packages/workspace', '../packages/other-workspace'], {
         cwd: appDir,
       });
 
@@ -92,6 +101,12 @@ describePosix('Regressions / Workspace executable portability', () => {
       const workspace = await fs.realpath(workspaceLink);
       assert.equal(workspace, path.join(tempDir, 'packages/workspace'));
       assert.ok(!isWithin(modules, workspace), 'Workspace must be outside app node_modules');
+      const otherWorkspaceLink = path.join(modules, '@example/other-workspace');
+      assert.ok((await fs.lstat(otherWorkspaceLink)).isSymbolicLink(),
+        'npm must link the other workspace');
+      const otherWorkspace = await fs.realpath(otherWorkspaceLink);
+      assert.equal(otherWorkspace, path.join(tempDir, 'packages/other-workspace'));
+      assert.ok(!isWithin(modules, otherWorkspace), 'Other workspace must be outside app node_modules');
       assert.ok(!(await fs.lstat(path.join(modules, 'portable-command'))).isSymbolicLink(),
         'npm must install the command tarball as a real directory');
       const command = await fs.realpath(path.join(modules, 'portable-command/bin/run.js'));
@@ -100,7 +115,13 @@ describePosix('Regressions / Workspace executable portability', () => {
       await fs.ensureDir(bin);
       await fs.symlink(path.relative(bin, command), path.join(bin, 'relative'));
       await fs.symlink(command, path.join(bin, 'absolute'));
+      const otherCommand = await fs.realpath(path.join(otherWorkspace, 'bin/run.js'));
+      await fs.symlink(path.relative(bin, otherCommand), path.join(bin, 'cross-relative'));
+      await fs.symlink(otherCommand, path.join(bin, 'cross-absolute'));
       for (const name of ['relative', 'absolute']) await assertCommand(path.join(bin, name));
+      for (const name of ['cross-relative', 'cross-absolute']) {
+        await assertCommand(path.join(bin, name), 'cross-portable');
+      }
 
       const { buildOutputDir, processResult } = await buildMeteorApp(tempDir, {
         isMonorepo: true,
@@ -124,7 +145,7 @@ describePosix('Regressions / Workspace executable portability', () => {
 
       const response = await page.goto(`http://localhost:${port}/portability`);
       expect(response.status()).toBe(200);
-      expect(await response.text()).toBe('portable');
+      expect(await response.text()).toBe('portable:cross-portable');
       expect(await fs.pathExists(tempDir)).toBe(false);
     } catch (error) {
       const logPath = path.join(__dirname, 'test-results', `workspace-bin-portability-${Date.now()}.log`);
