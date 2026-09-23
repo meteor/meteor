@@ -75,6 +75,7 @@
 
 import * as files from "../fs/files";
 import { Console } from "../console/console.js";
+import * as ts from "typescript";
 
 const TYPES_DIR = "types";
 const PACKAGES_SUBDIR = "packages";
@@ -277,10 +278,40 @@ function writeSingleFilePackage({
 }) {
   const copiedFiles = new Set();
   let usesPrivateModules = false;
+  const preserveLayout =
+    info.files &&
+    info.files.some((resource) =>
+      hasRelativeModuleSpecifier(resource.data.toString("utf8"))
+    );
 
-  const writeModule = ({ meteorModuleName, publicFileName, data }) => {
+  if (preserveLayout) {
+    for (const resource of info.files) {
+      if (!isSafeDeclarationResourcePath(resource.path)) continue;
+      const privateRelPath = `${DECLARATIONS_SUBDIR}/${normalizeResourcePath(resource.path)}`;
+      const privateAbsPath = files.pathJoin(packageDir, privateRelPath);
+      files.mkdir_p(files.pathDirname(privateAbsPath));
+      writeIfChanged(privateAbsPath, resource.data);
+      copiedFiles.add(privateRelPath);
+    }
+  }
+
+  const writeModule = ({
+    meteorModuleName,
+    publicFileName,
+    sourcePath,
+    data,
+  }) => {
     const body = data.toString("utf8");
+    const preservedRelPath = `${DECLARATIONS_SUBDIR}/${normalizeResourcePath(sourcePath)}`;
     if (isAmbientModuleScript(body)) {
+      if (preserveLayout && copiedFiles.has(preservedRelPath)) {
+        usesPrivateModules = true;
+        writeIfChanged(
+          files.pathJoin(packageDir, publicFileName),
+          Buffer.from(makeReferenceShim(preservedRelPath), "utf8")
+        );
+        return;
+      }
       writeIfChanged(
         files.pathJoin(packageDir, publicFileName),
         Buffer.from(`${body.trim()}\n`, "utf8")
@@ -289,13 +320,20 @@ function writeSingleFilePackage({
     }
 
     usesPrivateModules = true;
-    const privateRelPath = `${DECLARATIONS_SUBDIR}/${publicFileName}`;
+    const privateRelPath =
+      preserveLayout && copiedFiles.has(preservedRelPath)
+        ? preservedRelPath
+        : `${DECLARATIONS_SUBDIR}/${publicFileName}`;
     const privateAbsPath = files.pathJoin(packageDir, privateRelPath);
-    files.mkdir_p(files.pathDirname(privateAbsPath));
-    writeIfChanged(privateAbsPath, data);
-    copiedFiles.add(privateRelPath);
+    if (!copiedFiles.has(privateRelPath)) {
+      files.mkdir_p(files.pathDirname(privateAbsPath));
+      writeIfChanged(privateAbsPath, data);
+      copiedFiles.add(privateRelPath);
+    }
 
-    const privateModuleName = publicFileName.replace(/\.d\.ts$/, "");
+    const privateModuleName = privateRelPath
+      .slice(`${DECLARATIONS_SUBDIR}/`.length)
+      .replace(/\.d\.ts$/, "");
     writeIfChanged(
       files.pathJoin(packageDir, publicFileName),
       Buffer.from(
@@ -311,6 +349,7 @@ function writeSingleFilePackage({
   writeModule({
     meteorModuleName: `meteor/${name}`,
     publicFileName: MAIN_DTS,
+    sourcePath: info.entry,
     data: info.data,
   });
 
@@ -322,6 +361,7 @@ function writeSingleFilePackage({
       writeModule({
         meteorModuleName: `meteor/${name}/${moduleName}`,
         publicFileName: moduleFileName,
+        sourcePath: info.modulePaths[moduleName],
         data: moduleData,
       });
       entry.subModules.push({
@@ -943,7 +983,13 @@ function findTypesInfo(isopack, name) {
         modules[key] = findResourceData(isopack, filePath);
       }
     }
-    return { data, modules };
+    return {
+      data,
+      entry: normalizeResourcePath(isopack.typesEntry),
+      files: findAllDtsResources(isopack),
+      modules,
+      modulePaths: isopack.typesModules || {},
+    };
   }
 
   // Priority 2: package-types.json resource (backward compatibility)
@@ -978,7 +1024,13 @@ function findTypesInfo(isopack, name) {
             modules[key] = findResourceData(isopack, filePath);
           }
         }
-        return { data, modules };
+        return {
+          data,
+          entry: normalizeResourcePath(config.typesEntry),
+          files: findAllDtsResources(isopack),
+          modules,
+          modulePaths: config.modules || {},
+        };
       }
     }
   }
@@ -986,7 +1038,13 @@ function findTypesInfo(isopack, name) {
   // Priority 3: single .d.ts resource in the isopack
   const dtsResources = findAllDtsResources(isopack);
   if (dtsResources.length === 1) {
-    return { data: dtsResources[0].data, modules: null };
+    return {
+      data: dtsResources[0].data,
+      entry: normalizeResourcePath(dtsResources[0].path),
+      files: dtsResources,
+      modules: null,
+      modulePaths: {},
+    };
   }
 
   return null;
@@ -1000,6 +1058,23 @@ function findTypesInfo(isopack, name) {
  */
 function normalizeResourcePath(p) {
   return p && p.startsWith("./") ? p.slice(2) : p;
+}
+
+/**
+ * Resource paths become output paths in layout-preserving file mode. Keep
+ * them package-relative on POSIX and Windows even for malformed old isopacks.
+ */
+function isSafeDeclarationResourcePath(p) {
+  const normalized = normalizeResourcePath(p);
+  return (
+    typeof normalized === "string" &&
+    normalized !== "" &&
+    !normalized.startsWith("/") &&
+    !normalized.includes("\\") &&
+    !normalized
+      .split("/")
+      .some((segment) => segment === "" || segment === "." || segment === "..")
+  );
 }
 
 /**
@@ -1201,17 +1276,16 @@ function generatePackagesDeclaration(entries) {
 }
 
 /**
- * Matches a top-level ambient module declaration such as
+ * Matches an ambient module declaration such as
  * `declare module 'meteor/random' {` or `declare module "foo";`.
- * Anchored to the start of a line so occurrences inside comments that are
- * indented, or inside nested blocks, are unlikely to match.
+ * The TypeScript parser below decides whether the containing file is an
+ * external module; this regex is only the cheap declaration-presence check.
  */
 const DECLARE_MODULE_RE = /^\s*declare\s+module\s+['"]/m;
-const TOP_LEVEL_IMPORT_OR_EXPORT_RE = /^(?:import|export)\b/m;
 
 /**
  * True when a .d.ts file already contains its own ambient module
- * declaration(s).  Packages written for zodern:types typically ship files
+ * declaration(s). Packages written for zodern:types typically ship files
  * like `declare module 'meteor/pkg' { … }`; those must be used verbatim,
  * because ambient module declarations cannot be nested — wrapping them in
  * another `declare module` block would be a TypeScript syntax error.
@@ -1222,17 +1296,31 @@ function hasOwnModuleDeclaration(body) {
 
 /**
  * True only for a declaration script whose ambient module blocks provide the
- * public module ids directly.  A file with a column-zero import/export is an
+ * public module ids directly. A file with a top-level import/export is an
  * external module even if it also contains `declare module` augmentations;
  * it must be loaded through an adapter so its own exports remain importable.
- * Declaration files generated by TypeScript and the mixed declarations in
- * core packages consistently emit top-level imports/exports at column zero.
+ * Parsing avoids mistaking comments and nested exports for module indicators,
+ * while correctly accepting leading whitespace on top-level declarations.
  */
 function isAmbientModuleScript(body) {
-  return (
-    hasOwnModuleDeclaration(body) &&
-    !TOP_LEVEL_IMPORT_OR_EXPORT_RE.test(body)
+  if (!hasOwnModuleDeclaration(body)) return false;
+  const sourceFile = ts.createSourceFile(
+    "declarations.d.ts",
+    body,
+    ts.ScriptTarget.Latest,
+    false,
+    ts.ScriptKind.TS
   );
+  return !ts.isExternalModule(sourceFile);
+}
+
+/**
+ * True when a declaration imports or re-exports a relative module. File-mode
+ * packages with these links must retain their original declaration tree.
+ */
+function hasRelativeModuleSpecifier(body) {
+  const info = ts.preProcessFile(body, true, true);
+  return info.importedFiles.some(({ fileName }) => /^\.\.?\//.test(fileName));
 }
 
 /**
