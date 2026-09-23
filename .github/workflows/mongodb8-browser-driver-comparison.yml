@@ -1,0 +1,47 @@
+name: Browser test driver MongoDB comparison
+on:
+  push:
+    branches: [codex/mongodb8-runtime-validation]
+    paths:
+      - .github/workflows/mongodb8-browser-driver-comparison.yml
+permissions:
+  contents: read
+jobs:
+  compare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    container:
+      image: node:22-bookworm
+      options: --init --cpus 4 --memory 16g --security-opt seccomp=unconfined
+    strategy:
+      fail-fast: false
+      matrix:
+        mongo: ['7.0.16', '8.0.29']
+    env:
+      USE_TEST_DEV_BUNDLE_SERVER: '1'
+      METEOR_ALLOW_SUPERUSER: '1'
+      TOOL_NODE_FLAGS: '--max_old_space_size=12288'
+      NODE_OPTIONS: '--max_old_space_size=16384 --dns-result-order=ipv4first'
+      PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.cache/ms-playwright
+      npm_config_audit: 'false'
+      METEOR_E2E_TEST_RETRIES: '0'
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install dependencies
+        run: npm install
+      - name: Install E2E dependencies and browser
+        run: npm run install:e2e
+      - name: Install identical MongoDB 8 test bundle
+        run: bash scripts/ci/verify-mongodb8-bundle.sh
+      - name: Replace only MongoDB binaries for baseline
+        if: matrix.mongo == '7.0.16'
+        run: |
+          mkdir /tmp/mongo7
+          curl -fSL https://github.com/meteor/mongodb-builder/releases/download/v7.0.16/mongodb-linux-x86_64-7.0.16.tgz | tar xz -C /tmp/mongo7 --strip-components=1
+          cp /tmp/mongo7/bin/mongod /tmp/mongo7/bin/mongos dev_bundle/mongodb/bin/
+      - name: Prepare Meteor
+        run: ./meteor --get-ready --allow-superuser
+      - name: Run browser driver regression
+        run: |
+          dev_bundle/mongodb/bin/mongod --version
+          npm run test:e2e -- --runInBand --runTestsByPath regressions/test-in-browser.test.js
