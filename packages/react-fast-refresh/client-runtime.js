@@ -1,141 +1,86 @@
-var runtime = require('react-refresh/runtime');
+const runtime = require('react-refresh/runtime');
 
-var timeout = null;
+let timeout;
 function scheduleRefresh() {
-  if (!timeout) {
-    timeout = setTimeout(function () {
-      timeout = null;
-      runtime.performReactRefresh();
-    }, 0);
-  }
+  timeout ??= setTimeout(() => {
+    timeout = null;
+    runtime.performReactRefresh();
+  }, 0);
 }
 
 // The react refresh babel plugin only registers functions. For react
 // to update other types of exports (such as classes), we have to
 // register them
 function registerExportsForReactRefresh(moduleId, moduleExports) {
-  runtime.register(moduleExports, moduleId + ' %exports%');
+  runtime.register(moduleExports, `${moduleId} %exports%`);
+  if (moduleExports == null || typeof moduleExports !== 'object') return;
 
-  if (moduleExports == null || typeof moduleExports !== 'object') {
-    // Exit if we can't iterate over exports.
-    return;
-  }
-
-  for (var key in moduleExports) {
-    var desc = Object.getOwnPropertyDescriptor(moduleExports, key);
-    if (desc && desc.get) {
-      // Don't invoke getters as they may have side effects.
-      continue;
+  for (const key of Object.keys(moduleExports)) {
+    if (!Object.getOwnPropertyDescriptor(moduleExports, key)?.get) {
+      runtime.register(moduleExports[key], `${moduleId} %exports% ${key}`);
     }
-
-    var exportValue = moduleExports[key];
-    var typeID = moduleId + ' %exports% ' + key;
-    runtime.register(exportValue, typeID);
   }
 }
 
 // Modules that only export components become React Refresh boundaries.
+// DOM elements are excluded to avoid triggering deprecated getter warnings.
 function isReactRefreshBoundary(moduleExports) {
-  if (runtime.isLikelyComponentType(moduleExports)) {
-    return true;
-  }
-  if (moduleExports == null || typeof moduleExports !== 'object') {
-    // Exit if we can't iterate over exports.
+  if (runtime.isLikelyComponentType(moduleExports)) return true;
+  if (moduleExports == null || typeof moduleExports !== 'object' || moduleExports instanceof Element) {
     return false;
   }
 
-  // Is a DOM element. If we iterate its properties, we might cause the
-  // browser to show warnings when accessing depreciated getters on its
-  // prototype
-  if (moduleExports instanceof Element) {
-    return false;
-  }
+  const keys = Object.keys(moduleExports);
+  if (keys.length === 0) return false;
 
-  var hasExports = false;
-  var onlyExportComponents = true;
-
-  for (var key in moduleExports) {
-    hasExports = true;
-
-    var desc = Object.getOwnPropertyDescriptor(moduleExports, key);
-    if (desc && desc.get) {
-      // Don't invoke getters as they may have side effects.
-      return false;
-    }
-
+  return keys.every(key => {
+    // Don't invoke getters as they may have side effects
+    if (Object.getOwnPropertyDescriptor(moduleExports, key)?.get) return false;
     try {
-      if (!runtime.isLikelyComponentType(moduleExports[key])) {
-        onlyExportComponents = false;
-      }
+      return runtime.isLikelyComponentType(moduleExports[key]);
     } catch (e) {
-      if (e.name === 'SecurityError') {
-        // Not a component. Could be a cross-origin object or something else
-        // we don't have access to
-        return false;
-      }
-
+      if (e.name === 'SecurityError') return false;
       throw e;
     }
-  }
-
-  return hasExports && onlyExportComponents;
+  });
 }
 
 runtime.injectIntoGlobalHook(window);
 
-window.$RefreshReg$ = function () { };
-window.$RefreshSig$ = function () {
-  return function (type) { return type; };
-};
+window.$RefreshReg$ = () => {};
+window.$RefreshSig$ = () => (type) => type;
 
-var moduleInitialState = new WeakMap();
+const moduleInitialState = new WeakMap();
 
 module.hot.onRequire({
-  after: function (module) {
-    // TODO: handle modules with errors
-
-    var beforeStates = moduleInitialState.get(module);
-    var beforeState = beforeStates && beforeStates.pop();
-    if (!beforeState) {
-      return;
-    }
+  after(module) {
+    const beforeState = moduleInitialState.get(module)?.pop();
+    if (!beforeState) return;
 
     window.$RefreshReg$ = beforeState.prevRefreshReg;
     window.$RefreshSig$ = beforeState.prevRefreshSig;
     if (isReactRefreshBoundary(module.exports)) {
       registerExportsForReactRefresh(module.id, module.exports);
       module.hot.accept();
-
       scheduleRefresh();
     }
   }
 });
 
-module.exports = function setupModule (module) {
-  if (module.loaded) {
-    // The module was already executed
-    return;
+module.exports = function setupModule(module) {
+  if (module.loaded) return;
+
+  if (!moduleInitialState.has(module)) {
+    moduleInitialState.set(module, []);
   }
 
-  var beforeStates = moduleInitialState.get(module);
-
-  if (beforeStates === undefined) {
-    beforeStates = [];
-    moduleInitialState.set(module, beforeStates);
-  }
-
-  var prevRefreshReg = window.$RefreshReg$;
-  var prevRefreshSig = window.$RefreshSig$;
-
-  window.RefreshRuntime = runtime;
-  window.$RefreshReg$ = function (type, _id) {
-    var fullId = module.id + ' ' + _id;
-    RefreshRuntime.register(type, fullId);
-  };
-  window.$RefreshSig$ = RefreshRuntime.createSignatureFunctionForTransform;
-
-  beforeStates.push({
-    prevRefreshReg: prevRefreshReg,
-    prevRefreshSig: prevRefreshSig
+  moduleInitialState.get(module).push({
+    prevRefreshReg: window.$RefreshReg$,
+    prevRefreshSig: window.$RefreshSig$
   });
+
+  window.$RefreshReg$ = (type, _id) => {
+    runtime.register(type, `${module.id} ${_id}`);
+  };
+  window.$RefreshSig$ = runtime.createSignatureFunctionForTransform;
 };
