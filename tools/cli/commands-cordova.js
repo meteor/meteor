@@ -9,6 +9,7 @@ import {
   ensureDevBundleDependencies,
   filterPlatforms,
 } from '../cordova/index.js';
+import { TAURI_PLATFORMS, TAURI_SUPPORTED_PLATFORMS } from '../tauri/index.js';
 import {PlatformList} from "../project-context";
 
 async function createProjectContext(appDir) {
@@ -25,8 +26,6 @@ async function createProjectContext(appDir) {
 }
 
 async function doAddPlatform(options) {
-  import { CordovaProject } from '../cordova/project.js';
-
   Console.setVerbose(!!options.verbose);
 
   const projectContext = await createProjectContext(options.appDir);
@@ -34,8 +33,25 @@ async function doAddPlatform(options) {
   const platformsToAdd = options.args;
   let installedPlatforms = projectContext.platformList.getPlatforms();
 
+  // Tauri platforms are handled separately from Cordova: they don't require the
+  // Cordova dev bundle or a cordova-lib project sync.
+  const tauriPlatformsToAdd =
+    platformsToAdd.filter(p => TAURI_PLATFORMS.includes(p));
+  const cordovaPlatformsToAdd =
+    platformsToAdd.filter(p => !TAURI_PLATFORMS.includes(p));
+
   await main.captureAndExit('', 'adding platforms', async () => {
-    for (var platform of platformsToAdd) {
+    for (var platform of tauriPlatformsToAdd) {
+      if (installedPlatforms.includes(platform)) {
+        buildmessage.error(`${platform}: platform is already added`);
+      } else if (!TAURI_SUPPORTED_PLATFORMS.includes(platform)) {
+        buildmessage.error(
+          `${platform}: this Tauri platform is not supported yet ` +
+          `(supported: ${TAURI_SUPPORTED_PLATFORMS.join(', ')})`);
+      }
+    }
+
+    for (var platform of cordovaPlatformsToAdd) {
       if (installedPlatforms.includes(platform)) {
         buildmessage.error(`${platform}: platform is already added`);
       } else if (!CORDOVA_PLATFORMS.includes(platform)) {
@@ -47,12 +63,29 @@ async function doAddPlatform(options) {
       return;
     }
 
+    // Add Tauri platforms straight to the platform list.
+    if (tauriPlatformsToAdd.length) {
+      installedPlatforms = installedPlatforms.concat(tauriPlatformsToAdd);
+      await projectContext.platformList.write(installedPlatforms);
+      for (var platform of tauriPlatformsToAdd) {
+        Console.info(`${platform}: added platform`);
+      }
+    }
+
+    if (!cordovaPlatformsToAdd.length) {
+      return;
+    }
+
+    // Only require cordova-lib (via CordovaProject) when actually working with
+    // Cordova platforms, so Tauri-only projects don't need the Cordova bits of
+    // the dev bundle.
+    const { CordovaProject } = require('../cordova/project.js');
     const cordovaProject = new CordovaProject(projectContext);
     await cordovaProject.init();
 
     if (buildmessage.jobHasMessages()) return;
 
-    installedPlatforms = installedPlatforms.concat(platformsToAdd);
+    installedPlatforms = installedPlatforms.concat(cordovaPlatformsToAdd);
     const cordovaPlatforms = filterPlatforms(installedPlatforms);
     await cordovaProject.ensurePlatformsAreSynchronized(cordovaPlatforms);
 
@@ -63,7 +96,7 @@ async function doAddPlatform(options) {
     // Only write the new platform list when we have successfully synchronized.
     await projectContext.platformList.write(installedPlatforms);
 
-    for (var platform of platformsToAdd) {
+    for (var platform of cordovaPlatformsToAdd) {
       Console.info(`${platform}: added platform`);
       if (cordovaPlatforms.includes(platform)) {
         await cordovaProject.checkPlatformRequirements(platform);
@@ -73,7 +106,6 @@ async function doAddPlatform(options) {
 }
 
 async function doRemovePlatform(options) {
-  import { CordovaProject } from '../cordova/project.js';
   import { PlatformList } from '../project-context.js';
 
   const projectContext = await createProjectContext(options.appDir);
@@ -103,12 +135,17 @@ version of Meteor`);
       Console.info(`${platform}: removed platform`);
     }
 
-    if (process.platform !== 'win32') {
+    // Only touch the Cordova project if Cordova platforms are still involved;
+    // a Tauri-only project has no cordova-lib project to synchronize.
+    const remainingCordova = filterPlatforms(installedPlatforms);
+    const hadCordova = filterPlatforms(
+      projectContext.platformList.getPlatforms()).length > 0;
+    if (process.platform !== 'win32' && (remainingCordova.length || hadCordova)) {
+      const { CordovaProject } = require('../cordova/project.js');
       const cordovaProject = new CordovaProject(projectContext);
       await cordovaProject.init();
       if (buildmessage.jobHasMessages()) return;
-      const cordovaPlatforms = filterPlatforms(installedPlatforms);
-      await cordovaProject.ensurePlatformsAreSynchronized(cordovaPlatforms);
+      await cordovaProject.ensurePlatformsAreSynchronized(remainingCordova);
     }
   });
 }
@@ -127,7 +164,12 @@ main.registerCommand(
     notOnWindows: false,
   },
   async function(options) {
-    await ensureDevBundleDependencies();
+    // Skip installing the Cordova dev bundle when only adding Tauri platforms.
+    const onlyTauri = options.args.length > 0 &&
+      options.args.every(p => TAURI_PLATFORMS.includes(p));
+    if (!onlyTauri) {
+      await ensureDevBundleDependencies();
+    }
     await doAddPlatform(options);
   }
 );
@@ -140,7 +182,11 @@ main.registerCommand({
   requiresApp: true,
   catalogRefresh: new catalog.Refresh.Never()
 }, async function (options) {
-  await ensureDevBundleDependencies();
+  const onlyTauri = options.args.length > 0 &&
+    options.args.every(p => TAURI_PLATFORMS.includes(p));
+  if (!onlyTauri) {
+    await ensureDevBundleDependencies();
+  }
   await doRemovePlatform(options);
 });
 

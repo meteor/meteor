@@ -3,6 +3,7 @@ import { create as createStream } from "combined-stream2";
 
 import { headTemplate as modernHeadTemplate, closeTemplate as modernCloseTemplate } from './template-web.browser';
 import { headTemplate as cordovaHeadTemplate, closeTemplate as cordovaCloseTemplate } from './template-web.cordova';
+import { headTemplate as tauriHeadTemplate, closeTemplate as tauriCloseTemplate } from './template-web.tauri';
 
 // Copied from webapp_server
 const readUtf8FileSync = filename => readFileSync(filename, 'utf8');
@@ -156,6 +157,10 @@ function getTemplate(arch) {
 
   if (prefix === "web.cordova") {
     return { headTemplate: cordovaHeadTemplate, closeTemplate: cordovaCloseTemplate };
+  }
+
+  if (prefix === "web.tauri") {
+    return { headTemplate: tauriHeadTemplate, closeTemplate: tauriCloseTemplate };
   }
 
   throw new Error("Unsupported arch: " + arch);
