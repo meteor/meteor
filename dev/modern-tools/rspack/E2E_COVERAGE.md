@@ -264,17 +264,17 @@ Meteor app inside a pnpm workspace monorepo, with shared code in `workspace:*` p
 
 ### workspace
 
-Minimal Meteor app with an external npm workspace and an internal command tarball;
+Minimal Meteor app with two external npm workspaces and an internal command tarball;
 Build only, without Rspack. POSIX symlinks; Windows command shims are not covered.
 Covered by `workspace-bin-portability.test.js`.
 
 | What is covered | Phase |
 |----------------|-------|
-| npm installs the command as a real directory and the workspace as an external symlink | Init |
-| Relative and absolute workspace `.bin` links resolve to the packaged command after source removal | Build |
-| Command retains executable mode and reads its package-relative JSON resource | Build |
+| npm installs the command as a real directory and both workspaces as external symlinks | Init |
+| Relative and absolute workspace `.bin` links resolve to the packaged command or copied second workspace after source removal | Build |
+| Commands retain executable mode and read their package-relative JSON resources | Build |
 | Links survive server runtime dependency installation | Build |
-| Built server invokes the workspace command at request time and returns `portable` to Chromium | Build |
+| Built server invokes both workspace commands at request time and returns `portable:cross-portable` to Chromium | Build |
 
 ### server-only
 

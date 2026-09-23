@@ -2668,6 +2668,10 @@ class JsImage {
           // will be copied to the destination directory. A little bit of
           // overcopying vastly simplifies the job of the filter.
           copyOptions.filter = prodPackagePredicate;
+          // The predicate cannot recognize a .bin symlink into another
+          // workspace by its resolved path. Builder can retain it when that
+          // target is also present in the copied production bundle.
+          copyOptions.preserveCopiedExternalLinks = true;
         }
 
         await builder.copyNodeModulesDirectory(copyOptions);
