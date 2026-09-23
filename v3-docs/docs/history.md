@@ -41,7 +41,7 @@ This is a complete history of changes for Meteor releases.
 - Log Meteor-Rspack dev-server proxy failures with the upstream error, request, and target, and summarize repeated failures every five seconds instead of flooding the console, [PR#14348](https://github.com/meteor/meteor/pull/14348)
 - Batch independent npm installs and prefetch local package dependencies with bounded concurrency during `meteor --get-ready`, falling back to per-package preparation when a batch fails, [PR#14683](https://github.com/meteor/meteor/pull/14683)
 - Reuse the package `.npm` cache for exact `git+https://…#v<semver>` `Npm.depends` declarations when the shrinkwrap and installed tree agree on the resolved commit, [PR#14681](https://github.com/meteor/meteor/pull/14681). The package shrinkwrap format moves to `lockfileVersion` 5 and records the declared `Npm.depends` versions, so each package's `.npm` directory is reinstalled once on the first build after updating and its `npm-shrinkwrap.json` is rewritten
-- Upgrade the development bundle to Node.js 26.8.2 and npm 11.19.0, [PR#14412](https://github.com/meteor/meteor/pull/14412)
+- Upgrade the development bundle to Node.js 26.10.0 and npm 11.19.1, [PR#14412](https://github.com/meteor/meteor/pull/14412)
 - Harden the HttpOnly Accounts cookie endpoints with explicit server enablement, app-origin and login-token validation, bounded requests, no-store responses, `SameSite=Strict`, and configurable per-client rate limiting, [PR#14726](https://github.com/meteor/meteor/pull/14726)
 - Validate the complete `requestLoginTokenForUser` payload before account lookup or creation and include the method in the default Accounts request-rate rule, [PR#14725](https://github.com/meteor/meteor/pull/14725)
 
@@ -61,7 +61,7 @@ All Merged PRs@[GitHub PRs 3.6](https://github.com/meteor/meteor/pulls?q=is%3Apr
 
 #### Breaking Changes
 
-- Meteor now runs applications and build tooling on Node.js 26.8.2 with npm 11.19.0. Validate native dependencies and any code that depends on Node.js runtime behavior before deploying.
+- Meteor now runs applications and build tooling on Node.js 26.10.0 with npm 11.19.1. Validate native dependencies and any code that depends on Node.js runtime behavior before deploying.
 - `rspack@1.4.0` requires Rspack 2.x: `@rspack/core`, `@rspack/cli`, and `@rspack/dev-server` 2.2.0 or newer, and `@meteorjs/rspack` 3.0.0. Meteor installs them on the next run when automatic dependency installation is enabled. Custom `rspack.config.js` overrides must follow the [Rspack 1.x migration guide](https://rspack.rs/guide/migration/rspack_1.x).
 - `@meteorjs/rspack@3.0.0` replaces `webpack-merge` with `rspack-merge` and declares Rspack 2.2.0 peer dependencies.
 - Apps using HttpOnly login cookies must enable `useHttpOnlyCookies` in configuration visible to the server. The cookie endpoints now require app-origin requests, `/set` requires JSON and a valid unexpired login token, and the cookie uses `SameSite=Strict`, which changes authentication on an initial top-level navigation from another site.
