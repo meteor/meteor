@@ -7,6 +7,7 @@ on:
       - reopened
       - synchronize
     paths:
+      - "scripts/ci/verify-mongodb8-bundle.cjs"
       - 'meteor'
       - 'meteor.bat'
       - 'tools/**'
@@ -22,6 +23,8 @@ on:
       - devel
 
 env:
+  # Temporary MongoDB 8 validation bundle, published only to the test server.
+  USE_TEST_DEV_BUNDLE_SERVER: "1"
   # npm submits an audit request with every install. Meteor runs many installs
   # when caches are cold, and this workflow does not consume their automatic
   # audit reports. Avoid making CI reliability depend on npm's audit endpoint.
@@ -36,7 +39,7 @@ env:
 
 jobs:
   test:
-    runs-on: windows-2019-meteor
+    runs-on: windows-2022
     concurrency:
       group: ${{ github.head_ref }}-meteor-selftest-windows
       cancel-in-progress: true
@@ -84,6 +87,9 @@ jobs:
         run: |
           $env:PATH = "C:\Program Files\7-Zip;$env:PATH"
           .\scripts\windows\ci\install.ps1
+
+      - name: Verify MongoDB 8 dev bundle
+        run: node scripts/ci/verify-mongodb8-bundle.cjs
 
       # Run ONLY when the cache was NOT restored
       - name: Prepare Meteor (cache miss)

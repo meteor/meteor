@@ -3,6 +3,10 @@ name: Test DDP Transports
 on:
   pull_request:
 
+env:
+  # Temporary MongoDB 8 validation bundle, published only to the test server.
+  USE_TEST_DEV_BUNDLE_SERVER: "1"
+
 jobs:
   test-ddp-transport:
     strategy:
@@ -52,6 +56,9 @@ jobs:
 
       - name: Install npm dependencies
         run: npm install
+
+      - name: Verify MongoDB 8 dev bundle
+        run: node scripts/ci/verify-mongodb8-bundle.cjs
 
       - name: Run DDP server tests (${{ matrix.transport }})
         run: ./packages/test-in-console/run.sh "ddp-server"
