@@ -57,8 +57,8 @@ that is evaluated on a per-request basis. For example:
 ```js
 // Enable offline mode using a value from database and certificate validation
 Meteor.AppCache.config({
-  // This option is available starting from appcache@1.2.4
-  enableCallback: () => {
+  // This option is available starting from appcache@1.2.5
+  enableCallback: (req) => {
     if (!getSettingsFromDb("public.appcache_enabled")) {
       return false;
     }

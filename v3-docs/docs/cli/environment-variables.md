@@ -227,7 +227,7 @@ Used to pass Node.js flags that Meteor will inherit and spread to other tool pro
 
 By default, these flags are automatically spread to `NODE_OPTIONS` so that tools like Rspack inherit them. This behavior can be controlled using [`TOOL_NODE_FLAGS_INHERIT`](#tool-node-flags-spread).
 
-For full list of available flags see the [Node documentation](https://nodejs.org/dist/latest-v12.x/docs/api/cli.html).
+For full list of available flags see the [Node documentation](https://nodejs.org/api/cli.html).
 
 ## TOOL_NODE_FLAGS_INHERIT
 (_development, production_)

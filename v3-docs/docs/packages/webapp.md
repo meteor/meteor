@@ -128,7 +128,7 @@ There are a couple things to think about with this approach.
 
 We're reading the contents of index.html using the [Assets](../api/assets.md) module that makes it really easy to read files out of the _private_ root folder.
 
-We're using the [connect-route](https://www.npmjs.com/package/connect-route) NPM package to simplify WebApp route processing. But you can use any package you want to understand what is being requested.
+We're using an [Express](https://expressjs.com/) router (`express.Router()`), since `webapp` exposes the Express API through `WebApp.handlers`. But you can use any routing package you want to understand what is being requested.
 
 And finally, if you decide to use this technique you'll want to make sure you understand how conflicting client side routing will affect user experience.
 

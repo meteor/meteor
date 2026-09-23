@@ -45,7 +45,7 @@ We provide the final app for both the Rspack and Meteor bundlers. This guide fol
 You can find the final version of this app on GitHub using the [Rspack bundler](https://github.com/meteor/meteor3-vue3/tree/3.4-rspack) or the [Meteor bundler](https://github.com/meteor/meteor3-vue3/tree/3.4-meteor).
 :::
 
-You will find the `client` directory contains files for your client-side setup. Inside, you can see for example `client/main.jsx` where Meteor is rendering your App main component into the HTML.
+You will find the `client` directory contains files for your client-side setup. Inside, you can see for example `client/main.js`, the client entry point, which imports `imports/ui/main.js` — the file where your App main component is mounted into the HTML.
 
 Check the server directory for the server setup where you will see `server/main.js` populating your MongoDB database with some default data. There's no need to install MongoDB separately, as Meteor includes an embedded version.
 
@@ -475,7 +475,7 @@ Inside the function, we are adding a task to the `tasks` collection by calling `
 ### 3.5: Show Newest Tasks First
 
 
-Now, you just need to make a change which will improve user experience: we will show the newest tasks first. We can accomplish this quickly by sorting our [MongoDB](/tutorials/collections/collections#mongo-collections) query.
+Now, you just need to make a change which will improve user experience: we will show the newest tasks first. We can accomplish this quickly by sorting our [MongoDB](/tutorials/collections/collections#mongodb-collections-in-meteor) query.
 
 
 ::: code-group
@@ -866,16 +866,6 @@ meteor add accounts-password
 ```
 
 > There are many more authentication methods supported. You can read more about the accounts system [here](/api/accounts).
-
-
-
-We also recommend you to install `bcrypt` node module, otherwise you are going to see a warning saying that you are using pure-Javascript implementation of it.
-
-```shell
-meteor npm install --save bcrypt
-```
-
-> You should always use `meteor npm` instead of only `npm` so you always use the `npm` version pinned by Meteor, this helps you to avoid problems due to different versions of npm installing different modules.
 
 
 ### 7.2: Create User Account
@@ -1354,7 +1344,7 @@ You can check your logs on Galaxy, including the part that Galaxy is building yo
 
 Now you should be able to access your Galaxy dashboard at `https://galaxy.meteor.com/app/vue3-meteor-3.meteorapp.com`.
 
-You can also access your app on Galaxy 2.0 which is currently in beta at `https://galaxy-beta.meteor.com/<your-username>/us-east-1/apps/<your-app-name>.meteorapp.com`. Remember to use your own subdomain instead of `vue3-meteor-3`.
+You can also manage your app on the [Galaxy Cloud dashboard](https://my.galaxycloud.app/).
 
 You can access the app at [vue3-meteor-3.meteorapp.com](https://vue3-meteor-3.meteorapp.com/)! Just use your subdomain to access yours!
 

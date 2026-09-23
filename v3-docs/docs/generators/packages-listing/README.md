@@ -15,4 +15,4 @@ Should follow the following format:
 }
 ```
 
-At the end, this script will update the file located in `docs/source/packages/packages-listing.md` with the new list of packages.
+At the end, this script will update the file located in `v3-docs/docs/packages/packages-listing.md` with the new list of packages.

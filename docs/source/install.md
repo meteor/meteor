@@ -20,7 +20,6 @@ You need to install the Meteor command line tool to create, run, and manage your
 - Apple M1 is natively supported from Meteor 2.5.1 onward (for older versions, rosetta terminal is required).
 - If you are on a Mac M1 (Arm64 version) you need to have Rosetta 2 installed, as Meteor uses it for running MongoDB. Check how to install it [here](https://osxdaily.com/2020/12/04/how-install-rosetta-2-apple-silicon-mac/).
 - Disabling antivirus (Windows Defender, etc.) will improve performance.
-- For compatibility, Linux binaries are built with CentOS 6.4 i386/amd64.
 
 <h3 id="prereqs-mobile">Mobile Development</h3>
 

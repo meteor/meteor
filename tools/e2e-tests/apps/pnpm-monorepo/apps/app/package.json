@@ -1,0 +1,28 @@
+{
+  "name": "meteor-pnpm-app",
+  "private": true,
+  "scripts": {
+    "start": "meteor run",
+    "test": "meteor test --once --driver-package meteortesting:mocha"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.23.5",
+    "@example/shared": "workspace:*",
+    "@example/server": "workspace:*",
+    "@example/ui": "workspace:*",
+    "@swc/helpers": "^0.5.17",
+    "meteor-node-stubs": "^1.2.12"
+  },
+  "devDependencies": {
+    "playwright": "1.59.0"
+  },
+  "meteor": {
+    "mainModule": {
+      "client": "client/main.js",
+      "server": "server/main.js"
+    },
+    "testModule": "tests/main.test.js",
+    "autoInstallDeps": false,
+    "modern": true
+  }
+}

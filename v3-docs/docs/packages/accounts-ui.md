@@ -28,7 +28,7 @@ when the URLs are loaded.
 
 ## Customizing the UI
 
-If you want to control the look and feel of your accounts system a little more, we recommend reading the [useraccounts](/tutorials/accounts/accounts#useraccounts) section of the Meteor Guide.
+If you want more control over the look and feel of your accounts UI, you can customize this package's [CSS variables](#css-variables) below, or build your own login UI using the accounts API described in the [Users and Accounts article](/tutorials/accounts/accounts).
 
 ### CSS Variables
 

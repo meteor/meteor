@@ -1,12 +1,9 @@
 # Dynamic Imports
 
-> **Note:** Dynamic imports require Meteor 1.5 or higher.
-
 The `dynamic-import` package provides an implementation of
 `Module.prototype.dynamicImport`, an extension of the module runtime which
-powers the [dynamic `import(...)`](https://github.com/tc39/proposal-dynamic-import)
-statement, an up-and-coming (ECMA2020) addition to the
-ECMAScript standard.
+powers the [dynamic `import(...)`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/import)
+expression, part of the ECMAScript standard since ES2020.
 
 The dynamic `import(...)` statement is a complementary method to the static
 `import` technique of requiring a module. While a statically `import`-ed

@@ -12,7 +12,7 @@ meteor add mobile-status-bar
 
 ## How it works
 
-The package bundles the standard [`cordova-plugin-statusbar`](https://github.com/apache/cordova-plugin-statusbar/blob/master/doc/index.md) Cordova plugin. It only takes effect in a native Cordova build.
+The package bundles the standard [`cordova-plugin-statusbar`](https://github.com/apache/cordova-plugin-statusbar/blob/rel/2.4.3/README.md) Cordova plugin. It only takes effect in a native Cordova build.
 
 ## Configuration
 
@@ -23,7 +23,7 @@ App.setPreference('StatusBarOverlaysWebView', 'false');
 App.setPreference('StatusBarBackgroundColor', '#000000');
 ```
 
-For the full list of available preferences and the runtime `StatusBar` plugin API, see the [`cordova-plugin-statusbar` documentation](https://github.com/apache/cordova-plugin-statusbar/blob/master/doc/index.md).
+For the full list of available preferences and the runtime `StatusBar` plugin API, see the [`cordova-plugin-statusbar` documentation](https://github.com/apache/cordova-plugin-statusbar/blob/rel/2.4.3/README.md).
 
 ### Common preferences
 
@@ -40,7 +40,7 @@ App.setPreference('StatusBarBackgroundColor', '#000000');
 App.setPreference('StatusBarStyle', 'lightcontent');
 ```
 
-For the complete list of preferences and the runtime `StatusBar` JavaScript API, refer to the [`cordova-plugin-statusbar` documentation](https://github.com/apache/cordova-plugin-statusbar/blob/master/doc/index.md).
+For the complete list of preferences and the runtime `StatusBar` JavaScript API, refer to the [`cordova-plugin-statusbar` documentation](https://github.com/apache/cordova-plugin-statusbar/blob/rel/2.4.3/README.md).
 
 ### Platform-specific preferences
 
