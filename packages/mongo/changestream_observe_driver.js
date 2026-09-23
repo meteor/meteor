@@ -654,7 +654,11 @@ export class ChangeStreamObserveDriver {
   //      and a doc deleted live is never re-added as a phantom.
   //   2. For everything else the live-event handlers are cache-guarded, so a doc
   //      the reopened cursor happens to redeliver is reconciled once, not twice.
-  async _resyncAfterHistoryLost() {
+  //
+  // caughtUpTo (optional) is an op time our query is known to cover (the shared
+  // stream pings it before reopening); fences waiting on writes up to it are
+  // released once the reconcile is done.
+  async _resyncAfterHistoryLost(caughtUpTo) {
     if (this._stopped || !this._isReady) return;
 
     const collection = this._mongoHandle.rawCollection(
@@ -719,6 +723,15 @@ export class ChangeStreamObserveDriver {
         } catch (error) {
           console.error(`[ChangeStream ${this._id}] resync remove failed:`, error);
         }
+      }
+
+      // Events up to caughtUpTo may never be delivered (the reopened stream
+      // starts after it, e.g. skipping an oversized event, #14763), so a fence
+      // waiting on one would park until some unrelated later write. The
+      // reconcile above already reflects them, so release those fences now.
+      if (caughtUpTo && (!this._lastProcessedOperationTime ||
+          compareOperationTimes(caughtUpTo, this._lastProcessedOperationTime) > 0)) {
+        this._setLastProcessedOperationTime(caughtUpTo);
       }
     } finally {
       // Only clear if still ours: a re-entrant resync should not happen (drivers

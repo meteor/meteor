@@ -2851,6 +2851,95 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
+  'changestream - a BSONObjectTooLarge (10334) error is non-resumable and clears the token (#14763)',
+  async function (test) {
+    const c = makeCollection();
+    const handle = await c.find({}).observeChanges({ added: function () { } });
+    test.isTrue(isChangeStreamDriver(handle));
+
+    const shared = handle._multiplexer._observeDriver._sharedStream;
+    const streamBefore = shared._changeStream;
+    shared._resumeToken = { _data: 'token-before-oversized-event' };
+
+    try {
+      // Resuming via startAfter lands on the same >16MB event and fails again
+      // forever, so it must take the non-resumable path.
+      const tooLarge = Object.assign(new Error('BSONObj size: 18874887 is invalid'), {
+        code: 10334, codeName: 'BSONObjectTooLarge',
+      });
+      streamBefore.emit('error', tooLarge);
+
+      test.equal(shared._resumeToken, null, 'token cleared on BSONObjectTooLarge');
+      test.isTrue(shared._historyLost, 'resync flagged on BSONObjectTooLarge');
+    } finally {
+      handle.stop();
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - an oversized (>16MB) change event neither loops the stream nor hangs the write fence (#14763)',
+  async function (test) {
+    const MB = 1024 * 1024;
+    const c = makeCollection();
+    // 9MB doc: a 9MB $set makes the event (updatedFields + fullDocument) ~18MB.
+    await c.rawCollection().insertOne({ _id: 'big', big: 'a'.repeat(9 * MB), v: 0 });
+
+    const events = [];
+    const handle = await c.find({}, { fields: { big: 0 } }).observeChanges({
+      added: (id, fields) => events.push({ type: 'added', id, fields }),
+      changed: (id, fields) => events.push({ type: 'changed', id, fields }),
+    });
+    test.isTrue(isChangeStreamDriver(handle));
+    await waitFor(() => events.some(e => e.type === 'added' && e.id === 'big'), 3000);
+
+    const shared = handle._multiplexer._observeDriver._sharedStream;
+    let restarts = 0;
+    const origRestart = shared._restart.bind(shared);
+    shared._restart = function () {
+      restarts++;
+      return origRestart();
+    };
+
+    try {
+      // The event for this write can never be delivered. Recovery must still
+      // release the fence (else the method that made the write hangs), without
+      // relying on some other write to advance the stream.
+      const TIMEOUT = Symbol('timeout');
+      const outcome = await Promise.race([
+        withFence(async () => {
+          await c.updateAsync('big', { $set: { big: 'b'.repeat(9 * MB), v: 1 } });
+        }),
+        new Promise(r => setTimeout(() => r(TIMEOUT), 10000)),
+      ]);
+      test.isTrue(outcome !== TIMEOUT, 'write fence fires after the oversized event');
+
+      // The skipped update is reconciled by the resync.
+      await waitFor(() => events.some(e => e.type === 'changed' && e.fields.v === 1), 3000);
+      test.isTrue(
+        events.some(e => e.type === 'changed' && e.id === 'big' && e.fields.v === 1),
+        'the skipped update reaches the observer via the resync'
+      );
+
+      // The reopened stream starts after the oversized event, so it recovers in
+      // one restart instead of hitting the same event again.
+      await new Promise(r => setTimeout(r, 1000));
+      test.equal(restarts, 1, 'exactly one restart, no loop');
+
+      await c.insertAsync({ _id: 'after-recovery' });
+      await waitFor(() => events.some(e => e.type === 'added' && e.id === 'after-recovery'), 3000);
+      test.isTrue(
+        events.some(e => e.type === 'added' && e.id === 'after-recovery'),
+        'change events flow again after the stream recovers'
+      );
+    } finally {
+      delete shared._restart;
+      handle.stop();
+    }
+  }
+);
+
+Tinytest.addAsync(
   'changestream - a live event applied during a resync is recorded so the resync leaves that id alone (#14604)',
   async function (test) {
     const c = makeCollection();
