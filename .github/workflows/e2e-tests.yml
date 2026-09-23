@@ -2,7 +2,7 @@ name: E2E Tests
 
 on:
   push:
-    branches: [codex/mongodb8-bundle-validation]
+    branches: [codex/mongodb8-e2e-validation]
   pull_request:
     paths:
       - "meteor"
@@ -76,7 +76,7 @@ jobs:
       # leaving every orphan (chrome, mongod, sh, ...) as a permanent zombie.
       options: >-
         --init
-        --cpus 6
+        --cpus 4
         --memory 16g
         --security-opt seccomp=unconfined
         -v /var/run/docker.sock:/var/run/docker.sock

@@ -18,7 +18,7 @@ on:
       - '.github/workflows/e2e-accounts.yml'
   push:
     branches:
-      - codex/mongodb8-bundle-validation
+      - codex/mongodb8-e2e-validation
       - 'release-*'
 
 concurrency:
@@ -49,7 +49,7 @@ jobs:
       # --init runs tini as PID 1 so orphaned processes get reaped. Without it
       # the container's PID 1 is `tail -f /dev/null`, which never calls wait(),
       # leaving every orphan (chrome, mongod, sh, ...) as a permanent zombie.
-      options: --init --cpus 6 --memory 16g --security-opt seccomp=unconfined
+      options: --init --cpus 4 --memory 16g --security-opt seccomp=unconfined
 
     steps:
       - name: Checkout code
