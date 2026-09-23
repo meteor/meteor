@@ -5,6 +5,7 @@ const mockSubscribe = jest.fn(async () => ({ unsubscribe: mockUnsubscribe }));
 const mockWatchFile = jest.fn();
 const mockUnwatchFile = jest.fn();
 let mockIsCheckout = false;
+let mockMissingDirectory = false;
 
 jest.mock(
   "@parcel/watcher",
@@ -30,9 +31,10 @@ jest.mock("../tool-env/meteor-config", () => ({
 }));
 
 jest.mock("./files", () => ({
-  statOrNull: (filePath) => ({
-    isDirectory: () => !filePath.endsWith(".js"),
-  }),
+  statOrNull: (filePath) =>
+    mockMissingDirectory && filePath === "/app/imports"
+      ? null
+      : { isDirectory: () => !filePath.endsWith(".js") },
   lstat: () => ({ isSymbolicLink: () => false }),
   toPosixPath: (filePath) => filePath,
   convertToOSPath: (filePath) => filePath,
@@ -62,6 +64,7 @@ const watch = (filePath, callback = jest.fn()) => {
 
 beforeEach(() => {
   mockIsCheckout = false;
+  mockMissingDirectory = false;
   delete process.env.METEOR_WAREHOUSE_DIR;
   mockSubscribe.mockReset();
   mockSubscribe.mockResolvedValue({ unsubscribe: mockUnsubscribe });
@@ -152,6 +155,81 @@ test("treats a missing path during root subscription as transient", async () => 
     expect(mockSubscribe).toHaveBeenCalledTimes(2);
   } finally {
     consoleError.mockRestore();
+  }
+});
+
+test("retries a missing root for an existing watch entry", async () => {
+  const missingPathError = Object.assign(new Error("root disappeared"), {
+    code: "ENOENT",
+  });
+  const callback = jest.fn();
+  mockSubscribe.mockRejectedValueOnce(missingPathError);
+  jest.useFakeTimers({ doNotFake: ["setImmediate"] });
+
+  try {
+    watch("/app/imports/main.js", callback);
+    await flushPromises();
+
+    expect(mockSubscribe).toHaveBeenCalledTimes(1);
+    expect(mockWatchFile).not.toHaveBeenCalled();
+
+    await jest.runOnlyPendingTimersAsync();
+
+    expect(mockSubscribe).toHaveBeenCalledTimes(2);
+
+    const parcelCallback = mockSubscribe.mock.calls[1][1];
+    parcelCallback(null, [{ path: "/app/imports/main.js", type: "update" }]);
+    expect(callback).toHaveBeenCalledWith("change");
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+test("keeps retrying while the root remains missing", async () => {
+  const missingPathError = Object.assign(new Error("root disappeared"), {
+    code: "ENOENT",
+  });
+  mockSubscribe.mockRejectedValueOnce(missingPathError);
+  jest.useFakeTimers({ doNotFake: ["setImmediate"] });
+
+  try {
+    watch("/app/imports/main.js");
+    await flushPromises();
+
+    mockMissingDirectory = true;
+    await jest.runOnlyPendingTimersAsync();
+
+    expect(mockSubscribe).toHaveBeenCalledTimes(1);
+    expect(jest.getTimerCount()).toBe(1);
+
+    mockMissingDirectory = false;
+    await jest.runOnlyPendingTimersAsync();
+
+    expect(mockSubscribe).toHaveBeenCalledTimes(2);
+    expect(jest.getTimerCount()).toBe(0);
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+test("cancels a missing-root retry when its last entry closes", async () => {
+  const missingPathError = Object.assign(new Error("root disappeared"), {
+    code: "ENOENT",
+  });
+  mockSubscribe.mockRejectedValueOnce(missingPathError);
+  jest.useFakeTimers({ doNotFake: ["setImmediate"] });
+
+  try {
+    const watcher = watch("/app/imports/main.js");
+    await flushPromises();
+
+    expect(jest.getTimerCount()).toBe(1);
+
+    watcher.close();
+
+    expect(jest.getTimerCount()).toBe(0);
+  } finally {
+    jest.useRealTimers();
   }
 });
 
