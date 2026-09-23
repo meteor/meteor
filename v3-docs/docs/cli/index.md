@@ -32,9 +32,11 @@ Install shell completion for Meteor commands in bash or zsh.
 meteor shell-completion --install
 ```
 
-This command writes the completion script to `~/.meteor/meteor-completion.sh`
-and adds a source line to your shell startup file so completion is loaded
-automatically in future terminal sessions.
+This command writes the completion scripts to
+`~/.meteor/meteor-completion.bash` and `~/.meteor/meteor-completion.zsh`, plus a
+small `~/.meteor/meteor-completion.sh` loader that picks the right one for the
+running shell. It then adds a source line for the loader to your shell startup
+file so completion is loaded automatically in future terminal sessions.
 
 The generated script embeds the current top-level Meteor command list at install
 time for faster and more reliable first-argument completion. Re-run
@@ -51,6 +53,9 @@ want to install completion for a different shell explicitly.
 meteor shell-completion --install --shell zsh
 meteor shell-completion --install --shell bash
 ```
+
+Each shell has its own script, so you can install completion for both and
+switch between them freely.
 
 ### What Gets Completed
 
@@ -104,8 +109,9 @@ those aliases are registered for completion.
 meteor shell-completion --uninstall
 ```
 
-This removes `~/.meteor/meteor-completion.sh` and deletes the
-`# Meteor autocompletion` block that Meteor added to your startup files.
+This removes `~/.meteor/meteor-completion.sh` and the per-shell scripts next to
+it, and deletes the `# Meteor autocompletion` block that Meteor added to your
+startup files.
 
 ### Troubleshooting
 
@@ -456,6 +462,26 @@ Blaze app plus a web app manifest, icons, a dependency-free service worker and a
 
 **Meteor packages:**
 - `meteor-base`, `mobile-experience`, `mongo`, `blaze-html-templates`, `jquery`, `reactive-var`, `tracker`, `standard-minifier-css`, `standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`, `hot-module-replacement`, `blaze-hot`, `rspack`
+
+**Service worker behavior:**
+
+- In development, the service worker precaches only its static offline files.
+  Application bundles, navigation requests, and other traffic stay on the
+  network so hot code push does not reuse a stale bundle.
+- In production, navigation is network-first with `offline.html` as a fallback,
+  hashed bundles use stale-while-revalidate, and images and fonts use a
+  cache-first strategy.
+- DDP traffic under `/sockjs/` and `/websocket` is never intercepted.
+
+`localhost` is a secure context, so the generated app is installable during
+local development. A browser on a phone or another device requires the app to
+be served over HTTPS before offering installation.
+
+The skeleton provides an installable app shell and offline fallback page. It
+does not synchronize Meteor data, queue methods, or replay writes while the
+application is offline; add those capabilities separately if your application
+needs them.
+
 </details>
 
 <details>

@@ -56,13 +56,18 @@ Make sure you have Node.js v24 or higher installed.
 
 #### Node.js Version Compatibility
 
-Different Meteor versions bundle and require different minimum Node.js active LTS releases:
+Different Meteor versions bundle different Node.js runtimes:
 
 | Meteor Version | Bundled Node.js Version |
 | -------------- | ----------------------- |
 | Meteor 3.3     | Node.js 20              |
 | Meteor 3.4     | Node.js 22              |
 | Meteor 3.5     | Node.js 24              |
+| Meteor 3.6     | Node.js 26.8.2          |
+
+Meteor 3.6's development bundle also includes npm 11.19.0. To confirm the
+runtime bundled with the Meteor release installed on your machine, run
+`meteor node -v` and `meteor npm -v`.
 
 :::
 

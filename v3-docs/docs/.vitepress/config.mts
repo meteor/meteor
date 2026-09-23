@@ -413,6 +413,10 @@ export default defineConfig({
                 link: "/packages/logging",
               },
               {
+                text: "instrumentation",
+                link: "/packages/instrumentation",
+              },
+              {
                 text: "autoupdate",
                 link: "/packages/autoupdate",
               },
