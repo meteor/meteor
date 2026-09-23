@@ -520,9 +520,14 @@ The --db flag also removes the local database.
 
 >>> deploy
 Deploy this project to Galaxy, Meteor's hosting service.
-Usage: meteor deploy <site> [--settings settings.json] [--debug] [--delete]
+Usage: meteor deploy [site] [--settings settings.json] [--debug] [--delete]
 
 Deploys the project in your current directory to Meteor's servers.
+
+If you don't specify a site name, and are running in an interactive terminal,
+Meteor will prompt you to select from your existing deployed sites or
+enter a new one. If you run with `--delete` (or `-D`) without a site name,
+Meteor will error out, requiring you to specify the site to delete.
 
 You can deploy to any available name under 'meteorapp.com'
 without any additional configuration, for example,

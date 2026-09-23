@@ -2022,11 +2022,7 @@ main.registerCommand({
 });
 
 async function deployCommand(options, { rawOptions }) {
-  const site = options.args[0];
-
-  if (options.delete) {
-    return await deploy.deleteApp(site);
-  }
+  let site = options.args[0];
 
   if (options.password) {
     Console.error(
@@ -2035,6 +2031,97 @@ async function deployCommand(options, { rawOptions }) {
         "that only you (and people you designate) can access them. See the " +
         Console.command("'meteor authorized'") + " command.");
     return 1;
+  }
+
+  // Deleting is destructive, so we never offer a guess: naming the site is
+  // always the user's job, interactive terminal or not. Checked before the
+  // build-only carve-out below so `--delete --build-only` can't slip past it.
+  if (options.delete && ! site) {
+    Console.error("Error: site is required to delete.");
+    return 1;
+  }
+
+  // "First time" for the registration message at the end of the deploy means
+  // "was not logged in when the command started" -- capture it before any
+  // interactive login below muddies the water.
+  const wasLoggedIn = auth.isLoggedIn();
+
+  if (! site && ! options['build-only']) {
+    // Self-tests drive these prompts through pipes, where stdin has no TTY;
+    // METEOR_FORCE_INTERACTIVE lets the harness opt in to the prompts anyway
+    // (same spirit as METEOR_PRETTY_OUTPUT / METEOR_HEADLESS in console.js).
+    const stdinIsInteractive = process.stdin.isTTY ||
+      (process.env.METEOR_FORCE_INTERACTIVE &&
+        process.env.METEOR_FORCE_INTERACTIVE !== '0');
+    if (! Console.isInteractive() || ! stdinIsInteractive) {
+      Console.error("Error deploying application: site is required.");
+      return 1;
+    }
+
+    let sites = [];
+    let loggedIn = wasLoggedIn;
+    if (! loggedIn && ! options["deploy-token"]) {
+      Console.info(
+        "You must be logged in to deploy, just enter your email address.");
+      Console.info();
+      const isRegistered = await auth.registerOrLogIn();
+      if (! isRegistered) {
+        return 1;
+      }
+      loggedIn = true;
+    }
+
+    if (loggedIn) {
+      // Returns null when Galaxy can't be reached (deployRpc reports errors
+      // as values, it doesn't throw); we fall through to the free-text prompt.
+      sites = await deploy.getSitesList();
+    }
+
+    // Inquirer paints its own prompts, so the progress display has to stand
+    // down until we're done asking. (main.js enables it for every command, so
+    // unconditionally re-enabling in the finally restores the prior state.)
+    Console.enableProgressDisplay(false);
+    try {
+      const prompt = inquirer.createPromptModule();
+
+      if (sites && sites.length > 0) {
+        const answers = await prompt([
+          {
+            type: "list",
+            name: "site",
+            message: "Which site do you want to deploy to?",
+            choices: [
+              // A null value falls through to the free-text prompt below,
+              // and can't collide with a real hostname.
+              { name: "+ Deploy to a new site...", value: null },
+              new inquirer.Separator(),
+              ...sites
+            ]
+          }
+        ]);
+        site = answers.site;
+      }
+
+      if (! site) {
+        const answers = await prompt([
+          {
+            type: "input",
+            name: "site",
+            message: "Enter the site name (e.g. myapp.meteorapp.com):",
+            validate(input) {
+              return input.trim() ? true : "Please enter a site name.";
+            }
+          }
+        ]);
+        site = answers.site.trim();
+      }
+    } finally {
+      Console.enableProgressDisplay(true);
+    }
+  }
+
+  if (options.delete) {
+    return await deploy.deleteApp(site);
   }
 
   const loggedIn = auth.isLoggedIn();
@@ -2117,7 +2204,9 @@ async function deployCommand(options, { rawOptions }) {
       // If the user was already logged in at the beginning of the
       // deploy, then they've already been prompted to set a password
       // at least once before, so we use a slightly different message.
-      firstTime: !loggedIn
+      // (wasLoggedIn, not loggedIn: the interactive site prompt may have
+      // logged them in between the start of the command and here.)
+      firstTime: ! wasLoggedIn
     });
   }
 
