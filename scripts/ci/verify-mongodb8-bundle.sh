@@ -2,7 +2,7 @@
 set -euo pipefail
 export USE_TEST_DEV_BUNDLE_SERVER=1
 # Invoking the checkout launcher installs the selected bundle even on cache hits.
-./meteor node --version
+METEOR_ALLOW_SUPERUSER=1 ./meteor node --version
 expected=$(sed -n 's/^BUNDLE_VERSION=//p' meteor)
 test "$(cat dev_bundle/.bundle_version.txt)" = "$expected"
 ./dev_bundle/mongodb/bin/mongod --version | tee /tmp/mongodb8-version.txt
