@@ -11,6 +11,7 @@ import assert from "assert";
 import {readAndWatchFileWithHash, sha1, WatchSet,} from '../fs/watch';
 import LRUCache from 'lru-cache';
 import {sourceMapLength} from '../utils/utils.js';
+import {isFileBackedSourceMap} from '../utils/file-backed-source-map.js';
 import {Console} from '../console/console.js';
 import ImportScanner from './import-scanner';
 import {cssToCommonJS} from "./css-modules";
@@ -61,7 +62,7 @@ const hasOwn = Object.prototype.hasOwnProperty;
 // Cache the (slightly post-processed) results of linker.fullLink.
 const CACHE_SIZE = process.env.METEOR_LINKER_CACHE_SIZE || 1024*1024*100;
 const CACHE_DEBUG = !! process.env.METEOR_TEST_PRINT_LINKER_CACHE_DEBUG;
-const LINKER_CACHE_SALT = 26; // Increment this number to force relinking.
+const LINKER_CACHE_SALT = 27; // Increment this number to force relinking.
 const LINKER_CACHE = new LRUCache({
   max: CACHE_SIZE,
   // Cache is measured in bytes. We don't care about servePath.
@@ -1760,15 +1761,19 @@ export class PackageSourceBatch {
     };
 
     const fileHashes = [];
+    let hasFileBackedInput = false;
     const cacheKeyPrefix = sha1(JSON.stringify({
       linkerOptions,
       files: await Promise.all(
         jsResources.map(async (inputFile) => {
           fileHashes.push(await inputFile.hash);
+          const sourceMap = await inputFile.sourceMap;
+          hasFileBackedInput ||= isFileBackedSourceMap(sourceMap);
+
           return {
             meteorInstallOptions: inputFile.meteorInstallOptions,
             absModuleId: inputFile.absModuleId,
-            sourceMap: !!(await inputFile.sourceMap),
+            sourceMap: !!sourceMap,
             mainModule: inputFile.mainModule,
             imported: inputFile.imported,
             alias: inputFile.alias,
@@ -1785,7 +1790,7 @@ export class PackageSourceBatch {
     const cacheKey = `${cacheKeyPrefix}_${cacheKeySuffix}`;
     await onCacheKey(cacheKey, jsResources);
 
-    if (LINKER_CACHE.has(cacheKey)) {
+    if (!hasFileBackedInput && LINKER_CACHE.has(cacheKey)) {
       if (CACHE_DEBUG) {
         console.log('LINKER IN-MEMORY CACHE HIT:',
                     linkerOptions.name, bundleArch);
@@ -1793,7 +1798,7 @@ export class PackageSourceBatch {
       return LINKER_CACHE.get(cacheKey);
     }
 
-    const cacheFilename = self.linkerCacheDir &&
+    const cacheFilename = !hasFileBackedInput && self.linkerCacheDir &&
       files.pathJoin(self.linkerCacheDir, cacheKey + '.cache');
 
     const wildcardCacheFilename = cacheFilename &&
@@ -1837,7 +1842,7 @@ export class PackageSourceBatch {
 
     // nb: linkedFiles might be aliased to an entry in LINKER_CACHE, so don't
     // mutate anything from it.
-    let canCache = true;
+    let canCache = !hasFileBackedInput;
     let linkedFiles = null;
     await buildmessage.enterJob('linking', async () => {
       linkedFiles = await linker.fullLink(jsResources, linkerOptions);
@@ -1845,6 +1850,12 @@ export class PackageSourceBatch {
         canCache = false;
       }
     });
+    if (linkedFiles.some(file => isFileBackedSourceMap(file.sourceMap))) {
+      // File-backed maps live in process-owned temporary directories. Keeping
+      // their descriptors in either cache would create dangling paths after
+      // the process exits, and serializing their contents defeats the design.
+      canCache = false;
+    }
     // Add each output as a resource
     const ret = linkedFiles.map((file) => {
       const sm = (typeof file.sourceMap === 'string')
@@ -1868,7 +1879,6 @@ export class PackageSourceBatch {
 
     // Convert strings to buffers, now that we've serialized it.
     bufferifyJSONReturnValue(ret);
-
     if (canCache) {
       LINKER_CACHE.set(cacheKey, ret);
       if (cacheFilename) {

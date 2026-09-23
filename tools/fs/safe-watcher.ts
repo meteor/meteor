@@ -21,6 +21,7 @@ import {
 import { getMeteorConfig } from "../tool-env/meteor-config";
 
 const constants = require("constants");
+const MISSING_PATH_ERROR_MESSAGE = "No such file or directory";
 
 // Both ENOSPC (inotify watch limit reached) and EINTR (interrupted system call)
 // surfaced by the native watcher mean the watch is no longer reliable, so we
@@ -29,6 +30,17 @@ const constants = require("constants");
 function isENOSPCorEINTR(err: any): boolean {
   return err.code === "ENOSPC" || err.errno === constants.ENOSPC ||
       err.code === "EINTR" || err.errno === constants.EINTR;
+}
+
+function isMissingPathError(err: unknown): boolean {
+  if (!err || typeof err !== "object") {
+    return false;
+  }
+
+  const nativeError = err as NodeJS.ErrnoException;
+
+  return nativeError.code === "ENOENT" ||
+      nativeError.message?.includes(MISSING_PATH_ERROR_MESSAGE) === true;
 }
 
 // Register process exit handlers to ensure subscriptions are properly cleaned up
@@ -125,6 +137,8 @@ function findNearestEntry(startPath: string): Entry | null {
 const watchRoots = new Set<string>();
 // For each watch root, store its active subscription.
 const dirSubscriptions = new Map<string, ParcelWatcher.AsyncSubscription>();
+// Transiently missing roots are retried while entries still need them.
+const rootRetryTimers = new Map<string, NodeJS.Timeout>();
 // A set of roots that are known to be unwatchable.
 const ignoredWatchRoots = new Set<string>();
 
@@ -145,6 +159,45 @@ var DEFAULT_POLLING_INTERVAL =
 
 var NO_WATCHER_POLLING_INTERVAL =
     +(process.env.METEOR_WATCH_POLLING_INTERVAL_MS || 500);
+
+function hasEntryUnderRoot(root: string): boolean {
+  for (const [absPath, entry] of entries) {
+    const relativePath = pathRelative(root, absPath);
+
+    if (entry && (relativePath === "" ||
+        (relativePath !== ".." && !relativePath.startsWith("../") &&
+         !relativePath.startsWith("/")))) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function cancelRootRetry(root: string): void {
+  const timer = rootRetryTimers.get(root);
+  if (timer) {
+    clearTimeout(timer);
+    rootRetryTimers.delete(root);
+  }
+}
+
+function retryMissingRoot(root: string): void {
+  if (rootRetryTimers.has(root) || !hasEntryUnderRoot(root)) {
+    return;
+  }
+
+  const timer = setTimeout(() => {
+    rootRetryTimers.delete(root);
+
+    if (hasEntryUnderRoot(root)) {
+      void ensureWatchRoot(root);
+    }
+  }, NO_WATCHER_POLLING_INTERVAL);
+
+  timer.unref();
+  rootRetryTimers.set(root, timer);
+}
 
 var PRIORITIZE_CHANGED = true;
 if (process.env.METEOR_WATCH_PRIORITIZE_CHANGED &&
@@ -342,14 +395,20 @@ async function ensureWatchRoot(dirPath: string): Promise<void> {
   // Check that osDirPath is indeed a directory.
   try {
     const stats = statOrNull(osDirPath);
-    if (!stats?.isDirectory()) {
+    if (!stats) {
+      retryMissingRoot(dirPath);
+      return;
+    }
+    if (!stats.isDirectory()) {
       console.warn(`Skipping watcher for ${osDirPath}: not a directory`);
       ignoredWatchRoots.add(dirPath);
+      cancelRootRetry(dirPath);
       return;
     }
   } catch (e) {
     console.error(`Failed to stat ${osDirPath}:`, e);
     ignoredWatchRoots.add(dirPath);
+    cancelRootRetry(dirPath);
     return;
   }
 
@@ -393,7 +452,17 @@ async function ensureWatchRoot(dirPath: string): Promise<void> {
         { ignore: ignorePatterns }
     );
     dirSubscriptions.set(dirPath, subscription);
+    cancelRootRetry(dirPath);
   } catch (e: any) {
+    if (isMissingPathError(e)) {
+      // npm replaces dependency trees atomically. A child can disappear after
+      // the root stat succeeds but before Parcel finishes subscribing. Retry
+      // while an active entry still needs this root.
+      watchRoots.delete(dirPath);
+      retryMissingRoot(dirPath);
+      return;
+    }
+
     if (
         e &&
         (e.code === "ENOTDIR" ||
@@ -412,6 +481,7 @@ async function ensureWatchRoot(dirPath: string): Promise<void> {
       }
     }
     watchRoots.delete(dirPath);
+    cancelRootRetry(dirPath);
   }
 }
 
@@ -428,6 +498,12 @@ function startNewEntry(absPath: string): Entry {
       if (closed) return;
       closed = true;
       deleteEntry(absPath);
+
+      for (const root of rootRetryTimers.keys()) {
+        if (!hasEntryUnderRoot(root)) {
+          cancelRootRetry(root);
+        }
+      }
     },
     _fire(event: string) {
       callbacks.forEach(cb => {
@@ -549,6 +625,9 @@ export async function closeAllWatchers() {
   if (!getMeteorConfig()?.modern?.watcher) {
     // @ts-ignore
     return closeAllWatchersLegacy();
+  }
+  for (const root of rootRetryTimers.keys()) {
+    cancelRootRetry(root);
   }
   for (const root of Array.from(watchRoots)) {
     await safeUnsubscribeSub(root);

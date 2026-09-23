@@ -139,6 +139,10 @@ jobs:
 
       - name: Prepare Meteor
         if: steps.deps-cache.outputs.cache-hit != 'true'
+        env:
+          # --get-ready replaces package npm trees while it builds them. Polling
+          # avoids native subscriptions racing those transient directories.
+          METEOR_WATCH_FORCE_POLLING: "true"
         run: ./meteor --get-ready --allow-superuser
 
       - name: Run tests for ${{ matrix.category }}
