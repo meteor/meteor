@@ -19,6 +19,8 @@ Package.onUse(api => {
   api.addFiles('google_client.js', 'client');
   api.addFiles('google_sign-in.js', 'web.cordova');
 
+  api.addAssets('google-oauth.d.ts', 'server');
+
   api.mainModule('namespace.js');
 
   api.export('Google');
