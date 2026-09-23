@@ -1004,26 +1004,40 @@ async function atomicallyCopyFile(path, source, { mode, prefix }) {
   const rname = '.builder-tmp-file.' + Math.floor(Math.random() * 999999);
   const rpath = files.pathJoin(files.pathDirname(path), rname);
 
-  if (prefix) {
-    files.writeFile(rpath, prefix, { mode });
-    await pipeline(
-      createReadStream(source),
-      createWriteStream(rpath, { flags: "a", mode }),
-    );
-  } else {
-    files.copyFile(source, rpath);
-    files.chmod(rpath, mode);
-  }
-
   try {
-    files.rename(rpath, path);
-  } catch (e) {
-    if (e.code === 'EISDIR') {
-      await files.rm_recursive_deferred(path);
-      files.rename(rpath, path);
+    if (prefix) {
+      // The bundle mode is read-only, so apply it only after appending finishes.
+      files.writeFile(rpath, prefix, { mode: 0o600 });
+      await pipeline(
+        createReadStream(source),
+        createWriteStream(rpath, { flags: "a" }),
+      );
+      files.chmod(rpath, mode);
     } else {
-      throw e;
+      files.copyFile(source, rpath);
+      files.chmod(rpath, mode);
     }
+
+    try {
+      files.rename(rpath, path);
+    } catch (e) {
+      if (e.code === 'EISDIR') {
+        await files.rm_recursive_deferred(path);
+        files.rename(rpath, path);
+      } else {
+        throw e;
+      }
+    }
+  } catch (e) {
+    try {
+      files.unlink(rpath);
+    } catch (cleanupError) {
+      if (cleanupError.code !== 'ENOENT') {
+        e.cleanupError = cleanupError;
+      }
+    }
+
+    throw e;
   }
 }
 
