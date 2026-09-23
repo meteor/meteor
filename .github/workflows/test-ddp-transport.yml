@@ -1,7 +1,12 @@
 name: Test DDP Transports
 
 on:
+  push:
+    branches: [codex/mongodb8-bundle-validation]
   pull_request:
+
+env:
+  USE_TEST_DEV_BUNDLE_SERVER: "1"
 
 jobs:
   test-ddp-transport:
@@ -52,6 +57,9 @@ jobs:
 
       - name: Install npm dependencies
         run: npm install
+
+      - name: Verify MongoDB 8 test bundle
+        run: bash scripts/ci/verify-mongodb8-bundle.sh
 
       - name: Run DDP server tests (${{ matrix.transport }})
         run: ./packages/test-in-console/run.sh "ddp-server"

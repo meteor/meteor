@@ -10,6 +10,7 @@ on:
       - '.github/workflows/unit-tests.yml'
   push:
     branches:
+      - codex/mongodb8-bundle-validation
       - devel
 
 concurrency:

@@ -19,9 +19,11 @@ on:
 
   push:
     branches:
+      - codex/mongodb8-bundle-validation
       - devel
 
 env:
+  USE_TEST_DEV_BUNDLE_SERVER: "1"
   # npm submits an audit request with every install. Meteor runs many installs
   # when caches are cold, and this workflow does not consume their automatic
   # audit reports. Avoid making CI reliability depend on npm's audit endpoint.
@@ -38,7 +40,7 @@ jobs:
   test:
     runs-on: windows-2019-meteor
     concurrency:
-      group: ${{ github.head_ref }}-meteor-selftest-windows
+      group: mongodb8-windows-${{ github.ref }}
       cancel-in-progress: true
 
     steps:
@@ -84,6 +86,15 @@ jobs:
         run: |
           $env:PATH = "C:\Program Files\7-Zip;$env:PATH"
           .\scripts\windows\ci\install.ps1
+
+      - name: Verify MongoDB 8 test bundle
+        shell: pwsh
+        run: |
+          .\meteor.bat node --version
+          if ($LASTEXITCODE -ne 0) { throw "Could not install test bundle" }
+          $version = & .\dev_bundle\mongodb\bin\mongod.exe --version
+          if ($LASTEXITCODE -ne 0 -or ($version -join "`n") -notmatch 'db version v8\.0\.29') { throw "Expected MongoDB 8.0.29" }
+          $version
 
       # Run ONLY when the cache was NOT restored
       - name: Prepare Meteor (cache miss)

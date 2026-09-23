@@ -1,12 +1,17 @@
 name: Test Packages
 
 on:
+  push:
+    branches: [codex/mongodb8-bundle-validation]
   pull_request:
     paths:
       - "packages/**"
       - ".github/workflows/test-packages.yml"
 
 
+
+env:
+  USE_TEST_DEV_BUNDLE_SERVER: "1"
 
 jobs:
   test-packages:
@@ -55,6 +60,9 @@ jobs:
           key: ${{ runner.os }}-node-26-meteor-${{ hashFiles('meteor', '**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-26-meteor-
+      - name: Verify MongoDB 8 test bundle
+        run: bash scripts/ci/verify-mongodb8-bundle.sh
+
       - name: Run test-in-console suite
         run: |
           export TEST_PACKAGES_EXCLUDE="stylus"

@@ -1,6 +1,8 @@
 name: Test Tools
 
 on:
+  push:
+    branches: [codex/mongodb8-bundle-validation]
   pull_request:
     paths:
       - "tools/**"
@@ -17,6 +19,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  USE_TEST_DEV_BUNDLE_SERVER: "1"
   # npm submits an audit request with every install. Meteor runs many installs
   # when caches are cold, and this workflow does not consume their automatic
   # audit reports. Avoid making CI reliability depend on npm's audit endpoint.
@@ -85,6 +88,9 @@ jobs:
       - name: Validate Test Tools cache keys
         run: node --test scripts/ci/test-tools-cache-keys.test.js
 
+      - name: Verify MongoDB 8 test bundle
+        run: bash scripts/ci/verify-mongodb8-bundle.sh
+
       - name: Prepare Meteor
         # Run on every workflow so the package catalog at .meteor/package-metadata
         # is refreshed and includes any release referenced by versionsFrom.
@@ -149,6 +155,9 @@ jobs:
           path: |
             packages/**/.npm
           key: ${{ runner.os }}-node-26-pkg-npm-${{ hashFiles('packages/**/package.js', 'packages/**/npm-shrinkwrap.json') }}
+
+      - name: Verify MongoDB 8 test bundle
+        run: bash scripts/ci/verify-mongodb8-bundle.sh
 
       - name: Log environment
         run: |
@@ -232,6 +241,9 @@ jobs:
           path: |
             packages/**/.npm
           key: ${{ runner.os }}-node-26-pkg-npm-${{ hashFiles('packages/**/package.js', 'packages/**/npm-shrinkwrap.json') }}
+
+      - name: Verify MongoDB 8 test bundle
+        run: bash scripts/ci/verify-mongodb8-bundle.sh
 
       - name: Log environment
         env:

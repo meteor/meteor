@@ -1,0 +1,122 @@
+name: MongoDB 8 packaged runtime matrix
+on:
+  push:
+    branches: [codex/mongodb8-bundle-validation]
+    paths:
+      - .github/workflows/mongodb8-validation.yml
+      - scripts/ci/mongodb8-smoke.cjs
+permissions:
+  contents: read
+concurrency:
+  group: mongodb8-runtime-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  BUNDLE_VERSION: 26.8.2-mongodb8-pr14663-20260923
+  USE_TEST_DEV_BUNDLE_SERVER: '1'
+jobs:
+  linux-distros:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ['ubuntu:22.04', 'ubuntu:24.04', 'debian:12', 'rockylinux:9', 'amazonlinux:2023']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+      - name: Download exact test bundle
+        run: |
+          curl -fSL --retry 3 "https://s3.amazonaws.com/com.meteor.static/test/dev_bundle_Linux_x86_64_${BUNDLE_VERSION}.tar.gz" -o bundle.tar.gz
+          shasum -a 256 bundle.tar.gz | tee bundle-sha256.txt
+          mkdir dev_bundle
+          tar xzf bundle.tar.gz -C dev_bundle
+          test "$(cat dev_bundle/.bundle_version.txt)" = "$BUNDLE_VERSION"
+          npm install --prefix "$RUNNER_TEMP/mongo-driver" --no-audit --no-fund mongodb@6.16.0
+      - name: Verify dependencies and exercise packaged MongoDB
+        env:
+          DISTRO_IMAGE: ${{ matrix.image }}
+        run: |
+          set -o pipefail
+          docker run --rm -v "$PWD:/validation:ro" -v "$RUNNER_TEMP/mongo-driver:/driver:ro" \
+            -e MONGO_DRIVER_DIR=/driver "$DISTRO_IMAGE" bash -ec '
+              cat /etc/os-release
+              echo "Native dependencies before installing prerequisites:"
+              ldd /validation/dev_bundle/mongodb/bin/mongod || true
+              if command -v apt-get >/dev/null; then
+                apt-get update
+                apt-get install -y ca-certificates libcurl4
+              elif grep -q "Amazon Linux" /etc/os-release; then
+                dnf install -y libcurl-minimal openssl-libs libstdc++
+              else
+                dnf install -y libcurl openssl-libs libstdc++
+              fi
+              echo "Native dependencies after installing prerequisites:"
+              ldd /validation/dev_bundle/mongodb/bin/mongod
+              /validation/dev_bundle/bin/node /validation/scripts/ci/mongodb8-smoke.cjs /validation/dev_bundle/mongodb/bin/mongod
+            ' 2>&1 | tee runtime.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: linux-${{ strategy.job-index }}
+          path: |
+            runtime.log
+            bundle-sha256.txt
+  native-platforms:
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            platform: Darwin_arm64
+          - runner: macos-15-intel
+            platform: Darwin_x86_64
+          - runner: ubuntu-24.04-arm
+            platform: Linux_aarch64
+          - runner: windows-2022
+            platform: windows_x64
+    runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+      - name: Download and extract exact test bundle
+        env:
+          BUNDLE_PLATFORM: ${{ matrix.platform }}
+        run: |
+          url="https://s3.amazonaws.com/com.meteor.static/test/dev_bundle_${BUNDLE_PLATFORM}_${BUNDLE_VERSION}.tar.gz"
+          for attempt in $(seq 1 90); do
+            if curl -fsI "$url" >/dev/null; then break; fi
+            sleep 30
+          done
+          curl -fSL --retry 3 "$url" -o bundle.tar.gz
+          shasum -a 256 bundle.tar.gz | tee bundle-sha256.txt
+          mkdir dev_bundle
+          if [ "$BUNDLE_PLATFORM" = windows_x64 ]; then
+            tar xzf bundle.tar.gz -C dev_bundle --strip-components=1
+          else
+            tar xzf bundle.tar.gz -C dev_bundle
+          fi
+          test "$(tr -d '\r\n' < dev_bundle/.bundle_version.txt)" = "$BUNDLE_VERSION"
+          npm install --prefix smoke-driver --no-audit --no-fund mongodb@6.16.0
+      - name: Exercise packaged MongoDB
+        run: |
+          export MONGO_DRIVER_DIR=smoke-driver
+          if [ "$RUNNER_OS" = Windows ]; then
+            ./dev_bundle/bin/node.exe scripts/ci/mongodb8-smoke.cjs dev_bundle/mongodb/bin/mongod.exe | tee runtime.log
+          else
+            ./dev_bundle/bin/node scripts/ci/mongodb8-smoke.cjs dev_bundle/mongodb/bin/mongod | tee runtime.log
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-${{ matrix.platform }}
+          path: |
+            runtime.log
+            bundle-sha256.txt
