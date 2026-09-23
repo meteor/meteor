@@ -21,7 +21,7 @@ jobs:
         reactivity_order:
           - 'changeStreams,polling'
           - 'oplog,polling'
-    runs-on: oss-vm
+    runs-on: ubuntu-24.04
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.reactivity_order }}
       cancel-in-progress: true

@@ -67,7 +67,7 @@ jobs:
   test:
     needs: groups
     name: ${{ matrix.category }}
-    runs-on: oss-vm
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     container:
       image: node:22-bookworm

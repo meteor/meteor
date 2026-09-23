@@ -46,11 +46,9 @@ jobs:
               ldd /validation/dev_bundle/mongodb/bin/mongod || true
               if command -v apt-get >/dev/null; then
                 apt-get update
-                apt-get install -y ca-certificates libcurl4
-              elif grep -q "Amazon Linux" /etc/os-release; then
-                dnf install -y libcurl-minimal openssl-libs libstdc++
+                apt-get install -y ca-certificates libcurl4 libatomic1
               else
-                dnf install -y libcurl openssl-libs libstdc++
+                dnf install -y "libcurl.so.4()(64bit)" openssl-libs libstdc++ libatomic
               fi
               echo "Native dependencies after installing prerequisites:"
               ldd /validation/dev_bundle/mongodb/bin/mongod

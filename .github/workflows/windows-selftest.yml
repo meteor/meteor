@@ -38,7 +38,7 @@ env:
 
 jobs:
   test:
-    runs-on: windows-2019-meteor
+    runs-on: windows-2022
     concurrency:
       group: mongodb8-windows-${{ github.ref }}
       cancel-in-progress: true

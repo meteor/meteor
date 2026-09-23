@@ -47,7 +47,7 @@ jobs:
   # source-file matrix used by the parallel test jobs.
   setup:
     name: Setup
-    runs-on: oss-vm
+    runs-on: ubuntu-24.04
     container:
       image: meteor/circleci:2026.07.28-android-36-node-24
       # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
@@ -121,7 +121,7 @@ jobs:
   # (excluded from the matrix) and any custom-warehouse tests.
   isolated-tests:
     name: Isolated Tests
-    runs-on: oss-vm
+    runs-on: ubuntu-24.04
     container:
       image: meteor/circleci:2026.07.28-android-36-node-24
       # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
@@ -200,7 +200,7 @@ jobs:
   # shared setup while allowing files to run independently across workers.
   test:
     name: ${{ matrix.name }}
-    runs-on: oss-vm
+    runs-on: ubuntu-24.04
     container:
       image: meteor/circleci:2026.07.28-android-36-node-24
       options: ${{ matrix.resources == 'heavy' && '--init --user root --cpus 4 --memory 16g --security-opt seccomp=unconfined' || '--init --user root' }}
