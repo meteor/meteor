@@ -1225,6 +1225,15 @@ const setsEqual = function (a, b) {
           // Remove first 4 docs (3, 1, 2, 4) forcing buffer to become empty and
           // schedule a repoll.
           await rem({ bar: { $lt: 10 } });
+          const multiRemoveSnapshot = EJSON.stringify({
+            usesOplog,
+            state: o.state,
+            expectedState: [
+              { _id: docId8, foo: 22, bar: 17 },
+              { _id: docId7, foo: 22, bar: 18 },
+              { _id: docId6, foo: 22, bar: 19 },
+            ],
+          });
           // State: [ 17:8 18:7 19:6 | ]!
 
           // XXX the oplog code analyzes the events one by one: one remove after
@@ -1366,6 +1375,19 @@ const setsEqual = function (a, b) {
           testSafeAppendToBufferFlag(false);
 
           o.handle.stop();
+          const mongoConnection = MongoInternals.defaultRemoteCollectionDriver().mongo;
+          const namespace = mongoConnection.db.databaseName + '.' + coll._name;
+          const deleteEntries = await mongoConnection.client.db('local').collection('oplog.rs').find({
+            $or: [
+              { ns: namespace, op: 'd' },
+              { 'o.applyOps': { $elemMatch: { ns: namespace, op: 'd' } } },
+            ],
+          }).toArray();
+          console.log('MONGODB_DELETE_EVIDENCE', JSON.stringify({
+            version: (await mongoConnection.db.admin().command({ buildInfo: 1 })).version,
+            multiRemoveSnapshot,
+            deleteEntries,
+          }));
         }
       );
 
