@@ -38,6 +38,21 @@ OAuth.showPopup = (url, callback, dimensions) => {
   }, 100);
 };
 
+// Login popups must never share a window name. `window.open` re-targets an
+// existing window when the name matches, so a constant name (this used to be
+// 'Login') breaks nested OAuth flows: when the login service is itself a
+// Meteor app — e.g. logging into Meteor developer accounts, which then logs in
+// via GitHub — the service's own `window.open(url, 'Login', ...)` matches the
+// popup we already opened and navigates THAT window to the inner provider
+// instead of opening a new one. Both login attempts then fail with no error.
+// The counter keeps names unique within this document; the timestamp and
+// random suffix keep them unique across documents, since the app and the login
+// service each run their own copy of this code. See issue #12418.
+let popupSequence = 0;
+
+const uniqueLoginWindowName = () =>
+  `Login_${Date.now()}_${Math.floor(Math.random() * 1e9)}_${++popupSequence}`;
+
 const openCenteredPopup = function(url, width, height) {
   const screenX = typeof window.screenX !== 'undefined'
         ? window.screenX : window.screenLeft;
@@ -56,8 +71,7 @@ const openCenteredPopup = function(url, width, height) {
   const features = (`width=${width},height=${height}` +
                   `,left=${left},top=${top},scrollbars=yes`);
 
-
-  const newwindow = window.open(url, 'Login', features);
+  const newwindow = window.open(url, uniqueLoginWindowName(), features);
 
   if (!newwindow || newwindow.closed) {
     // blocked by a popup blocker maybe?
