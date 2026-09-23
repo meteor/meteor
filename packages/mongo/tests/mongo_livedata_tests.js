@@ -1019,11 +1019,7 @@ const setsEqual = function (a, b) {
 
   const difference = (arr1, arr2) => arr1.filter(x => !arr2.includes(x));
 
-  const matches = difference(a, b).length === 0 && difference(b, a).length === 0;
-  if (!matches) {
-    console.error('MONGODB_COMPARISON', JSON.stringify({ actual: a, expected: b, stack: new Error().stack }));
-  }
-  return matches;
+  return difference(a, b).length === 0 && difference(b, a).length === 0;
   };
 
     if (IS_OPLOG) {
@@ -1225,51 +1221,36 @@ const setsEqual = function (a, b) {
           // Remove first 4 docs (3, 1, 2, 4) forcing buffer to become empty and
           // schedule a repoll.
           await rem({ bar: { $lt: 10 } });
-          const multiRemoveSnapshot = EJSON.stringify({
-            usesOplog,
-            state: o.state,
-            expectedState: [
-              { _id: docId8, foo: 22, bar: 17 },
-              { _id: docId7, foo: 22, bar: 18 },
-              { _id: docId6, foo: 22, bar: 19 },
-            ],
-          });
           // State: [ 17:8 18:7 19:6 | ]!
 
-          // XXX the oplog code analyzes the events one by one: one remove after
-          // another. Poll-n-diff code, on the other side, analyzes the batch action
-          // of multiple remove. Because of that difference, expected outputs differ.
-          if (usesOplog) {
-            expectedRemoves = [
-              { removed: docId3 },
-              { removed: docId1 },
-              { removed: docId2 },
-              { removed: docId4 },
-            ];
-            expectedAdds = [
-              { added: docId4 },
-              { added: docId8 },
-              { added: docId7 },
-              { added: docId6 },
-            ];
-
-            test.length(o.output, 8);
-          } else {
-            expectedRemoves = [
-              { removed: docId3 },
-              { removed: docId1 },
-              { removed: docId2 },
-            ];
-            expectedAdds = [
-              { added: docId8 },
-              { added: docId7 },
-              { added: docId6 },
-            ];
-
-            test.length(o.output, 6);
-          }
-
-          test.isTrue(setsEqual(o.output, expectedAdds.concat(expectedRemoves)));
+          // Multi-delete order is not guaranteed. If doc 4 is deleted after it
+          // enters the published set, oplog observers emit a transient add/remove
+          // pair. MongoDB 8 can delete it from the unpublished buffer first.
+          expectedRemoves = [
+            { removed: docId3 },
+            { removed: docId1 },
+            { removed: docId2 },
+          ];
+          expectedAdds = [
+            { added: docId8 },
+            { added: docId7 },
+            { added: docId6 },
+          ];
+          const requiredEvents = expectedAdds.concat(expectedRemoves);
+          const eventsWithTransientDoc = requiredEvents.concat([
+            { added: docId4 },
+            { removed: docId4 },
+          ]);
+          test.isTrue(
+            (o.output.length === 6 && setsEqual(o.output, requiredEvents)) ||
+              (usesOplog && o.output.length === 8 &&
+                setsEqual(o.output, eventsWithTransientDoc)),
+            'unexpected multi-delete callbacks: ' + EJSON.stringify(o.output)
+          );
+          test.length(Object.keys(o.state), 3);
+          test.equal(o.state[docId8], { _id: docId8, foo: 22, bar: 17 });
+          test.equal(o.state[docId7], { _id: docId7, foo: 22, bar: 18 });
+          test.equal(o.state[docId6], { _id: docId6, foo: 22, bar: 19 });
           clearOutput(o);
           testOplogBufferIds([]);
           testSafeAppendToBufferFlag(true);
@@ -1375,19 +1356,6 @@ const setsEqual = function (a, b) {
           testSafeAppendToBufferFlag(false);
 
           o.handle.stop();
-          const mongoConnection = MongoInternals.defaultRemoteCollectionDriver().mongo;
-          const namespace = mongoConnection.db.databaseName + '.' + coll._name;
-          const deleteEntries = await mongoConnection.client.db('local').collection('oplog.rs').find({
-            $or: [
-              { ns: namespace, op: 'd' },
-              { 'o.applyOps': { $elemMatch: { ns: namespace, op: 'd' } } },
-            ],
-          }).toArray();
-          console.error('MONGODB_DELETE_EVIDENCE', JSON.stringify({
-            version: (await mongoConnection.db.admin().command({ buildInfo: 1 })).version,
-            multiRemoveSnapshot,
-            deleteEntries,
-          }));
         }
       );
 
