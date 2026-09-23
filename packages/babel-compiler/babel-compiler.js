@@ -277,7 +277,8 @@ BCp.processOneFileForTarget = function (inputFile, source) {
       // Try to read the corresponding map file
       const mapPath = fullPath + '.map';
       if (fs.existsSync(mapPath)) {
-        if (arch.startsWith('web.') && !useLegacySourceMapEngine) {
+        if (arch.startsWith('web.') && !useLegacySourceMapEngine &&
+            typeof Plugin.rspackHelpers.createFileBackedSourceMap === 'function') {
           toBeAdded.sourceMap =
             Plugin.rspackHelpers.createFileBackedSourceMap(mapPath);
         } else {
