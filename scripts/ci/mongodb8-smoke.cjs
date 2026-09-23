@@ -35,7 +35,11 @@ async function main() {
     while (true) {
       if (spawnError) throw spawnError;
       if (child.exitCode !== null || child.signalCode) throw Error(`mongod exited: ${child.exitCode ?? child.signalCode}`);
-      try { await client.db('admin').command({ ping: 1 }); break; }
+      try {
+        await client.connect();
+        await client.db('admin').command({ ping: 1 });
+        break;
+      }
       catch (error) { if (Date.now() > deadline) throw error; await delay(200); }
     }
     await client.db('admin').command({ replSetInitiate: {

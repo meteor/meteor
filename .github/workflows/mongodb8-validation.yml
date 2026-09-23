@@ -1,7 +1,7 @@
 name: MongoDB 8 packaged runtime matrix
 on:
   push:
-    branches: [codex/mongodb8-bundle-validation]
+    branches: [codex/mongodb8-runtime-validation]
     paths:
       - .github/workflows/mongodb8-validation.yml
       - scripts/ci/mongodb8-smoke.cjs
