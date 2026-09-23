@@ -9,7 +9,10 @@ import {
   matches as archMatches,
   isLegacyArch,
 } from "../utils/archinfo";
-import {findImportedModuleIdentifiers} from "./js-analyze.js";
+import {
+  findImportedModuleIdentifiers,
+  usesModuleOnlySyntax,
+} from "./js-analyze.js";
 import {cssToCommonJS} from "./css-modules";
 import buildmessage from "../utils/buildmessage.js";
 import {Profile} from "../tool-env/profile";
@@ -65,6 +68,10 @@ const fakeFileStat = {
 // Symbol used by scanMissingModules to mark certain files as temporary,
 // to prevent them from being added to scanner.outputFiles.
 const fakeSymbol = Symbol("fake");
+
+// Whether this version of Node can load ESM modules with require(), which
+// is what module.useNode() does on the server.
+const nodeCanRequireESM = !! (process.features as any).require_module;
 
 const emptyDataString = "";
 const emptyData = Buffer.from(emptyDataString, "utf8");
@@ -504,7 +511,7 @@ export default class ImportScanner {
   }
 
   async addInputFiles(files: File[]) {
-    for (const file of files) {
+    for (let file of files) {
       await this.checkSourceAndTargetPaths(file);
 
       // Note: this absolute path may not necessarily exist on the file
@@ -519,6 +526,24 @@ export default class ImportScanner {
 
       file.absModuleId = file.absModuleId ||
           this.getAbsModuleId(file.absPath);
+
+      if (file.absModuleId &&
+          this.shouldUseNodeForESM(file.absModuleId, file.absPath)) {
+        // The compiled version of this module would throw a SyntaxError
+        // when the server bundle is evaluated, so replace it with a stub
+        // that lets Node evaluate the original module.
+        file = {
+          ...useNodeStub,
+          type: "js",
+          absPath: file.absPath,
+          sourcePath: file.sourcePath,
+          targetPath: file.targetPath,
+          servePath: file.servePath,
+          absModuleId: file.absModuleId,
+          lazy: file.lazy,
+          imported: file.imported,
+        };
+      }
 
       if (! this.addFile(file.absPath, file)) {
         // Collisions can happen if a compiler plugin calls addJavaScript
@@ -1384,6 +1409,44 @@ export default class ImportScanner {
   // Similar to logic in Module.prototype.useNode as defined in
   // packages/modules-runtime/server.js. Introduced to fix issue #10122.
   private shouldUseNode(absModuleId: string, absPath: string) {
+    if (! this.isServerNpmModule(absModuleId)) {
+      return false;
+    }
+
+    // Below this point, we know we're dealing with a module in
+    // node_modules, which means we should try to use module.useNode() to
+    // evaluate the module natively in Node, except if the module is an
+    // ESM module, which we usually compile into the bundle instead (see
+    // cannotBundleESM).
+
+    const dotExt = pathExtname(absPath).toLowerCase();
+
+    if (dotExt === ".json") {
+      // There's no benefit to using Node to evaluate JSON modules, since
+      // there's nothing Node-specific about the parsing of JSON.
+      return false;
+    }
+
+    if (this.isESM(absPath)) {
+      return this.cannotBundleESM(absPath);
+    }
+
+    // Everything else (.node, .wasm, whatever) needs to be handled
+    // natively by Node.
+    return true;
+  }
+
+  // Like shouldUseNode, but only true for ESM modules that cannot be
+  // bundled. Such modules must be evaluated natively even if a compiler
+  // plugin already compiled them as application source files (for example,
+  // .mjs files in the application's node_modules directory).
+  private shouldUseNodeForESM(absModuleId: string, absPath: string) {
+    return this.isServerNpmModule(absModuleId) &&
+      this.isESM(absPath) &&
+      this.cannotBundleESM(absPath);
+  }
+
+  private isServerNpmModule(absModuleId: string) {
     if (this.isWeb()) {
       // Node should never be used in a browser, obviously.
       return false;
@@ -1406,28 +1469,16 @@ export default class ImportScanner {
     // If the remaining parts do not include node_modules, then this
     // module was not installed by npm, so we should not try to evaluate
     // it natively in Node on the server.
-    if (parts.indexOf("node_modules", start) < 0) {
-      return false;
-    }
+    return parts.indexOf("node_modules", start) >= 0;
+  }
 
-    // Below this point, we know we're dealing with a module in
-    // node_modules, which means we should try to use module.useNode() to
-    // evaluate the module natively in Node, except if the module is an
-    // ESM module, because then the module cannot be imported using
-    // require (as of Node 12.16.0), so module.useNode() will not work.
-
+  private isESM(absPath: string) {
     const dotExt = pathExtname(absPath).toLowerCase();
 
     if (dotExt === ".mjs") {
       // Although few npm packages actually use .mjs, Node will always
-      // interpret these files as ESM modules, so we can return early.
-      return false;
-    }
-
-    if (dotExt === ".json") {
-      // There's no benefit to using Node to evaluate JSON modules, since
-      // there's nothing Node-specific about the parsing of JSON.
-      return false;
+      // interpret these files as ESM modules.
+      return true;
     }
 
     if (dotExt === ".js") {
@@ -1436,14 +1487,44 @@ export default class ImportScanner {
         optimisticLookupPackageJsonArray(this.sourceRoot, relDir);
       // Setting "type":"module" in package.json makes Node treat .js
       // files within the package as ESM modules.
-      if (pkgJsonArray.some(pkgJson => pkgJson?.type === "module")) {
-        return false;
-      }
+      return pkgJsonArray.some(pkgJson => pkgJson?.type === "module");
     }
 
-    // Everything else (.node, .wasm, whatever) needs to be handled
-    // natively by Node.
-    return true;
+    return false;
+  }
+
+  // Compiling an ESM module into the bundle only works if the module does
+  // not depend on ESM-only semantics. Modules that use import.meta, or that
+  // declare top-level bindings named like the parameters of the module
+  // wrapper function (require, exports, module, __filename, __dirname),
+  // throw a SyntaxError when the server bundle is evaluated, which prevents
+  // the whole server from starting (issue #14784). Node can require() ESM
+  // modules natively, so module.useNode() can evaluate them instead.
+  private cannotBundleESM(absPath: string) {
+    if (! nodeCanRequireESM) {
+      return false;
+    }
+
+    let data: Buffer;
+    try {
+      data = optimisticReadFile(absPath) as Buffer;
+    } catch (e: any) {
+      // Let readModule report unreadable files as usual.
+      if (e.code === "ENOENT" || e.code === "EISDIR") return false;
+      throw e;
+    }
+
+    try {
+      return usesModuleOnlySyntax(
+        stripHashBang(data.toString("utf8")),
+        optimisticHashOrNull(absPath),
+      );
+    } catch (e: any) {
+      // If the module cannot be parsed, keep compiling it into the bundle,
+      // so any syntax errors are reported as usual.
+      if (e.$ParseError) return false;
+      throw e;
+    }
   }
 
   // Returns an absolute module identifier indicating where to install the

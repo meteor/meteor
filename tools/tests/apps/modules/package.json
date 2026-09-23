@@ -12,6 +12,7 @@
     "acorn": "file:imports/links/acorn",
     "aws-sdk": "^2.2.41",
     "cli-color": "^0.2.3",
+    "esm-only-syntax": "file:packages/modules-test-package/node_modules/esm-only-syntax",
     "github": "^0.2.4",
     "graphql": "^14.3.1",
     "immutable-tuple": "^0.4.4",
