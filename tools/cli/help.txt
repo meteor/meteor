@@ -153,9 +153,11 @@ Options:
 
 >>> create
 Create a new project.
-Usage: meteor create [--release <release>] [--bare|--minimal|--full|--react|--vue|--apollo|--svelte|--blaze|--tailwind|--chakra-ui|--solid] <path>
-       meteor create [--release <release>] --example <example_name> [<path>]
-       meteor create [--release <release>] --from <git_url> [<path>]
+Usage: meteor create [--release <release>] [--bare|--minimal|--full|--pnpm|--react|--vue|--apollo|--svelte|--blaze|--tailwind|--chakra-ui|--solid|--babel|--coffeescript|--angular] <path>
+       meteor create [--release <release>] --example <slug> [<path>]
+       meteor create [--release <release>] <url> [<path>] [--from-branch <branch>] [--from-dir <dir>]
+       meteor create [--release <release>] <path> <url> [--from-branch <branch>] [--from-dir <dir>]
+       meteor create [--release <release>] --from <url> [--from-branch <branch>] [--from-dir <dir>] [<path>]
        meteor create --list
        meteor create --package [<package_name>]
 
@@ -176,27 +178,48 @@ package created in an app, will be created using the application's version of
 meteor and a package created outside a meteor app will use the latest release).
 
 You can pass --example to start off with a copy of one of the Meteor
-sample applications. Use --list to see the available examples. There are
-currently no package examples.
+community examples. Use --list to see the available examples.
 
-Options:
-  --package     Create a new meteor package instead of an app.
-  --example     Example template to use.
-  --from        Clones a meteor project from a url.
-  --list        Show list of available examples.
-  --bare        Create an empty app.
-  --minimal     Create an app with as few Meteor packages as possible.
-  --full        Create a fully scaffolded app.
-  --react       Create a basic react-based app, same as default.
-  --vue         Create a basic vue3-based app.
-  --apollo      Create a basic apollo-based app.
-  --svelte      Create a basic svelte-based app.
-  --typescript  Create a basic Typescript React-based app.
-  --blaze       Create a basic blaze-based app.
-  --tailwind    Create a basic react-based app, with tailwind configured.
-  --chakra-ui   Create a basic react-based app, with chakra-ui configured.
-  --solid       Create a basic solid-based app.
-  --prototype Create a prototype app with the insecure & autopublish packages. Can be used along with other app commands
+You can clone a Meteor project from a Git URL by passing the URL as the only
+argument, by passing a path and URL together, or by passing the URL explicitly
+with --from. When only a URL is provided, the app directory is derived from the
+repository or subdirectory name.
+GitHub shorthand such as owner/repo is supported with --from owner/repo.
+Positional inference requires a full URL so paths like apps/my-app keep their
+existing meaning.
+
+Skeleton options:
+  --bare         Create an empty app.
+  --minimal      Create an app with as few Meteor packages as possible.
+  --full         Create a fully scaffolded app.
+  --pnpm         Create a pnpm monorepo with a Meteor app in apps/app.
+  --react        Create a basic react-based app, same as default.
+  --vue          Create a basic vue3-based app.
+  --apollo       Create a basic apollo-based app.
+  --svelte       Create a basic svelte-based app.
+  --typescript   Create a basic Typescript React-based app.
+  --blaze        Create a basic blaze-based app.
+  --pwa          Create a basic blaze-based app, installable as a PWA.
+  --tailwind     Create a basic react-based app, with tailwind configured.
+  --chakra-ui    Create a basic react-based app, with chakra-ui configured.
+  --coffeescript Create a basic coffescript app, with react.
+  --babel        Create a React app with Babel support.
+  --solid        Create a basic solid-based app.
+  --angular      Create a basic Angular app.
+  --prototype    Create a prototype app with the insecure & autopublish packages.
+
+Example options:
+  --example      Create from a community example (use --list to browse).
+  --list         Show detailed list of available examples.
+  --from         Clone a Meteor project from a Git URL. Accepts GitHub, GitLab,
+                 and Bitbucket tree/src URLs. branch and subdirectory are
+                 auto-detected from the URL when possible.
+                 Optional when a positional source is an unambiguous Git URL.
+  --from-branch  Branch to clone from (overrides branch parsed from URL).
+  --from-dir     Extract only a subdirectory (overrides dir parsed from URL).
+
+Other options:
+  --package      Create a new meteor package instead of an app.
 
 
 >>> update
@@ -261,11 +284,23 @@ internal functionality of Meteor.
 
 >>> add
 Add a package to this project.
-Usage: meteor add <package> [package..]
+Usage: meteor add [package..]
+       meteor add --search <query>
+       meteor add <url|user/repo> [--from-branch <branch>] [--from-dir <dir>] [--to <path>] [--force]
+       meteor add --from <url|user/repo> [--from-branch <branch>] [--from-dir <dir>] [--to <path>] [--force]
 
 Adds packages to your Meteor project. You can add multiple
-packages with one command. To query for available packages, use
-the meteor search command.
+packages with one command.
+
+Run without any package names to open an interactive search
+against the Atmosphere community package directory. With no query
+typed the picker shows two starter sections: a Core recommended
+list followed by the top 10 community-maintained packages from
+Atmosphere (deduped). Type to search, press <space> to toggle, ? on
+a row for details, and <enter> to install. Results are reordered to
+favor packages updated within the last 24 months.
+Use `meteor add --search <query>` to jump straight to results for
+a given query. Both forms require an interactive terminal.
 
 Optional version constraints can be added. Running `meteor add package@1.1.0`
 will add the package at version 1.1.0 or higher (but not 2.0.0 or higher).
@@ -277,22 +312,52 @@ To remove a version constraint for a specific package, run "meteor add" command
 again without specifying a version. For example above, to stop using
 version 1.1.0 exactly, run `meteor add package`.
 
+You can clone a package from a Git repository by passing the source URL as the
+only package argument, or by passing it explicitly with --from. Meteor places it
+as a local package in your project. The cloned directory must contain a valid
+package.js file. The package name is read from Package.describe and registered
+in .meteor/packages automatically.
+
 Options:
+  --search <query>              Open an interactive Atmosphere package search
+                                pre-populated with the given query. Incompatible
+                                with positional package names and Git options.
   --allow-incompatible-update   Allow packages in your project to be upgraded or
                    downgraded to versions that are potentially incompatible with
                    the current versions, if required to satisfy all package
                    version constraints.
 
+Git options:
+  --from           Clone a package from a Git URL or GitHub shorthand (user/repo).
+                   Optional when the only package argument is URL-like.
+  --from-branch    Branch to clone from.
+  --from-dir       Extract only a subdirectory from the repo.
+  --to             Destination path relative to project root. By default, Meteor
+                   uses packages/<dir-name> when --from-dir is set or when a
+                   tree/.../<dir> URL parses into fromDir, otherwise
+                   packages/<repo-name>.
+  --force          Overwrite destination directory if it already exists.
+
 
 >>> remove
 Remove a package from this project.
-Usage: meteor remove <package> [package..]
+Usage: meteor remove [package..]
+       meteor remove --search <query>
 
 Removes a package previously added to your Meteor project. For a
 list of the packages that your application is currently using, see
 'meteor list'.
 
+Run without any package names to open an interactive picker listing
+the packages currently in `.meteor/packages`. Type to filter, press
+<space> to toggle, ? on a row to see its details, and <enter> to
+confirm. Use `meteor remove --search <query>` to open the picker
+pre-filtered. Both forms require an interactive terminal.
+
 Options:
+  --search <query>              Open an interactive picker pre-filtered by the
+                                given query. Incompatible with positional
+                                package names.
   --allow-incompatible-update   Allow packages in your project to be upgraded or
                    downgraded to versions that are potentially incompatible with
                    the current versions, if required to satisfy all package
@@ -437,6 +502,22 @@ Options:
   --platforms         Builds only the specified platforms (when available).
   --packageType       Choose between apk/bundle for android builds. (Defaults to bundle)
 
+
+
+>>> types
+Generate package type declarations for this project.
+Usage: meteor types
+
+Build local packages and generate `.meteor/types/` for projects that
+have a `tsconfig.json` or `jsconfig.json`. This command skips linting and
+bundling, which makes it useful for CI workflows that only need generated
+Meteor package declarations before running `tsc`.
+
+Options:
+  --allow-incompatible-update   Allow packages in your project to be upgraded or
+                      downgraded to versions that are potentially incompatible
+                      with the current versions, if required to satisfy all
+                      package version constraints.
 
 
 >>> lint
@@ -961,6 +1042,10 @@ Options:
              constraints.
   --no-lint  don't run linters on the published package and its local
              dependencies before publishing
+  --release <version> Specify the release of Meteor to resolve top-level version
+             conflicts. This option is particularly useful during the migration
+             process when dealing with packages that have conflicting version
+             requirements.
 
 
 >>> publish-for-arch
@@ -1190,3 +1275,24 @@ Options:
 The rest of options for this command are the same as those for the meteor run command.
 You can pass typical runtime options (such as --settings, --exclude-archs, etc.)
 to customize the profiling process.
+
+
+>>> shell-completion
+Install and configure tab completion for meteor commands.
+Usage: meteor shell-completion [options]
+
+Installs tab completion for the 'meteor' command to your shell profile
+(supporting Bash and Zsh on macOS and Linux).
+
+When installed, pressing tab will automatically autocomplete Meteor commands,
+options, platforms, and package names.
+
+The installed script embeds the current top-level command list. Re-run
+'meteor shell-completion --install' after updating your Meteor checkout to
+refresh that list.
+
+Options:
+  --install      Install completion to your shell profile configuration
+  --uninstall    Uninstall completion from your shell profile configuration
+  --script       Print the shell completion script to stdout
+  --shell        Specify the shell type (bash or zsh) for --install or --script

@@ -1,5 +1,5 @@
 Package.describe({
-  version: '1.0.10',
+  version: '1.0.11-beta360.1',
   summary: 'SHA256 implementation',
   git: 'https://github.com/meteor/meteor'
 });
@@ -7,4 +7,5 @@ Package.describe({
 Package.onUse(function (api) {
   api.export('SHA256');
   api.addFiles('sha256.js');
+  api.types('sha.d.ts');
 });

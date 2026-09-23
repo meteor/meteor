@@ -4,7 +4,7 @@ description: How to use Meteor's build system to compile your app.
 discourseTopicId: 19669
 ---
 
-The Meteor build system is the actual command line tool that you get when you install Meteor. You run it by typing the `meteor` command in your terminal, possibly followed by a set of arguments. Read the [docs about the command line tool](https://docs.meteor.com/commandline.html) or type `meteor help` in your terminal to learn about all of the commands.
+The Meteor build system is the actual command line tool that you get when you install Meteor. You run it by typing the `meteor` command in your terminal, possibly followed by a set of arguments. Read the [docs about the command line tool](https://docs.meteor.com/cli/) or type `meteor help` in your terminal to learn about all of the commands.
 
 <h2 id="what-it-does">What does it do?</h2>
 
@@ -16,7 +16,7 @@ After executing the `meteor` command to start the build tool you should leave it
 
 <h3 id="compiles-with-build-plugins">Compiles files with build plugins</h3>
 
-The main function of the Meteor build tool is to run "build plugins". These plugins define different parts of your app build process. Meteor puts heavy emphasis on reducing or removing build configuration files, so you won't see any large build process config files like you would in Gulp or Webpack. The Meteor build process is configured almost entirely through adding and removing packages to your app and putting files in specially named directories. For example, to get all of the newest stable ES2015 JavaScript features in your app, you add the [`ecmascript` package](http://docs.meteor.com/#/full/ecmascript). This package provides support for ES2015 modules, which gives you even more fine grained control over file load order using ES2015 `import` and `export`. As new Meteor releases add new features to this package you get them for free.
+The main function of the Meteor build tool is to run "build plugins". These plugins define different parts of your app build process. Meteor puts heavy emphasis on reducing or removing build configuration files, so you won't see any large build process config files like you would in Gulp or Webpack. The Meteor build process is configured almost entirely through adding and removing packages to your app and putting files in specially named directories. For example, to get all of the newest stable ES2015 JavaScript features in your app, you add the [`ecmascript` package](https://docs.meteor.com/packages/ecmascript.html). This package provides support for ES2015 modules, which gives you even more fine grained control over file load order using ES2015 `import` and `export`. As new Meteor releases add new features to this package you get them for free.
 
 <h4 id="controlling-build-files">Controlling which files to build</h4>
 
@@ -224,7 +224,7 @@ For more examples and details on importing styles and using `@imports` with pack
 
 <h3 id="sass">Sass</h3>
 
-The best Sass build plugin for Meteor is [`fourseven:scss`](https://atmospherejs.com/fourseven/scss).
+The best Sass build plugin for Meteor is [`leonardoventurini:scss`](https://atmospherejs.com/leonardoventurini/scss). An alternative to the previous recommended  [`fourseven:scss`](https://atmospherejs.com/fourseven/scss) package.
 
 <h3 id="less">Less</h3>
 

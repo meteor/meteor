@@ -135,7 +135,7 @@ Once you've done that, it's easy to [deploy to Galaxy](https://galaxy-guide.mete
 DEPLOY_HOSTNAME=galaxy.meteor.com meteor deploy your-app.com --settings production-settings.json
 ```
 
-To deploy to the EU region, set DEPLOY_HOSTNAME to eu-west-1.galaxy.meteor.com.
+To deploy to the EU region, set DEPLOY_HOSTNAME to eu-west-1.galaxy-deploy.meteor.com.
 
 In order for Galaxy to work with your custom domain (`your-app.com` in this case), you need to [set up your DNS to point at Galaxy](http://galaxy-guide.meteor.com/dns.html). Once you've done this, you should be able to reach your site from a browser.
 
@@ -196,6 +196,7 @@ MONGO_URL=mongodb://localhost:27017/myapp ROOT_URL=http://my-app.com PORT=3000 n
 * `ROOT_URL` is the base URL for your Meteor project
 * `PORT` is the port at which the application is running
 * `MONGO_URL` is a [Mongo connection string URI](https://docs.mongodb.com/manual/reference/connection-string/) supplied by the MongoDB provider.
+* `METEOR_SETTINGS` is a JSON object containing your application settings (can also be set via --settings flag). **Warning:** Any settings under the `public` key will be sent to the client - never put secrets there.
 
 
 Unless you have a specific need to roll your own hosting environment, the other options here are definitely easier, and probably make for a better setup than doing everything from scratch. Operating a Meteor app in a way that it works correctly for everyone can be complex, and [Galaxy](#galaxy) handles a lot of the specifics like routing clients to the right containers and handling coordinated version updates for you.

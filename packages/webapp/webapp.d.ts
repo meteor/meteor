@@ -22,7 +22,7 @@ type ExpressModule = {
   urlencoded: typeof express.urlencoded;
 };
 
-export declare module WebApp {
+export declare namespace WebApp {
   var defaultArch: string;
   var clientPrograms: {
     [key: string]: {
@@ -69,7 +69,7 @@ export declare module WebApp {
   function addHtmlAttributeHook(hook: Function): void;
 }
 
-export declare module WebAppInternals {
+export declare namespace WebAppInternals {
   var NpmModules: {
     [key: string]: {
       version: string;

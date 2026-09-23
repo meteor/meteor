@@ -1,12 +1,13 @@
 Package.describe({
   summary: "Reload the page while preserving application state.",
-  version: '1.3.2',
+  version: '1.3.3-beta360.1',
 });
 
 Package.onUse(function (api) {
   api.use('ecmascript');
   api.mainModule('reload.js', 'client');
   api.export('Reload', 'client');
+  api.types('reload.d.ts');
 });
 
 Package.onTest(function (api) {

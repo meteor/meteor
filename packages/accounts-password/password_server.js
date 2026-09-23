@@ -1,6 +1,7 @@
 import argon2 from "argon2";
-import { hash as bcryptHash, compare as bcryptCompare } from "bcrypt";
 import { Accounts } from "meteor/accounts-base";
+import { check, Match } from 'meteor/check';
+import { hash as bcryptHash, compare as bcryptCompare } from 'bcrypt';
 
 // Utility for grabbing user
 const getUserById =
@@ -288,14 +289,8 @@ Accounts._checkPasswordAsync = checkPasswordAsync;
 
 
 
-// XXX maybe this belongs in the check package
-const NonEmptyString = Match.Where(x => {
-  check(x, String);
-  return x.length > 0;
-});
-
 const passwordValidator = Match.OneOf(
-  Match.Where(str => Match.test(str, String) && str.length <= Meteor.settings?.packages?.accounts?.passwordMaxLength || 256), {
+  Match.Where(str => Match.test(str, String) && str.length <= (Meteor.settings?.packages?.accounts?.passwordMaxLength || 256)), {
     digest: Match.Where(str => Match.test(str, String) && str.length === 64),
     algorithm: Match.OneOf('sha-256')
   }
@@ -322,7 +317,7 @@ Accounts.registerLoginHandler("password", async options => {
   check(options, {
     user: Accounts._userQueryValidator,
     password: passwordValidator,
-    code: Match.Optional(NonEmptyString),
+    code: Match.Optional(Match.NonEmptyString),
   });
 
 
@@ -374,10 +369,9 @@ Accounts.registerLoginHandler("password", async options => {
  * @param {String} newUsername A new username for the user.
  * @importFromPackage accounts-base
  */
-Accounts.setUsername =
-  async (userId, newUsername) => {
-    check(userId, NonEmptyString);
-    check(newUsername, NonEmptyString);
+Accounts.setUsername = async (userId, newUsername) => {
+  check(userId, Match.NonEmptyString);
+  check(newUsername, Match.NonEmptyString);
 
     const user = await getUserById(userId, {
       fields: {
@@ -478,7 +472,7 @@ Meteor.methods(
 Accounts.setPasswordAsync =
   async (userId, newPlaintextPassword, options) => {
     check(userId, String);
-    check(newPlaintextPassword, Match.Where(str => Match.test(str, String) && str.length <= Meteor.settings?.packages?.accounts?.passwordMaxLength || 256));
+    check(newPlaintextPassword, Match.Where(str => Match.test(str, String) && str.length <= (Meteor.settings?.packages?.accounts?.passwordMaxLength || 256)));
     check(options, Match.Maybe({ logout: Boolean }));
     options = { logout: true, ...options };
 
@@ -513,6 +507,7 @@ Meteor.methods({forgotPassword: async options => {
   const user = await Accounts.findUserByEmail(options.email, { fields: { emails: 1 } });
 
   if (!user) {
+    if (Accounts._options.ambiguousErrorMessages) return;
     Accounts._handleError("User not found");
   }
 
@@ -1006,9 +1001,9 @@ Meteor.methods(
  * @importFromPackage accounts-base
  */
 Accounts.replaceEmailAsync = async (userId, oldEmail, newEmail, verified) => {
-  check(userId, NonEmptyString);
-  check(oldEmail, NonEmptyString);
-  check(newEmail, NonEmptyString);
+  check(userId, Match.NonEmptyString);
+  check(oldEmail, Match.NonEmptyString);
+  check(newEmail, Match.NonEmptyString);
   check(verified, Match.Optional(Boolean));
 
   if (verified === void 0) {
@@ -1050,8 +1045,8 @@ Accounts.replaceEmailAsync = async (userId, oldEmail, newEmail, verified) => {
  * @importFromPackage accounts-base
  */
 Accounts.addEmailAsync = async (userId, newEmail, verified) => {
-  check(userId, NonEmptyString);
-  check(newEmail, NonEmptyString);
+  check(userId, Match.NonEmptyString);
+  check(newEmail, Match.NonEmptyString);
   check(verified, Match.Optional(Boolean));
 
   if (verified === void 0) {
@@ -1161,8 +1156,8 @@ Accounts.addEmailAsync = async (userId, newEmail, verified) => {
  */
 Accounts.removeEmail =
   async (userId, email) => {
-    check(userId, NonEmptyString);
-    check(email, NonEmptyString);
+    check(userId, Match.NonEmptyString);
+    check(email, Match.NonEmptyString);
 
     const user = await getUserById(userId, { fields: { _id: 1 } });
     if (!user)

@@ -1,0 +1,9 @@
+{
+  "jsc": {
+    "baseUrl": "./",
+    "paths": {
+      "@ui/*": ["imports/ui/*"],
+      "@api/*": ["imports/api/*"]
+    }
+  }
+}

@@ -20,17 +20,17 @@ selftest.define("'meteor test --port' accepts/rejects proper values", async func
 
   run = s.run("test", "--port", "3700", "--driver-package", "tmeasday:acceptance-test-driver");
   run.waitSecs(30);
-  await run.match('App running at: http://localhost:3700/');
+  await run.match('App running at http://localhost:3700/');
   await run.stop();
 
   run = s.run("test", "--port", "127.0.0.1:3700", "--driver-package", "tmeasday:acceptance-test-driver");
   run.waitSecs(30);
-  await run.match('App running at: http://127.0.0.1:3700/');
+  await run.match('App running at http://127.0.0.1:3700/');
   await run.stop();
 
   run = s.run("test", "--port", "[::]:3700", "--driver-package", "tmeasday:acceptance-test-driver");
   run.waitSecs(30);
-  await run.match('App running at: http://[::]:3700/');
+  await run.match('App running at http://[::]:3700/');
   await run.stop();
 });
 

@@ -2,6 +2,10 @@ var showRequireProfile = ('METEOR_PROFILE_REQUIRE' in process.env);
 if (showRequireProfile) {
   require('../tool-env/profile-require.js').start();
 }
+const { initMeteorConfig } = require('../tool-env/meteor-config');
+
+// Initialize meteorConfig globally
+initMeteorConfig();
 
 var assert = require("assert");
 var _ = require('underscore');
@@ -96,7 +100,17 @@ Command.prototype.evaluateOption = function (optionName, options) {
 //
 // Options that function as commands (eg, "meteor --arch") are treated
 // as subcommands of "--".
-var commands = {};
+var commands = main.commands = {};
+
+main.getTopLevelCommandNames = function () {
+  const names = [];
+  Object.entries(commands).forEach(([name, cmd]) => {
+    if (name !== "--" && cmd && !cmd.hidden) {
+      names.push(name);
+    }
+  });
+  return names;
+};
 
 // Exception to throw from a command to bail out and show command
 // usage information.
@@ -287,15 +301,12 @@ main.captureAndExit = async function (header, title, f) {
 
 // NB: files required up to this point may not define commands
 
-const { initMeteorConfig } = require('../tool-env/meteor-config');
 require('./commands.js');
 require('./commands-packages.js');
 require('./commands-packages-query.js');
 require('./commands-cordova.js');
 require('./commands-aliases.js');
-
-// Initialize meteorConfig globally
-initMeteorConfig();
+require('./commands-completion.js');
 
 ///////////////////////////////////////////////////////////////////////////////
 // Record all the top-level commands as JSON
@@ -619,8 +630,14 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
   // first time we do a isopack.load, it will fail due to the check in the
   // meteor package, and that'll look a lot uglier.
   if (process.env.ROOT_URL) {
-    var parsedUrl = require('url').parse(process.env.ROOT_URL);
-    if (!parsedUrl.host || ['http:', 'https:'].indexOf(parsedUrl.protocol) === -1) {
+    let parsedUrl = null;
+    try {
+      parsedUrl = new URL(process.env.ROOT_URL);
+    } catch (e) {
+      // Not a parseable URL; handled by the check below.
+    }
+    if (!parsedUrl || !parsedUrl.host ||
+        ['http:', 'https:'].indexOf(parsedUrl.protocol) === -1) {
       Console.error('$ROOT_URL, if specified, must be an URL.');
       process.exit(1);
     }
@@ -846,18 +863,11 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
         "However, if you are running this command in a build process (CI, etc.), or you are absolutely sure you know what you are doing,",
         "set the METEOR_ALLOW_SUPERUSER environment variable or pass --allow-superuser to proceed."
       );
-    }
 
-    Console.info("");
-    Console.info(
-      "Even with METEOR_ALLOW_SUPERUSER or --allow-superuser, permissions in your app directory will be incorrect if you ever attempt to perform any Meteor tasks as a normal user.",
-      "If you need to fix your permissions, run the following command from the root of your project:"
-    );
-    Console.info("");
-    Console.info(Console.command("  sudo chown -Rh <username> .meteor/local"));
-    Console.info("");
+      Console.info("");
+      Console.info(Console.command("  sudo chown -Rh <username> .meteor/local"));
+      Console.info("");
 
-    if (! allowSuperuser) {
       process.exit(1);
     }
   }

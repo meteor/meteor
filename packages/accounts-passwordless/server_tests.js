@@ -1,6 +1,7 @@
 import { Random } from 'meteor/random';
 import { checkToken } from './server_utils';
 import { SHA256 } from 'meteor/sha';
+import './passwordless_method_tests.js';
 
 const USER_TOKEN = '123ABC';
 
@@ -28,6 +29,9 @@ const getData = ({ createdAt }) => {
 };
 
 Tinytest.add('passwordless - time expired', test => {
+  // The test suite for accounts-passwordless includes testing whether it gets the right error messages from the server.
+  // So, we need this disabled, otherwise those tests incorrectly fail when you run them.
+  Accounts._options.ambiguousErrorMessages = false;
   const createdAt = new Date('July 17, 2022 13:00:00');
   const currentDate = new Date('July 17, 2022 14:01:00');
 

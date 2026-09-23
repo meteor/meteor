@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'Meteor developer accounts OAuth flow',
-  version: '1.3.3',
+  version: '1.3.4-beta360.1',
 });
 
 Package.onUse(api => {
@@ -14,6 +14,7 @@ Package.onUse(api => {
   api.addFiles('meteor_developer_client.js', 'client');
 
   api.export('MeteorDeveloperAccounts');
+  api.types('meteor-developer-oauth.d.ts');
 });
 
 Package.onTest(function(api) {

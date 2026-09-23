@@ -1,6 +1,6 @@
 Package.describe({
   name: "fetch",
-  version: '0.1.6',
+  version: '0.2.1-beta360.1',
   summary: "Isomorphic modern/legacy/Node polyfill for WHATWG fetch()",
   documentation: "README.md"
 });
@@ -10,12 +10,12 @@ Npm.depends({
   "whatwg-fetch": "3.6.17"
 });
 
-Package.onUse(function(api) {
+Package.onUse(function (api) {
   api.use("modules");
   api.use("modern-browsers");
   api.use("promise");
 
-  api.mainModule("modern.js", "web.browser");
+  api.mainModule("modern.js", "modern");
   api.mainModule("legacy.js", "legacy");
   api.mainModule("server.js", "server");
 
@@ -25,7 +25,7 @@ Package.onUse(function(api) {
   api.export("fetch");
 });
 
-Package.onTest(function(api) {
+Package.onTest(function (api) {
   api.use("ecmascript");
   api.use("tinytest");
   api.use("fetch");

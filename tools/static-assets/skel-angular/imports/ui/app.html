@@ -1,0 +1,58 @@
+<style>
+  :host {
+    --primary-color: #3f51b5;
+    --accent-color: #ff4081;
+    --warn-color: #f44336;
+    --text-color: #333333;
+    --background-color: #fafafa;
+    
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    box-sizing: border-box;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1 {
+    font-size: 2.5rem;
+    color: var(--text-color);
+    font-weight: 500;
+    margin: 0 0 1rem 0;
+  }
+
+  p {
+    margin: 0 0 1rem 0;
+    color: var(--text-color);
+  }
+
+  button {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 0.5rem 1rem;
+    margin-right: 0.5rem;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.3s;
+  }
+
+  button:hover {
+    background-color: #303f9f;
+  }
+
+  button:active {
+    background-color: #1a237e;
+  }
+</style>
+
+<div class="container">
+  <div class="content">
+    <h1>Welcome to Meteor!</h1>
+    
+    <app-hello></app-hello>
+    
+    <app-info></app-info>
+  </div>
+</div>
+
+<router-outlet></router-outlet>
