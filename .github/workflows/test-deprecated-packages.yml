@@ -25,7 +25,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libnss3 g++-12
 
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
