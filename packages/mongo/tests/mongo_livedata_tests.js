@@ -1383,7 +1383,7 @@ const setsEqual = function (a, b) {
               { 'o.applyOps': { $elemMatch: { ns: namespace, op: 'd' } } },
             ],
           }).toArray();
-          console.log('MONGODB_DELETE_EVIDENCE', JSON.stringify({
+          console.error('MONGODB_DELETE_EVIDENCE', JSON.stringify({
             version: (await mongoConnection.db.admin().command({ buildInfo: 1 })).version,
             multiRemoveSnapshot,
             deleteEntries,
