@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: "Core Meteor environment",
-  version: '2.3.1',
+  version: '2.3.2-beta360.1',
 });
 
 Package.registerBuildPlugin({
@@ -65,6 +65,7 @@ Package.onUse(function (api) {
   api.export('EmitterPromise', 'server');
 
   api.addAssets('meteor.d.ts', 'server');
+  api.types('meteor.native.d.ts');
 });
 
 Package.onTest(function (api) {

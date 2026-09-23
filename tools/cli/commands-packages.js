@@ -23,6 +23,10 @@ var updater = require('../packaging/updater.js');
 var packageMapModule = require('../packaging/package-map.js');
 var packageClient = require('../packaging/package-client.js');
 var tropohouse = require('../packaging/tropohouse.js');
+var {
+  TYPES_BUILD_DIR,
+  usePrebuiltTypeScriptDeclarations
+} = require('../packaging/typescript-declarations.js');
 
 import {
   ensureDevBundleDependencies,
@@ -30,6 +34,17 @@ import {
   splitPluginsAndPackages,
 } from '../cordova/index.js';
 import { updateMeteorToolSymlink } from "../packaging/updater.js";
+import { execFileAsync } from '../utils/processes';
+import { isTypeScriptSourceEntry } from '../isobuild/types-generator';
+
+const {
+  isGitSourceLike,
+  parseGitUrl,
+  cloneRepo,
+  cloneSubdirectory,
+  validatePackageJs
+} = require('./git-clone.js');
+const inquirer = require('inquirer');
 
 // For each release (or package), we store a meta-record with its name,
 // maintainers, etc. This function takes in a name, figures out if
@@ -224,6 +239,129 @@ var updatePackageMetadata = async function (packageSource, conn) {
     return 0;
 };
 
+// For a TypeScript-authored package (api.types('index.ts')), run tsc in the
+// package directory to emit declaration files under .types-build/, then
+// rewrite the PackageSource IN PLACE to the directory form of api.types():
+// typesDir = '.types-build' with typesEntry/typesModules pointed at the
+// generated .d.ts files.  The build that follows reads the very same
+// PackageSource instance (the local catalog caches it, and the compiler
+// fetches it through the package map), so the published isopack carries
+// plain directory-mode metadata — consumers never see the .ts entry.
+//
+// tsc resolution order: the package's own node_modules/typescript wins, so
+// authors can pin their compiler; otherwise the TypeScript bundled with
+// Meteor's dev bundle is used — no typescript dependency is required at
+// all.  Either way the compiler runs as lib/tsc.js executed with Meteor's
+// own node, never through the extensionless node_modules/.bin/tsc shim
+// (a POSIX shell script that Windows could only run via cmd.exe PATHEXT
+// resolution).  A tsconfig.json in the package directory is respected
+// (-p ./); without one, tsc compiles the entry file and the typesModules
+// files with its defaults.
+//
+// Returns 0 on success; on failure prints tsc's output and returns 1.
+var generateTypeScriptDeclarations = async function (packageSource, packageDir) {
+  // Normalize a leading './' the same way _addFiles would have: the
+  // rewritten paths must match the relPaths that the compile-time
+  // directory expansion produces.
+  var entry = packageSource.typesEntry.replace(/^\.\//, '');
+
+  if (! files.exists(files.pathJoin(packageDir, entry))) {
+    Console.error(
+      "api.types(): entry file '" + entry + "' does not exist in the " +
+      "package directory.");
+    return 1;
+  }
+
+  var command = files.convertToOSPath(
+    files.pathJoin(files.getCurrentNodeBinDir(), 'node'));
+  var localTscJs = files.pathJoin(
+    packageDir, 'node_modules', 'typescript', 'lib', 'tsc.js');
+  var args = [files.convertToOSPath(
+    files.exists(localTscJs)
+      ? localTscJs
+      : files.pathJoin(
+          files.getDevBundle(),
+          'lib', 'node_modules', 'typescript', 'lib', 'tsc.js'))];
+
+  // Start from a clean output directory so declarations of files deleted
+  // since a previous publish attempt cannot leak into this one.
+  await files.rm_recursive(files.pathJoin(packageDir, TYPES_BUILD_DIR));
+
+  args.push(
+    '--declaration',
+    '--emitDeclarationOnly',
+    '--noEmit', 'false',
+    '--declarationDir', TYPES_BUILD_DIR,
+    // Pin TypeScript's incremental state inside the directory that was
+    // just cleared: with "incremental"/"composite" in the author's
+    // tsconfig, a stale tsconfig.tsbuildinfo at the package root would
+    // otherwise make tsc skip re-emitting declarations it believes are
+    // current — silently publishing a partial (or empty) .types-build.
+    // Inert when the author uses no incremental compilation.
+    '--tsBuildInfoFile', TYPES_BUILD_DIR + '/.tsbuildinfo',
+    '--rootDir', './'
+  );
+  if (files.exists(files.pathJoin(packageDir, 'tsconfig.json'))) {
+    // Respect the author's compiler configuration.
+    args.push('-p', './');
+  } else {
+    // Without a tsconfig, tsc compiles only the files it is given (plus
+    // their import closure).  Sub-path module files are by design not
+    // imported by the entry, so they must be passed explicitly or their
+    // declarations would never be emitted.
+    args.push(entry);
+    _.each(packageSource.typesModules || {}, function (modulePath) {
+      args.push(modulePath.replace(/^\.\//, ''));
+    });
+  }
+
+  try {
+    // waitForClose so tsc's stdout/stderr are fully drained before the
+    // diagnostics below are captured — settling on 'exit' can truncate a
+    // large compile-error dump.
+    await execFileAsync(command, args, {
+      cwd: packageDir,
+      waitForClose: true,
+      quoteArgsOnWindows: true
+    });
+  } catch (err) {
+    Console.error(
+      'tsc failed to generate type declarations for ' +
+      packageSource.name + ':');
+    // tsc reports compile errors on stdout; spawn-level problems land on
+    // stderr.  Surface both verbatim.
+    if (err.stdout) {
+      Console.rawError(err.stdout + '\n');
+    }
+    if (err.stderr) {
+      Console.rawError(err.stderr + '\n');
+    }
+    return 1;
+  }
+
+  // Verify that every declaration the rewrite will point at was actually
+  // emitted — e.g. an author tsconfig whose include/files misses a module
+  // file would otherwise publish metadata pointing at nonexistent
+  // declarations, and consumers would silently lose those types.
+  var prebuiltResult = usePrebuiltTypeScriptDeclarations(
+    packageSource, packageDir);
+  if (! prebuiltResult.ok) {
+    var missing = prebuiltResult.missing.map(function (item) {
+      return item.label + " ('" + item.sourcePath + "' -> '" +
+        item.declarationPath + "')";
+    });
+    Console.error(
+      'api.types(): tsc did not emit declarations for: ' +
+      missing.join(', ') + '. If the package has a tsconfig.json, make ' +
+      'sure its "include"/"files" covers these files.');
+    return 1;
+  }
+
+  Console.info(
+    '[types] Generated declarations for ' + packageSource.name + ' with tsc');
+  return 0;
+};
+
 main.registerCommand({
   name: 'publish',
   minArgs: 0,
@@ -388,6 +526,30 @@ main.registerCommand({
       }
       return 2;
     }
+  }
+
+  // TypeScript-authored package: api.types() was called with a .ts/.tsx
+  // source entry.  Generate real .d.ts declarations with tsc now — after
+  // the cheap validation above, before the build below — and rewrite the
+  // PackageSource to the directory form (typesDir = '.types-build'), which
+  // the compile-time expansion in PackageSource.getFiles picks up.  The
+  // published isopack is therefore a plain directory-mode types package.
+  if (isTypeScriptSourceEntry(packageSource.typesEntry) &&
+      ! packageSource.typesDir) {
+    var typesExit = await generateTypeScriptDeclarations(
+      packageSource, options.packageDir);
+    if (typesExit !== 0) {
+      return typesExit;
+    }
+    // The rewrite above only mutates the in-memory PackageSource, and the
+    // isopack cached in .meteor/local/isopacks may have been built from
+    // the pre-rewrite (ts-src) source by a prior `meteor run`.  Nothing in
+    // isopack-buildinfo.json reflects the rewrite — the .types-build
+    // dot-directory is excluded from every watched directory listing — so
+    // the up-to-date check would happily republish the stale ts-src
+    // isopack.  Force a recompile of this package so the build below
+    // always stamps the rewritten directory-mode metadata.
+    projectContext.forceRebuildPackage(packageName);
   }
 
   // Make sure that both the package and its test (if any) are actually built.
@@ -650,6 +812,36 @@ main.registerCommand({
   });
   projectContext.projectConstraintsFile.addConstraints(
     [utils.parsePackageConstraint(name + "@=" + versionString)]);
+
+  // The source tarball's package.js still says api.types('index.ts'), but the
+  // initial publish includes its already-generated .types-build declarations.
+  // Reuse those exact files rather than running tsc again with a potentially
+  // different source/configuration closure on this architecture builder.
+  var archPackageSource = projectContext.localCatalog.getPackageSource(name);
+  if (archPackageSource &&
+      isTypeScriptSourceEntry(archPackageSource.typesEntry) &&
+      ! archPackageSource.typesDir) {
+    var prebuiltResult = usePrebuiltTypeScriptDeclarations(
+      archPackageSource, packageDir);
+    if (! prebuiltResult.ok) {
+      var missing = prebuiltResult.missing.map(function (item) {
+        return item.label + " ('" + item.sourcePath + "' -> '" +
+          item.declarationPath + "')";
+      });
+      Console.error(
+        'api.types(): source bundle is missing declarations generated by ' +
+        'the original publish: ' + missing.join(', ') + '. ' +
+        'publish-for-arch will not regenerate them with a different ' +
+        'TypeScript configuration. Republish the package source with a ' +
+        'Meteor release that includes prebuilt declarations.');
+      return 1;
+    }
+    Console.info(
+      '[types] Reusing declarations generated by the original publish for ' +
+      name);
+    projectContext.forceRebuildPackage(name);
+  }
+
   await main.captureAndExit("=> Errors while initializing project:", async function () {
     await projectContext.prepareProjectForBuild();
   });
@@ -2178,13 +2370,204 @@ main.registerCommand({
 main.registerCommand({
   name: 'add',
   options: {
-    "allow-incompatible-update": { type: Boolean }
+    "allow-incompatible-update": { type: Boolean },
+    "search": { type: String },
+    "from": { type: String },
+    "from-branch": { type: String },
+    "from-dir": { type: String },
+    "to": { type: String },
+    "force": { type: Boolean },
   },
-  minArgs: 1,
+  minArgs: 0,
   maxArgs: Infinity,
   requiresApp: true,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, async function (options) {
+  if (
+    !options.from &&
+    options.args &&
+    options.args.length === 1 &&
+    isGitSourceLike(options.args[0])
+  ) {
+    options.from = options.args[0];
+    options.args = [];
+  }
+
+  if (
+    options.search &&
+    (options.from || options['from-branch'] || options['from-dir'] ||
+      options.to || options.force)
+  ) {
+    Console.error(
+      'meteor add: cannot combine --search with Git clone options.'
+    );
+    return 1;
+  }
+
+  // --from flow: clone a package from a Git repository
+  if (options['from-branch'] && !options.from) {
+    Console.error('--from-branch requires --from to specify the source repository.');
+    return 1;
+  }
+  if (options['from-dir'] && !options.from) {
+    Console.error('--from-dir requires --from to specify the source repository.');
+    return 1;
+  }
+  if (options.force && !options.from) {
+    Console.error('--force requires --from to specify the source repository.');
+    return 1;
+  }
+  if (options.to && !options.from) {
+    Console.error('--to requires --from to specify the source repository.');
+    return 1;
+  }
+
+  if (options.from) {
+    if (options.args && options.args.length > 0) {
+      Console.error('Cannot specify package names when using --from.');
+      return 1;
+    }
+
+    // Smart-parse the URL to extract repo, branch, and dir when possible.
+    // Explicit --from-branch / --from-dir always take precedence.
+    const parsed = parseGitUrl(options.from);
+    const repoUrl = parsed.repoUrl;
+    const branch = options['from-branch'] || parsed.branch || null;
+    const fromDir = options['from-dir'] || parsed.dir || null;
+
+    // Determine destination path
+    let destPath;
+    if (options.to) {
+      destPath = files.pathResolve(options.appDir, options.to);
+    } else {
+      // Derive name from the URL or --from-dir
+      let dirName;
+      if (fromDir) {
+        dirName = fromDir.split('/').filter(Boolean).pop();
+      } else {
+        dirName = repoUrl.split('/').filter(Boolean).pop().replace(/\.git$/, '');
+      }
+      destPath = files.pathJoin(options.appDir, 'packages', dirName);
+    }
+
+    // Check if destination already exists
+    if (files.exists(destPath)) {
+      if (options.force) {
+        await files.rm_recursive_async(destPath);
+      } else {
+        const prompt = inquirer.createPromptModule();
+        const { overwrite } = await prompt([{
+          type: 'confirm',
+          name: 'overwrite',
+          message: `Directory '${files.convertToOSPath(destPath)}' already exists. Overwrite? (use --force to skip this prompt)`,
+          default: false,
+        }]);
+        if (!overwrite) {
+          return 0;
+        }
+        await files.rm_recursive_async(destPath);
+      }
+    }
+
+    let clonedPackageName;
+    try {
+      if (fromDir) {
+        await cloneSubdirectory(repoUrl, branch, fromDir, destPath);
+      } else {
+        await cloneRepo(repoUrl, destPath, { branch });
+      }
+
+      const { name } = validatePackageJs(destPath);
+      if (!name) {
+        throw new Error(
+          `Could not determine the package name from package.js in '${files.convertToOSPath(destPath)}'.`
+        );
+      }
+      clonedPackageName = name;
+
+      Console.info(`Package cloned to ${files.convertToOSPath(destPath)}`);
+    } catch (err) {
+      // Clean up on failure
+      if (files.exists(destPath)) {
+        await files.rm_recursive_async(destPath);
+      }
+      Console.error(err.message);
+      return 1;
+    }
+
+    // Only auto-register the package when the destination is somewhere the
+    // local catalog will scan (the project's packages/ dir or any path in
+    // METEOR_PACKAGE_DIRS / PACKAGE_DIRS). Otherwise the constraint solver
+    // would fail with a generic "no such package" error.
+    const searchDirs = [files.pathJoin(options.appDir, 'packages')];
+    const envDirs = [
+      ...((process.env.METEOR_PACKAGE_DIRS || '')
+        .split(files.pathOsDelimiter).filter(Boolean)),
+      ...((process.env.PACKAGE_DIRS || '')
+        .split(':').filter(Boolean)),
+    ];
+    for (const dir of envDirs) {
+      searchDirs.push(files.pathResolve(dir));
+    }
+    const isDiscoverable = searchDirs.some(root => {
+      const rel = files.pathRelative(root, destPath);
+      return rel && !rel.startsWith('..' + files.pathSep) && rel !== '..';
+    });
+
+    if (!isDiscoverable) {
+      Console.warn(
+        `'${files.convertToOSPath(destPath)}' is outside the project's packages/ ` +
+        `directory and not covered by METEOR_PACKAGE_DIRS, so it cannot be ` +
+        `registered automatically.`
+      );
+      Console.info(
+        `Move it under packages/ or add its parent to METEOR_PACKAGE_DIRS, ` +
+        `then run: meteor add ${clonedPackageName}`
+      );
+      return 0;
+    }
+
+    // Fall through to the standard add flow so the cloned package is
+    // registered in .meteor/packages and resolved by the constraint solver.
+    options.args = [clonedPackageName];
+  }
+
+  if (!options.from && (options.args.length === 0 || options.search)) {
+    if (options.args.length > 0 && options.search) {
+      Console.error(
+        "meteor add: cannot combine --search with positional package names."
+      );
+      return 1;
+    }
+    if (!Console.isInteractive() || !process.stdin.isTTY) {
+      Console.error(
+        options.search
+          ? "meteor add --search requires an interactive terminal."
+          : "meteor add requires at least one package name in non-interactive mode."
+      );
+      return 1;
+    }
+    var search = require('./commands-packages-search.js');
+    var picked;
+    try {
+      picked = await search.runInteractivePackageSearch({
+        initialQuery: options.search,
+        installed: search.readInstalledPackageNames(options.appDir)
+      });
+    } catch (err) {
+      if (err instanceof search.MeteorSearchAbortedError) {
+        return 1;
+      }
+      Console.error("Package search failed: " + (err && err.message ? err.message : err));
+      return 1;
+    }
+    if (!picked || picked.length === 0) {
+      Console.info("No packages selected.");
+      return 0;
+    }
+    options.args = picked;
+  }
+
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
     allowIncompatibleUpdate: options["allow-incompatible-update"]
@@ -2386,13 +2769,59 @@ main.registerCommand({
 main.registerCommand({
   name: 'remove',
   options: {
-    "allow-incompatible-update": { type: Boolean }
+    "allow-incompatible-update": { type: Boolean },
+    "search": { type: String }
   },
-  minArgs: 1,
+  minArgs: 0,
   maxArgs: Infinity,
   requiresApp: true,
   catalogRefresh: new catalog.Refresh.Never()
 }, async function (options) {
+  if (options.args.length === 0 || options.search) {
+    if (options.args.length > 0 && options.search) {
+      Console.error(
+        "meteor remove: cannot combine --search with positional package names."
+      );
+      return 1;
+    }
+    if (!Console.isInteractive() || !process.stdin.isTTY) {
+      Console.error(
+        options.search
+          ? "meteor remove --search requires an interactive terminal."
+          : "meteor remove requires at least one package name in non-interactive mode."
+      );
+      return 1;
+    }
+    var search = require('./commands-packages-search.js');
+    var removeSearch = require('./commands-packages-remove-search.js');
+    var installed = search.readInstalledPackageNames(options.appDir);
+    if (installed.size === 0) {
+      Console.info("No packages installed.");
+      return 0;
+    }
+    var picked;
+    try {
+      picked = await removeSearch.runInteractiveRemoveSelection({
+        installed: installed,
+        initialQuery: options.search
+      });
+    } catch (err) {
+      if (err instanceof search.MeteorSearchAbortedError) {
+        return 1;
+      }
+      Console.error(
+        "Package selection failed: "
+        + (err && err.message ? err.message : err)
+      );
+      return 1;
+    }
+    if (!picked || picked.length === 0) {
+      Console.info("No packages selected.");
+      return 0;
+    }
+    options.args = picked;
+  }
+
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
     allowIncompatibleUpdate: options["allow-incompatible-update"]

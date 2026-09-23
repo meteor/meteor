@@ -8,6 +8,7 @@ on:
       # testMatch also covers this package, so a PR that only touches it must
       # still run the suite.
       - 'npm-packages/meteor-rspack/**'
+      - 'packages/rspack/**'
       - 'package.json'
       - '.github/workflows/unit-tests.yml'
   push:
@@ -30,7 +31,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22.x
+          node-version: 26.x
 
       - name: Install unit test deps
         run: npm run install:unit

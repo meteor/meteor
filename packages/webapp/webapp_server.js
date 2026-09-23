@@ -16,7 +16,6 @@ import {
   removeExistingSocketFile,
   registerSocketFileCleanup,
 } from './socket_file.js';
-import cluster from 'cluster';
 import { execSync } from 'child_process';
 import { onMessage } from 'meteor/inter-process-messaging';
 
@@ -1525,7 +1524,15 @@ async function runWebAppServer() {
     let unixSocketPath = process.env.UNIX_SOCKET_PATH;
 
     if (unixSocketPath) {
-      if (cluster.isWorker) {
+      // Lazy-load cluster only when needed (UNIX_SOCKET_PATH with workers).
+      // Avoids loading the module in the common case where it is unused.
+      let cluster;
+      try {
+        cluster = require('cluster');
+      } catch (e) {
+        // cluster module unavailable in this runtime; continue without worker suffix.
+      }
+      if (cluster?.isWorker && cluster.worker) {
         const workerName = cluster.worker.process.env.name || cluster.worker.id;
         unixSocketPath += '.' + workerName + '.sock';
       }
