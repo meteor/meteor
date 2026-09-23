@@ -1019,7 +1019,11 @@ const setsEqual = function (a, b) {
 
   const difference = (arr1, arr2) => arr1.filter(x => !arr2.includes(x));
 
-  return difference(a, b).length === 0 && difference(b, a).length === 0;
+  const matches = difference(a, b).length === 0 && difference(b, a).length === 0;
+  if (!matches) {
+    console.error('MONGODB_COMPARISON', JSON.stringify({ actual: a, expected: b, stack: new Error().stack }));
+  }
+  return matches;
   };
 
     if (IS_OPLOG) {

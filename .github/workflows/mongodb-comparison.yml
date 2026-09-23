@@ -1,0 +1,48 @@
+name: MongoDB 7 and 8 observer comparison
+on:
+  push:
+    branches: [codex/mongodb8-runtime-validation]
+    paths:
+      - .github/workflows/mongodb-comparison.yml
+      - packages/mongo/tests/mongo_livedata_tests.js
+permissions:
+  contents: read
+jobs:
+  compare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        mongo: ['7.0.16', '8.0.29']
+    env:
+      USE_TEST_DEV_BUNDLE_SERVER: '1'
+      npm_config_audit: 'false'
+      CXX: g++-12
+      phantom: 'false'
+      METEOR_MODERN: 'true'
+      NODE_ENV: CI
+      METEOR_REACTIVITY_ORDER: oplog,polling
+      METEOR_HEADLESS: 'true'
+      TIMEOUT_SCALE_FACTOR: '20'
+      TINYTEST_FILTER: 'mongo-livedata - observe sorted, limited'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26.x
+      - name: Install identical Node 26 test bundle
+        run: bash scripts/ci/verify-mongodb8-bundle.sh
+      - name: Replace only MongoDB binaries for baseline
+        if: matrix.mongo == '7.0.16'
+        run: |
+          mkdir /tmp/mongo7
+          curl -fSL https://github.com/meteor/mongodb-builder/releases/download/v7.0.16/mongodb-linux-x86_64-7.0.16.tgz | tar xz -C /tmp/mongo7 --strip-components=1
+          cp /tmp/mongo7/bin/mongod /tmp/mongo7/bin/mongos dev_bundle/mongodb/bin/
+      - name: Record actual binaries and run focused observer tests
+        run: |
+          dev_bundle/mongodb/bin/mongod --version
+          dev_bundle/bin/node --version
+          ./packages/test-in-console/run.sh "mongo"
