@@ -1,7 +1,7 @@
 import { FILE_ROLE } from "./lib/constants";
 import {
   getBuildFileContent,
-  shouldRewriteModuleFile,
+  canRewriteModuleFile,
 } from "./lib/build-context";
 import {
   RSPACK_EXTENSIONS_TO_IGNORE,
@@ -125,23 +125,11 @@ Tinytest.add(
 );
 
 Tinytest.add(
-  "rspack - build-context - stale owned scaffolds are rewritten",
+  "rspack - build-context - owned scaffolds can be rewritten",
   function (test) {
     test.isTrue(
-      shouldRewriteModuleFile({
-        filename: "main-dev/server-meteor.js",
-        existing: "/* old placeholder */",
-        defaultContent: "/* new placeholder */",
-      }),
-      "a scaffold that no longer contains its placeholder must be rewritten",
-    );
-    test.isFalse(
-      shouldRewriteModuleFile({
-        filename: "main-dev/server-meteor.js",
-        existing: "/* placeholder */\n/* rspack-server-build-id:1 */",
-        defaultContent: "/* placeholder */",
-      }),
-      "a scaffold that still contains its placeholder must be left alone",
+      canRewriteModuleFile({ filename: "main-dev/server-meteor.js" }),
+      "a scaffold owned by the current mode must stay rewritable",
     );
   },
 );
@@ -152,11 +140,7 @@ Tinytest.add(
     ["main-dev/server-rspack.cjs", "test/client-rspack.js"].forEach(
       (filename) => {
         test.isFalse(
-          shouldRewriteModuleFile({
-            filename,
-            existing: "/* compiled bundle */",
-            defaultContent: "/* placeholder */",
-          }),
+          canRewriteModuleFile({ filename }),
           `${filename} must keep its compiled bundle`,
         );
       },
@@ -170,10 +154,8 @@ Tinytest.add(
     // A `meteor test` run marks the main-mode scaffolds create-only, so it
     // leaves a concurrent dev server's compiled server-meteor.js in place.
     test.isFalse(
-      shouldRewriteModuleFile({
+      canRewriteModuleFile({
         filename: "main-dev/server-meteor.js",
-        existing: "/* dev server scaffold with lazyExternalImports */",
-        defaultContent: "/* placeholder */",
         createOnly: true,
       }),
     );

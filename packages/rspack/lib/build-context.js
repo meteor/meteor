@@ -216,6 +216,15 @@ export function ensureModuleFilesExist() {
 
     // 2. If the file exists, check its contents
     if (fs.existsSync(filePath)) {
+      // Leave protected files alone without reading them; output bundles can
+      // be large compiled bundles.
+      if (!canRewriteModuleFile({
+        filename,
+        createOnly: createOnlyFiles.has(filename),
+      })) {
+        return;
+      }
+
       let existing;
       try {
         existing = fs.readFileSync(filePath, 'utf8');
@@ -224,13 +233,8 @@ export function ensureModuleFilesExist() {
         return;
       }
 
-      // 3. Overwrite stale scaffolds this mode owns
-      if (shouldRewriteModuleFile({
-        filename,
-        existing,
-        defaultContent,
-        createOnly: createOnlyFiles.has(filename),
-      })) {
+      // 3. If it doesn't already include the new defaultContent, overwrite it
+      if (!existing.includes(defaultContent)) {
         try {
           fs.writeFileSync(filePath, defaultContent, 'utf8');
         } catch (err) {
@@ -260,8 +264,8 @@ function isOutputBundleFile(filename) {
 }
 
 /**
- * Decides whether ensureModuleFilesExist() should overwrite a scaffold file
- * that already exists.
+ * Decides whether ensureModuleFilesExist() may overwrite a scaffold file that
+ * already exists.
  *
  * Output bundles are never overwritten: they receive the real compiled bundle
  * from Rspack, and replacing one with the placeholder would wipe the live
@@ -269,20 +273,15 @@ function isOutputBundleFile(filename) {
  * sharing an app directory), leaving it to serve a blank bundle.
  *
  * Create-only files belong to another command mode and are never overwritten
- * either. Every other file is rewritten when it no longer contains its
+ * either. Every other file may be rewritten when it no longer contains its
  * placeholder content.
  * @param {Object} options
  * @param {string} options.filename - Scaffold path relative to the build context
- * @param {string} options.existing - Current file contents
- * @param {string} options.defaultContent - Placeholder content for the file
  * @param {boolean} [options.createOnly] - Whether the file is create-only
  * @returns {boolean}
  */
-export function shouldRewriteModuleFile({ filename, existing, defaultContent, createOnly = false }) {
-  if (createOnly || isOutputBundleFile(filename)) {
-    return false;
-  }
-  return !existing.includes(defaultContent);
+export function canRewriteModuleFile({ filename, createOnly = false }) {
+  return !createOnly && !isOutputBundleFile(filename);
 }
 
 export function bumpServerRuntimeBuildId() {
