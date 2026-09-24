@@ -29,7 +29,11 @@ const {
 } = require('./extract');
 const { engines } = require('./package.json');
 const { uninstall } = require('./uninstall');
-const { isMeteorOnPath, appendLineIfMissing } = require('./exec-path');
+const {
+  appendLineIfMissing,
+  bashLoginFile,
+  isMeteorOnPath,
+} = require('./exec-path');
 
 const nodeVersion = engines.node;
 const npmVersion = engines.npm;
@@ -130,14 +134,13 @@ if (fs.existsSync(startedPath)) {
   // Repair the PATH if a previous install left it missing, instead of just
   // bailing out. setupExecPath is idempotent, so it is safe to call again.
   if (
-    !isWindows() &&
     shouldSetupExecPath() &&
-    !isMeteorOnPath(process.env.PATH, meteorPath, path.delimiter)
+    !isMeteorOnPath(process.env.PATH, meteorPath, path.delimiter, {
+      windows: isWindows(),
+      env: process.env,
+    })
   ) {
-    setupExecPath();
-    console.log(
-      'Added Meteor to your PATH. Open a new terminal (or reload your shell profile) to use the `meteor` command.',
-    );
+    repairExecPath();
   }
 
   console.log(
@@ -318,29 +321,88 @@ async function extract() {
 async function setup() {
   fs.unlinkSync(startedPath);
   if (shouldSetupExecPath()) {
-    await setupExecPath();
+    setupExecPath();
   }
   await fixOwnership();
   showGettingStarted();
 }
-async function setupExecPath() {
+// Adds meteorPath to the user's PATH unless it is already configured there.
+// Returns { written, present }: the locations that were updated and the ones
+// that already had it.
+function setupExecPath() {
+  const result = { written: [], present: [] };
   if (isWindows()) {
+    const target = 'your Windows user environment';
+    if (
+      isMeteorOnPath(readWindowsUserPath(), meteorPath, ';', {
+        windows: true,
+        env: process.env,
+      })
+    ) {
+      result.present.push(target);
+      return result;
+    }
     // set for the current session and beyond
     child_process.execSync(
       `powershell -c "$path = (Get-Item 'HKCU:\\Environment').GetValue('Path', '', 'DoNotExpandEnvironmentNames'); [Environment]::SetEnvironmentVariable('PATH', \\"${meteorPath};$path\\", 'User');"`,
     );
-    return;
+    result.written.push(target);
+    return result;
   }
   const exportCommand = `export PATH=${meteorPath}:$PATH`;
 
-  const appendPathToFile = file =>
-    appendLineIfMissing(`${rootPath}/${file}`, exportCommand);
+  const files =
+    process.env.SHELL && process.env.SHELL.includes('zsh')
+      ? ['.zshrc']
+      : ['.bashrc', bashLoginFile(rootPath)];
 
-  if (process.env.SHELL && process.env.SHELL.includes('zsh')) {
-    appendPathToFile('.zshrc');
-  } else {
-    appendPathToFile('.bashrc');
-    appendPathToFile('.bash_profile');
+  files.forEach(file => {
+    const target = path.join(rootPath, file);
+    if (appendLineIfMissing(target, exportCommand)) {
+      result.written.push(target);
+    } else {
+      result.present.push(target);
+    }
+  });
+  return result;
+}
+// The raw (unexpanded) user PATH from the registry, or '' if it can't be read.
+// It is transported as base64 UTF-16 so non-ASCII profile paths survive the
+// console code page.
+function readWindowsUserPath() {
+  try {
+    const out = child_process.execFileSync(
+      'powershell.exe',
+      [
+        '-NoProfile',
+        '-NonInteractive',
+        '-Command',
+        "$p = (Get-Item 'HKCU:\\Environment').GetValue('Path', '', 'DoNotExpandEnvironmentNames'); [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes([string]$p))",
+      ],
+      { encoding: 'utf8' },
+    );
+    return Buffer.from(out.trim(), 'base64').toString('utf16le');
+  } catch (e) {
+    return '';
+  }
+}
+// Called when Meteor is already installed but not on the PATH of this shell.
+function repairExecPath() {
+  try {
+    const { written, present } = setupExecPath();
+    if (written.length) {
+      console.log(`Added Meteor to the PATH in ${written.join(' and ')}.`);
+    } else {
+      console.log(
+        `Meteor is already added to the PATH in ${present.join(' and ')}, but this terminal has not loaded it.`,
+      );
+    }
+    console.log('Open a new terminal to use the `meteor` command.');
+  } catch (e) {
+    const manual = isWindows()
+      ? `Add ${meteorPath} to your user PATH environment variable.`
+      : `Add this line to your shell profile: export PATH=${meteorPath}:$PATH`;
+    console.warn(`Could not add Meteor to your PATH: ${e.message}\n${manual}`);
   }
 }
 async function fixOwnership() {
