@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Dependency tracker to allow reactive callbacks",
-  version: '1.3.4',
+  version: '1.3.5-beta360.1',
 });
 
 Package.onUse(function (api) {
@@ -9,6 +9,7 @@ Package.onUse(function (api) {
   api.export("Tracker");
   api.export("Deps");
   api.addAssets("tracker.d.ts", ["client", "server"]);
+  api.types("tracker.native.d.ts");
 });
 
 Package.onTest(function (api) {

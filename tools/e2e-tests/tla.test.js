@@ -15,7 +15,10 @@ describe('Regressions / tla /', () => {
   let meteorProcess;
 
   beforeAll(async () => {
-    ({ tempDir } = await setupMeteorApp('tla'));
+    ({ tempDir } = await setupMeteorApp('tla', {
+      tempDirSegments: ['private'],
+    }));
+    expect(tempDir.split(/[\\/]/)).toContain('private');
     await linkLocalRspack(tempDir);
   });
 
@@ -48,7 +51,7 @@ describe('Regressions / tla /', () => {
     expect(mainIndex).toBeGreaterThan(settledIndex);
   });
 
-  test('"meteor test --full-app --once" runs tests', async () => {
+  test('"meteor test --full-app --once" runs tests below a private path segment', async () => {
     const result = await runMeteorTests(tempDir, port, {
       commandOptions: ['--full-app', '--once'],
       checkTestResults: true,

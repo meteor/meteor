@@ -1,6 +1,6 @@
 Package.describe({
   name: "socket-stream-client",
-  version: '0.7.1',
+  version: '0.7.2-beta360.1',
   summary: "Provides the ClientStream abstraction used by ddp-client",
   documentation: "README.md"
 });
@@ -21,6 +21,7 @@ Package.onUse(function (api) {
 
   api.addFiles("server.js", "server");
   api.mainModule("node.js", "server", { lazy: true });
+  api.types("socket-stream-client.d.ts");
 });
 
 Package.onTest(function (api) {

@@ -5,4 +5,4 @@ ecmascript
 typescript
 shell-server
 rspack
-meteortesting:mocha@3.4.0-rc.1
+meteortesting:mocha@3.4.0

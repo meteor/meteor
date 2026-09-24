@@ -100,6 +100,8 @@ export default class Builder {
     this.createdSymlinks = {};
     this.previousWrittenHashes = {};
     this.previousCreatedSymlinks = {};
+    this.copiedSourceRoots = new Map();
+    this.pendingExternalFileLinks = [];
 
     // foo/bar => foo/.build1234.bar
     // Should we include a random number? The advantage is that multiple
@@ -645,6 +647,8 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
   //   entries that end with a slash if it's a directory.
   // - specificFiles: just copy these paths (specified as relative to 'to').
   // - symlink: true if the directory should be symlinked instead of copying
+  // - preserveCopiedExternalLinks: retain filtered external file links only
+  //   when their resolved target is copied elsewhere in this builder
   copyDirectory(options) {
     // TODO(benjamn) Remove this wrapper when Builder#enter is no longer
     // implemented using ridiculous hacks.
@@ -659,6 +663,8 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     npmDiscards,
     // Optional predicate to filter files and directories.
     filter,
+    // Keep filtered external file links only when their target is copied.
+    preserveCopiedExternalLinks = false,
   }) {
     if (to.slice(-1) === files.pathSep) {
       to = to.slice(0, -1);
@@ -688,6 +694,14 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     }
 
     const rootDir = realpath(from);
+    const recordCopiedRoot = (source, destination) => {
+      const destinations = this.copiedSourceRoots.get(source) || [];
+      destinations.push(destination);
+      this.copiedSourceRoots.set(source, destinations);
+    };
+    if (!symlink) {
+      recordCopiedRoot(rootDir, to);
+    }
 
     const walk = async (absFrom, relTo) => {
       if (symlink && ! (relTo in this.usedAsFile)) {
@@ -725,6 +739,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
         // rootDir, using caching because this function might be called
         // more than once.
         let cachedExternalPath;
+        let resolvedLinkPath;
         const getExternalPath = () => {
           if (typeof cachedExternalPath !== "undefined") {
             return cachedExternalPath;
@@ -732,6 +747,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
           try {
             var real = realpath(thisAbsFrom);
+            resolvedLinkPath = real;
           } catch (e) {
             if (e.code !== "ENOENT" &&
                 e.code !== "ELOOP") {
@@ -748,6 +764,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
         };
 
         let fileStatus = optimisticLStatOrNull(thisAbsFrom);
+        let dereferencedExternalPath = false;
 
         if (! symlink &&
             fileStatus &&
@@ -758,6 +775,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           // file as a normal file rather than as a symbolic link.
           const externalPath = getExternalPath();
           if (externalPath) {
+            dereferencedExternalPath = externalPath;
             // Update fileStatus to match the actual file rather than the
             // symbolic link, thus forcing the file to be copied below.
             fileStatus = optimisticLStatOrNull(externalPath);
@@ -780,8 +798,11 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           continue;
         }
 
-        if (typeof filter === "function" &&
-            ! filter(thisAbsFrom, isDirectory)) {
+        const filtered = typeof filter === "function" &&
+            ! filter(thisAbsFrom, isDirectory);
+        const pendingCopiedLink = filtered && preserveCopiedExternalLinks &&
+            dereferencedExternalPath && fileStatus.isFile();
+        if (filtered && !pendingCopiedLink) {
           continue;
         }
 
@@ -791,7 +812,25 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
         }
 
         if (isDirectory) {
+          if (dereferencedExternalPath) {
+            recordCopiedRoot(dereferencedExternalPath, thisRelTo);
+          }
           await walk(thisAbsFrom, thisRelTo);
+          continue;
+        }
+
+        if (dereferencedExternalPath && fileStatus.isFile()) {
+          // A later directory in this build may contain the same file. Wait
+          // until all copies finish before deciding whether to link to that
+          // copy or preserve the old fallback of copying this external file.
+          this.pendingExternalFileLinks.push({
+            from: thisAbsFrom,
+            resolved: dereferencedExternalPath,
+            to: thisRelTo,
+            mode: fileStatus.mode,
+            onlyIfCopied: pendingCopiedLink,
+          });
+          this.usedAsFile[thisRelTo] = true;
           continue;
         }
 
@@ -799,18 +838,30 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           // Symbolic links pointing to relative external paths are less
           // portable than absolute links, so getExternalPath() is
           // preferred if it returns a path.
-          let linkSource;
-          try {
-            linkSource = getExternalPath() ||
-                files.readlink(thisAbsFrom);
-          } catch (e) {
-            // Entry deleted between readdir and readlink; skip it.
-            if (e.code === "ENOENT") continue;
-            throw e;
+          const externalPath = getExternalPath();
+          let linkSource = externalPath;
+          if (! linkSource) {
+            try {
+              linkSource = files.readlink(thisAbsFrom);
+            } catch (e) {
+              // Entry deleted between lstat and readlink; skip it.
+              if (e.code === "ENOENT") continue;
+              throw e;
+            }
           }
 
           const linkTarget =
               files.pathResolve(this.buildPath, thisRelTo);
+
+          if (!symlink && !externalPath && resolvedLinkPath) {
+            // A copied workspace can have a different depth than its source.
+            // Link to the target's bundle location, not its checkout location.
+            linkSource = files.pathRelative(
+              files.pathDirname(linkTarget),
+              files.pathResolve(this.buildPath, to,
+                files.pathRelative(rootDir, resolvedLinkPath))
+            ) || ".";
+          }
 
           if (await symlinkIfPossible(linkSource, linkTarget)) {
             // A symlink counts as a file, as far as "can you put
@@ -923,6 +974,59 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
   // Move the completed bundle into its final location (outputPath)
   async complete() {
+    for (const pending of this.pendingExternalFileLinks) {
+      const absTo = files.pathResolve(this.buildPath, pending.to);
+      let copiedTarget;
+
+      // Search from the file's directory outward, so the closest copied
+      // source root wins when workspaces are nested or copied more than once.
+      let sourceRoot = files.pathDirname(pending.resolved);
+      while (true) {
+        const relTarget = files.pathRelative(sourceRoot, pending.resolved);
+        for (const destination of this.copiedSourceRoots.get(sourceRoot) || []) {
+          const bundleTarget = files.pathJoin(destination, relTarget);
+          if (bundleTarget !== pending.to &&
+              this.usedAsFile[bundleTarget] === true) {
+            copiedTarget = files.pathResolve(this.buildPath, bundleTarget);
+            break;
+          }
+        }
+        if (copiedTarget) break;
+        const parent = files.pathDirname(sourceRoot);
+        if (parent === sourceRoot) break;
+        sourceRoot = parent;
+      }
+
+      if (copiedTarget) {
+        const relativeTarget = files.pathRelative(
+          files.pathDirname(absTo), copiedTarget
+        ) || ".";
+        if (await symlinkIfPossible(relativeTarget, absTo)) {
+          continue;
+        }
+      }
+
+      // An in-place rebuild may have left a symlink at this path. Remove it
+      // before falling back to a file copy so the write cannot follow it.
+      try {
+        files.unlink(absTo);
+      } catch (e) {
+        if (e.code !== "ENOENT") throw e;
+      }
+
+      if (pending.onlyIfCopied && !copiedTarget) {
+        delete this.usedAsFile[pending.to];
+        continue;
+      }
+
+      // The external target was not copied into the bundle, or symlinks are
+      // unavailable. Preserve the previous behavior by copying the file.
+      files.writeFile(absTo, optimisticReadFile(pending.from), {
+        mode: (pending.mode & 0o100) ? 0o777 : 0o666,
+      });
+      this.writtenHashes[pending.to] = optimisticHashOrNull(pending.from);
+    }
+
     if (this.previousUsedAsFile) {
       // delete files and folders left-over from previous runs and not
       // re-used in this run

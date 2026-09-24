@@ -5,19 +5,32 @@
 
 import path from 'path';
 
-export const DEFAULT_RSPACK_VERSION = '1.7.1';
+/* Minimum accepted and auto-install version for `@rspack/core` and `@rspack/cli`. */
+export const DEFAULT_RSPACK_VERSION = '2.2.0';
 
-export const DEFAULT_METEOR_RSPACK_VERSION = '2.2.0-beta.0';
+/* Minimum accepted and auto-install version for `@rspack/dev-server`. */
+export const DEFAULT_RSPACK_DEV_SERVER_VERSION = '2.2.0';
 
-export const DEFAULT_METEOR_RSPACK_REACT_HMR_VERSION = '1.4.3';
+/* Published `@meteorjs/rspack` minimum and auto-install version. */
+export const DEFAULT_METEOR_RSPACK_VERSION = '3.0.0-beta.2';
 
+/* Minimum accepted and auto-install version for `@rspack/plugin-react-refresh`. */
+export const DEFAULT_METEOR_RSPACK_REACT_HMR_VERSION = '2.0.0';
+
+/* Minimum accepted and auto-install version for the `react-refresh` HMR runtime. */
 export const DEFAULT_METEOR_RSPACK_REACT_REFRESH_VERSION = '0.17.0';
 
+/* Reserved `swc-loader` version; currently unused by `dependencies.js`. */
 export const DEFAULT_METEOR_RSPACK_SWC_LOADER_VERSION = '0.2.6';
 
-export const DEFAULT_METEOR_RSPACK_SWC_HELPERS_VERSION = '0.5.17';
+/* Minimum accepted and auto-install version for the `@swc/helpers` runtime. */
+export const DEFAULT_METEOR_RSPACK_SWC_HELPERS_VERSION = '0.5.23';
 
-export const DEFAULT_RSDOCTOR_RSPACK_PLUGIN_VERSION = '1.5.7';
+/* Minimum accepted and auto-install version for `@swc/core`. */
+export const DEFAULT_METEOR_RSPACK_SWC_CORE_VERSION = '1.15.32';
+
+/* Minimum accepted and auto-install version for `@rsdoctor/rspack-plugin`. */
+export const DEFAULT_RSDOCTOR_RSPACK_PLUGIN_VERSION = '1.5.9';
 
 /**
  * Global state keys used for storing and retrieving state across the application

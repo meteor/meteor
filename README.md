@@ -118,6 +118,7 @@ Meteor is made possible by our amazing sponsors. Support the project and get you
 
 **Building an application with Meteor?**
 
+* Build with AI coding assistants using [Meteor Agent Skills](https://docs.meteor.com/ai/agent-skills)
 * Deploy on [Galaxy](https://galaxycloud.app)
 * Find packages on [Atmosphere](https://atmospherejs.com/)
 * Discuss on [Forums](https://forums.meteor.com/)

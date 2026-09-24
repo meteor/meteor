@@ -25,6 +25,35 @@ WebApp.handlers.use("/hello", (req, res, next) => {
 <ApiBox name="WebApp.handlers"/>
 <ApiBox name="expressHandlersCallback(req, res, next)" hasCustomExample/>
 
+### Customizing the `<html>` Element
+
+Use `WebApp.addHtmlAttributeHook` on the server to add attributes to the
+`<html>` element. The hook runs whenever Meteor generates app HTML and receives
+information about the request, so attributes can be static or request-specific.
+
+For example, this sets the document language for every request:
+
+```js
+// server/main.js
+import { WebApp } from "meteor/webapp";
+
+WebApp.addHtmlAttributeHook(() => ({ lang: "en" }));
+```
+
+Return `null` when no attributes should be added for a request. If multiple
+hooks return the same attribute, the hook registered last takes precedence.
+The request object contains:
+
+- `browser`: the browser `name` and `major`, `minor`, and `patch` versions
+- `modern`: whether the browser supports Meteor's modern JavaScript bundle
+- `path`: the request path
+- `arch`: the selected client architecture
+- `url`: parsed URL data, including a `query` object
+- `headers`: the request headers
+- `cookies`: the parsed request cookies
+
+<ApiBox name="WebApp.addHtmlAttributeHook" hasCustomExample/>
+
 ### Serving a Static Landing Page
 
 One of the really cool things you can do with WebApp is serve static HTML for a landing page where TTFB (time to first byte) is of utmost importance.
@@ -151,11 +180,9 @@ When using React SSR with packages like `server-render`, you may want to complet
 
 ```js
 // server/main.js
-import { WebApp } from 'meteor/webapp';
+import { WebAppInternals } from "meteor/webapp";
 
-WebApp.addHtmlAttributeHook(() => ({
-  disableBoilerplateResponse: true
-}));
+WebAppInternals.disableBoilerplateResponse();
 ```
 
 **Benefits:**
@@ -178,11 +205,9 @@ Example with server-render:
 ```js
 import { onPageLoad } from 'meteor/server-render';
 import { renderToString } from 'react-dom/server';
-import { WebApp } from 'meteor/webapp';
+import { WebAppInternals } from 'meteor/webapp';
 
-WebApp.addHtmlAttributeHook(() => ({
-  disableBoilerplateResponse: true
-}));
+WebAppInternals.disableBoilerplateResponse();
 
 onPageLoad(sink => {
   const html = renderToString(<App />);

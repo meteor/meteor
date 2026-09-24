@@ -1,0 +1,136 @@
+// Bounded, JSON-safe preview of an arbitrary value. Never emits raw application
+// objects: it caps depth, key count, string length and array length, breaks
+// cycles, and renders non-JSON values (function/symbol/bigint/undefined, Error,
+// Date) as safe markers. This is the global-capture serializer AND the final
+// safety bound applied to whatever a per-method captureArgs/captureResult returns,
+// so a careless override can never blow up a consumer.
+
+const DEFAULTS = { maxDepth: 4, maxKeys: 32, maxStringLength: 200, maxArrayLength: 32 };
+const dateGetTime = Date.prototype.getTime;
+const dateToISOString = Date.prototype.toISOString;
+
+const truncate = (str, max) => (str.length > max ? str.slice(0, max) + '…' : str);
+// Reading a property of an application error can itself throw (getters), and
+// the reply path must survive that: degrade to a marker, never propagate.
+function safeGet(obj, key) {
+  try {
+    return obj[key];
+  } catch (_ignored) {
+    return '[Getter threw]';
+  }
+}
+
+function previewErrorWithState(error, opts, depth, seen) {
+  if (depth >= opts.maxDepth) return '[Error]';
+  if (seen.has(error)) return '[Circular]';
+  seen.add(error);
+
+  const out = {
+    name: walk(safeGet(error, 'name'), opts, depth + 1, seen),
+    message: walk(safeGet(error, 'message'), opts, depth + 1, seen),
+  };
+  const code = safeGet(error, 'error');
+  if (code !== undefined) out.error = walk(code, opts, depth + 1, seen);
+  const reason = safeGet(error, 'reason');
+  if (reason !== undefined) out.reason = walk(reason, opts, depth + 1, seen);
+
+  seen.delete(error);
+  return out;
+}
+
+export function previewError(error) {
+  let isError;
+  try {
+    isError = error instanceof Error;
+  } catch (_ignored) {
+    isError = false;
+  }
+  if (!isError) {
+    let str;
+    try {
+      str = String(error);
+    } catch (_ignored) {
+      str = '[unstringifiable value]';
+    }
+    return { name: 'Error', message: truncate(str, DEFAULTS.maxStringLength) };
+  }
+  return previewErrorWithState(error, DEFAULTS, 0, new WeakSet());
+}
+
+function walk(value, opts, depth, seen) {
+  if (value === null) return null;
+  const t = typeof value;
+  if (t === 'string') {
+    return truncate(value, opts.maxStringLength);
+  }
+  if (t === 'number' || t === 'boolean') return value;
+  if (t === 'undefined') return '[undefined]';
+  if (t === 'function') return `[Function ${truncate(String(value.name || 'anonymous'), 50)}]`;
+  if (t === 'symbol') return truncate(value.toString(), opts.maxStringLength);
+  if (t === 'bigint') return truncate(`${value}n`, opts.maxStringLength);
+  if (value instanceof Error) return previewErrorWithState(value, opts, depth, seen);
+  if (value instanceof Date) {
+    try {
+      const ms = dateGetTime.call(value);
+      return Number.isNaN(ms) ? '[Invalid Date]' : dateToISOString.call(value);
+    } catch (_ignored) {
+      return '[Invalid Date]';
+    }
+  }
+
+  if (depth >= opts.maxDepth) return Array.isArray(value) ? '[Array]' : '[Object]';
+  if (seen.has(value)) return '[Circular]';
+  seen.add(value);
+
+  let out;
+  if (Array.isArray(value)) {
+    let arrayLength;
+    try {
+      arrayLength = value.length;
+    } catch (_ignored) {
+      seen.delete(value);
+      return '[Array]';
+    }
+    out = [];
+    const previewLength = Math.min(arrayLength, opts.maxArrayLength);
+    for (let index = 0; index < previewLength; index += 1) {
+      let item;
+      try {
+        item = value[index];
+      } catch (_ignored) {
+        out[index] = '[Getter threw]';
+        continue;
+      }
+      out[index] = walk(item, opts, depth + 1, seen);
+    }
+    if (arrayLength > opts.maxArrayLength) out[previewLength] = `… +${arrayLength - opts.maxArrayLength} more`;
+  } else {
+    out = {};
+    const keys = Object.keys(value);
+    for (const k of keys.slice(0, opts.maxKeys)) {
+      // Bounded key: two long keys sharing a 200-char prefix collide in the
+      // preview (last one wins) — acceptable for observability output.
+      const boundedKey = truncate(k, opts.maxStringLength);
+      let v;
+      try {
+        v = value[k]; // an enumerable getter may throw
+      } catch (err) {
+        let msg = 'error';
+        try {
+          if (err && err.message) msg = truncate(String(err.message), opts.maxStringLength);
+        } catch (_ignored) { /* reading .message threw too — keep the generic marker */ }
+        out[boundedKey] = `[Getter threw: ${msg}]`;
+        continue;
+      }
+      out[boundedKey] = walk(v, opts, depth + 1, seen);
+    }
+    if (keys.length > opts.maxKeys) out['…'] = `+${keys.length - opts.maxKeys} more keys`;
+  }
+
+  seen.delete(value); // allow the same object in sibling branches (DAG, not a cycle)
+  return out;
+}
+
+export function previewValue(value, options) {
+  return walk(value, { ...DEFAULTS, ...(options || {}) }, 0, new WeakSet());
+}

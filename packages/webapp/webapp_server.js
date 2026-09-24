@@ -16,7 +16,6 @@ import {
   removeExistingSocketFile,
   registerSocketFileCleanup,
 } from './socket_file.js';
-import cluster from 'cluster';
 import { execSync } from 'child_process';
 import { onMessage } from 'meteor/inter-process-messaging';
 
@@ -214,9 +213,6 @@ WebApp.categorizeRequest = function(req) {
   return categorized;
 };
 
-// HTML attribute hooks: functions to be called to determine any attributes to
-// be added to the '<html>' tag. Each function is passed a 'request' object (see
-// #BrowserIdentification) and should return null or object.
 var htmlAttributeHooks = [];
 var getHtmlAttributes = function(request) {
   var combinedAttributes = {};
@@ -229,6 +225,17 @@ var getHtmlAttributes = function(request) {
   });
   return combinedAttributes;
 };
+
+/**
+ * @summary Registers a callback that runs whenever Meteor generates app HTML.
+ * Attributes returned by all registered callbacks are merged onto the
+ * `<html>` element. If callbacks return the same attribute, the callback
+ * registered last takes precedence.
+ * @locus Server
+ * @param {Function} hook A callback that receives information about the request
+ * for app HTML and returns an object of HTML attribute names and values, or
+ * `null` to add no attributes for that request.
+ */
 WebApp.addHtmlAttributeHook = function(hook) {
   htmlAttributeHooks.push(hook);
 };
@@ -1517,7 +1524,15 @@ async function runWebAppServer() {
     let unixSocketPath = process.env.UNIX_SOCKET_PATH;
 
     if (unixSocketPath) {
-      if (cluster.isWorker) {
+      // Lazy-load cluster only when needed (UNIX_SOCKET_PATH with workers).
+      // Avoids loading the module in the common case where it is unused.
+      let cluster;
+      try {
+        cluster = require('cluster');
+      } catch (e) {
+        // cluster module unavailable in this runtime; continue without worker suffix.
+      }
+      if (cluster?.isWorker && cluster.worker) {
         const workerName = cluster.worker.process.env.name || cluster.worker.id;
         unixSocketPath += '.' + workerName + '.sock';
       }
