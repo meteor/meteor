@@ -1,5 +1,8 @@
 import { FILE_ROLE } from "./lib/constants";
-import { getBuildFileContent } from "./lib/build-context";
+import {
+  getBuildFileContent,
+  shouldRewriteModuleFile,
+} from "./lib/build-context";
 import {
   RSPACK_EXTENSIONS_TO_IGNORE,
   getRspackFileExtensionsToIgnore,
@@ -117,6 +120,62 @@ Tinytest.add(
     test.isTrue(
       content.includes("await Promise.resolve(__rspackBundle)"),
       "production server must wait for the async Rspack bundle",
+    );
+  },
+);
+
+Tinytest.add(
+  "rspack - build-context - stale owned scaffolds are rewritten",
+  function (test) {
+    test.isTrue(
+      shouldRewriteModuleFile({
+        filename: "main-dev/server-meteor.js",
+        existing: "/* old placeholder */",
+        defaultContent: "/* new placeholder */",
+      }),
+      "a scaffold that no longer contains its placeholder must be rewritten",
+    );
+    test.isFalse(
+      shouldRewriteModuleFile({
+        filename: "main-dev/server-meteor.js",
+        existing: "/* placeholder */\n/* rspack-server-build-id:1 */",
+        defaultContent: "/* placeholder */",
+      }),
+      "a scaffold that still contains its placeholder must be left alone",
+    );
+  },
+);
+
+Tinytest.add(
+  "rspack - build-context - output bundles are never rewritten",
+  function (test) {
+    ["main-dev/server-rspack.cjs", "test/client-rspack.js"].forEach(
+      (filename) => {
+        test.isFalse(
+          shouldRewriteModuleFile({
+            filename,
+            existing: "/* compiled bundle */",
+            defaultContent: "/* placeholder */",
+          }),
+          `${filename} must keep its compiled bundle`,
+        );
+      },
+    );
+  },
+);
+
+Tinytest.add(
+  "rspack - build-context - create-only scaffolds are never rewritten",
+  function (test) {
+    // A `meteor test` run marks the main-mode scaffolds create-only, so it
+    // leaves a concurrent dev server's compiled server-meteor.js in place.
+    test.isFalse(
+      shouldRewriteModuleFile({
+        filename: "main-dev/server-meteor.js",
+        existing: "/* dev server scaffold with lazyExternalImports */",
+        defaultContent: "/* placeholder */",
+        createOnly: true,
+      }),
     );
   },
 );
