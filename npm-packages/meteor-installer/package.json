@@ -4,7 +4,8 @@
   "description": "Install Meteor",
   "main": "install.js",
   "scripts": {
-    "install": "node cli.js install"
+    "install": "node cli.js install",
+    "test": "node --test exec-path.test.js"
   },
   "author": "zodern",
   "license": "MIT",
