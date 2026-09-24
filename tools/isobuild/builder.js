@@ -47,27 +47,33 @@ const ENABLE_IN_PLACE_BUILDER_REPLACEMENT =
   (process.platform !== 'win32') &&
   ! process.env.METEOR_DISABLE_BUILDER_IN_PLACE;
 
-// Scratch directories created inside node_modules by meteorNpm.
-// rebuildIfNonPortable, rm_recursive_deferred and renameDirAlmostAtomically;
-// never legitimate bundle content.
+// Scratch directories Meteor itself creates directly inside a node_modules
+// directory (or one of its @scope directories) that is about to be copied:
+//   .temp-<token>            meteorNpm.rebuildIfNonPortable
+//   .temp-<token>.old-<n>    the same, renamed by rm_recursive_deferred
+//                            (left behind by Meteor 3.5.2 / 3.6 betas)
+//   .<name>-garbage-<token>  files.renameDirAlmostAtomically
+// They are never bundle content. Another process can also be rebuilding the
+// same shared node_modules (e.g. ~/.meteor/packages) while we copy it, so
+// the copy must skip them even though this process awaits its own cleanup.
 const TRANSIENT_SCRATCH_REGEX =
-  /^\.(?:temp-[0-9a-z]+(?:\.old-\d+)?|.*-garbage-[0-9a-z]+)$/;
+  /^\.(?:temp-[0-9a-z]+(?:\.old-\d+)?|.+-garbage-[0-9a-z]+)$/;
 
-// Meteor only ever creates those directly inside a node_modules directory
-// (or a node_modules/@scope directory), so the location is part of the
-// check: a package-owned lookalike deeper in the tree (e.g.
-// node_modules/example/.temp-cache) is preserved.
-function isTransientScratchDir(absPath) {
+// Only the root of the copied node_modules tree (and its @scope dirs) is a
+// Meteor scratch location, so package-owned lookalikes anywhere below it
+// (node_modules/example/.temp-cache,
+// node_modules/example/node_modules/.temp-x) are preserved.
+function isTransientScratchDir(absPath, nodeModulesRoot) {
   if (! TRANSIENT_SCRATCH_REGEX.test(files.pathBasename(absPath))) {
     return false;
   }
   let parent = files.pathDirname(absPath);
-  if (files.pathBasename(parent).startsWith("@")) {
+  if (parent !== nodeModulesRoot &&
+      files.pathBasename(parent).startsWith("@")) {
     parent = files.pathDirname(parent);
   }
-  return files.pathBasename(parent) === "node_modules";
+  return parent === nodeModulesRoot;
 }
-
 
 // Options:
 //  - outputPath: Required. Path to the directory that will hold the
@@ -573,7 +579,8 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       // package directories, such as the node_modules directory itself,
       // as well as node_modules/meteor and the parent directories of any
       // scoped npm packages.
-      this._ensureAllNonPackageDirectories(absFrom, options.to, rootCache);
+      this._ensureAllNonPackageDirectories(
+        absFrom, options.to, rootCache, absFrom);
     }
 
     const userFilter = options.filter;
@@ -582,15 +589,17 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     return this._copyDirectory(Object.assign({}, options, {
       filter: (absPath, isDirectory) => {
         if (isDirectory && absPath === rootCache) return false;
-        if (isDirectory && isTransientScratchDir(absPath)) return false;
+        if (isDirectory && isTransientScratchDir(absPath, absFrom)) {
+          return false;
+        }
         return userFilter ? userFilter(absPath, isDirectory) : true;
       },
     }));
   }
 
-  _ensureAllNonPackageDirectories(absFromDir, relToDir, skipPath) {
+  _ensureAllNonPackageDirectories(absFromDir, relToDir, skipPath, rootDir) {
     if (skipPath && absFromDir === skipPath) return;
-    if (isTransientScratchDir(absFromDir)) return;
+    if (isTransientScratchDir(absFromDir, rootDir)) return;
 
     const dirStat = optimisticStatOrNull(absFromDir);
     if (! (dirStat && dirStat.isDirectory())) {
@@ -624,7 +633,8 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       this._ensureAllNonPackageDirectories(
         files.pathJoin(absFromDir, item),
         files.pathJoin(relToDir, item),
-        skipPath
+        skipPath,
+        rootDir
       );
     });
   }

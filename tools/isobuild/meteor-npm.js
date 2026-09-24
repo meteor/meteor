@@ -385,9 +385,7 @@ Profile("meteorNpm.rebuildIfNonPortable", async function (nodeModulesDir) {
   const rebuildResult = await runNpmCommand(getRebuildArgs(), tempDir);
   if (! rebuildResult.success) {
     buildmessage.error(rebuildResult.error);
-    // Awaited so the bundler never walks nodeModulesDir while tempDir is
-    // half-deleted, but async so the event loop is not blocked meanwhile.
-    await files.rm_recursive_async(tempDir);
+    await removeRebuildTempDir(tempDir);
     return false;
   }
 
@@ -423,12 +421,24 @@ Profile("meteorNpm.rebuildIfNonPortable", async function (nodeModulesDir) {
     await files.renameDirAlmostAtomically(tempPkgDirs[pkgPath], pkgPath);
   }
 
-  // Awaited so the bundler never walks nodeModulesDir while tempDir is
-  // half-deleted, but async so the event loop is not blocked meanwhile.
-  await files.rm_recursive_async(tempDir);
+  await removeRebuildTempDir(tempDir);
 
   return true;
 });
+
+// tempDir lives inside the node_modules directory that the bundler walks as
+// soon as rebuildIfNonPortable returns, so remove it before returning; a
+// deferred removal lets that walk step into the half-deleted tree (ENOENT on
+// readlink). Async so the event loop keeps running meanwhile. A failed
+// removal (e.g. a Windows file lock) is not fatal: Builder never copies
+// .temp-* directories, so a leftover is harmless.
+async function removeRebuildTempDir(tempDir) {
+  try {
+    await files.rm_recursive_async(tempDir);
+  } catch (e) {
+    console.error(`Error removing temporary directory ${tempDir}:`, e);
+  }
+}
 
 // Copy an npm package directory to another location, but attempt to
 // symlink all of its node_modules rather than recursively copying them,
