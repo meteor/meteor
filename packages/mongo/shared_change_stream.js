@@ -283,6 +283,11 @@ export class SharedChangeStream {
       resumeTokenPresent: !!this._resumeToken,
     });
     try {
+      // The reopened cursor goes live before each driver's resync runs, so hold
+      // fence releases until that driver is reconciled (see _endResyncHold).
+      if (this._historyLost) {
+        for (const driver of this._drivers) driver._resyncPending = true;
+      }
       await this._closeStream();
       if (this._stopped) return;
       // Reopen via the shared guard so a mid-restart subscriber awaits it too.
@@ -341,6 +346,11 @@ export class SharedChangeStream {
           driverId: driver._id,
           error,
         });
+      } finally {
+        // A resync that threw before reaching its own cleanup would otherwise
+        // keep holding fence releases, hanging every later write on this
+        // collection.
+        if (driver._resyncPending) driver._endResyncHold();
       }
     }
   }

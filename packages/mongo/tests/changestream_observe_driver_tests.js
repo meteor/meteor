@@ -2913,12 +2913,18 @@ Tinytest.addAsync(
         new Promise(r => setTimeout(() => r(TIMEOUT), 10000)),
       ]);
       test.isTrue(outcome !== TIMEOUT, 'write fence fires after the oversized event');
+      const eventsAtFence = events.length;
 
-      // The skipped update is reconciled by the resync.
+      // The skipped update is reconciled by the resync, before the fence fires:
+      // otherwise the method's `updated` would reach the client ahead of its data.
       await waitFor(() => events.some(e => e.type === 'changed' && e.fields.v === 1), 3000);
+      const changedAt = events.findIndex(
+        e => e.type === 'changed' && e.id === 'big' && e.fields.v === 1
+      );
+      test.isTrue(changedAt !== -1, 'the skipped update reaches the observer via the resync');
       test.isTrue(
-        events.some(e => e.type === 'changed' && e.id === 'big' && e.fields.v === 1),
-        'the skipped update reaches the observer via the resync'
+        changedAt !== -1 && changedAt < eventsAtFence,
+        'the skipped update is reconciled before the write fence fires'
       );
 
       // The reopened stream starts after the oversized event, so it recovers in
@@ -2934,6 +2940,96 @@ Tinytest.addAsync(
       );
     } finally {
       delete shared._restart;
+      handle.stop();
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - a live event during the oversized-event resync does not release the write fence early (#14763)',
+  async function (test) {
+    const MB = 1024 * 1024;
+    const c = makeCollection();
+    await c.rawCollection().insertOne({ _id: 'big', big: 'a'.repeat(9 * MB), v: 0 });
+
+    const log = [];
+    const handle = await c.find({}, { fields: { big: 0 } }).observeChanges({
+      added: id => log.push(`added:${id}`),
+      changed: (id, fields) => log.push(`changed:${id}:${fields.v}`),
+    });
+    test.isTrue(isChangeStreamDriver(handle));
+    await waitFor(() => log.includes('added:big'), 3000);
+
+    // Stand in for ordinary write traffic: the reopened stream delivers another
+    // write before this driver's resync runs, moving the driver past the write
+    // whose event was skipped.
+    const driver = handle._multiplexer._observeDriver;
+    const origResync = driver._resyncAfterHistoryLost.bind(driver);
+    driver._resyncAfterHistoryLost = async (caughtUpTo) => {
+      await c.rawCollection().insertOne({ _id: 'live-during-resync' });
+      await waitFor(() => log.includes('added:live-during-resync'), 3000);
+      // Give an early fence release time to surface before the resync runs.
+      await new Promise(r => setTimeout(r, 200));
+      return origResync(caughtUpTo);
+    };
+
+    try {
+      const TIMEOUT = Symbol('timeout');
+      const outcome = await Promise.race([
+        withFence(async () => {
+          await c.updateAsync('big', { $set: { big: 'b'.repeat(9 * MB), v: 1 } });
+        }),
+        new Promise(r => setTimeout(() => r(TIMEOUT), 10000)),
+      ]);
+      test.isTrue(outcome !== TIMEOUT, 'write fence fires');
+      log.push('fence');
+
+      await waitFor(() => log.includes('changed:big:1'), 3000);
+      const changedAt = log.indexOf('changed:big:1');
+      test.isTrue(
+        changedAt !== -1 && changedAt < log.indexOf('fence'),
+        `the skipped update is reconciled before the fence fires; log=${log.join(',')}`
+      );
+    } finally {
+      delete driver._resyncAfterHistoryLost;
+      handle.stop();
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - a resync that throws does not keep holding write fences (#14763)',
+  async function (test) {
+    const c = makeCollection();
+    const handle = await c.find({}).observeChanges({ added: function () { } });
+    test.isTrue(isChangeStreamDriver(handle));
+
+    const driver = handle._multiplexer._observeDriver;
+    const shared = driver._sharedStream;
+    let resyncCalls = 0;
+    driver._resyncAfterHistoryLost = async () => {
+      resyncCalls++;
+      throw new Error('resync failed');
+    };
+
+    try {
+      const tooLarge = Object.assign(new Error('BSONObj size: 18874887 is invalid'), {
+        code: 10334, codeName: 'BSONObjectTooLarge',
+      });
+      shared._changeStream.emit('error', tooLarge);
+      await waitFor(() => resyncCalls === 1 && !shared._restarting, 5000);
+      test.isFalse(driver._resyncPending, 'the hold is lifted after a failed resync');
+
+      const TIMEOUT = Symbol('timeout');
+      const outcome = await Promise.race([
+        withFence(async () => {
+          await c.insertAsync({ _id: 'after-failed-resync' });
+        }),
+        new Promise(r => setTimeout(() => r(TIMEOUT), 5000)),
+      ]);
+      test.isTrue(outcome !== TIMEOUT, 'later writes still release their fence');
+    } finally {
+      delete driver._resyncAfterHistoryLost;
       handle.stop();
     }
   }
