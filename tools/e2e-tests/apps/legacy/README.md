@@ -20,6 +20,10 @@ Mozilla/5.0 (Windows NT 6.1; Trident/7.0; rv:11.0) like Gecko
 
 `regressions/architecture-entrypoints.test.js` keeps the focused production/debug build, explicit `false`, omitted-entry, and ES5 assertions. It also verifies full-app tests with both browser programs, legacy development reloads, and excluded architectures. An Android platform is added only to its temporary copy to inspect the Cordova web program without a native SDK.
 
+The same suite tests the [reporter's npm dependency reproduction](https://github.com/perbergland/meteor-14756-legacy-repro) using the alternate `client/npm-modern.tsx` and `client/npm-legacy.ts` entries. Only that temporary app installs React, `ua-parser-js`, and `@datadog/browser-rum`. The production case checks entry and React isolation, then boots the bundle to render the React page and the unsupported-browser stub. The shared browser description must execute through `ua-parser-js` in both programs. Datadog is imported and called without initializing telemetry. Running the legacy page also verifies that Meteor includes helpers introduced when it recompiles Rspack output.
+
+The case preserves the reporter's empty Rspack configuration and `nodeModules.recompile` setting for `ua-parser-js`. That setting does not add Rspack transpilation rules. The SDK version used here contains BigInt literals, so this case verifies program delivery and execution in Chromium, without claiming ES5 compatibility for the SDK. The existing syntax checks continue to cover the original fixture's app code and Rspack runtime.
+
 Run both suites sequentially from the repository root:
 
 ```sh

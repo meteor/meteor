@@ -377,8 +377,18 @@ The legacy entry can then import `@legacy/message.js` from `imports/legacy/messa
 
 The default legacy compilation targets ES5 for both the app's SWC transform and Rspack's generated runtime, including dynamic chunks. Custom compiler settings can override those defaults. npm dependencies are excluded from the default app transpilation rule; use [Meteor.compileWithRspack](#delegating-dependencies-to-rspack) for dependencies that need transformation. That helper inherits the current compilation's SWC options, including the legacy target.
 
+`meteor.nodeModules.recompile` applies to dependencies compiled by Meteor; it does not add transpilation rules for dependencies bundled by Rspack. To transpile the npm dependencies reached by your legacy entry, including their transitive imports, you can use:
+
+```javascript
+const { defineConfig } = require('@meteorjs/rspack');
+
+module.exports = defineConfig(Meteor => Meteor.isLegacy
+  ? Meteor.compileWithRspack([/node_modules/])
+  : {});
+```
+
 :::info
-An ES5 syntax target does not supply every browser API or make arbitrary dependencies compatible with older browsers. Include any required polyfills and test the browsers your application supports.
+An ES5 syntax target does not supply every browser API or make arbitrary dependencies compatible with older browsers. SWC transpilation does not remove requirements such as BigInt support. Include any required polyfills and test the browsers your application supports.
 :::
 
 #### Run and test the legacy flow

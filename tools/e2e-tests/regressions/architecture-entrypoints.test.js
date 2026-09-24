@@ -1,14 +1,17 @@
 import path from 'path';
 import fs from 'fs-extra';
 import { parse } from 'acorn';
+import execa from 'execa';
 import {
   buildMeteorApp,
   cleanupTempDir,
   getFreePort,
   killMeteorProcess,
+  runBuiltApp,
   runMeteorApp,
   runMeteorTests,
   setupMeteorApp,
+  startMongo,
 } from '../helpers';
 import { assertBrowserEntrypoints, legacyUserAgent } from '../legacy-helpers';
 
@@ -185,6 +188,104 @@ describe('Regressions / Architecture-specific entrypoints /', () => {
         arch,
         markers: arch === 'web.browser' ? ['architecture-modern-entry'] : expected,
       });
+    }
+  }, 300000);
+});
+
+describe('Regressions / Legacy npm dependencies /', () => {
+  let tempDir;
+  let buildOutputDir;
+  let builtApp;
+  let mongo;
+
+  beforeAll(async () => {
+    ({ tempDir } = await setupMeteorApp('legacy'));
+    // Match #14756's React app and unsupported-browser stub with shared npm
+    // imports. Keep these dependencies out of the fixture's other scenarios.
+    await execa('npm', ['install', '--save-exact',
+      'react@19.2.0', 'react-dom@19.2.0',
+      'ua-parser-js@2.0.10', '@datadog/browser-rum@7.14.0',
+    ], { cwd: tempDir, stdio: 'inherit' });
+    if (process.env.NPM_LINK_RSPACK !== 'false') {
+      await linkLocalRspack(tempDir);
+    }
+    const packagePath = path.join(tempDir, 'package.json');
+    const pkg = await fs.readJson(packagePath);
+    pkg.meteor.mainModule = {
+      client: 'client/npm-modern.tsx',
+      legacy: 'client/npm-legacy.ts',
+      server: 'server/main.js',
+    };
+    pkg.meteor.nodeModules = { recompile: { 'ua-parser-js': 'legacy' } };
+    delete pkg.meteor.modern;
+    await fs.writeJson(packagePath, pkg, { spaces: 2 });
+    await fs.writeFile(path.join(tempDir, 'rspack.config.js'),
+      "const { defineConfig } = require('@meteorjs/rspack');\n" +
+      'module.exports = defineConfig(() => ({}));\n');
+  }, 600000);
+
+  afterEach(async () => {
+    if (builtApp) await builtApp.stop();
+    builtApp = null;
+    if (mongo) await mongo.stop();
+    mongo = null;
+    if (buildOutputDir) await cleanupTempDir(buildOutputDir);
+    buildOutputDir = null;
+  });
+
+  afterAll(async () => {
+    if (tempDir) await cleanupTempDir(tempDir);
+  });
+
+  test('production isolates the React app and runs the legacy npm stub', async () => {
+    ({ buildOutputDir } = await buildMeteorApp(tempDir, {
+      commandOptions: ['--directory', '--server-only'],
+    }));
+    const modernSource = await readProgramJavaScript(buildOutputDir, 'web.browser');
+    const legacySource = await readProgramJavaScript(buildOutputDir, 'web.browser.legacy');
+    for (const [arch, source, entry] of [
+      ['web.browser', modernSource, 'modern'],
+      ['web.browser.legacy', legacySource, 'legacy'],
+    ]) {
+      expect({ arch, markers: [...new Set(source.match(/architecture-\w+-entry/g))] })
+        .toEqual({ arch, markers: [`architecture-${entry}-entry`] });
+      expect({ arch, reactDOM: source.includes('react-dom'), react: source.includes('react.production') })
+        .toEqual({ arch, reactDOM: entry === 'modern', react: entry === 'modern' });
+    }
+    mongo = await startMongo();
+    expect(mongo).not.toBeNull();
+    const port = await getFreePort();
+    builtApp = await runBuiltApp(buildOutputDir, { port, mongoUrl: mongo.mongoUrl });
+    for (const { userAgent, message, isModern } of [
+      {
+        userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        message: 'Modern app / Chrome 120.0.0.0 / architecture-modern-entry',
+        isModern: true,
+      },
+      {
+        userAgent: legacyUserAgent,
+        message: 'Your browser is not supported / IE 11.0 / architecture-legacy-entry',
+        isModern: false,
+      },
+    ]) {
+      const testPage = await browser.newPage({ userAgent });
+      const errors = [];
+      testPage.on('pageerror', error => errors.push(error.message));
+      try {
+        await testPage.goto(`http://localhost:${port}/`);
+        try {
+          await testPage.waitForFunction(() =>
+            document.getElementById('architecture-entry')?.textContent.includes('architecture-')
+          );
+        } catch (error) {
+          throw new Error(`${isModern ? 'Modern' : 'Legacy'} npm entry failed: ${errors.join('; ')}\n${error.message}`);
+        }
+        expect(await testPage.textContent('#architecture-entry')).toBe(message);
+        expect(await testPage.evaluate(() => Meteor.isModern)).toBe(isModern);
+        expect(errors).toEqual([]);
+      } finally {
+        await testPage.close();
+      }
     }
   }, 300000);
 });

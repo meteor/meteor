@@ -392,10 +392,10 @@ export function configureMeteorForRspack() {
     entrypoints: Object.values(appEntrypoints),
   });
 
-  // Only expose the selected architecture's generated files to Meteor. Other
-  // wrappers and HTML fragments must not be eagerly included in this program.
+  // Only expose the selected architecture's generated files to Meteor. Exclude
+  // every mode so stale HTML from a previous run cannot add another arch's CSS.
   const architectureDirectories = architectureEntries.map(entry =>
-    `${RSPACK_BUILD_CONTEXT}/${path.dirname(getBuildFilePath({ ...env, ...entry }))}`
+    `${RSPACK_BUILD_CONTEXT}/*-${entry.arch.replaceAll('.', '-')}`
   );
   if (architectureDirectories.length) {
     setMeteorAppIgnore(architectureDirectories.map(dir => `/${dir}`).join(' '), {

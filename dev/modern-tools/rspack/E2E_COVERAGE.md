@@ -290,14 +290,15 @@ Minimal app with separate modern, legacy, and Cordova entries. `legacy.test.js` 
 |----------------|-------|
 | Shared lifecycle: development/production client and server rebuilds, watched tests, tests once, deployed bundle, and reset | All |
 | Separate legacy test module executes an alias configured only for `Meteor.isLegacy`, its loader, plugin constant, and async chunk, then reruns after a source edit | Test |
-| Full-app tests render each browser's app entry and pass its matching test module, including the legacy-only configuration | Test |
+| Full-app tests render each browser's app entry and pass its matching test module, including the legacy-only configuration, after running development mode | Test |
 | Distinct client entries in production/debug bundles, covering `client`, `modern`, `legacy`, `web.browser.legacy`, and `web.cordova` | Build |
 | Legacy TypeScript imports use an alias configured only for `Meteor.isLegacy`, a custom loader, DefinePlugin constant, and asynchronous chunk | Run, Prod, Build |
-| Legacy CSS and emitted SVG assets load from its Rspack output; legacy styles do not affect the modern page | Run, Prod, Build |
+| Legacy CSS and emitted SVG assets load from its Rspack output; legacy styles do not affect the modern page, including after switching from development to full-app tests | Run, Prod, Test, Build |
 | Raw legacy Rspack bundle/runtime, async chunks, and Meteor-linked application output parse as ES5 after compiling modern TypeScript syntax | Build |
 | Browser programs render the correct modern/legacy entry for each user agent, report `Meteor.isModern`, and exercise the legacy dependency's fallback without browser errors (Chromium) | Run, Prod, Build |
 | Explicit `false` architecture entries suppress app JavaScript; omitted entries fall back to the Rspack client | Build |
 | Development serves modern/legacy separately, reloads legacy after a source edit, and skips an excluded Cordova entry that cannot compile | Run |
+| Empty Rspack config with shared npm imports and `nodeModules.recompile`: production programs isolate the React app and legacy stub, and both pages render browser information after booting the bundle, including helpers introduced by Meteor's legacy recompilation | Build |
 
 ### Focused server runtime regressions
 
@@ -354,6 +355,16 @@ Tested via `skeleton.test.js` using `meteor create --<skeleton>`. Each skeleton 
 ## NPM Package Compatibility
 
 Several apps import specific npm packages to verify that Meteor + Rspack handles different module formats and edge cases without errors. The app boots successfully only if these imports resolve correctly.
+
+### legacy (`apps/legacy/`)
+
+These dependencies are installed only in the temporary variant used by `regressions/architecture-entrypoints.test.js`.
+
+| Package | File | Reason |
+|---------|------|--------|
+| `ua-parser-js` | `imports/browser-info.ts` | Shared npm import in separate modern/legacy compilations with the reporter's `nodeModules.recompile` setting; browser output is checked with default Rspack configuration |
+| `@datadog/browser-rum` | `client/npm-modern.tsx`, `client/npm-legacy.ts` | Browser SDK and its transitive imports execute in both entrypoints without initializing telemetry; exposes missing helper imports after Meteor recompiles the legacy bundle. Its BigInt syntax is outside the fixture's ES5 checks |
+| `react` + `react-dom/client` | `client/npm-modern.tsx` | The built modern page renders React while the legacy program excludes React DOM and renders its own stub |
 
 ### react-router (`apps/react-router/server/main.js`)
 
