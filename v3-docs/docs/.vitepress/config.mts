@@ -732,6 +732,24 @@ export default defineConfig({
         text: "Performance",
         items: [
           {
+            text: "OpenTelemetry",
+            link: "/performance/opentelemetry",
+            items: [
+              {
+                text: "Infrastructure Setup",
+                link: "/performance/otel-infrastructure",
+              },
+              {
+                text: "Basic Instrumentation",
+                link: "/performance/otel-instrumentation",
+              },
+              {
+                text: "Advanced Features",
+                link: "/performance/otel-advanced",
+              },
+            ],
+          },
+          {
             text: "Change Streams Observer Driver",
             link: "/performance/change-streams-observer-driver",
           },
