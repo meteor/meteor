@@ -34,7 +34,7 @@ is available; those runs do not execute `afterRunBuiltApp` assertions.
 
 | What is covered | Test |
 |-----------------|------|
-| Packed `@meteorjs/rspack` consumer installs its runtime dependencies, applies `npm audit fix`, and reports zero critical production vulnerabilities | `rspack-audit.test.js` |
+| Packed `@meteorjs/rspack` consumer uses the React skeleton dependency graph, applies both `npm audit fix` and `npm audit fix --force`, retains compatible Rspack versions and valid peers, excludes the old elliptic polyfill chain, reports zero critical vulnerabilities, and builds and executes a bundle through the Rspack CLI (#14310) | `rspack-audit.test.js` |
 | Fresh `meteor create --package` output completes both client and server Tinytests with the default browser driver and no browser errors, without adding a separate jQuery dependency (#14735) | `regressions/test-in-browser.test.js` |
 
 ---
