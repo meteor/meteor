@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Facebook OAuth flow",
-  version: '1.11.6',
+  version: '1.11.7-beta360.1',
 });
 
 Package.onUse(api => {
@@ -14,6 +14,7 @@ Package.onUse(api => {
   api.addFiles('facebook_server.js', 'server');
 
   api.export('Facebook');
+  api.types('facebook-oauth.d.ts');
 });
 
 Package.onTest(function(api) {

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Meteor's latency-compensated distributed data framework",
-  version: '1.4.2',
+  version: '1.4.3-beta360.1',
 });
 
 Package.onUse(function (api) {
@@ -8,6 +8,7 @@ Package.onUse(function (api) {
   api.use(['ddp-server'], 'server');
 
   api.addAssets('ddp.d.ts', 'server');
+  api.types('ddp.native.d.ts');
 
   api.export('DDP');
   api.export('DDPServer', 'server');

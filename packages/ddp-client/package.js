@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Meteor's latency-compensated distributed data client",
-  version: '3.4.1',
+  version: '3.4.2-beta360.1',
   documentation: null,
 });
 
@@ -40,6 +40,7 @@ Package.onUse((api) => {
   api.export("DDP");
   api.mainModule("client/client.js", "client");
   api.mainModule("server/server.js", "server");
+  api.types("ddp-client.d.ts");
 });
 
 Package.onTest((api) => {
@@ -61,6 +62,7 @@ Package.onTest((api) => {
 
   api.addFiles("test/stub_stream.js");
   api.addFiles("test/livedata_connection_tests.js");
+  api.addFiles("test/duplicate_added_tests.js");
   api.addFiles("test/livedata_tests.js");
   api.addFiles("test/livedata_test_service.js");
   api.addFiles("test/random_stream_tests.js");

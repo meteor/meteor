@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Publish internal app statistics",
-  version: "1.0.2",
+  version: "1.0.3-beta360.1",
 });
 
 Package.onUse(function (api) {
@@ -17,6 +17,7 @@ Package.onUse(function (api) {
   api.mainModule("facts_base_common.js", "client");
 
   api.export("Facts");
+  api.types("facts-base.d.ts");
 });
 
 Package.onTest(function (api) {

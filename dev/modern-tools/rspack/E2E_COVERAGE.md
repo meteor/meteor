@@ -1,6 +1,6 @@
 # E2E Test Coverage
 
-> To update this report, follow the [e2e-coverage skill](/.github/skills/e2e-coverage/SKILL.md).
+> To update this report, follow the [coverage-report guidance](/.github/skills/e2e-testing/references/coverage-report.md) in the [E2E testing skill](/.github/skills/e2e-testing/SKILL.md).
 
 End-to-end tests using Jest + Playwright that verify Meteor apps with the Rspack bundler across frameworks, build modes, and features.
 
@@ -8,7 +8,10 @@ Test infrastructure lives in `tools/e2e-tests/`, with app fixtures in `tools/e2e
 
 ## Test Lifecycle
 
-Every app and skeleton goes through these phases (unless skipped):
+The Rspack fixture helper covers the phases below. The skeleton helper covers
+creation, Run, Prod, Test once, Build, and Reset; it does not automatically run
+the fixture helper's watch/rebuild cases. Focused regression suites select their
+own phases. Check each suite's options and assertions for exceptions.
 
 | Phase | What it does |
 |-------|-------------|
@@ -17,16 +20,22 @@ Every app and skeleton goes through these phases (unless skipped):
 | **Run (prod)** | `meteor run --production` — same checks in production mode |
 | **Test** | `meteor test` — runs mocha test driver, verifies test rebuild |
 | **Test once** | `meteor test --once` — runs tests to completion, checks exit code |
-| **Build** | `meteor build` — verifies bundle structure (main.js, programs/server, web.browser, web.browser.legacy) |
+| **Build** | `meteor build` — verifies bundle structure (main.js, programs/server, web.browser, web.browser.legacy); shared helpers also boot the built app by default when Mongo is available |
 | **Reset** | `meteor reset` — clears rspack build artifacts, caches, asset/chunk context dirs, and `.meteor/local` subdirectories |
 
-Default assertions on every run phase: build artifacts exist, page title matches, body styles render, `__rspack__` script tag is present.
+The fixture helper checks mode-specific build artifacts and, when client checks
+are enabled, the page title and body styles. The `__rspack__` development script
+tag must be present in Run and absent in Prod. Skeletons check rendering/styles
+according to their options. Shared built-app boot checks can be disabled with
+`testBuiltApp: false` and are skipped if neither bundled MongoDB nor `MONGO_URL`
+is available; those runs do not execute `afterRunBuiltApp` assertions.
 
 ### Package dependency regression
 
 | What is covered | Test |
 |-----------------|------|
-| Packed `@meteorjs/rspack` consumer installs its runtime dependencies, applies `npm audit fix`, and reports zero critical production vulnerabilities | `rspack-audit.test.js` |
+| Packed `@meteorjs/rspack` consumer uses the React skeleton dependency graph, applies both `npm audit fix` and `npm audit fix --force`, retains compatible Rspack versions and valid peers, excludes the old elliptic polyfill chain, reports zero critical vulnerabilities, and builds and executes a bundle through the Rspack CLI (#14310) | `rspack-audit.test.js` |
+| Fresh `meteor create --package` output completes both client and server Tinytests with the default browser driver and no browser errors, without adding a separate jQuery dependency (#14735) | `regressions/test-in-browser.test.js` |
 
 ---
 
@@ -36,7 +45,7 @@ Each app lives in `apps/<name>/` and has a matching `<name>.test.js`.
 
 ### react
 
-Core React integration with custom Meteor local directory.
+Core React 19 integration with custom Meteor local directory.
 
 | What is covered | Phase |
 |----------------|-------|
@@ -44,6 +53,8 @@ Core React integration with custom Meteor local directory.
 | Custom build dir (`_build-local-custom`) created | Run |
 | `.gitignore` updated with custom local dir | Run |
 | React + JSX environment detection | Run, Prod, Test, Build |
+| React Compiler on React 19 through Rspack's built-in SWC transform | All |
+| Automatic JSX runtime without default React imports | Run, Prod, Test, Build |
 | Image assets load (generated + public + background) | Run, Prod |
 | `Meteor.disablePlugins` suppresses rspack plugins | Run, Prod, Test, Build |
 | Unplugin transform hook fires on first run (fresh cache) | Init |
@@ -52,6 +63,8 @@ Core React integration with custom Meteor local directory.
 | Custom rspack config (`rspack.config.cjs`) | All |
 | HMR works in dev, disabled in prod | Run, Prod |
 | Rspack devserver port is released after `SIGTERM` (`regressions/port-cleanup.test.js`) | Run |
+| Rapid server edits during slow startup and shutdown preserve the dev server, apply the final edit, allow a later client refresh, and can replace an app that stops answering IPC (`regressions/rapid-server-restarts.test.js`, #14755) | Run |
+| `--port` with a host prefix derives a valid rspack devserver port (`regressions/host-prefixed-port.test.js`) | Run |
 | Client test Node compatibility (`Buffer`, `buffer`, `crypto`, `timers/promises`) | Test |
 | Cordova bundle stays modern when `meteor.modern` is unset (`regressions/cordova-modern-default.test.js`) | Build |
 
@@ -76,6 +89,20 @@ Full-featured React Router app with custom packages, Less, and advanced rspack c
 | Full-app test mode (`--full-app`) | Test |
 | Static assets in bundle (png, md) | Build |
 | HMR works in dev, disabled in prod | Run, Prod |
+
+### assets
+
+Minimal app with a local package testing asset resolution and bundling.
+
+| What is covered | Phase |
+|----------------|-------|
+| Local package loading (`api.addAssets`) | Run, Prod, Test, Build |
+| Server-side package assets (`Assets.getTextAsync`) | Run, Prod |
+| App-private folder assets (`Assets.getTextAsync`) | Run, Prod |
+| Client-side package assets (`fetch('/packages/...`) | Run, Prod |
+| `skipTestClient: true` (ignores client mocha tests) | Test once |
+| Assets skipped by compiler source discovery (#14566) | All |
+| Boot built bundle (`node main.js`) to test assets | Build |
 
 ### blaze
 
@@ -132,12 +159,13 @@ TypeScript with SCSS, type checking, `.ts` rspack config, and `.ts` SWC config.
 | `@swc/core` type-only import for SWC config typings | All |
 | Custom build dir (`build`) | All |
 | Custom asset/chunk context dirs (`assets`, `chunks`) | All |
+| Explicit `meteor types` command generates native package declarations before app startup | Init |
 | SCSS styles support (`white-space: break-spaces`) | Run, Prod |
 | TypeScript + TSX environment detection | Run, Prod, Test, Build |
 | Portable build (Meteor.isDevelopment/isProduction not defined) | Run, Prod, Build |
 | `Meteor.extendSwcConfig` with path aliases (`@ui/*`, `@api/*`) | All |
 | `TsCheckerRspackPlugin` type checking (no errors) | Run |
-| `.meteor/local/types` directory generated | Run |
+| `.meteor/types` directory generated by the native core generator | Init, Run |
 | Separate client/server test files | Test |
 | CI: removes TsCheckerRspackPlugin (resource limits) | Init |
 | Persistent cache dependency scanner parses TypeScript configs without errors | All |
@@ -202,11 +230,14 @@ Svelte framework integration.
 
 ### monorepo
 
-Monorepo structure with app in subdirectory, service worker, and PWA manifest.
+Monorepo structure with app in a subdirectory, exercised through the full npm
+workspace lifecycle and a focused Yarn Classic initialization smoke test.
 
 | What is covered | Phase |
 |----------------|-------|
 | Monorepo layout (`app/` subdirectory) | All |
+| npm workspace auto-install keeps the lockfile at the root | Init |
+| Yarn Classic workspace auto-install keeps the lockfile at the root | Init |
 | Custom rspack config (`rspack.config.cjs`) | All |
 | `rspack.config.override.cjs` custom plugin loading | Run, Test, Build |
 | Static assets in bundle (png, md, icon, manifest) | Build |
@@ -220,6 +251,40 @@ Monorepo structure with app in subdirectory, service worker, and PWA manifest.
 | PWA manifest linked and fields validated | Run |
 | Meta tags (`theme-color`) | Run |
 | HMR works in dev, disabled in prod | Run, Prod |
+
+### pnpm-monorepo
+
+Meteor app inside a pnpm workspace monorepo, with shared code in `workspace:*` packages compiled through Rspack. Meteor app lives at `apps/app/`.
+
+| What is covered | Phase |
+|----------------|-------|
+| pnpm workspace layout (`apps/` + `packages/`, Meteor app at `apps/app`) | All |
+| `corepack pnpm install` at workspace root | Init |
+| `workspace:*` dependency linking between local packages | All |
+| `meteor.autoInstallDeps: false` (pnpm owns npm install) | All |
+| Workspace package sources compiled by Rspack (`compileWithRspack`, `resolve.symlinks: false`) | All |
+| Workspace packages render on client (`@example/ui`, `@example/shared`) | Run, Prod |
+| Workspace packages load on server (`@example/shared`, `@example/server`) | Run, Prod |
+| Compiled workspace packages available in tests | Test |
+| Transitive npm dependency resolution through pnpm store (`color` tree) — client | Run, Prod |
+| Transitive npm dependency resolution through pnpm store (`color` tree) — server | Run, Prod |
+| Transitive npm dependency resolution through pnpm store (`color` tree) — tests | Test |
+| Built app boots; workspace packages + `color` tree imported in production bundle | Build |
+| HMR works in dev, disabled in prod | Run, Prod |
+
+### workspace
+
+Minimal Meteor app with two external npm workspaces and an internal command tarball;
+Build only, without Rspack. POSIX symlinks; Windows command shims are not covered.
+Covered by `workspace-bin-portability.test.js`.
+
+| What is covered | Phase |
+|----------------|-------|
+| npm installs the command as a real directory and both workspaces as external symlinks | Init |
+| Relative and absolute workspace `.bin` links resolve to the packaged command or copied second workspace after source removal | Build |
+| Commands retain executable mode and read their package-relative JSON resources | Build |
+| Links survive server runtime dependency installation | Build |
+| Built server invokes both workspace commands at request time and returns `portable:cross-portable` to Chromium | Build |
 
 ### server-only
 
@@ -265,19 +330,21 @@ Tested via `skeleton.test.js` using `meteor create --<skeleton>`. Each skeleton 
 | Skeleton | Port | Language | Extra coverage |
 |----------|------|----------|----------------|
 | angular | 3213 | TypeScript | |
-| apollo | 3201 | JSX | |
-| babel | 3212 | JSX | |
+| apollo | 3201 | JSX | React 19.2 dependencies |
+| babel | 3212 | JSX | React 19.2 dependencies |
 | bare | 3219 | JS | No title/style checks, no client tests, skip build cache check |
-| blaze | 3202 | JS | |
-| chakra-ui | 3203 | JSX | No body style checks (custom UI library) |
-| coffeescript | 3211 | CoffeeScript | |
-| full | 3204 | JS | `imports/api/` test structure |
-| react | 3205 | JSX | Custom body styles (Inter font, padding) |
+| blaze | 3202, 3216 | JS | Path-prefixed `ROOT_URL` (`/app`, port 3216): Rspack dev script injected under the prefix and client code running, dev + prod (#14716) |
+| chakra-ui | 3203 | JSX | React 19.2 dependencies; no body style checks (custom UI library) |
+| coffeescript | 3211 | CoffeeScript | React 19.2 dependencies |
+| full | 3204 | JS | `imports/api/` test structure; wildcard 404 route renders with no deprecation notice in the console (Run) |
+| pnpm | 3222 | JS + TypeScript workspace package | pnpm workspace root with Meteor at `apps/app`; default auto-install behavior with no explicit `autoInstallDeps`; root install via Corepack/bundled npx fallback; automatic pnpm bump of an outdated Rspack dependency; `workspace:*` linking; transitive pnpm-store resolution; local `link:` dependency validation without false warnings; nested app lifecycle; built-app boot; workspace dependencies preserved by reset |
+| pwa | 3214, 3215 | JS | Manifest link + templated `manifest.webmanifest`; skeleton's own service worker controlling the page across reload (dev `/sw.js?dev=1`, prod `/sw.js`); prod app shell loads with the server down; a data fetch to a navigation-cached URL reaches the network instead of the cached page (PRECACHE-only fallback); manifest, worker and offline checks repeated under a path-prefixed `ROOT_URL` (`/app`, port 3215, production only: the dev boilerplate injects the Rspack client script unprefixed) |
+| react | 3205 | JSX | React 19.2 dependencies, automatic JSX runtime via `.swcrc`, custom body styles |
 | solid | 3206 | JS | |
 | svelte | 3207 | JS | |
-| tailwind | 3208 | JSX | Tailwind `bg-gray-100` styles (dev + prod color formats) |
-| typescript | 3209 | TypeScript | TypeScript 7; native `tsgo` checker loading, diagnostic, and watch behavior |
-| typescript-tailwind | 3221 | TypeScript | TypeScript 7, native `tsgo`, Tailwind 4, and PostCSS |
+| tailwind | 3208 | JSX | React 19.2 dependencies; Tailwind `bg-gray-100` styles (dev + prod color formats) |
+| typescript | 3209 | TypeScript | React 19.2 dependencies and type definitions; TypeScript 7 native `tsgo` checker loading, diagnostic, and watch behavior |
+| typescript-tailwind | 3221 | TypeScript | React 19.2 dependencies and type definitions; TypeScript 7, native `tsgo`, Tailwind 4, and PostCSS |
 | vue | 3210 | JS | |
 
 ---
@@ -303,8 +370,21 @@ Several apps import specific npm packages to verify that Meteor + Rspack handles
 | `grubba-rpc` | `server/main.js` | Untranspiled npm dependency — needs `Meteor.compileWithRspack(["grubba-rpc"])` to compile it through rspack |
 | `node:buffer` | `imports/api/links.js` | Node.js built-in via `node:` protocol in shared client/server code — must be ignored on client without errors |
 | `@react-email/components` | `imports/emails/TestEmail.jsx` | JSX-heavy ESM package with many subpath exports |
+| `workbox-webpack-plugin` + `webpack` | `rspack.config.cjs` | GenerateSW compatibility with Rspack; declares Workbox's Webpack peer explicitly for Yarn Classic installs |
 
-### react (`apps/react/`)
+### pnpm-monorepo (`apps/pnpm-monorepo/packages/domain/`)
+
+| Package | File | Reason |
+|---------|------|--------|
+| `color` | `packages/domain/src/index.js` | npm dependency of a `workspace:*` package, pulling a multi-level transitive tree (`color-convert`, `color-name`, `color-string`, `simple-swizzle`, `is-arrayish`) — pnpm does not hoist these to the app, so it validates transitive resolution through the pnpm store |
+
+### pnpm skeleton (`tools/static-assets/skel-pnpm/packages/domain/`)
+
+| Package | File | Reason |
+|---------|------|--------|
+| `color` | `packages/domain/src/index.js` | Verifies a generated `workspace:*` package can resolve its non-hoisted transitive dependency tree through the pnpm store |
+
+### react (`apps/react/plugins/demo-unplugin.js`)
 
 | Package | File | Reason |
 |---------|------|--------|
@@ -334,7 +414,7 @@ Where each feature is tested across apps and skeletons.
 
 | Feature | Apps | Skeletons |
 |---------|------|-----------|
-| HMR (dev) | react, react-router, babel, coffeescript, vue, solid, svelte, monorepo, typescript | |
+| HMR (dev) | react, react-router, babel, coffeescript, vue, solid, svelte, monorepo, pnpm-monorepo, typescript | |
 | HMR disabled (prod) | all apps with HMR | |
 | HMR incompatible | blaze, full-blaze | |
 | Custom rspack config | react (.cjs), react-router, babel (.mjs), monorepo (.cjs), typescript (.ts) | |
@@ -344,14 +424,19 @@ Where each feature is tested across apps and skeletons.
 | Custom build dir | react, typescript | |
 | Custom asset/chunk context dirs | typescript | |
 | Custom env vars | react (METEOR_LOCAL_DIR), react-router (METEOR_PACKAGE_DIRS), server-only regression (absolute external METEOR_LOCAL_DIR) | |
+| Path-prefixed `ROOT_URL` (`ROOT_URL_PATH_PREFIX`) | | blaze |
 | Static asset bundling | react-router, monorepo (png, md, icon, manifest) | |
 | Less styles | react-router | |
 | SCSS styles | typescript | |
 | Tailwind CSS | vue (PostCSS) | tailwind |
+| PWA (manifest, service worker, offline app shell) | | pwa |
 | Image asset loading | react | |
 | 404 routing | react-router, blaze-router | |
 | Meta tags | react-router, monorepo | |
 | Babel compiler plugin | react-router | |
+| React Compiler through built-in SWC | react | |
+| React 19.2 | react | apollo, babel, chakra-ui, coffeescript, react, tailwind, typescript, typescript-tailwind |
+| Automatic JSX runtime | react | react |
 | TypeScript type checking | typescript | typescript (`tsgo` loading, diagnostic, watch), typescript-tailwind (`tsgo`) |
 | Meteor.disablePlugins | react | |
 | Unplugin transform with cache (#14031) | react | |
@@ -362,8 +447,12 @@ Where each feature is tested across apps and skeletons.
 | Server bundle excluded from Meteor linker payload | server-only regression | |
 | `Assets`/`Npm` server globals in the dev bundle | server-only regression | |
 | Delayed server Meteor package import | server-only regression | |
+| Monorepo layout | monorepo, pnpm-monorepo | pnpm |
+| Source-independent workspace executable links (POSIX) | workspace | |
+| Workspace-aware Rspack dependency auto-install | monorepo (npm, Yarn Classic) | pnpm |
+| pnpm workspace (`workspace:*` packages, `corepack pnpm install`) | pnpm-monorepo | pnpm |
+| Transitive npm dependency resolution (pnpm store) | pnpm-monorepo | pnpm |
 | First-compilation process failure | server-only | |
-| Monorepo layout | monorepo | |
 | Full-app test mode | react-router, blaze-router, tla | |
 | Concurrent Rspack mode isolation | blaze-router | |
 | Full-app client without a client test module | blaze-router | |
@@ -376,7 +465,7 @@ Where each feature is tested across apps and skeletons.
 | CSS auto-delegation (entry folder filtering) | vue | |
 | `meteor.modules` config (preserve files for Meteor) | react-router, vue | |
 | `meteor reset` cleanup | all apps | all skeletons |
-| Skeleton creation | | all 14 skeletons |
+| Skeleton creation | | all 16 tested skeletons |
 | Body style assertions | | react, tailwind (custom); most others (default) |
 | Custom .gitignore entries | react | |
 | ESM-only packages | react-router, monorepo, babel | |
@@ -392,3 +481,9 @@ Where each feature is tested across apps and skeletons.
 | Service worker runtime caching (images) | monorepo | |
 | Service worker precaching (`additionalManifestEntries`) | monorepo | |
 | PWA manifest | monorepo | |
+| Local package loading (`api.addAssets`) | assets | |
+| Server/App-private assets (`Assets.getTextAsync`) | assets | |
+| Client package assets (`fetch`) | assets | |
+| `skipTestClient: true` test helper option | assets | |
+| Assets skipped by compiler source discovery (#14566) | assets | |
+| Boot built bundle (`node main.js`) to test assets | assets | |

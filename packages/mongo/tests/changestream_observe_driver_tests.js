@@ -90,6 +90,34 @@ if (!IS_CHANGESTREAM) {
 }
 
 // ============================================================================
+// CURSOR SUPPORT TESTS
+// ============================================================================
+
+// $where/$near must fall back, like oplog's cursorSupported already does.
+Tinytest.addAsync(
+  'changestream - cursorSupported rejects $where and $near',
+  async function (test) {
+    // Never written to: the fallback's server-side find only evaluates
+    // $where / $near once the namespace exists.
+    const c = makeCollection();
+
+    const supported = async function (expected, selector) {
+      const handle = await c.find(selector).observeChanges({ added() {} });
+      test.equal(isChangeStreamDriver(handle), expected, EJSON.stringify(selector));
+      handle.stop();
+    };
+
+    await supported(true, { foo: 'asdf' });
+    await supported(true, { $and: [{ foo: 'asdf' }, { bar: 'baz' }] });
+
+    await supported(false, { $where: 'xxx' });
+    await supported(false, { $and: [{ foo: 'adsf' }, { $where: 'xxx' }] });
+    await supported(false, { foo: 'fn', $where() { return true; } });
+    await supported(false, { x: { $near: [1, 1] } });
+  }
+);
+
+// ============================================================================
 // BASIC CRUD OPERATIONS TESTS
 // ============================================================================
 
@@ -3528,13 +3556,14 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  'changestream- insert under fence with observer resolves well under 1s',
+  'changestream- insert under fence with observer resolves under 1s',
   async function (test) {
     // Pre-fix pathology was a hard ~2s wait (2x 1000ms timeout) because
     // _waitUntilCaughtUp asked the server for a ts the stream hadn't seen
     // yet. With the fix the fence carries the exact write ts, the change
     // event carries the same ts, and the wait resolves immediately.
-    // 500ms bound catches a regression without flaking on slow CI.
+    // Allow up to 1s for loaded CI runners (659ms was observed), while still
+    // catching the original ~2s wait.
     const c = makeCollection();
     const added = [];
     const handle = await c.find({}).observeChanges({
@@ -3552,7 +3581,7 @@ Tinytest.addAsync(
     const elapsed = Date.now() - t0;
 
     test.isTrue(
-      elapsed < 500,
+      elapsed < 1000,
       `fenced insert+fire should be fast with the fix; elapsed=${elapsed}ms (pre-fix ~2000ms)`
     );
 

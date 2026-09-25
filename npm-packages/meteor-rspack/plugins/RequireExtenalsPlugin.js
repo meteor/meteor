@@ -164,6 +164,13 @@ class RequireExternalsPlugin {
     }
 
     compiler.hooks.done.tap({ name: this.pluginName, stage: -10 }, (stats) => {
+      // Preserve the last known-good Meteor runtime entry when compilation
+      // fails. Rewriting externals from incomplete stats would make Meteor
+      // restart against a broken Rspack bundle.
+      if (stats.hasErrors()) {
+        return;
+      }
+
       // 1) Ensure globalThis.module / exports block is present if enabled
       if (this._enableGlobalPolyfill) {
         this._ensureGlobalThisModule();

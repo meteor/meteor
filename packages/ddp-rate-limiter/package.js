@@ -1,6 +1,6 @@
 Package.describe({
   name: 'ddp-rate-limiter',
-  version: '1.3.0',
+  version: '1.3.1-beta360.1',
   // Brief, one-line summary of the package.
   summary: 'The DDPRateLimiter allows users to add rate limits to DDP' +
     ' methods and subscriptions.',
@@ -15,6 +15,7 @@ Package.onUse(function (api) {
   api.use('rate-limit', 'server');
   api.use('ecmascript');
   api.addAssets('ddp-rate-limiter.d.ts', 'server');
+  api.types('ddp-rate-limiter.native.d.ts');
   api.export('DDPRateLimiter', 'server');
   api.mainModule('ddp-rate-limiter.js', 'server');
 });
