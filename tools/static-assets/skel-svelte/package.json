@@ -14,16 +14,16 @@
   },
   "devDependencies": {
     "@meteorjs/rspack": "^3.0.0-beta.2",
-    "@rsdoctor/rspack-plugin": "^1.5.9",
-    "@rspack/cli": "^2.2.0",
-    "@rspack/core": "^2.2.0",
-    "@rspack/dev-server": "^2.2.0",
+    "@rsdoctor/rspack-plugin": "^1.6.4",
+    "@rspack/cli": "^2.2.7",
+    "@rspack/core": "^2.2.7",
+    "@rspack/dev-server": "^2.2.1",
     "postcss-load-config": "^5.1.0",
     "svelte": "^5.38.2",
     "svelte-check": "^4.3.1",
     "svelte-loader": "^3.2.4",
     "svelte-preprocess": "^6.0.3",
-    "@swc/core": "^1.15.32"
+    "@swc/core": "^1.16.2"
   },
   "meteor": {
     "mainModule": {
