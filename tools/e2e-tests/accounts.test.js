@@ -449,6 +449,252 @@ function defineAccountsScenarios(storageMode, getCtx) {
         await expectLoggedIn(page, userId);
       });
 
+      it('retries cookie resume after a transient 429', async () => {
+        const { page } = getCtx();
+        const userId = await seedUser(page, {
+          email: 'cookie-retry@example.com',
+          password: 'pw12345',
+        });
+        await login(page, { email: 'cookie-retry@example.com' }, 'pw12345');
+        await page.evaluate(() => {
+          localStorage.removeItem('Meteor.loginToken');
+          localStorage.removeItem('Meteor.loginTokenExpires');
+          localStorage.removeItem('Meteor.userId');
+        });
+
+        let refreshCount = 0;
+        const refreshRoute = async route => {
+          refreshCount += 1;
+          if (refreshCount === 1) {
+            await route.fulfill({
+              status: 429,
+              contentType: 'application/json',
+              body: JSON.stringify({ error: 'rate_limited' }),
+            });
+          } else {
+            await route.continue();
+          }
+        };
+        await page.route('**/_accounts/cookie/refresh', refreshRoute);
+        try {
+          await page.reload();
+          await page.waitForFunction(
+            () => window.__accountsE2E && Meteor.status().status === 'connected',
+            { timeout: 30_000 },
+          );
+          await page.waitForFunction(() => Meteor.userId() != null, { timeout: 10_000 });
+          await expectLoggedIn(page, userId);
+          expect(refreshCount).toBe(2);
+        } finally {
+          await page.unroute('**/_accounts/cookie/refresh', refreshRoute);
+        }
+      });
+
+      it('resumes a valid cookie after the default quota window resets', async () => {
+        const { page } = getCtx();
+        const userId = await seedUser(page, {
+          email: 'cookie-quota-window@example.com',
+          password: 'pw12345',
+        });
+        await login(page, { email: 'cookie-quota-window@example.com' }, 'pw12345');
+        const statuses = await page.evaluate(async () => {
+          const results = [];
+          for (let request = 0; request < 31; request += 1) {
+            const response = await fetch('/_accounts/cookie/refresh', {
+              credentials: 'include',
+            });
+            results.push(response.status);
+          }
+          localStorage.removeItem('Meteor.loginToken');
+          localStorage.removeItem('Meteor.loginTokenExpires');
+          localStorage.removeItem('Meteor.userId');
+          return results;
+        });
+        expect(statuses).toContain(429);
+
+        await page.reload();
+        await page.waitForFunction(
+          () => window.__accountsE2E && Meteor.status().status === 'connected',
+          { timeout: 30_000 },
+        );
+        await page.waitForFunction(() => Meteor.userId() != null, { timeout: 15_000 });
+        await expectLoggedIn(page, userId);
+      });
+
+      it('does not retry cookie resume after an unauthorized response', async () => {
+        const { page } = getCtx();
+        let refreshCount = 0;
+        const refreshRoute = async route => {
+          refreshCount += 1;
+          await route.fulfill({
+            status: 401,
+            contentType: 'application/json',
+            body: JSON.stringify({ error: 'invalid_cookie' }),
+          });
+        };
+        await page.route('**/_accounts/cookie/refresh', refreshRoute);
+        try {
+          await page.evaluate(() => window.__accountsE2E.Accounts.loginWithCookie());
+          await page.waitForTimeout(600);
+          expect(refreshCount).toBe(1);
+        } finally {
+          await page.unroute('**/_accounts/cookie/refresh', refreshRoute);
+        }
+      });
+
+      it('bounds cookie resume retries', async () => {
+        const { page } = getCtx();
+        let refreshCount = 0;
+        const refreshRoute = async route => {
+          refreshCount += 1;
+          await route.fulfill({
+            status: 429,
+            contentType: 'application/json',
+            body: JSON.stringify({ error: 'rate_limited' }),
+          });
+        };
+        await page.route('**/_accounts/cookie/refresh', refreshRoute);
+        try {
+          await page.evaluate(() => window.__accountsE2E.Accounts.loginWithCookie());
+          expect(refreshCount).toBe(5);
+        } finally {
+          await page.unroute('**/_accounts/cookie/refresh', refreshRoute);
+        }
+      });
+
+      it('cancels cookie resume retries on explicit logout', async () => {
+        const { page } = getCtx();
+        await seedUser(page, { email: 'cookie-logout@example.com', password: 'pw12345' });
+        await login(page, { email: 'cookie-logout@example.com' }, 'pw12345');
+        let refreshCount = 0;
+        const refreshRoute = async route => {
+          refreshCount += 1;
+          await route.fulfill({
+            status: 429,
+            contentType: 'application/json',
+            body: JSON.stringify({ error: 'rate_limited' }),
+          });
+        };
+        await page.route('**/_accounts/cookie/refresh', refreshRoute);
+        try {
+          const firstRefresh = page.waitForResponse('**/_accounts/cookie/refresh');
+          void page.evaluate(() => window.__accountsE2E.Accounts.loginWithCookie());
+          await firstRefresh;
+          await logout(page);
+          await page.waitForTimeout(600);
+          expect(refreshCount).toBe(1);
+        } finally {
+          await page.unroute('**/_accounts/cookie/refresh', refreshRoute);
+        }
+      });
+
+      it('cancels cookie resume retries after a competing login succeeds', async () => {
+        const { page } = getCtx();
+        const userId = await seedUser(page, {
+          email: 'cookie-competing-login@example.com',
+          password: 'pw12345',
+        });
+        let refreshCount = 0;
+        let releaseSecondRefresh;
+        let markSecondRefreshReached;
+        const holdSecondRefresh = new Promise(resolve => {
+          releaseSecondRefresh = resolve;
+        });
+        const secondRefreshReached = new Promise(resolve => {
+          markSecondRefreshReached = resolve;
+        });
+        const refreshRoute = async route => {
+          refreshCount += 1;
+          if (refreshCount === 2) {
+            markSecondRefreshReached();
+            await holdSecondRefresh;
+          }
+          await route.fulfill({
+            status: 429,
+            contentType: 'application/json',
+            body: JSON.stringify({ error: 'rate_limited' }),
+          });
+        };
+        await page.route('**/_accounts/cookie/refresh', refreshRoute);
+        try {
+          void page.evaluate(() => window.__accountsE2E.Accounts.loginWithCookie());
+          await secondRefreshReached;
+          await login(page, { email: 'cookie-competing-login@example.com' }, 'pw12345');
+          await expectLoggedIn(page, userId);
+          releaseSecondRefresh();
+          // A non-cancelled second 429 schedules the third request after 1s.
+          await page.waitForTimeout(1200);
+          expect(refreshCount).toBe(2);
+        } finally {
+          releaseSecondRefresh();
+          await page.unroute('**/_accounts/cookie/refresh', refreshRoute);
+        }
+      });
+
+      it('does not replace a pending explicit login with a retried cookie session', async () => {
+        const { page } = getCtx();
+        await seedUser(page, { email: 'cookie-old@example.com', password: 'pw12345' });
+        const userId = await seedUser(page, {
+          email: 'cookie-new@example.com',
+          password: 'pw12345',
+        });
+        await login(page, { email: 'cookie-old@example.com' }, 'pw12345');
+        await page.evaluate(() => {
+          localStorage.removeItem('Meteor.loginToken');
+          localStorage.removeItem('Meteor.loginTokenExpires');
+          localStorage.removeItem('Meteor.userId');
+        });
+
+        // Keep the old HTTP cookie, but start with an unauthenticated DDP
+        // connection so reconnect cannot add another automatic resume.
+        await page.route('**/_accounts/cookie/refresh', route =>
+          route.fulfill({ status: 204 }), { times: 1 });
+        await page.reload();
+        await page.waitForFunction(() =>
+          window.__accountsE2E && Meteor.status().connected);
+        await expectLoggedOut(page);
+
+        let refreshCount = 0;
+        let releaseRefresh;
+        let markRetryReached;
+        const holdRefresh = new Promise(resolve => { releaseRefresh = resolve; });
+        const retryReached = new Promise(resolve => { markRetryReached = resolve; });
+        const refreshRoute = async route => {
+          refreshCount += 1;
+          if (refreshCount === 1) {
+            await route.fulfill({ status: 429 });
+          } else {
+            markRetryReached();
+            await holdRefresh;
+            await route.continue();
+          }
+        };
+        await page.route('**/_accounts/cookie/refresh', refreshRoute);
+        try {
+          const recovery = page.evaluate(() =>
+            window.__accountsE2E.Accounts.loginWithCookie());
+          await retryReached;
+          // Queue the real password login while DDP is offline. HTTP still
+          // works, allowing the retry to return the old cookie before login
+          // completes, without depending on server timing.
+          await page.evaluate(() => Meteor.disconnect());
+          const passwordLogin = login(page, { email: 'cookie-new@example.com' }, 'pw12345');
+          await page.waitForFunction(() => Meteor.loggingIn());
+          releaseRefresh();
+          await recovery;
+          await page.evaluate(() => Meteor.reconnect());
+          await passwordLogin;
+          // This method runs after any queued resume, so the assertion sees
+          // the final session rather than the first successful login.
+          await callMethod(page, '_e2e.getUser', userId);
+          await expectLoggedIn(page, userId);
+        } finally {
+          releaseRefresh();
+          await page.unroute('**/_accounts/cookie/refresh', refreshRoute);
+          await page.evaluate(() => Meteor.reconnect());
+        }
+      });
+
       it('logout clears the cookie', async () => {
         const { page } = getCtx();
         await seedUser(page, { email: 'c@example.com', password: 'pw12345' });
