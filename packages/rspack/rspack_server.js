@@ -131,7 +131,7 @@ if (shouldEnableDevHMRProxy) {
       return next();
     }
 
-    // 1) match ANY URL whose last segment ends with ".hot-update.js" or ".hot-update.json",
+    // 1) match hot-update scripts, manifests, and the scripts' source maps,
     //    e.g. "/main.ce385971e9f19307.hot-update.js"
     //         "/ui_pages_tasks_tasks-page_jsx.ce385971e9f19307.hot-update.js"
     //         "/foo/bar/baz.1234abcd.hot-update.json"

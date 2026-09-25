@@ -261,36 +261,40 @@ BCp.processOneFileForTarget = function (inputFile, source) {
   };
   const arch = inputFile.getArch();
   const isLegacyWebArch = arch.includes('legacy');
+  const isRspackOutput = Plugin?.rspackHelpers?.isRspackOutputFile(inputFilePath);
 
-  // Check if the file is a Rspack output file
-  // If it is, bypass SWC/Babel and just read the file and its map file
-  // as the contents are already transpiled by Rspack.
-  if (Plugin?.rspackHelpers?.isRspackOutputFile(inputFilePath) && !isLegacyWebArch) {
+  let inputSourceMap;
+  if (isRspackOutput) {
     try {
-      // Get the full path to the file
-      const fullPath = inputFile.getPathInPackage();
-      // Read the file directly
-      toBeAdded.data = source;
-
-      // Try to read the corresponding map file
-      const mapPath = fullPath + '.map';
-      if (fs.existsSync(mapPath)) {
-        const mapContent = fs.readFileSync(mapPath, 'utf8');
-        toBeAdded.sourceMap = JSON.parse(mapContent);
+      const mapFile = inputFile.readAndWatchFileWithHash(
+        path.resolve(inputFilePath + '.map')
+      );
+      if (mapFile.contents) {
+        inputSourceMap = JSON.parse(mapFile.contents.toString('utf8'));
+        // Original locations can change while generated JavaScript stays the
+        // same. Invalidate both compiler and linker caches when the map changes.
+        toBeAdded.hash = crypto.createHash('sha1')
+          .update(toBeAdded.hash)
+          .update(mapFile.hash)
+          .digest('hex');
       }
 
-      if (this.isVerbose()) {
-        const arch = inputFile.getArch();
-        logTranspilation({
-          usedRspack: true,
-          inputFilePath,
-          packageName,
-          cacheHit: true,
-          arch,
-        });
-      }
+      // Rspack already transpiled this output. Legacy targets still need a
+      // further transform, which must compose with the original source map.
+      if (!isLegacyWebArch) {
+        toBeAdded.sourceMap = inputSourceMap || null;
+        if (this.isVerbose()) {
+          logTranspilation({
+            usedRspack: true,
+            inputFilePath,
+            packageName,
+            cacheHit: true,
+            arch,
+          });
+        }
 
-      return toBeAdded;
+        return toBeAdded;
+      }
     } catch (e) {
       // If there's an error reading the file or map, log it and continue with normal processing
       console.error('Error reading Rspack file:', e);
@@ -360,6 +364,9 @@ BCp.processOneFileForTarget = function (inputFile, source) {
 
       babelOptions.sourceMaps = true;
       babelOptions.filename = babelOptions.sourceFileName = filename;
+      if (inputSourceMap) {
+        babelOptions.inputSourceMap = inputSourceMap;
+      }
 
       this.inferExtraBabelOptions(inputFile, babelOptions, cacheOptions.cacheDeps);
 
@@ -384,7 +391,9 @@ BCp.processOneFileForTarget = function (inputFile, source) {
             jsx: hasJSXSupport,
             tsx: hasTSXSupport,
           },
-          ...(hasSwcHelpersAvailable &&
+          // Rspack output is already bundled; helpers added by this final
+          // legacy transform must not introduce new npm imports.
+          ...(hasSwcHelpersAvailable && !isRspackOutput &&
             !isNodeTarget &&
             (packageName == null ||
               !['core-runtime', 'modules', 'modules-runtime'].includes(
@@ -398,6 +407,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
         sourceMaps: true,
         filename,
         sourceFileName: filename,
+        ...(inputSourceMap && { inputSourceMap: JSON.stringify(inputSourceMap) }),
         ...(isLegacyWebArch && {
           env: {
             targets: {
@@ -592,7 +602,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
     }
 
     toBeAdded.data = result.code;
-    toBeAdded.hash = result.hash;
+    toBeAdded.hash = result.hash || toBeAdded.hash;
 
     // The babelOptions.sourceMapTarget option was deprecated in Babel
     // 7.0.0-beta.41: https://github.com/babel/babel/pull/7500

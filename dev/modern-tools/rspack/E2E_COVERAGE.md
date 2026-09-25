@@ -43,6 +43,23 @@ is available; those runs do not execute `afterRunBuiltApp` assertions.
 
 Each app lives in `apps/<name>/` and has a matching `<name>.test.js`.
 
+### source-maps
+
+Small TypeScript fixture for source-map correctness (#14655); focused debugging and build checks replace the default lifecycle.
+
+| What is covered | Phase |
+|----------------|-------|
+| Original source paths, contents, and exact line/column mappings through an independent map consumer | Run, Build |
+| Chromium breakpoints, stepping, and mapped exception frames in modern and legacy browser programs | Run |
+| Lazy-loaded code and rebuilds that shift original source line numbers | Run |
+| Meteor and Rspack server breakpoints, stepping, and mapped error stacks | Run |
+| Debug maps for modern, legacy, and Cordova web programs, plus Rspack's emitted production maps | Build |
+| Babel and SWC legacy map composition; warm Meteor caches update maps when generated JavaScript is unchanged (Rspack cache cleared) | Build (debug) |
+| Debug and production bundles boot and execute eager and lazy browser code | Build |
+| App paths containing spaces and Unicode; inline and external map references accepted | All |
+
+A separate warm-Rspack-cache regression is skipped pending a fix for stale upstream maps after edits that only shift source locations; see the fixture README.
+
 ### react
 
 Core React 19 integration with custom Meteor local directory.
@@ -461,6 +478,8 @@ Where each feature is tested across apps and skeletons.
 | Module rules override | babel | |
 | Custom NODE_ENV compilation | babel | |
 | Portable build (no isDev/isProd defines) | typescript | |
+| Source-map paths, contents, exact breakpoint/step/exception locations, lazy code, and rebuilds | source-maps | |
+| Modern, legacy, and Cordova web source maps in built output | source-maps | |
 | `Meteor.extendSwcConfig` (path aliases) | typescript | |
 | CSS auto-delegation (entry folder filtering) | vue | |
 | `meteor.modules` config (preserve files for Meteor) | react-router, vue | |

@@ -9,6 +9,7 @@
     "test:groups:audit": "node scripts/audit-test-groups.js"
   },
   "devDependencies": {
+    "@jridgewell/trace-mapping": "^0.3.30",
     "@swc/core": "^1.15.18",
     "@swc/jest": "^0.2.39",
     "cheerio": "^1.0.0-rc.12",
