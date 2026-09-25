@@ -1,5 +1,8 @@
 import { FILE_ROLE } from "./lib/constants";
-import { getBuildFileContent } from "./lib/build-context";
+import {
+  getBuildFileContent,
+  canRewriteModuleFile,
+} from "./lib/build-context";
 import {
   RSPACK_EXTENSIONS_TO_IGNORE,
   getRspackFileExtensionsToIgnore,
@@ -117,6 +120,44 @@ Tinytest.add(
     test.isTrue(
       content.includes("await Promise.resolve(__rspackBundle)"),
       "production server must wait for the async Rspack bundle",
+    );
+  },
+);
+
+Tinytest.add(
+  "rspack - build-context - owned scaffolds can be rewritten",
+  function (test) {
+    test.isTrue(
+      canRewriteModuleFile({ filename: "main-dev/server-meteor.js" }),
+      "a scaffold owned by the current mode must stay rewritable",
+    );
+  },
+);
+
+Tinytest.add(
+  "rspack - build-context - output bundles are never rewritten",
+  function (test) {
+    ["main-dev/server-rspack.cjs", "test/client-rspack.js"].forEach(
+      (filename) => {
+        test.isFalse(
+          canRewriteModuleFile({ filename }),
+          `${filename} must keep its compiled bundle`,
+        );
+      },
+    );
+  },
+);
+
+Tinytest.add(
+  "rspack - build-context - create-only scaffolds are never rewritten",
+  function (test) {
+    // A `meteor test` run marks the main-mode scaffolds create-only, so it
+    // leaves a concurrent dev server's compiled server-meteor.js in place.
+    test.isFalse(
+      canRewriteModuleFile({
+        filename: "main-dev/server-meteor.js",
+        createOnly: true,
+      }),
     );
   },
 );

@@ -162,7 +162,7 @@ export function ensureModuleFilesExist() {
     mainEntryFile: mainServerFiles.entryFile,
   };
 
-  const moduleFiles = {
+  const mainModuleFiles = {
     /* Main module files for client and server */
     [getBuildFilePath({ isMain: true, isClient: true, ...env, ...commandRole })]:
       getBuildFileContent({ isMain: true, isClient: true, ...env, ...commandRole, ...mainClientFiles }),
@@ -176,6 +176,8 @@ export function ensureModuleFilesExist() {
       getBuildFileContent({ isMain: true, isServer: true, ...env, role: FILE_ROLE.entry, ...mainServerFiles }),
     [getBuildFilePath({ isMain: true, isServer: true, ...env, role: FILE_ROLE.output })]:
       getBuildFileContent({ isMain: true, isServer: true, ...env, role: FILE_ROLE.output, ...mainServerFiles }),
+  };
+  const testModuleFiles = {
     /* Test module files when test module, test module files for client and server are present or eager discovery */
     [getBuildFilePath({ isTest: true, isTestFullApp, isTestModule, isClient: true, ...commandRole })]:
       getBuildFileContent({ isTest: true, isTestFullApp, isTestModule, isClient: true, ...commandRole, ...testClientFiles }),
@@ -190,16 +192,14 @@ export function ensureModuleFilesExist() {
     [getBuildFilePath({ isTest: true, isTestFullApp, isTestModule, isServer: true, role: FILE_ROLE.output })]:
       getBuildFileContent({ isTest: true, isTestFullApp, isTestModule, isServer: true, role: FILE_ROLE.output, ...testServerFiles }),
   };
+  const moduleFiles = { ...mainModuleFiles, ...testModuleFiles };
 
-  // Main and current test-mode scaffolds are regenerated on every run so their
-  // `*-meteor.js` mainModule files are available on disk. Rspack output bundles
-  // are the exception: they receive the real compiled bundle from Rspack, so
-  // once one exists we only leave it be.
-  // Overwriting it with the placeholder here would wipe the live build output
-  // of a concurrent instance in that mode (a dev server + a `meteor test` run
-  // sharing an app directory), leaving it to serve a blank bundle.
-  const isOutputBundleFile = (filename) =>
-    filename.endsWith('-rspack.js') || filename.endsWith('-rspack.cjs');
+  // A `meteor test` process does not own the main-mode scaffolds: a dev server
+  // sharing the app directory does, and it rewrites its `server-meteor.js`
+  // after compiling. Test runs only create them when they are missing.
+  const createOnlyFiles = new Set(
+    isMeteorAppTest() ? Object.keys(mainModuleFiles) : [],
+  );
 
   Object.entries(moduleFiles).forEach(([filename, defaultContent]) => {
     // 1. Build full path and ensure directory exists
@@ -216,9 +216,12 @@ export function ensureModuleFilesExist() {
 
     // 2. If the file exists, check its contents
     if (fs.existsSync(filePath)) {
-      // Never overwrite an output bundle that already exists — it may hold a
-      // real (or concurrently building) compiled bundle.
-      if (isOutputBundleFile(filename)) {
+      // Leave protected files alone without reading them; output bundles can
+      // be large compiled bundles.
+      if (!canRewriteModuleFile({
+        filename,
+        createOnly: createOnlyFiles.has(filename),
+      })) {
         return;
       }
 
@@ -230,7 +233,7 @@ export function ensureModuleFilesExist() {
         return;
       }
 
-      // 3. If it doesn't already start with the new defaultContent, overwrite it
+      // 3. If it doesn't already include the new defaultContent, overwrite it
       if (!existing.includes(defaultContent)) {
         try {
           fs.writeFileSync(filePath, defaultContent, 'utf8');
@@ -248,6 +251,37 @@ export function ensureModuleFilesExist() {
       }
     }
   });
+}
+
+/**
+ * Checks whether a scaffold filename is an Rspack output bundle
+ * (`*-rspack.js` / `*-rspack.cjs`).
+ * @param {string} filename - Scaffold path relative to the build context
+ * @returns {boolean}
+ */
+function isOutputBundleFile(filename) {
+  return filename.endsWith('-rspack.js') || filename.endsWith('-rspack.cjs');
+}
+
+/**
+ * Decides whether ensureModuleFilesExist() may overwrite a scaffold file that
+ * already exists.
+ *
+ * Output bundles are never overwritten: they receive the real compiled bundle
+ * from Rspack, and replacing one with the placeholder would wipe the live
+ * build output of a concurrent instance (a dev server + a `meteor test` run
+ * sharing an app directory), leaving it to serve a blank bundle.
+ *
+ * Create-only files belong to another command mode and are never overwritten
+ * either. Every other file may be rewritten when it no longer contains its
+ * placeholder content.
+ * @param {Object} options
+ * @param {string} options.filename - Scaffold path relative to the build context
+ * @param {boolean} [options.createOnly] - Whether the file is create-only
+ * @returns {boolean}
+ */
+export function canRewriteModuleFile({ filename, createOnly = false }) {
+  return !createOnly && !isOutputBundleFile(filename);
 }
 
 export function bumpServerRuntimeBuildId() {
