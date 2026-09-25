@@ -634,6 +634,33 @@ describe("issue #9878", () => {
   });
 });
 
+Meteor.isServer &&
+describe("ESM npm modules that cannot be compiled into the bundle", () => {
+  // The esm-only-syntax package uses import.meta and declares top-level
+  // bindings named __filename, __dirname, require, and module, which used to
+  // make the whole server bundle throw a SyntaxError (issue #14784).
+  function checkEvaluatedNatively(ns) {
+    assert.strictEqual(path.basename(ns.filename), "module-only-syntax.mjs");
+    assert.ok(fs.existsSync(ns.filename));
+    assert.strictEqual(ns.url, require("url").pathToFileURL(ns.filename).href);
+    assert.strictEqual(ns.dirname, path.dirname(ns.filename));
+    assert.strictEqual(ns.default(), ns.dirname);
+    // Resolved relative to the real module file with createRequire.
+    assert.strictEqual(ns.packageName, "esm-only-syntax");
+  }
+
+  it("should be evaluated natively when imported by a package", async () => {
+    const { esmOnlySyntax } = await require("meteor/modules-test-package");
+    checkEvaluatedNatively(esmOnlySyntax);
+  });
+
+  it("should be evaluated natively when imported by the app", async () => {
+    // Unlike .js files, .mjs files in the application's node_modules are
+    // compiled as application source files.
+    checkEvaluatedNatively(await import("esm-only-syntax"));
+  });
+});
+
 describe("issue #10233", () => {
   it("should be fixed", () => {
     require("meteor/dummy-compiler").check();
