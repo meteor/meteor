@@ -4,6 +4,26 @@ The tools-core package exposes helpers for managing modern tools in Meteor, prov
 
 These helpers will be useful to integrate a modern bundler like Rspack and a native solution like CapacitorJS.
 
+## Scoping source exclusions to replacement entrypoints
+
+Integrations that replace application entrypoints can use
+`setMeteorAppIgnore(patterns, { entrypoints })` from `lib/meteor.js` to exclude
+their original sources only when Meteor builds those replacement modules:
+
+```js
+setMeteorAppIgnore('client/** !client/*.html', {
+  entrypoints: ['_build/client-meteor.js'],
+});
+```
+
+Other architecture-specific main or test modules keep Meteor's normal source
+compilation. Use resolved, app-relative module paths. Without `entrypoints`,
+the patterns apply to all architectures. Both forms append patterns and preserve
+the last occurrence of each pattern; `.meteorignore` and global exclusions still
+apply before the entrypoint-specific patterns.
+
+`setMeteorAppEntrypoints({ mainModule, testModule })` accepts architecture maps alongside the existing client/server shortcuts. Map entries replace only the specified keys and preserve `false` values. Integrations can also restrict a development script to selected browser programs with `setMeteorAppCustomScriptUrl(url, { archs: ['web.browser'] })`; omitting `archs` keeps the existing behavior of injecting it into every browser program.
+
 ## Declaring required npm dependencies
 
 Atmosphere packages that need the host app to install (or stay above a minimum

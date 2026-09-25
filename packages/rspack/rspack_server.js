@@ -145,6 +145,14 @@ if (shouldEnableDevHMRProxy) {
 
     // 2) match "/build-chunks/<anything>"
     const bundlesMatch = req.url.match(RSPACK_CHUNKS_REGEX);
+    const assetsMatch = req.url.match(RSPACK_ASSETS_REGEX);
+    // Explicit architecture builds are written to disk and served by Meteor.
+    // Only the default client's in-memory output belongs to the HMR server.
+    if (/^web\.(?:browser(?:\.legacy)?|cordova)\//.test(
+      (bundlesMatch || assetsMatch)?.[1] || ''
+    )) {
+      return next();
+    }
     if (bundlesMatch) {
       // Redirect "/bundles/foo.js" → "/__rspack__/build-chunks/foo.js"
       const target = `/__rspack__/${rspackChunksContext}/${bundlesMatch[1]}`;
@@ -153,7 +161,6 @@ if (shouldEnableDevHMRProxy) {
     }
 
     // 3) match "/build-assets/<anything>"
-    const assetsMatch = req.url.match(RSPACK_ASSETS_REGEX);
     if (assetsMatch) {
       // Redirect "/build-assets/foo.js" → "/__rspack__/build-assets/foo.js"
       const target = `/__rspack__/${rspackAssetsContext}/${assetsMatch[1]}`;

@@ -44,6 +44,8 @@ In Meteor, set this in `package.json`:
 
 [Check out the Meteor migration guide](#entry-points) on describing entry points in your app.
 
+Starting with Meteor 3.6, Rspack can compile a separate legacy browser application or unsupported-browser message. See [Legacy and Architecture-Specific Entry Points](#legacy-and-architecture-specific-entry-points).
+
 ### Remove nested imports
 
 Your app code cannot use Meteor's specific nested imports (not to be confused with dynamic imports, which are supported). These are ES import statements placed inside conditions or functions.
@@ -221,6 +223,8 @@ You can use flags to control the final configuration based on the environment. T
 | `isProduction`      | boolean  | True when running in production mode                                                                                              |
 | `isClient`          | boolean  | True when building or running client code                                                                                         |
 | `isServer`          | boolean  | True when building or running server code                                                                                         |
+| `arch`              | string or undefined | The explicit client architecture being compiled, such as `web.browser.legacy`; undefined for the default client and server compilations. Available from Meteor 3.6. |
+| `isLegacy`          | boolean  | True for an explicit legacy client compilation; use it for [legacy-specific configuration](#legacy-and-architecture-specific-entry-points). Available from Meteor 3.6. |
 | `isTest`            | boolean  | True when running in test mode                                                                                                    |
 | `isDebug`           | boolean  | True when debug mode is enabled                                                                                                   |
 | `isRun`             | boolean  | True when running the project with `meteor run`                                                                                   |
@@ -318,6 +322,110 @@ If you need Meteor to handle CSS or HTML files outside the main entry folder, ad
 With this, Meteor will process these files, merge stylesheets, generate the final HTML, and support files a Meteor plugin may use, except for JS or script code now handled by Rspack. You can also process CSS and HTML files directly with Rspack using loaders from imports in your app code, as mentioned in ["CSS, Less and SCSS"](#css-less-and-scss) or ["HtmlRspackPlugin"](#htmlrspackplugin). If you prefer Meteor's loading approach, you can still rely on it.
 
 Keep in mind: compiling styles with the Meteor compilers triggers Meteor HMR, which is slower than Rspack HMR. Migrating to compile styles with Rspack as part of the app code ensures the fastest HMR for style changes in development.
+
+### Legacy and Architecture-Specific Entry Points
+
+:::info
+Starting with Meteor 3.6
+:::
+
+To serve different application code to legacy browsers, define `meteor.mainModule.legacy` alongside the default `client` entry in `package.json`:
+
+```json
+{
+  "meteor": {
+    "mainModule": {
+      "client": "client/main.js",
+      "legacy": "client/legacy.js",
+      "server": "server/main.js"
+    },
+    "modern": {
+      "webArchOnly": false
+    }
+  }
+}
+```
+
+Rspack compiles `client/legacy.js` and its imports separately, using the same `rspack.config.js` as the default client. Aliases, loaders, plugins, CSS, assets, and dynamic imports apply to this compilation too. Meteor selects the appropriate browser program when serving the app and still assembles the final bundle, including Atmosphere packages.
+
+The legacy entry can start a compatible version of your app or display a small unsupported-browser message. It can import shared application modules; avoid importing the modern bootstrap if the goal is to keep the legacy bundle small.
+
+`legacy` selects `web.browser.legacy`; you can use the full architecture name as the key instead. Explicit `web.browser` and `web.cordova` entries also get their own compilations. The `modern` shorthand follows Meteor's architecture mapping. When `meteor.modern.cordova` is `false`, the `legacy` shorthand also covers Cordova. Set an entry to `false` to disable that architecture's app entry; this does not disable Meteor package code or remove the browser program.
+
+With only `mainModule.client`, the existing shared-client behavior is preserved. Add an explicit `legacy` entry to get a separate legacy Rspack compilation, even if both entries point to the same source file.
+
+#### Customize the legacy compilation
+
+The `Meteor` argument passed to `defineConfig` describes the current compilation. Use `Meteor.isLegacy` for legacy-specific options and `Meteor.arch` when a setting should apply to one exact architecture. These are configuration callback values, not new properties on the application's runtime `Meteor` object.
+
+For example, expose an alias only to legacy code:
+
+```javascript
+const { defineConfig } = require('@meteorjs/rspack');
+const path = require('path');
+
+module.exports = defineConfig(Meteor => ({
+  resolve: {
+    alias: Meteor.isLegacy
+      ? { '@legacy': path.resolve(__dirname, 'imports/legacy') }
+      : {},
+  },
+}));
+```
+
+The legacy entry can then import `@legacy/message.js` from `imports/legacy/message.js`. Apply the same condition to loaders or plugins that should run only for legacy builds. Meteor does not automatically load a separate `rspack.legacy.config.js`; keep the condition in your existing config, or import your own configuration fragments from it. Keep entry selection in `mainModule` rather than overriding Rspack's reserved `entry` and `output` options.
+
+The default legacy compilation targets ES5 for both the app's SWC transform and Rspack's generated runtime, including dynamic chunks. Custom compiler settings can override those defaults. npm dependencies are excluded from the default app transpilation rule; use [Meteor.compileWithRspack](#delegating-dependencies-to-rspack) for dependencies that need transformation. That helper inherits the current compilation's SWC options, including the legacy target.
+
+`meteor.nodeModules.recompile` applies to dependencies compiled by Meteor; it does not add transpilation rules for dependencies bundled by Rspack. To transpile the npm dependencies reached by your legacy entry, including their transitive imports, you can use:
+
+```javascript
+const { defineConfig } = require('@meteorjs/rspack');
+
+module.exports = defineConfig(Meteor => Meteor.isLegacy
+  ? Meteor.compileWithRspack([/node_modules/])
+  : {});
+```
+
+:::info
+An ES5 syntax target does not supply every browser API or make arbitrary dependencies compatible with older browsers. SWC transpilation does not remove requirements such as BigInt support. Include any required polyfills and test the browsers your application supports.
+:::
+
+#### Run and test the legacy flow
+
+`modern.webArchOnly: false` in the example enables legacy programs during development and app tests. An explicit `--exclude-archs` option takes precedence; do not exclude `web.browser.legacy` when checking this flow.
+
+```bash
+meteor run
+meteor run --production
+meteor build ../output --directory
+```
+
+Development uses a watched Rspack build and Meteor reloads for the separate legacy entry. The default client keeps Rspack's development server and HMR. Production builds include the legacy browser program unless the requested platforms exclude it, for example with `--platforms modern`.
+
+Open the app normally for its modern program. To inspect legacy delivery in a current browser, override its user agent in developer tools and reload the same URL, for example with:
+
+```text
+Mozilla/5.0 (Windows NT 6.1; Trident/7.0; rv:11.0) like Gecko
+```
+
+This checks program selection and asset loading; it does not emulate an old JavaScript engine. In application code, `Meteor.isModern` identifies the selected browser program.
+
+For separate test entry points, add a matching `testModule` map to the same `meteor` configuration:
+
+```json
+{
+  "meteor": {
+    "testModule": {
+      "client": "tests/client.js",
+      "legacy": "tests/legacy.js",
+      "server": "tests/server.js"
+    }
+  }
+}
+```
+
+Run `meteor test --driver-package meteortesting:mocha` and open its URL with both modern and legacy user agents to exercise the two test entries. A headless run of `meteor test --once` with a modern browser exercises the modern program; checking the legacy program requires selecting it explicitly. See [Testing](#testing) for full-app test mode.
 
 ### Server-Only Apps
 

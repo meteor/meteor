@@ -289,6 +289,34 @@ Tinytest.add(
 );
 
 Tinytest.add(
+  "tools-core - setMeteorAppIgnore - scopes patterns to entrypoints",
+  function (test) {
+    const previousIgnore = process.env.METEOR_IGNORE;
+    const previousByEntrypoint = process.env.METEOR_IGNORE_BY_ENTRYPOINT;
+    try {
+      process.env.METEOR_IGNORE = "private/**";
+      delete process.env.METEOR_IGNORE_BY_ENTRYPOINT;
+      setMeteorAppIgnore("client/** !client/meteor.css", {
+        entrypoints: ['_build/client.js', '_build/client-tests.js'],
+      });
+      setMeteorAppIgnore("client/*.css !client/meteor.css", {
+        entrypoints: ['_build/client.js'],
+      });
+      test.equal(process.env.METEOR_IGNORE, "private/**");
+      test.equal(JSON.parse(process.env.METEOR_IGNORE_BY_ENTRYPOINT), {
+        '_build/client.js': 'client/** client/*.css !client/meteor.css',
+        '_build/client-tests.js': 'client/** !client/meteor.css',
+      });
+    } finally {
+      if (previousIgnore === undefined) delete process.env.METEOR_IGNORE;
+      else process.env.METEOR_IGNORE = previousIgnore;
+      if (previousByEntrypoint === undefined) delete process.env.METEOR_IGNORE_BY_ENTRYPOINT;
+      else process.env.METEOR_IGNORE_BY_ENTRYPOINT = previousByEntrypoint;
+    }
+  }
+);
+
+Tinytest.add(
   "tools-core - parseMeteorAppPort - bare port",
   function (test) {
     test.equal(parseMeteorAppPort("3000"), "3000");

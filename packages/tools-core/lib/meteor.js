@@ -197,24 +197,32 @@ export function isMeteorAppTestModule() {
  * @param {Object} options - The entry points configuration object.
  * @param {string} [options.mainClient] - The client main module path.
  * @param {string} [options.mainServer] - The server main module path.
- * @param {string} [options.testModule] - The test module path.
+ * @param {Object} [options.mainModule] - Architecture-specific main entry overrides.
+ * @param {string|Object} [options.testModule] - The test module path or architecture overrides.
  * @param {string} [options.testClient] - The client test module path.
  * @param {string} [options.testServer] - The server test module path.
  */
 export function setMeteorAppEntrypoints({
   mainClient,
   mainServer,
+  mainModule,
   testModule,
   testClient,
   testServer,
 }) {
+  if (mainModule && typeof mainModule === 'object') {
+    process.env.METEOR_CONFIG_MAIN_MODULE = JSON.stringify(mainModule);
+  }
   if (mainClient) {
     process.env.METEOR_CONFIG_CLIENT = mainClient;
   }
   if (mainServer) {
     process.env.METEOR_CONFIG_SERVER = mainServer;
   }
-  if (testModule) {
+  if (testModule && typeof testModule === 'object') {
+    process.env.METEOR_CONFIG_TEST_MODULE = JSON.stringify(testModule);
+  }
+  if (typeof testModule === 'string') {
     process.env.METEOR_CONFIG_TEST = testModule;
   } else {
     if (testClient) {
@@ -233,32 +241,45 @@ export function setMeteorAppEntrypoints({
  * each exact pattern. This preserves gitignore-style "last match wins"
  * semantics while preventing unbounded growth.
  * @param {string} ignore - The pattern to be ignored.
+ * @param {Object} options
+ * @param {string[]} options.entrypoints - Apply only when one of these modules is
+ * the architecture's entrypoint. Omit to apply to all architectures.
  */
-export function setMeteorAppIgnore(ignore) {
-  const currentPatterns = (process.env.METEOR_IGNORE || '')
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
+export function setMeteorAppIgnore(ignore, { entrypoints } = {}) {
   const newPatterns = ignore.trim().split(/\s+/).filter(Boolean);
 
   if (newPatterns.length === 0) {
     return;
   }
 
-  const combinedPatterns = [...currentPatterns, ...newPatterns];
-  const seenPatterns = new Set();
-  const dedupedPatterns = [];
+  function appendPatterns(current) {
+    const currentPatterns = (current || '').trim().split(/\s+/).filter(Boolean);
+    const combinedPatterns = [...currentPatterns, ...newPatterns];
+    const seenPatterns = new Set();
+    const dedupedPatterns = [];
 
-  for (let index = combinedPatterns.length - 1; index >= 0; index -= 1) {
-    const pattern = combinedPatterns[index];
+    for (let index = combinedPatterns.length - 1; index >= 0; index -= 1) {
+      const pattern = combinedPatterns[index];
 
-    if (!seenPatterns.has(pattern)) {
-      seenPatterns.add(pattern);
-      dedupedPatterns.push(pattern);
+      if (!seenPatterns.has(pattern)) {
+        seenPatterns.add(pattern);
+        dedupedPatterns.push(pattern);
+      }
     }
+    return dedupedPatterns.reverse().join(' ');
   }
 
-  process.env.METEOR_IGNORE = dedupedPatterns.reverse().join(' ');
+  if (entrypoints) {
+    const byEntrypoint = JSON.parse(process.env.METEOR_IGNORE_BY_ENTRYPOINT || '{}');
+    for (const entrypoint of entrypoints) {
+      if (typeof entrypoint === 'string') {
+        byEntrypoint[entrypoint] = appendPatterns(byEntrypoint[entrypoint]);
+      }
+    }
+    process.env.METEOR_IGNORE_BY_ENTRYPOINT = JSON.stringify(byEntrypoint);
+  } else {
+    process.env.METEOR_IGNORE = appendPatterns(process.env.METEOR_IGNORE);
+  }
 }
 
 /**
@@ -384,9 +405,16 @@ export function isMeteorAppProfile() {
 /**
  * Sets a custom script URL for the Meteor application in the environment variable.
  * @param {string} scriptUrl - The URL of the custom script.
+ * @param {Object} options
+ * @param {string[]} options.archs - Restrict injection to these architectures.
  */
-export function setMeteorAppCustomScriptUrl(scriptUrl) {
+export function setMeteorAppCustomScriptUrl(scriptUrl, { archs } = {}) {
   process.env.METEOR_APP_CUSTOM_SCRIPT_URL = scriptUrl;
+  if (archs) {
+    process.env.METEOR_APP_CUSTOM_SCRIPT_ARCHS = JSON.stringify(archs);
+  } else {
+    delete process.env.METEOR_APP_CUSTOM_SCRIPT_ARCHS;
+  }
 }
 
 /**
