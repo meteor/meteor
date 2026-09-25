@@ -1,4 +1,5 @@
 import { Meteor } from 'meteor/meteor';
+import { MongoDB } from './mongo_common';
 
 /**
  * SharedChangeStream — one MongoDB change stream shared per collection.
@@ -12,9 +13,9 @@ import { Meteor } from 'meteor/meteor';
  * It owns the cursor lifecycle: an error/close restarts from the last resume
  * token (startAfter), replaying events missed while reconnecting. A resumable
  * restart replaces only the cursor; drivers are untouched. A NON-resumable error
- * (the token aged out of the oplog) instead drops the token, reopens from a fresh
- * start time, and reconciles each driver with the collection for the events lost
- * during the gap (see _restart / _resyncDrivers).
+ * (e.g. the token aged out of the oplog) instead drops the token, reopens from a
+ * fresh start time, and reconciles each driver with the collection for the events
+ * lost during the gap (see _restart / _resyncDrivers).
  */
 export class SharedChangeStream {
   constructor(mongoHandle, collectionName, onEmpty) {
@@ -35,6 +36,9 @@ export class SharedChangeStream {
     // Set when a restart is triggered by a non-resumable error so the reopened
     // stream reconciles its drivers with the collection (see _restart).
     this._historyLost = false;
+    // Op time the reopened stream's resync is guaranteed to cover (set in _open
+    // on a non-resumable reopen); lets drivers release fences up to it.
+    this._resyncFloorOperationTime = null;
     // Serialize _restart: a second error firing on the freshly reopened cursor
     // while the previous restart is still awaiting its reconcile must not run a
     // second restart (and a second resync) concurrently. It coalesces into one
@@ -95,12 +99,22 @@ export class SharedChangeStream {
     // mongo processes the $changeStream command, and writes landing in that gap
     // are dropped. Skipped on resume (the token already pins the start).
     let startAtOperationTime;
+    this._resyncFloorOperationTime = null;
     if (!this._resumeToken) {
       try {
         const pingRes = await this._mongoHandle.db.command({ ping: 1 });
         startAtOperationTime = pingRes?.operationTime;
       } catch (e) {
         // Best-effort; falls back to mongo's default of "now".
+      }
+      // Reopening after a non-resumable error: the resync (see _restart) reads
+      // the collection after this ping, so it covers every event at or before
+      // it. Start strictly after it — startAtOperationTime is inclusive, and the
+      // failing event (e.g. an oversized one, #14763) is often the latest op, so
+      // an inclusive start would hit it again until another write lands.
+      if (this._historyLost && startAtOperationTime) {
+        this._resyncFloorOperationTime = startAtOperationTime;
+        startAtOperationTime = new MongoDB.Timestamp(startAtOperationTime.add(1));
       }
     }
 
@@ -138,8 +152,9 @@ export class SharedChangeStream {
         resumeTokenPresent: !!this._resumeToken,
         error,
       });
-      // A non-resumable error means the resume token is no longer in the oplog,
-      // so watch() reopens but every getMore fails with the same error again —
+      // A non-resumable error means resuming from the token can never succeed
+      // (it aged out of the oplog, or the next event is over 16MB), so watch()
+      // reopens but every getMore fails with the same error again —
       // an endless error→restart loop that re-sends the dead token. Drop the
       // token so the restart falls back to startAtOperationTime (now), and flag
       // the stream so the reopened cursor reconciles its drivers: events in the
@@ -198,10 +213,13 @@ export class SharedChangeStream {
     }
   }
 
-  // Non-resumable == the resume point itself is gone, so resuming from the stored
-  // token can never succeed and we must restart from a fresh start time:
+  // Non-resumable == resuming from the stored token can never succeed, so we must
+  // restart from a fresh start time:
   //   - ChangeStreamHistoryLost (286): the token aged out of the oplog.
   //   - ChangeStreamFatalError (280): the server declared the stream unusable.
+  //   - BSONObjectTooLarge (10334): the next event exceeds 16MB (e.g. a large
+  //     doc's post-image + pre-image). startAfter lands on that same event and
+  //     fails again forever, so skip it and let the resync reconcile it.
   // Everything else is treated as RESUMABLE and keeps the token. This matters:
   // the mongo driver retries resumable errors internally and only emits an
   // 'error' event after its own retry gives up, re-emitting the ORIGINAL error —
@@ -214,7 +232,8 @@ export class SharedChangeStream {
     if (!error) return false;
     return (
       error.code === 286 || error.codeName === 'ChangeStreamHistoryLost' ||
-      error.code === 280 || error.codeName === 'ChangeStreamFatalError'
+      error.code === 280 || error.codeName === 'ChangeStreamFatalError' ||
+      error.code === 10334 || error.codeName === 'BSONObjectTooLarge'
     );
   }
 
@@ -264,6 +283,11 @@ export class SharedChangeStream {
       resumeTokenPresent: !!this._resumeToken,
     });
     try {
+      // The reopened cursor goes live before each driver's resync runs, so hold
+      // fence releases until that driver is reconciled (see _endResyncHold).
+      if (this._historyLost) {
+        for (const driver of this._drivers) driver._resyncPending = true;
+      }
       await this._closeStream();
       if (this._stopped) return;
       // Reopen via the shared guard so a mid-restart subscriber awaits it too.
@@ -274,7 +298,7 @@ export class SharedChangeStream {
       // reschedules still reconciles on the retry.
       if (this._historyLost && !this._stopped) {
         this._historyLost = false;
-        await this._resyncDrivers();
+        await this._resyncDrivers(this._resyncFloorOperationTime);
       }
       // Note: _restartFailures is NOT reset here. A successful reopen does not
       // mean the stream is healthy — it may error again immediately. Only an
@@ -309,18 +333,24 @@ export class SharedChangeStream {
   // Reconcile every attached driver with the collection after a non-resumable
   // gap. Best-effort and isolated per driver: a failed reconcile is logged, not
   // rethrown, so it can never wedge or re-loop the stream that just recovered.
-  async _resyncDrivers() {
+  // caughtUpTo (optional) is an op time the resync is known to cover.
+  async _resyncDrivers(caughtUpTo) {
     for (const driver of [...this._drivers]) {
       if (this._stopped) return;
       if (driver._stopped) continue;
       try {
-        await driver._resyncAfterHistoryLost();
+        await driver._resyncAfterHistoryLost(caughtUpTo);
       } catch (error) {
         console.error('ChangeStream resync after history loss failed:', {
           collectionName: this._collectionName,
           driverId: driver._id,
           error,
         });
+      } finally {
+        // A resync that threw before reaching its own cleanup would otherwise
+        // keep holding fence releases, hanging every later write on this
+        // collection.
+        if (driver._resyncPending) driver._endResyncHold();
       }
     }
   }
