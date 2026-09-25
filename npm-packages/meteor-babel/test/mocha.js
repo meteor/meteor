@@ -5973,7 +5973,9 @@ exports.clean = function(str) {
  */
 
 exports.trim = function(str){
-  return str.replace(/^\s+|\s+$/g, '');
+  // Native trim strips the same characters as \s, without the regexp's
+  // quadratic backtracking on long inner whitespace runs.
+  return str.trim();
 };
 
 /**

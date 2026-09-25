@@ -62,6 +62,11 @@ describe("vendored browser Mocha utilities", function () {
     assert.strictEqual(clean('function () {\n  run();' + ' '.repeat(200000) + '}'), 'run();');
   });
 
+  it("handles long inner whitespace runs before a non-space ending", function () {
+    const input = 'x' + ' '.repeat(200000) + '!';
+    assert.strictEqual(clean(input), input);
+  });
+
   it("highlights integers and decimals once each", function () {
     assert.strictEqual(
       highlight('12 3.45'),
