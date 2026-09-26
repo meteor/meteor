@@ -196,3 +196,24 @@ Tinytest.add('ddp-common - setSerializer - swaps the active serializer', functio
   }
   test.equal(DDPCommon.getSerializer().name, 'ejson');
 });
+
+Tinytest.add('ddp-common - setSerializer - rejects invalid serializers', function (test) {
+  const active = DDPCommon.getSerializer();
+  const ejson = DDPCommon.createEJSONSerializer();
+
+  [null, undefined, {}, { ...ejson, serialize: undefined }, { ...ejson, deserialize: 'no' }]
+    .forEach(candidate => {
+      test.throws(
+        () => DDPCommon.setSerializer(candidate),
+        /must provide serialize\(\) and deserialize\(\)/
+      );
+    });
+  [{ ...ejson, wireFormat: 'binary' }, { ...ejson, wireFormat: undefined }].forEach(candidate => {
+    test.throws(() => DDPCommon.setSerializer(candidate), /wireFormat must be 'text'/);
+  });
+
+  // A rejected call leaves the active serializer and the entry points untouched.
+  test.isTrue(DDPCommon.getSerializer() === active);
+  test.equal(DDPCommon.stringifyDDP({ msg: 'ping', id: '1' }), '{"msg":"ping","id":"1"}');
+  test.equal(DDPCommon.parseDDP('{"msg":"pong","id":"1"}'), { msg: 'pong', id: '1' });
+});

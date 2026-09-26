@@ -115,14 +115,20 @@ DDPCommon.fromWireMessage = function (msg) {
 // A serializer converts DDP messages to and from the transport payload.
 //
 // Interface:
-//   name:        string              — identifier ('ejson', ...)
-//   wireFormat:  'text' | 'binary'   — frame type the transport must use
-//   serialize:   (msg) → string | Uint8Array; must not mutate `msg`
+//   name:        string   — identifier ('ejson', ...)
+//   wireFormat:  'text'   — frame type the transport must use; only 'text' is
+//                           accepted until a transport delivers binary frames
+//   serialize:   (msg) → string; must not mutate `msg`
 //   deserialize: (raw) → msg; throws on invalid input
 //
 // `msg` is the internal representation (cleared fields as `undefined`).
 // Serializers that encode the wire form generically can build it with
 // DDPCommon.toWireMessage and restore it with DDPCommon.fromWireMessage.
+//
+// The serializer is process-wide and is not negotiated per connection: the
+// server and every client connecting to it must install the same one, before
+// any connection is opened. A mismatch fails silently, because parseDDP
+// discards every frame the other side cannot decode.
 // ---------------------------------------------------------------------------
 
 function ejsonSerialize(msg) {
@@ -230,6 +236,15 @@ function ejsonParseDDP(raw) {
 let serializer = null;
 
 DDPCommon.setSerializer = function (newSerializer) {
+  if (!newSerializer ||
+      typeof newSerializer.serialize !== 'function' ||
+      typeof newSerializer.deserialize !== 'function') {
+    throw new Error("A DDP serializer must provide serialize() and deserialize()");
+  }
+  if (newSerializer.wireFormat !== 'text') {
+    throw new Error("DDP serializer wireFormat must be 'text'; " +
+                    "the DDP transports do not deliver binary frames yet");
+  }
   serializer = newSerializer;
   if (newSerializer.serialize === ejsonSerialize &&
       newSerializer.deserialize === ejsonDeserialize) {
