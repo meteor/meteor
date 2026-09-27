@@ -338,7 +338,11 @@ makeOptimistic("readJsonOrNull", (
   }
 });
 
-export const optimisticReadMeteorIgnore = wrap((dir: string) => {
+export const optimisticReadMeteorIgnore = wrap((
+  dir: string,
+  customMeteorIgnore?: string,
+  rootMeteorIgnore?: string
+) => {
   const meteorIgnorePath = pathJoin(dir, ".meteorignore");
   const meteorIgnoreStat = optimisticStatOrNull(meteorIgnorePath);
 
@@ -350,11 +354,12 @@ export const optimisticReadMeteorIgnore = wrap((dir: string) => {
     );
   }
 
-  const customMeteorIgnore = process.env.METEOR_IGNORE;
-  if (customMeteorIgnore != null) {
-    ignoreConfig = ignoreConfig || ignore();
-    const allCustomMeteorIgnores = customMeteorIgnore.trim().split(/\s+/);
-    ignoreConfig = ignoreConfig.add(allCustomMeteorIgnores);
+  // Explicit arguments also keep environment changes in the cache key.
+  for (const patterns of [customMeteorIgnore, rootMeteorIgnore]) {
+    if (patterns != null) {
+      ignoreConfig = ignoreConfig || ignore();
+      ignoreConfig = ignoreConfig.add(patterns.trim().split(/\s+/));
+    }
   }
 
   return ignoreConfig;

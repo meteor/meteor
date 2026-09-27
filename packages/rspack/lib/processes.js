@@ -75,18 +75,20 @@ import { isMeteorAppProfile } from "../../tools-core/lib/meteor";
 // Rspack's native code prints this marker when it aborts, e.g. when its
 // persistent cache was corrupted by a previous hard kill mid-write.
 const RSPACK_PANIC_PATTERN = 'Panic occurred at runtime';
-const RSPACK_UNSET_ENV = ['METEOR_IGNORE'];
+const RSPACK_UNSET_ENV = ['METEOR_IGNORE', 'METEOR_IGNORE_ROOT'];
 
 /**
- * Builds the environment passed to Rspack child processes. METEOR_IGNORE is
- * consumed by meteor-tool, not Rspack, so it is omitted here and explicitly
- * removed again by spawnProcess after the parent environment is merged.
+ * Builds the environment passed to Rspack child processes. Meteor source-scan
+ * ignores must not filter Rspack's inputs, including eager tests. Omit them
+ * here and remove them again after spawnProcess merges the parent environment.
  * @param {Object} envs - Rspack-specific environment variables
  * @returns {Object} Environment variables for spawnProcess
  */
 function getRspackSpawnEnv(envs) {
   const parentEnv = { ...process.env };
-  delete parentEnv.METEOR_IGNORE;
+  for (const name of RSPACK_UNSET_ENV) {
+    delete parentEnv[name];
+  }
 
   return inheritMeteorToolNodeFlags({
     ...parentEnv,

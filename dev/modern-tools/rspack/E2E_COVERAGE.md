@@ -311,6 +311,16 @@ Server-only app (no client entry point).
 | CommonJS development server bundle under a `type: module` app | Run |
 | Node Inspector attach, pauses, breakpoint, source map, and mapped stack | Run |
 
+### Focused root-ignore regressions
+
+`regressions/root-ignore.test.js` creates a minimal Rspack app and runs in the
+`regressions` CI group.
+
+| What is covered | Phase |
+|----------------|-------|
+| A root `test/` data directory does not hide generated `_build/test/` entry points ([#14514](https://github.com/meteor/meteor/issues/14514)) | Test once |
+| Explicit client `testModule` and eager server discovery each execute a named test with `1 passing`, without `--full-app` | Test once |
+
 ### tla
 
 Minimal top-level await fixture.

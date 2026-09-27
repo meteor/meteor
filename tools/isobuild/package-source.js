@@ -1543,7 +1543,13 @@ Object.assign(PackageSource.prototype, {
 
       const absDir = files.pathJoin(self.sourceRoot, dir);
       if (! inNodeModules) {
-        const ignore = optimisticReadMeteorIgnore(absDir);
+        // Keep user rules directory-relative. Build-tool rules apply only
+        // from the app root, so test/** cannot hide _build/test/**.
+        const ignore = optimisticReadMeteorIgnore(
+          absDir,
+          process.env.METEOR_IGNORE,
+          isApp && depth === 0 ? process.env.METEOR_IGNORE_ROOT : undefined
+        );
         if (ignore) {
           dotMeteorIgnoreFiles[dir] = ignore;
         }

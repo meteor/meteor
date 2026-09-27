@@ -289,6 +289,38 @@ Tinytest.add(
 );
 
 Tinytest.add(
+  "tools-core - setMeteorAppIgnore - isolates root-scoped build-tool rules",
+  function (test) {
+    const previousIgnore = process.env.METEOR_IGNORE;
+    const previousRootIgnore = process.env.METEOR_IGNORE_ROOT;
+
+    try {
+      process.env.METEOR_IGNORE = "user/**";
+      process.env.METEOR_IGNORE_ROOT = "!client/meteor.css";
+      setMeteorAppIgnore("client/*.css !client/meteor.css", { root: true });
+      setMeteorAppIgnore("client/*.css !client/meteor.css", { root: true });
+      test.equal(process.env.METEOR_IGNORE_ROOT, "client/*.css !client/meteor.css");
+      test.equal(process.env.METEOR_IGNORE, "user/**");
+
+      setMeteorAppIgnore("legacy/**");
+      test.equal(process.env.METEOR_IGNORE, "user/** legacy/**");
+      test.equal(process.env.METEOR_IGNORE_ROOT, "client/*.css !client/meteor.css");
+    } finally {
+      for (const [name, value] of [
+        ["METEOR_IGNORE", previousIgnore],
+        ["METEOR_IGNORE_ROOT", previousRootIgnore],
+      ]) {
+        if (value === undefined) {
+          delete process.env[name];
+        } else {
+          process.env[name] = value;
+        }
+      }
+    }
+  }
+);
+
+Tinytest.add(
   "tools-core - parseMeteorAppPort - bare port",
   function (test) {
     test.equal(parseMeteorAppPort("3000"), "3000");

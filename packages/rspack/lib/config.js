@@ -259,7 +259,7 @@ export function configureMeteorForRspack() {
     `!/${RSPACK_BUILD_CONTEXT}/**`,
     ...testIgnorePaths,
     otherMainIgnorePath,
-    'node_modules/**',
+    '**/node_modules/**',
     ...extraFoldersToIgnore,
   ].filter(Boolean);
   const rootFilesToIgnore = [
@@ -295,7 +295,7 @@ export function configureMeteorForRspack() {
   const meteorAppIgnores = `${foldersToIgnore.join(' ')} ${filesToIgnore.join(
     ' ',
   )} ${unignoredFilesAndFolders.join(' ')}`.trim();
-  setMeteorAppIgnore(meteorAppIgnores);
+  setMeteorAppIgnore(meteorAppIgnores, { root: true });
 
   if (isMeteorAppDebug() || isMeteorAppConfigModernVerbose()) {
     logInfo(`[i] Meteor app ignores: ${meteorAppIgnores}`);
@@ -428,11 +428,12 @@ export function applyDelegatedExtensions(extensions) {
     );
 
     setMeteorAppIgnore(
-      [...ignorePatterns, ...unignoredFilesAndFolders].join(' ')
+      [...ignorePatterns, ...unignoredFilesAndFolders].join(' '),
+      { root: true }
     );
 
     if (isMeteorAppDebug() || isMeteorAppConfigModernVerbose()) {
-      logInfo(`[i] Rspack delegated extensions: ${extensions.join(', ')} (ignored in entry folders)\n    ${process.env.METEOR_IGNORE}`);
+      logInfo(`[i] Rspack delegated extensions: ${extensions.join(', ')} (ignored in entry folders)\n    ${process.env.METEOR_IGNORE_ROOT}`);
     }
   }
 }

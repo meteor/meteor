@@ -233,9 +233,12 @@ export function setMeteorAppEntrypoints({
  * each exact pattern. This preserves gitignore-style "last match wins"
  * semantics while preventing unbounded growth.
  * @param {string} ignore - The pattern to be ignored.
+ * @param {Object} [options] - Ignore scope.
+ * @param {boolean} [options.root=false] - Use the internal app-root channel for build-tool rules.
  */
-export function setMeteorAppIgnore(ignore) {
-  const currentPatterns = (process.env.METEOR_IGNORE || '')
+export function setMeteorAppIgnore(ignore, { root = false } = {}) {
+  const envName = root ? 'METEOR_IGNORE_ROOT' : 'METEOR_IGNORE';
+  const currentPatterns = (process.env[envName] || '')
     .trim()
     .split(/\s+/)
     .filter(Boolean);
@@ -258,7 +261,7 @@ export function setMeteorAppIgnore(ignore) {
     }
   }
 
-  process.env.METEOR_IGNORE = dedupedPatterns.reverse().join(' ');
+  process.env[envName] = dedupedPatterns.reverse().join(' ');
 }
 
 /**
