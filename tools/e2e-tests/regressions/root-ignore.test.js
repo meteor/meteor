@@ -32,8 +32,9 @@ describe('Regressions / Rspack root-scoped ignores /', () => {
     await fs.outputFile(path.join(appDir, '.meteor/release'), 'none\n');
     await fs.outputFile(path.join(appDir, 'client/main.js'), 'export {};\n');
     await fs.outputFile(path.join(appDir, 'server/main.js'), 'export {};\n');
-    // The root test/ folder generates test/** for Meteor's source scanner.
-    // It must not hide Rspack's generated _build/test/ entry points (#14514).
+    // test/ holds data that stays excluded; tests/ holds the Mocha test below.
+    // Rspack generates test/** to exclude the data from Meteor's source scan.
+    // Meteor must still load _build/test/ entry points and execute that test (#14514).
     await fs.outputFile(path.join(appDir, 'test/data.js'),
       'throw new Error("test data must not be eagerly loaded");\n');
     await fs.outputFile(path.join(appDir, 'tests/root-ignore.test.js'), `

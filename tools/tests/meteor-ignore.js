@@ -16,16 +16,35 @@ selftest.define(".meteorignore - root and legacy environment patterns", async fu
   s.mkdir("_build/test/legacy");
   s.mkdir("_build/test/node_modules");
   s.mkdir("_build/test/node_modules/ignore-scope-dependency");
-  s.write("test/excluded.js", 'throw new Error("root test directory was not ignored");');
-  s.write("root.hidden.js", 'throw new Error("root anchored pattern was not applied");');
-  s.write("_build/test/included.js", 'require("/imports/registry.js").add(module.id);');
-  s.write("_build/test/nested.hidden.js", 'require("/imports/registry.js").add(module.id);');
-  s.write("_build/test/ignored.js", 'throw new Error("nested meteorignore was not applied");');
   s.write("_build/test/.meteorignore", "ignored.js\n");
-  s.write("legacy/excluded.js", 'throw new Error("root legacy pattern was not applied");');
-  s.write("_build/test/legacy/excluded.js", 'throw new Error("nested legacy pattern was not applied");');
-  s.write("root.legacy.js", 'throw new Error("root anchored legacy pattern was not applied");');
-  s.write("_build/test/nested.legacy.js", 'throw new Error("nested anchored legacy pattern was not applied");');
+
+  const filesToLoad = [
+    // Root-scoped test/** only excludes the app's top-level test/ contents.
+    "_build/test/included.js",
+    // Root-scoped /*.hidden.js only excludes files at the app root.
+    "_build/test/nested.hidden.js",
+  ];
+  const filesToIgnore = [
+    // METEOR_IGNORE_ROOT matches these paths from the app root.
+    "test/excluded.js",
+    "root.hidden.js",
+    // The nested .meteorignore matches relative to _build/test/.
+    "_build/test/ignored.js",
+    // Legacy METEOR_IGNORE rules match at both root and nested directories.
+    "legacy/excluded.js",
+    "_build/test/legacy/excluded.js",
+    "root.legacy.js",
+    "_build/test/nested.legacy.js",
+  ];
+  for (const file of filesToLoad) {
+    s.write(file, 'require("/imports/registry.js").add(module.id);');
+  }
+  for (const file of filesToIgnore) {
+    s.write(file, `throw new Error("Unexpectedly loaded: ${file}");`);
+  }
+
+  // Keep node_modules discoverable so imports resolve, while excluding its
+  // contents from the eager source scan (the invalid JSX must never be compiled).
   s.write("_build/test/node_modules/ignore-scope-dependency/package.json",
     JSON.stringify({ name: "ignore-scope-dependency", version: "1.0.0", main: "index.js" }));
   s.write("_build/test/node_modules/ignore-scope-dependency/index.js", 'exports.value = "nested dependency";');
@@ -37,8 +56,9 @@ selftest.define(".meteorignore - root and legacy environment patterns", async fu
 
   const run = s.run();
   run.waitSecs(30);
-  await run.match("/_build/test/included.js");
-  await run.match("/_build/test/nested.hidden.js");
+  for (const file of filesToLoad) {
+    await run.match(`/${file}`);
+  }
   await run.match("/_build/test/uses-dependency.js");
   await run.match("App running at");
   await run.stop();

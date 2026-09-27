@@ -297,6 +297,8 @@ Tinytest.add(
     try {
       process.env.METEOR_IGNORE = "user/**";
       process.env.METEOR_IGNORE_ROOT = "!client/meteor.css";
+      // Ignore client CSS except meteor.css: the final ! rule keeps that file.
+      // Reapplying the rules must preserve this exception without duplicates.
       setMeteorAppIgnore("client/*.css !client/meteor.css", { root: true });
       setMeteorAppIgnore("client/*.css !client/meteor.css", { root: true });
       test.equal(process.env.METEOR_IGNORE_ROOT, "client/*.css !client/meteor.css");
