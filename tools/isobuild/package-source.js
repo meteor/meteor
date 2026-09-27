@@ -1541,20 +1541,6 @@ Object.assign(PackageSource.prototype, {
         return [];
       }
 
-      const absDir = files.pathJoin(self.sourceRoot, dir);
-      if (! inNodeModules) {
-        // Keep user rules directory-relative. Build-tool rules apply only
-        // from the app root, so test/** cannot hide _build/test/**.
-        const ignore = optimisticReadMeteorIgnore(
-          absDir,
-          process.env.METEOR_IGNORE,
-          isApp && depth === 0 ? process.env.METEOR_IGNORE_ROOT : undefined
-        );
-        if (ignore) {
-          dotMeteorIgnoreFiles[dir] = ignore;
-        }
-      }
-
       let readOptions = sourceReadOptions;
       if (inNodeModules) {
         // This is an array because (in some rare cases) an npm package
@@ -1606,6 +1592,24 @@ Object.assign(PackageSource.prototype, {
         self._readAndWatchDirectory(dir, inNodeModules ? null : watchSet, readOptions),
         depth > 0 ? [] : controlFiles
       );
+
+      if (! inNodeModules) {
+        // The fresh listing already tells us whether this directory has an
+        // ignore file. Avoid a separate stat in every directory, and don't let
+        // delayed watcher notifications keep deleted rules in effect.
+        const meteorIgnorePath = files.pathJoin(dir, ".meteorignore");
+        const ignore = optimisticReadMeteorIgnore(
+          sources.includes(meteorIgnorePath)
+            ? files.pathJoin(self.sourceRoot, meteorIgnorePath)
+            : null,
+          process.env.METEOR_IGNORE,
+          // Build-tool rules apply only from the app root.
+          isApp && depth === 0 ? process.env.METEOR_IGNORE_ROOT : undefined
+        );
+        if (ignore) {
+          dotMeteorIgnoreFiles[dir] = ignore;
+        }
+      }
 
       const subdirectories = self._readAndWatchDirectory(
         dir,
