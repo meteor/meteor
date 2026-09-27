@@ -1,4 +1,16 @@
 import { Accounts } from "meteor/accounts-base";
+import { Meteor } from "meteor/meteor";
+
+function isAppOrigin(url) {
+  if (url.protocol !== "http:" && url.protocol !== "https:") return false;
+  return [window.location.href, Meteor.absoluteUrl()].some((root) => {
+    try {
+      return url.origin === new URL(root).origin;
+    } catch {
+      return false;
+    }
+  });
+}
 
 /**
  * @summary Wraps Meteor.fetch with opt-in authentication. Auth is off by
@@ -14,9 +26,23 @@ export function createAuthFetch(originalFetch) {
     // into the underlying fetch call.
     const { auth = false, token: _ignoredToken, ...fetchOptions } = options;
 
-    const headers = new Headers(fetchOptions.headers || {});
+    // Let Fetch normalize Request/URL/string inputs once, including inherited
+    // Request headers and bodies. Authenticate the same request we send.
+    const request = auth ? new Request(url, fetchOptions) : null;
+    const headers = new Headers(request ? request.headers : fetchOptions.headers || {});
+    // The Request owns the encoded body (and its multipart boundary). Passing
+    // the original body again would encode FormData a second time.
+    if (request) delete fetchOptions.body;
 
     if (auth) {
+      const target = new URL(request.url, document.baseURI || window.location.href);
+      // whatwg-fetch retains relative URLs, unlike native Request. Pin its
+      // destination before reading application state or calling the transport.
+      if (request.url !== target.href) request.url = target.href;
+      if (!isAppOrigin(target)) {
+        return originalFetch(request, { ...fetchOptions, headers });
+      }
+
       const token = Accounts._storedLoginToken();
       if (token && !headers.has("Authorization")) {
         headers.set("Authorization", `Bearer ${token}`);
@@ -26,11 +52,15 @@ export function createAuthFetch(originalFetch) {
       // browser sends the meteor_login_token cookie automatically.
       // This covers the case where the in-memory token is unavailable
       // (e.g. after page reload with clientStorage: 'none').
-      if (Accounts._useHttpOnlyCookies && !fetchOptions.credentials) {
+      if (
+        Accounts._useHttpOnlyCookies &&
+        !fetchOptions.credentials &&
+        request.credentials !== "omit"
+      ) {
         fetchOptions.credentials = "include";
       }
     }
 
-    return originalFetch(url, { ...fetchOptions, headers });
+    return originalFetch(request || url, { ...fetchOptions, headers });
   };
 }
