@@ -6,11 +6,13 @@ import {
 } from 'meteor/tools-core/lib/meteor';
 
 const clientArchitectures = ['web.browser', 'web.browser.legacy', 'web.cordova'];
-const { mapWhereToArches, mostSpecificMatch, isLegacyArch } =
-  getMeteorToolsRequire('utils/archinfo');
+
+// Package tests also import this module in the app server, where Meteor's CLI
+// modules are unavailable. Load archinfo only when a build helper needs it.
 
 function entryMap(module) {
   if (!module || typeof module !== 'object') return {};
+  const { mapWhereToArches } = getMeteorToolsRequire('utils/archinfo');
   return Object.fromEntries(Object.entries(module).flatMap(([key, entry]) =>
     mapWhereToArches(key).map(arch => [arch, entry])
   ));
@@ -18,6 +20,7 @@ function entryMap(module) {
 
 function resolveEntry(module, arch) {
   if (typeof module === 'string' || module === false) return module;
+  const { mostSpecificMatch } = getMeteorToolsRequire('utils/archinfo');
   const entries = entryMap(module);
   return entries[mostSpecificMatch(arch, Object.keys(entries))];
 }
@@ -28,6 +31,7 @@ export function getClientArchitectureEntries({
   isTest = isMeteorAppTest(),
   isTestFullApp = isMeteorAppTestFullApp(),
 } = {}) {
+  const { isLegacyArch } = getMeteorToolsRequire('utils/archinfo');
   const { mainModule, testModule } = getMeteorAppPackageJson()?.meteor || {};
   const mainEntries = entryMap(mainModule);
   const testEntries = entryMap(testModule);
@@ -57,6 +61,7 @@ export function isClientArchitectureIncluded(arch) {
 }
 
 export function getDefaultClientScriptArchitectures() {
+  const { mostSpecificMatch } = getMeteorToolsRequire('utils/archinfo');
   const entries = entryMap(getMeteorAppPackageJson()?.meteor?.mainModule);
   return ['web.browser', 'web.browser.legacy'].filter(arch => {
     const match = mostSpecificMatch(arch, Object.keys(entries));
