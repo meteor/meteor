@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Logging facility.",
-  version: "1.3.6",
+  version: "1.3.7-beta360.1",
 });
 
 Npm.depends({
@@ -24,6 +24,7 @@ Package.onUse(function (api) {
   api.addFiles("logging_browser.js", "client");
   api.mainModule("logging_cordova.js", "web.cordova");
   api.addAssets("logging.d.ts", "server");
+  api.types("logging.native.d.ts");
 });
 
 Package.onTest(function (api) {

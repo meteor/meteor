@@ -1,12 +1,13 @@
 Package.describe({
   summary: "Used internally by WebApp. Knows how to hash programs from manifests.",
-  version: "1.1.2",
+  version: "1.1.3-beta360.1",
 });
 
 Package.onUse(function (api) {
   api.use("ecmascript");
   api.addFiles("webapp-hashing.js", "server");
   api.export("WebAppHashing");
+  api.types("webapp-hashing.d.ts");
 });
 
 Package.onTest(function (api) {

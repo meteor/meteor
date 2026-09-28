@@ -7,21 +7,33 @@ module.exports = {
   testMatch: [
     "<rootDir>/tools/**/*.test.js",
     "<rootDir>/scripts/**/*.test.js",
+    "<rootDir>/npm-packages/meteor-rspack/**/*.test.js",
   ],
   testPathIgnorePatterns: [
     "/node_modules/",
+    // These tests run explicitly with Node's test runner in the Test Tools workflow.
+    "<rootDir>/scripts/ci/build-test-matrix.test.js",
+    "<rootDir>/scripts/ci/test-tools-cache-keys\\.test\\.js$",
     "<rootDir>/tools/e2e-tests/",
     "<rootDir>/tools/native-tests/",
     "<rootDir>/tools/tests/",
+    // The Rspack package keeps these cases on Node's test runner.
+    "<rootDir>/npm-packages/meteor-rspack/test/",
     "<rootDir>/packages/",
     "<rootDir>/.github/",
+    "<rootDir>/scripts/check-type-test-coverage/",
   ],
   modulePathIgnorePatterns: [
     "<rootDir>/tools/e2e-tests/",
     "<rootDir>/tools/native-tests/",
     "<rootDir>/tools/tests/",
     "<rootDir>/tools/static-assets/",
-    "<rootDir>/npm-packages/",
+    // meteor-rspack ships plain CommonJS helpers that are unit-tested here, so
+    // it stays visible to the module loader; the rest of npm-packages/ does not.
+    // The `/|$` alternation keeps the boundary at the directory: without the
+    // `$` the crawler prunes the bare directory path and finds no tests, and
+    // without the `/` a sibling like meteor-rspack-tools would escape too.
+    "<rootDir>/npm-packages/(?!meteor-rspack(?:/|$))",
     "<rootDir>/scripts/admin/",
     "<rootDir>/docs/",
     "<rootDir>/packages/non-core/",
@@ -33,6 +45,13 @@ module.exports = {
     "^.+\\.js$": [require.resolve("@swc/jest"), {
       jsc: {
         parser: { syntax: "ecmascript" },
+        target: "es2022",
+      },
+      module: { type: "commonjs" },
+    }],
+    "^.+\\.ts$": [require.resolve("@swc/jest"), {
+      jsc: {
+        parser: { syntax: "typescript" },
         target: "es2022",
       },
       module: { type: "commonjs" },

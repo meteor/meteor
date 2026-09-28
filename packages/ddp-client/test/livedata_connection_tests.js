@@ -2777,7 +2777,347 @@ Tinytest.addAsync('livedata connection - disconnect sends disconnect message', a
     "disconnect() should send a disconnect message to the server");
 });
 
+Tinytest.addAsync(
+  'livedata connection - store beginUpdate receives the real batch size',
+  async function (test) {
+    const stream = new StubStream();
+    const conn = newConnection(stream);
+
+    await startAndConnect(test, stream);
+
+    // Register a store that records every beginUpdate call. Stores receive
+    // batchSize > 1 (or reset) as the signal to pause observers, so a
+    // batchSize that is always 0 silently disables flicker prevention.
+    const beginUpdateCalls = [];
+    const storeApi = {
+      beginUpdate(batchSize, reset) {
+        beginUpdateCalls.push({ batchSize: batchSize, reset: reset });
+      },
+      update() {},
+      endUpdate() {},
+      saveOriginals() {},
+      retrieveOriginals() {}
+    };
+    if (Meteor.isServer) {
+      await conn.registerStoreServer('batch-test', storeApi);
+    } else {
+      conn.registerStoreClient('batch-test', storeApi);
+    }
+
+    // Three buffered writes for the store...
+    await stream.receive({ msg: 'added', collection: 'batch-test', id: '1', fields: { a: 1 } });
+    await stream.receive({ msg: 'added', collection: 'batch-test', id: '2', fields: { a: 2 } });
+    await stream.receive({ msg: 'added', collection: 'batch-test', id: '3', fields: { a: 3 } });
+    // ...then a non-write message, which forces an immediate flush.
+    await stream.receive({ msg: 'ready', subs: [] });
+
+    // However the flush batched the messages, the batch sizes reported to
+    // beginUpdate must account for all three writes.
+    const total = beginUpdateCalls.reduce(
+      (sum, call) => sum + call.batchSize,
+      0
+    );
+    test.equal(total, 3);
+  }
+);
+
+Tinytest.addAsync(
+  'livedata connection - malformed frames are discarded without crashing',
+  async function (test) {
+    const stream = new StubStream();
+    const conn = newConnection(stream);
+
+    await startAndConnect(test, stream);
+
+    // parseDDP returns null both for invalid JSON and for valid JSON that
+    // is not an object. Neither may throw out of the message handler.
+    await stream.receive('this is not json');
+    await stream.receive('"a bare string"');
+    await stream.receive('42');
+
+    // The connection still processes real messages afterwards.
+    let callbackFired = false;
+    conn.call('stillAlive', function () {
+      callbackFired = true;
+    });
+    const message = testGotMessage(test, stream, {
+      msg: 'method', method: 'stillAlive', params: [], id: '*'
+    });
+    await stream.receive({ msg: 'result', id: message.id, result: 'ok' });
+    await stream.receive({ msg: 'updated', methods: [message.id] });
+    test.isTrue(callbackFired);
+  }
+);
+
 // XXX also test:
 // - restart on update flag
 // - on_update event
 // - reloading when the app changes, including session migration
+
+Tinytest.addAsync(
+  'livedata connection - replaced stop callback fires on local stop',
+  async function (test) {
+    const stream = new StubStream();
+    const conn = newConnection(stream);
+
+    await startAndConnect(test, stream);
+
+    let firstStopCalls = 0;
+    let secondStopCalls = 0;
+
+    // Initial subscribe, as an autorun's first run would do.
+    const sub = conn.subscribe('replace-stop-test', {
+      onStop() {
+        firstStopCalls++;
+      }
+    });
+    testGotMessage(test, stream, {
+      msg: 'sub', id: '*', name: 'replace-stop-test', params: []
+    });
+
+    // Simulate the autorun rerun reuse path: the record is marked inactive
+    // and a matching subscribe reactivates it, replacing its callbacks.
+    conn._subscriptions[sub.subscriptionId].inactive = true;
+    conn.subscribe('replace-stop-test', {
+      onStop() {
+        secondStopCalls++;
+      }
+    });
+    test.length(stream.sent, 0); // record reused — no second 'sub' message
+
+    // A local stop must fire the record's CURRENT callback, exactly like
+    // the server-initiated stop path (nosub) does — not the callback
+    // captured when the record was first created.
+    sub.stop();
+    test.equal(secondStopCalls, 1);
+    test.equal(firstStopCalls, 0);
+  }
+);
+
+Tinytest.add(
+  'livedata connection - close() stops tracking the connection',
+  function (test) {
+    // Precondition: every already-tracked connection is fully ready, so
+    // this test's connection is the only thing that can flip the answer.
+    test.isTrue(DDP._allSubscriptionsReady());
+
+    // DDP.connect registers in the allConnections registry (the object
+    // form of `url` is the standard test-stream hook).
+    const stream = new StubStream();
+    const conn = DDP.connect(stream);
+
+    // A subscription that never becomes ready makes this connection the
+    // one blocking _allSubscriptionsReady.
+    conn.subscribe('never-ready-tracking-test');
+    test.isFalse(DDP._allSubscriptionsReady());
+
+    // Closing the connection must deregister it — a closed connection can
+    // never become ready and would otherwise be consulted forever.
+    conn.close();
+    test.isTrue(DDP._allSubscriptionsReady());
+  }
+);
+
+Tinytest.addAsync(
+  'livedata connection - unsub while disconnected is delivered after reconnect',
+  async function (test) {
+    const stream = new StubStream();
+    const conn = newConnection(stream);
+
+    await startAndConnect(test, stream);
+
+    const sub = conn.subscribe('queued-unsub-test');
+    const subMessage = testGotMessage(test, stream, {
+      msg: 'sub', id: '*', name: 'queued-unsub-test', params: []
+    });
+
+    // Stop the subscription while the stream is not connected. The stream
+    // drops data sent in this state, and the registry record is removed, so
+    // nothing would ever re-send the unsub — it must be queued.
+    stream.setStatus('waiting');
+    sub.stop();
+    test.length(stream.sent, 0);
+
+    // On reconnect the queued unsub goes out, after the connect message
+    // (and after any still-registered subscriptions would be re-sent).
+    stream.setStatus('connected');
+    await stream.reset();
+    testGotMessage(test, stream, makeConnectMessage(SESSION_ID, conn._receivedCount));
+    testGotMessage(test, stream, { msg: 'unsub', id: subMessage.id });
+    test.length(stream.sent, 0);
+  }
+);
+
+
+if (Meteor.isClient) {
+  // Use real stubs and the registered Mongo store to establish pending writes.
+  const withDuplicateAddConnection = async (test, run) => {
+    const stream = new StubStream();
+    const conn = newConnection(stream);
+    const name = `duplicate-add-${Random.id()}`;
+    const coll = new Mongo.Collection(name, { connection: conn });
+    try {
+      await coll._settingUpReplicationPromise;
+      await startAndConnect(test, stream);
+      await run({ stream, conn, coll, name });
+    } finally {
+      conn.close();
+      coll._collection.remove({});
+      Mongo._collections.delete(name);
+    }
+  };
+
+  for (const scenario of ['partial', 'two writers', 'fieldless', 'empty']) {
+    Tinytest.addAsync(`livedata stub - duplicate added - ${scenario}`, async test => {
+      await withDuplicateAddConnection(test, async ({ stream, conn, coll, name }) => {
+        const initial = { _id: 'record', label: 'initial', count: 0, preserved: 'keep' };
+        await stream.receive({
+          msg: 'added', collection: name, id: 'record',
+          fields: { label: 'initial', count: 0, preserved: 'keep' },
+        });
+        conn.methods({
+          async edit(count) {
+            await coll.updateAsync('record', { $set: { count } }).stubPromise;
+          },
+        });
+        const completed = [];
+        const edit = async count => {
+          await conn.applyAsync('edit', [count], {}, (error, result) => {
+            test.isUndefined(error);
+            completed.push(result);
+          });
+          return testGotMessage(test, stream, {
+            msg: 'method', method: 'edit', params: [count], id: '*',
+          }).id;
+        };
+        const first = await edit(10);
+        const second = scenario === 'two writers' ? await edit(11) : null;
+        const optimistic = { ...initial, count: second ? 11 : 10 };
+        test.equal(coll.findOne('record'), optimistic);
+        test.equal(conn._getServerDoc(name, 'record').document, initial);
+
+        const partial = scenario === 'partial' || scenario === 'two writers';
+        const addition = { msg: 'added', collection: name, id: 'record' };
+        if (partial) addition.fields = { label: 'replayed', count: 0 };
+        if (scenario === 'empty') addition.fields = {};
+        await stream.receive(addition);
+        test.equal(coll.findOne('record'), optimistic);
+        test.equal(conn._getServerDoc(name, 'record').document,
+          { ...initial, label: partial ? 'replayed' : 'initial' });
+
+        await stream.receive({ msg: 'result', id: first, result: 'first' });
+        test.equal(completed, []);
+        if (second) {
+          await stream.receive({ msg: 'updated', methods: [first] });
+          test.equal(completed, []);
+          test.equal(coll.findOne('record'), optimistic);
+          test.equal(Object.keys(conn._getServerDoc(name, 'record').writtenByStubs), [second]);
+          await stream.receive({ msg: 'result', id: second, result: 'second' });
+        }
+        await stream.receive({
+          msg: 'changed', collection: name, id: 'record', fields: { count: 20 },
+        });
+        test.equal(coll.findOne('record'), optimistic);
+        test.equal(completed, []);
+        await stream.receive({ msg: 'updated', methods: [second || first] });
+        test.equal(coll.findOne('record'), {
+          ...initial, label: partial ? 'replayed' : 'initial', count: 20,
+        });
+        test.equal(completed, second ? ['first', 'second'] : ['first']);
+        test.isNull(conn._getServerDoc(name, 'record'));
+      });
+    });
+  }
+
+  Tinytest.addAsync('livedata stub - duplicate added - reconnect replaces snapshot', async test => {
+    await withDuplicateAddConnection(test, async ({ stream, conn, coll, name }) => {
+      const subscription = conn.subscribe('records');
+      const subMessage = testGotMessage(test, stream, {
+        msg: 'sub', name: 'records', params: [], id: '*',
+      });
+      try {
+        await stream.receive({
+          msg: 'added', collection: name, id: 'record',
+          fields: { label: 'initial', count: 0, stale: true },
+        });
+        await stream.receive({ msg: 'ready', subs: [subMessage.id] });
+        await stream.reset();
+        testGotMessage(test, stream, makeConnectMessage(SESSION_ID, conn._receivedCount));
+        testGotMessage(test, stream, subMessage);
+        await stream.receive({ msg: 'connected', session: 'new-session' });
+        conn.methods({
+          async edit() {
+            await coll.updateAsync('record', { $set: { count: 10 } }).stubPromise;
+          },
+        });
+        const completed = [];
+        await conn.applyAsync('edit', [], {}, (error, result) => {
+          test.isUndefined(error);
+          completed.push(result);
+        });
+        const method = testGotMessage(test, stream, {
+          msg: 'method', method: 'edit', params: [], id: '*',
+        });
+        await stream.receive({
+          msg: 'added', collection: name, id: 'record',
+          fields: { label: 'fresh', count: 20 },
+        });
+        await stream.receive({ msg: 'ready', subs: [subMessage.id] });
+        test.equal(coll.findOne('record'), {
+          _id: 'record', label: 'initial', count: 10, stale: true,
+        });
+        test.equal(conn._getServerDoc(name, 'record').document, {
+          _id: 'record', label: 'fresh', count: 20,
+        });
+        await stream.receive({ msg: 'result', id: method.id, result: 'done' });
+        test.equal(completed, []);
+        await stream.receive({ msg: 'updated', methods: [method.id] });
+        test.equal(coll.findOne('record'), { _id: 'record', label: 'fresh', count: 20 });
+        test.equal(completed, ['done']);
+        test.isNull(conn._getServerDoc(name, 'record'));
+      } finally {
+        subscription.stop();
+      }
+    });
+  });
+
+  Tinytest.addAsync('livedata stub - duplicate added - ordinary insertion', async test => {
+    await withDuplicateAddConnection(test, async ({ stream, conn, coll, name }) => {
+      await stream.receive({
+        msg: 'added', collection: name, id: 'record', fields: { label: 'new' },
+      });
+      test.equal(coll.findOne('record'), { _id: 'record', label: 'new' });
+      test.isNull(conn._getServerDoc(name, 'record'));
+    });
+  });
+
+  Tinytest.addAsync('livedata stub - duplicate added - inserting stub', async test => {
+    await withDuplicateAddConnection(test, async ({ stream, conn, coll, name }) => {
+      conn.methods({
+        async insert() {
+          await coll.insertAsync({ _id: 'record', label: 'optimistic' }).stubPromise;
+        },
+      });
+      const completed = [];
+      await conn.applyAsync('insert', [], {}, (error, result) => {
+        test.isUndefined(error);
+        completed.push(result);
+      });
+      const method = testGotMessage(test, stream, {
+        msg: 'method', method: 'insert', params: [], id: '*',
+      });
+      test.isUndefined(conn._getServerDoc(name, 'record').document);
+      await stream.receive({
+        msg: 'added', collection: name, id: 'record', fields: { label: 'server' },
+      });
+      test.equal(coll.findOne('record'), { _id: 'record', label: 'optimistic' });
+      test.equal(conn._getServerDoc(name, 'record').document, { _id: 'record', label: 'server' });
+      await stream.receive({ msg: 'result', id: method.id, result: 'inserted' });
+      test.equal(completed, []);
+      await stream.receive({ msg: 'updated', methods: [method.id] });
+      test.equal(coll.findOne('record'), { _id: 'record', label: 'server' });
+      test.equal(completed, ['inserted']);
+      test.isNull(conn._getServerDoc(name, 'record'));
+    });
+  });
+}

@@ -13,6 +13,10 @@ import { TsCheckerRspackPlugin } from "ts-checker-rspack-plugin";
  */
 export default defineConfig((/* Meteor */) => {
   return {
-    plugins: [new TsCheckerRspackPlugin()],
+    plugins: [
+      new TsCheckerRspackPlugin({
+        typescript: { tsgo: true },
+      }),
+    ],
   };
 });

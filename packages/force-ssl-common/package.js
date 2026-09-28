@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'Internal force-ssl common code.',
-  version: '1.1.1',
+  version: '1.1.2-beta360.1',
 });
 
 Npm.depends({
@@ -10,6 +10,7 @@ Npm.depends({
 Package.onUse(function (api) {
   api.use('ecmascript');
   api.mainModule('force_ssl_common.js', 'server');
+  api.types('force-ssl-common.d.ts');
 });
 
 Package.onTest(function (api) {

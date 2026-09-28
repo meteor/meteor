@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Common code for OAuth-based services",
-  version: '3.0.4',
+  version: '3.0.5-beta360.1',
 });
 
 Package.onUse(api => {
@@ -34,6 +34,8 @@ Package.onUse(api => {
   ], 'client');
 
   api.addFiles('oauth_common.js');
+
+  api.types('oauth.d.ts');
 });
 
 Npm.depends({
@@ -43,9 +45,11 @@ Npm.depends({
 Package.onTest(api => {
   api.use('tinytest');
   api.use('random');
+  api.use('ecmascript');
   api.use('service-configuration', 'server');
-  api.use('oauth', 'server');
+  api.use('oauth', ['client', 'server']);
   api.addFiles("oauth_tests.js", 'server');
+  api.addFiles("oauth_browser_tests.js", 'web.browser');
 });
 
 Cordova.depends({

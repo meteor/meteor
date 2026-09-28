@@ -44,6 +44,8 @@ In Meteor, set this in `package.json`:
 
 [Check out the Meteor migration guide](#entry-points) on describing entry points in your app.
 
+Starting with Meteor 3.6, Rspack can compile a separate legacy browser application or unsupported-browser message. See [Legacy and Architecture-Specific Entry Points](#legacy-and-architecture-specific-entry-points).
+
 ### Remove nested imports
 
 Your app code cannot use Meteor's specific nested imports (not to be confused with dynamic imports, which are supported). These are ES import statements placed inside conditions or functions.
@@ -87,6 +89,77 @@ Attempts were made to reuse the existing `.meteor/local` cache context instead o
 Use `.meteor/local` or folders that suggest internals or hidden content (e.g., starting with a dot). These affect debug visibility, file watching, final compilation, and inclusion in the Cordova bundle.
 :::
 
+### Required npm dependencies
+
+The `rspack` package declares a minimum supported version for each npm package it relies on at the project level: `@rspack/core`, `@rspack/cli`, `@rspack/dev-server`, `@meteorjs/rspack`, `@swc/core`, `@swc/helpers`, and `@rsdoctor/rspack-plugin`. Each Meteor release pins these minimums so the build stack stays compatible across upgrades.
+
+By default, Meteor installs or updates them for you on the first run after adding the `rspack` package, and prints a short summary of what changed:
+
+```
+=> 📦 Rspack: updating npm dependencies
+   Dev dependencies:
+   • @rspack/core                    2.2.7          (new)
+   • @rspack/cli                     2.2.7          (new)
+   • @rspack/dev-server              2.2.1          (new)
+   • @meteorjs/rspack                2.2.0-beta.1 -> 3.0.0-beta.2
+   • @swc/core                       1.16.2         (new)
+   • @rsdoctor/rspack-plugin         1.6.4          (new)
+   Dependencies:
+   • @swc/helpers                    0.5.23         (new)
+=> ✅ Rspack dependencies are up to date
+=> ℹ️ Set `"meteor": { "autoInstallDeps": false }` in package.json to manage them yourself.
+```
+
+If your project already meets every minimum, no log is printed and the build moves on.
+
+#### Disabling auto-install
+
+If you prefer to manage these dependencies yourself, set `meteor.autoInstallDeps` to `false` in your app's `package.json`:
+
+```json
+{
+  "meteor": {
+    "autoInstallDeps": false
+  }
+}
+```
+
+With this flag off, Meteor still detects when a required dependency is missing or below the supported version, but it no longer touches your project. Instead, you get a single ready-to-copy install command:
+
+``` bash
+=> ⚠️  Rspack: npm dependencies need attention
+   Dev dependencies:
+   • @rspack/core                    2.2.7          (not installed)
+   • @rspack/cli                     2.2.7          (not installed)
+   • @rspack/dev-server              2.2.1          (not installed)
+   • @meteorjs/rspack                3.0.0-beta.2   (currently 2.2.0-beta.1)
+   • @swc/core                       1.16.2         (not installed)
+   • @rsdoctor/rspack-plugin         1.6.4          (not installed)
+   Dependencies:
+   • @swc/helpers                    0.5.23         (not installed)
+
+   To bring your project in line, run:
+       meteor npm install --save-dev @rspack/core@2.2.7 @rspack/cli@2.2.7 @rspack/dev-server@2.2.1 @meteorjs/rspack@3.0.0-beta.2 @swc/core@1.16.2 @rsdoctor/rspack-plugin@1.6.4
+       meteor npm install --save @swc/helpers@0.5.23
+=> ℹ️  Set `"meteor": { "autoInstallDeps": true }` in package.json to manage them automatically.
+```
+
+If you ignore the warning, the build continues and fails with the underlying module-not-found error. To re-enable auto-install, use the setting shown in the warning, or remove `autoInstallDeps` from your `meteor` block.
+
+If your CI or Docker pipeline reports missing NPM dependencies after disabling auto-install, see [CI & Docker](#docker) for the recommended commit-and-push flow.
+
+#### Upgrading from Rspack 1.x
+
+Meteor 3.6 moves the modern build stack to Rspack 2.x. On the first run after updating, the dependency check above bumps `@rspack/core` and `@rspack/cli` to 2.2.7, `@rspack/dev-server` to 2.2.1, `@meteorjs/rspack` to 3.0.0-beta.2, and the related `@swc/*`, `@rspack/plugin-react-refresh`, and `@rsdoctor/rspack-plugin` versions. When an existing lockfile still holds Rspack 1.x peer dependencies, Meteor runs that install with `--legacy-peer-deps` so npm does not reject the coordinated upgrade; fresh installs and already-upgraded apps keep npm's normal peer validation.
+
+If you disabled auto-install, run the printed `meteor npm install --save-dev ...` command. It already includes `--legacy-peer-deps` when the old Rspack 1.x peers require it.
+
+Apps that rely on the Meteor defaults need no further changes. If you override the configuration in `rspack.config.js`, review the [Rspack 1.x migration guide](https://rspack.rs/guide/migration/rspack_1.x). The most common adjustments are:
+
+- `experiments.css` and `experiments.cache` are gone: CSS support is built in, and `cache` accepts the persistent cache options directly.
+- `output.libraryTarget` is replaced by `output.library.type`.
+- If you merge configuration yourself, replace `webpack-merge` with `rspack-merge`. `@meteorjs/rspack@3.0.0` already does this internally.
+
 ### Replace build plugins
 
 Meteor build plugins extend the Meteor bundler by letting you handle new file types and process them for the final app bundle. They’ve commonly handled HTML templating, style files for Less or SCSS, CoffeeScript, and more, since the system allows third-party customization.
@@ -94,7 +167,11 @@ Meteor build plugins extend the Meteor bundler by letting you handle new file ty
 However, Meteor’s build system solves the same problems as other bundlers, including Rspack. Build plugins are largely deprecated in favor of Rspack alternatives. Some plugins may still be useful if they don’t act directly on app files and do something Meteor-specific that can be preserved.
 
 Among the compatible plugins:
-- [`zodern:types`](https://packosphere.com/zodern/types). Still compatible, automatically providing Meteor types for core and community packages.
+- [`zodern:types`](https://packosphere.com/zodern/types), which remains a
+  supported declaration provider in Meteor 3.6. Rspack controls transpilation,
+  not the declaration provider. Apps can keep `zodern:types` or explicitly
+  migrate to native declarations with `meteor types`; see
+  [TypeScript Types for Meteor Packages](/cli/using-core-types).
 
 For others, please refer to the migration topics.
 - [CSS, Less, and SCSS](#css-less-and-scss) (when using [`less`](https://packosphere.com/meteor/less), [`fourseven:scss`](https://packosphere.com/fourseven/scss))
@@ -111,7 +188,9 @@ Refer to the [Migration Topics](#migration-topics) section for more details on o
 
 ## Custom `rspack.config.js`
 
-Meteor-Rspack projects can be customized using the `rspack.config.js` file, which is automatically available when installing the `rspack` package. You can also use `rspack.config.mjs` or `rspack.config.cjs` if you prefer strict ESM or CommonJS formats.
+Meteor-Rspack projects can be customized using the `rspack.config.js` file, which is automatically available when installing the `rspack` package. You can also use `rspack.config.ts`, `rspack.config.mjs`, or `rspack.config.cjs` if you prefer TypeScript, strict ESM, or CommonJS formats.
+
+The configuration file and the relative local modules it references through `import`, dynamic `import()`, re-exports, or `require()` are tracked as Rspack build dependencies. Changing one of these files invalidates the persistent cache so the next build uses the updated configuration.
 
 This file defines dynamic configurations, so you return the config from a resolved function.
 
@@ -119,20 +198,17 @@ This file defines dynamic configurations, so you return the config from a resolv
 const { defineConfig } = require('@meteorjs/rspack');
 const { rspack } = require('@rspack/core');
 const HtmlRspackPlugin = require('html-rspack-plugin');
-const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
 
 /**
  * Example: Using different plugins for client and server builds
  *
  * - For client: Load Lodash automatically with ProvidePlugin
- * - For server: Add Node.js polyfills with NodePolyfillPlugin
  * - For both: Add progress plugin
  */
 module.exports = defineConfig(Meteor => {
   return {
     plugins: [
       Meteor.isClient && new rspack.ProvidePlugin({ _: 'lodash' }),
-      Meteor.isServer && new NodePolyfillPlugin(),
       new rspack.ProgressPlugin()
     ].filter(Boolean),
   };
@@ -147,6 +223,8 @@ You can use flags to control the final configuration based on the environment. T
 | `isProduction`      | boolean  | True when running in production mode                                                                                              |
 | `isClient`          | boolean  | True when building or running client code                                                                                         |
 | `isServer`          | boolean  | True when building or running server code                                                                                         |
+| `arch`              | string or undefined | The explicit client architecture being compiled, such as `web.browser.legacy`; undefined for the default client and server compilations. Available from Meteor 3.6. |
+| `isLegacy`          | boolean  | True for an explicit legacy client compilation; use it for [legacy-specific configuration](#legacy-and-architecture-specific-entry-points). Available from Meteor 3.6. |
 | `isTest`            | boolean  | True when running in test mode                                                                                                    |
 | `isDebug`           | boolean  | True when debug mode is enabled                                                                                                   |
 | `isRun`             | boolean  | True when running the project with `meteor run`                                                                                   |
@@ -246,6 +324,110 @@ With this, Meteor will process these files, merge stylesheets, generate the fina
 
 Keep in mind: compiling styles with the Meteor compilers triggers Meteor HMR, which is slower than Rspack HMR. Migrating to compile styles with Rspack as part of the app code ensures the fastest HMR for style changes in development.
 
+### Legacy and Architecture-Specific Entry Points
+
+:::info
+Starting with Meteor 3.6
+:::
+
+To serve different application code to legacy browsers, define `meteor.mainModule.legacy` alongside the default `client` entry in `package.json`:
+
+```json
+{
+  "meteor": {
+    "mainModule": {
+      "client": "client/main.js",
+      "legacy": "client/legacy.js",
+      "server": "server/main.js"
+    },
+    "modern": {
+      "webArchOnly": false
+    }
+  }
+}
+```
+
+Rspack compiles `client/legacy.js` and its imports separately, using the same `rspack.config.js` as the default client. Aliases, loaders, plugins, CSS, assets, and dynamic imports apply to this compilation too. Meteor selects the appropriate browser program when serving the app and still assembles the final bundle, including Atmosphere packages.
+
+The legacy entry can start a compatible version of your app or display a small unsupported-browser message. It can import shared application modules; avoid importing the modern bootstrap if the goal is to keep the legacy bundle small.
+
+`legacy` selects `web.browser.legacy`; you can use the full architecture name as the key instead. Explicit `web.browser` and `web.cordova` entries also get their own compilations. The `modern` shorthand follows Meteor's architecture mapping. When `meteor.modern.cordova` is `false`, the `legacy` shorthand also covers Cordova. Set an entry to `false` to disable that architecture's app entry; this does not disable Meteor package code or remove the browser program.
+
+With only `mainModule.client`, the existing shared-client behavior is preserved. Add an explicit `legacy` entry to get a separate legacy Rspack compilation, even if both entries point to the same source file.
+
+#### Customize the legacy compilation
+
+The `Meteor` argument passed to `defineConfig` describes the current compilation. Use `Meteor.isLegacy` for legacy-specific options and `Meteor.arch` when a setting should apply to one exact architecture. These are configuration callback values, not new properties on the application's runtime `Meteor` object.
+
+For example, expose an alias only to legacy code:
+
+```javascript
+const { defineConfig } = require('@meteorjs/rspack');
+const path = require('path');
+
+module.exports = defineConfig(Meteor => ({
+  resolve: {
+    alias: Meteor.isLegacy
+      ? { '@legacy': path.resolve(__dirname, 'imports/legacy') }
+      : {},
+  },
+}));
+```
+
+The legacy entry can then import `@legacy/message.js` from `imports/legacy/message.js`. Apply the same condition to loaders or plugins that should run only for legacy builds. Meteor does not automatically load a separate `rspack.legacy.config.js`; keep the condition in your existing config, or import your own configuration fragments from it. Keep entry selection in `mainModule` rather than overriding Rspack's reserved `entry` and `output` options.
+
+The default legacy compilation targets ES5 for both the app's SWC transform and Rspack's generated runtime, including dynamic chunks. Custom compiler settings can override those defaults. npm dependencies are excluded from the default app transpilation rule; use [Meteor.compileWithRspack](#delegating-dependencies-to-rspack) for dependencies that need transformation. That helper inherits the current compilation's SWC options, including the legacy target.
+
+`meteor.nodeModules.recompile` applies to dependencies compiled by Meteor; it does not add transpilation rules for dependencies bundled by Rspack. To transpile the npm dependencies reached by your legacy entry, including their transitive imports, you can use:
+
+```javascript
+const { defineConfig } = require('@meteorjs/rspack');
+
+module.exports = defineConfig(Meteor => Meteor.isLegacy
+  ? Meteor.compileWithRspack([/node_modules/])
+  : {});
+```
+
+:::info
+An ES5 syntax target does not supply every browser API or make arbitrary dependencies compatible with older browsers. SWC transpilation does not remove requirements such as BigInt support. Include any required polyfills and test the browsers your application supports.
+:::
+
+#### Run and test the legacy flow
+
+`modern.webArchOnly: false` in the example enables legacy programs during development and app tests. An explicit `--exclude-archs` option takes precedence; do not exclude `web.browser.legacy` when checking this flow.
+
+```bash
+meteor run
+meteor run --production
+meteor build ../output --directory
+```
+
+Development uses a watched Rspack build and Meteor reloads for the separate legacy entry. The default client keeps Rspack's development server and HMR. Production builds include the legacy browser program unless the requested platforms exclude it, for example with `--platforms modern`.
+
+Open the app normally for its modern program. To inspect legacy delivery in a current browser, override its user agent in developer tools and reload the same URL, for example with:
+
+```text
+Mozilla/5.0 (Windows NT 6.1; Trident/7.0; rv:11.0) like Gecko
+```
+
+This checks program selection and asset loading; it does not emulate an old JavaScript engine. In application code, `Meteor.isModern` identifies the selected browser program.
+
+For separate test entry points, add a matching `testModule` map to the same `meteor` configuration:
+
+```json
+{
+  "meteor": {
+    "testModule": {
+      "client": "tests/client.js",
+      "legacy": "tests/legacy.js",
+      "server": "tests/server.js"
+    }
+  }
+}
+```
+
+Run `meteor test --driver-package meteortesting:mocha` and open its URL with both modern and legacy user agents to exercise the two test entries. A headless run of `meteor test --once` with a modern browser exercises the modern program; checking the legacy program requires selecting it explicitly. See [Testing](#testing) for full-app test mode.
+
 ### Server-Only Apps
 
 Meteor-Rspack supports apps without a client entry point. If your app only defines a `server` entry in `meteor.mainModule`, Rspack runs only for the server build and Meteor skips client-side bundling through Rspack.
@@ -261,6 +443,25 @@ Meteor-Rspack supports apps without a client entry point. If your app only defin
 ```
 
 This is useful for API servers, microservices, or background workers that don't serve a client UI. Rspack still handles server-side bundling, including dependency resolution and tree-shaking.
+
+### Testing
+
+Meteor-Rspack supports both normal test mode and full-app test mode. Run a full-app test with the usual command:
+
+```bash
+meteor test --full-app --driver-package meteortesting:mocha
+```
+
+In full-app mode, Rspack builds the application bundles defined by `meteor.mainModule` alongside the app-test modules. A configured client bundle is still built when `meteor.testModule` contains only a server entry, so browser and server integration tests run against the complete application.
+
+Meteor also waits for asynchronous server startup to finish before running the tests. This includes top-level `await` in the server entry point:
+
+```js
+// server/main.js
+await initializeServices();
+```
+
+When the test driver starts, `initializeServices()` has already settled and the application is ready for the full-app tests.
 
 ### Nested Imports
 
@@ -352,7 +553,46 @@ No additional configuration is needed — just install the `rspack` package as u
 
 ### React Compiler
 
-Meteor-Rspack supports React Compiler. To enable it, install the required dependencies and add the new configuration to Meteor’s `rspack.config.js` file.
+:::info
+Starting with Meteor 3.6
+:::
+
+Meteor 3.6 ships with Rspack 2.x, including React Compiler support from Rspack 2.1. The compiler runs directly through the built-in SWC loader, avoiding Babel in the React compilation path. For React 19 projects, enable it in your `rspack.config.js` file:
+
+```shell
+meteor npm install react@^19 react-dom@^19
+```
+
+```js
+const { defineConfig } = require('@meteorjs/rspack');
+
+module.exports = defineConfig(Meteor => ({
+  ...Meteor.extendSwcConfig({
+    jsc: {
+      transform: {
+        react: {
+          runtime: 'automatic',
+        },
+        reactCompiler: true,
+      },
+    },
+  }),
+}));
+```
+
+For React 17 or 18, install `react-compiler-runtime` and replace `reactCompiler: true` with the matching target:
+
+```shell
+meteor npm install react-compiler-runtime
+```
+
+```js
+reactCompiler: {
+  target: '18',
+},
+```
+
+The `Meteor.extendSwcConfig` helper preserves Meteor's parser, React Fast Refresh, and other default SWC settings while adding the compiler transform.
 
 Learn more in the [official Rspack and React Compiler integration guide](https://rspack.rs/guide/tech/react#react-compiler).
 
@@ -571,7 +811,7 @@ Meteor-Rspack supports Babel projects as an alternative to default SWC.
 
 > Use `meteor create --babel` to start with a preconfigured Rspack Babel app.
 
-Using Babel will increase build times. Prefer SWC. If you need Babel for specific files, limit Babel to those files, or use a hybrid with SWC and Babel. For example, [enabling React Compiler is available only via Babel using module rules](https://rspack.rs/guide/tech/react#react-compiler).
+Using Babel will increase build times. Prefer SWC. Rspack 2.1 and later supports [React Compiler through the built-in SWC loader](#react-compiler), but the Babel plugin remains available when you need Babel-specific integration or compiler options that the SWC transform does not support.
 
 ### Angular
 
@@ -850,8 +1090,6 @@ This Rspack cache is enabled by default in persistent mode. If you [encounter is
 
 ```javascript
 const { defineConfig } = require('@meteorjs/rspack');
-const { rspack } = require('@rspack/core');
-const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
 
 module.exports = defineConfig(Meteor => ({
   // Disable cache, or use 'memory' to switch to in-memory cache
@@ -1112,6 +1350,57 @@ PORT=3001 METEOR_LOCAL_DIR=.meteor/local-2 meteor run
 
 For more details on how this variable affects Rspack, see the [`METEOR_LOCAL_DIR`](../../cli/environment-variables.md#meteor_local_dir) documentation.
 
+Rspack also separates command-mode output within each build context. Development,
+normal test, and full-app test builds use distinct module directories such as
+`_build/main-dev`, `_build/test`, and `_build/app-test`. This prevents one mode's
+Rspack cleanup from deleting another mode's build artifacts. This isolation does
+not require `METEOR_LOCAL_DIR`. Set it only when each process also needs separate
+Meteor build caches and local state.
+
+### Symlinks and Monorepos
+
+Meteor-Rspack supports different ways to share code across projects in monorepo setups, depending on how you link and consume dependencies.
+
+There are two primary approaches for sharing code, which fundamentally differ in how files are resolved: sharing by package name or sharing by file location.
+
+#### Workspace Setups (Share a package by name)
+
+This is the standard model used by package managers like npm, pnpm, and Yarn workspaces. It allows you to share versioned packages—each with its own `package.json`, name, and entry in a root manifest—and resolve them by package name through `node_modules`.
+
+Rspack defaults are oriented toward supporting this pattern out of the box, as it gives bundlers an explicit dependency graph to reason about, which powers caching, affected-detection, and other build optimizations.
+
+Starting with Meteor 3.6, `meteor create` can scaffold this setup for you:
+
+```bash
+meteor create --pnpm my-workspace
+```
+
+The `--pnpm` skeleton creates a Meteor + Rspack application in `apps/app`, reusable client, server, and shared packages under `packages/`, a `pnpm-workspace.yaml` file with a pinned pnpm version, and `workspace:*` links between the app and the local packages. Creation installs the workspace dependencies with the pnpm version declared by the workspace, through Corepack when available, so a global pnpm installation is not required.
+
+Inside a workspace, the checks described in [Required npm dependencies](#required-npm-dependencies) detect the workspace root and the package manager (npm, Yarn, or pnpm) from the root manifest and lockfiles. Installs run from the Meteor app directory so the package manager updates the app's `package.json` together with the workspace lockfile, and the manual instructions use the detected manager's commands. Dependencies declared with `file:`, `link:`, `portal:`, or `workspace:` protocols are validated against their installed version instead of being treated as invalid semver ranges.
+
+#### App-Local Source Symlinks (Share a file by location)
+
+This approach involves sharing individual files or directories at specific paths without promoting them to full packages. It provides a file-granular sharing mechanism with less ceremony: no manifests, names, or versioning. When you symlink to a shared module, the import context is preserved within the symlink path, where consumers expect it, instead of being replaced with the real filesystem path.
+
+Because Rspack defaults to package-style resolution, it assumes the workspace model and resolves symlinks to their real path. To preserve the app-local source symlink semantics, you need to configure Rspack to retain the symlinked path.
+
+You can achieve this by setting `resolve.symlinks: false` in your `rspack.config.js`:
+
+```javascript
+const { defineConfig } = require('@meteorjs/rspack');
+
+module.exports = defineConfig(Meteor => ({
+  resolve: {
+    symlinks: false
+  }
+}));
+```
+
+With this setting, Rspack will resolve imports using the symlink location rather than the real target path, preserving the expected context.
+
+[See this diagram for a detailed comparison between both approaches](https://github.com/user-attachments/assets/2f1ddcef-3d15-4ce7-b478-dcdd7479bab4).
+
 ## Benefits
 
 Meteor–Rspack integration sends your app code to Rspack to use modern bundler features. Meteor then uses Rspack’s output to handle Meteor-specific tasks (like Atmosphere package compilation) and create the final bundle.
@@ -1152,6 +1441,19 @@ If you run into issues, try `meteor reset` or delete the `.meteor/local` and `_b
 For help or to report issues, post on [GitHub](https://github.com/meteor/meteor/issues) or the [Meteor forums](https://forums.meteor.com). We're focused on making Meteor faster and your feedback helps.
 
 You can compare performance before and after enabling `modern` by running [`meteor profile`](../../cli/index.md#meteorprofile). Share your results to show progress to others.
+
+### Startup Panics and Cache Recovery
+
+If Rspack exits, cannot start, or panics before its first compilation, Meteor stops the build promptly instead of waiting indefinitely. Inspect the Rspack output immediately above the error first, since it usually contains the underlying cause.
+
+If the output points to a stale or incompatible persistent cache, remove only the Rspack cache and retry:
+
+```bash
+rm -rf ./node_modules/.cache/rspack
+meteor run
+```
+
+If the targeted cleanup does not resolve the problem, run `meteor reset` and try again.
 
 ### Memory Crashes
 

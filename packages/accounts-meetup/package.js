@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'Login service for Meetup accounts',
-  version: '1.5.1',
+  version: '1.5.2-beta360.1',
 });
 
 Package.onUse(api => {
@@ -20,4 +20,6 @@ Package.onUse(api => {
   );
   api.addFiles('notice.js');
   api.addFiles('meetup.js');
+
+  api.types('accounts-meetup.d.ts');
 });

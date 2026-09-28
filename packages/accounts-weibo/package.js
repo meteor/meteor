@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Login service for Sina Weibo accounts",
-  version: '1.4.1',
+  version: '1.4.2-beta360.1',
 });
 
 Package.onUse(api => {
@@ -16,4 +16,6 @@ Package.onUse(api => {
   api.addFiles("notice.js");
 
   api.addFiles("weibo.js");
+
+  api.types('accounts-weibo.d.ts');
 });

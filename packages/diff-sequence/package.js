@@ -1,6 +1,6 @@
 Package.describe({
   summary: "An implementation of a diff algorithm on arrays and objects.",
-  version: "1.1.3",
+  version: "1.1.4-beta360.1",
   documentation: null,
 });
 
@@ -9,6 +9,7 @@ Package.onUse(function (api) {
   api.use("ejson");
   api.mainModule("diff.js");
   api.export("DiffSequence");
+  api.types("diff-sequence.d.ts");
 });
 
 Package.onTest(function (api) {

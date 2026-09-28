@@ -130,16 +130,8 @@ describe('R.Router App Bundling /', () => {
           new RegExp(NATIVE_FALSE_POSITIVE_MARKER)
         );
       },
-      afterBuild: async ({ buildOutputDir, result, bundleRuntime }) => {
+      afterBuild: async ({ buildOutputDir, result }) => {
         await waitForReactEnvs(result.outputLines, { isTsxEnabled: true });
-        await waitForMeteorOutput(
-          bundleRuntime.outputLines,
-          /.*bcrypt runtime hash \$2.*/
-        );
-        await waitForMeteorOutput(
-          bundleRuntime.outputLines,
-          new RegExp(NATIVE_FALSE_POSITIVE_MARKER)
-        );
         expect(
           await directoryContains(
             path.join(
@@ -154,6 +146,25 @@ describe('R.Router App Bundling /', () => {
         await waitForMeteorOutput(result.outputLines, /.*babel-plugin-react-compiler.*/);
         // Check custom plugin gets loaded from rspack.config.override.js file
         await waitForMeteorOutput(result.outputLines, /.*CustomConsoleLogPlugin.*/);
+      },
+      afterRunBuiltApp: async ({ port, outputLines }) => {
+        await waitForMeteorOutput(
+          outputLines,
+          /.*bcrypt runtime hash \$2.*/
+        );
+        await waitForMeteorOutput(
+          outputLines,
+          new RegExp(NATIVE_FALSE_POSITIVE_MARKER)
+        );
+
+        // Routing, Less styles and custom meta tags must survive the build
+        await assert404Page(port, { isProductionMode: true });
+        await assertBodyStyles({
+          'white-space': 'break-spaces',
+        });
+        await assertMetaTags({
+          'theme-color': '#4285f4',
+        });
       },
     }
   }));

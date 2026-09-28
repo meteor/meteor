@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Reactive dictionary",
-  version: '1.3.2',
+  version: '1.3.3-beta360.1',
 });
 
 Package.onUse(function (api) {
@@ -10,6 +10,7 @@ Package.onUse(function (api) {
   api.mainModule('migration.js');
   api.export('ReactiveDict');
   api.addAssets('reactive-dict.d.ts', 'server');
+  api.types('reactive-dict.native.d.ts');
 });
 
 Package.onTest(function (api) {

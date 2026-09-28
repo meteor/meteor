@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Code shared beween ddp-client and ddp-server",
-  version: "1.4.5",
+  version: "1.4.6-beta360.1",
   documentation: null,
 });
 
@@ -18,6 +18,7 @@ Package.onUse(function (api) {
   api.addFiles("random_stream.js", ["client", "server"]);
 
   api.export("DDPCommon");
+  api.types("ddp-common.d.ts");
 });
 
 Package.onTest(function (api) {

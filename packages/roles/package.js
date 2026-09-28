@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: "Authorization package for Meteor",
-  version: '1.1.0',
+  version: '1.1.1-beta360.1',
   name: "roles",
   documentation: null,
 });
@@ -25,6 +25,7 @@ Package.onUse(function (api) {
   api.addFiles(["client/debug.js", "client/uiHelpers.js"], "client");
 
   api.addAssets("definitions.d.ts", "server");
+  api.types("definitions.native.d.ts");
   api.addAssets("package-types.json", "server");
 });
 

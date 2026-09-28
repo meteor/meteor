@@ -1,6 +1,6 @@
 Package.describe({
   summary: "route policy declarations",
-  version: '1.1.2',
+  version: '1.1.3-beta360.1',
 });
 
 Package.onUse(function (api) {
@@ -10,6 +10,7 @@ Package.onUse(function (api) {
   api.use('webapp', 'server', {unordered: true});
   api.export('RoutePolicy', 'server');
   api.mainModule('main.js', 'server');
+  api.types('routepolicy.d.ts');
 });
 
 Package.onTest(function (api) {

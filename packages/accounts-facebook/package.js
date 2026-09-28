@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Login service for Facebook accounts",
-  version: '1.3.4',
+  version: '1.3.5-beta360.1',
 });
 
 Package.onUse(api => {
@@ -17,4 +17,6 @@ Package.onUse(api => {
   api.addFiles("notice.js");
 
   api.addFiles("facebook.js");
+
+  api.types('accounts-facebook.d.ts');
 });

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Weibo OAuth flow",
-  version: '1.3.3',
+  version: '1.3.4-beta360.1',
 });
 
 Package.onUse(api => {
@@ -13,6 +13,7 @@ Package.onUse(api => {
   api.addFiles('weibo_server.js', 'server');
 
   api.export('Weibo');
+  api.types('weibo-oauth.d.ts');
 });
 
 Package.onTest(function(api) {
