@@ -297,6 +297,7 @@ Server-only app (no client entry point).
 | Server entry loads (`server/main.js loaded`) | Run |
 | Server Rspack process exits before first compilation and Meteor fails promptly | Run |
 | `.meteorignore` negation re-includes a test file an earlier pattern ignored (`regressions/meteorignore-negation.test.js`, [#14742](https://github.com/meteor/meteor/issues/14742)) | Test once |
+| User `METEOR_IGNORE` overrides file patterns in Rspack children while internal per-entrypoint ignores stay in meteor-tool (`regressions/meteorignore-negation.test.js`) | Test once |
 
 ### legacy
 

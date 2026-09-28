@@ -65,4 +65,37 @@ describe('Regressions / .meteorignore negation patterns /', () => {
     expect(output).not.toContain('runs the ignored test file');
     expect(output).toMatch(/1 passing/);
   });
+
+  it('applies user environment overrides without forwarding internal entrypoint ignores', async () => {
+    // Reverse the file's selection through METEOR_IGNORE. This exercises the
+    // child-process boundary shared by the ignore and architecture integrations.
+    const userIgnore = '/imports/included.tests.js !/imports/excluded.tests.js';
+    const configPath = path.join(tempDir, 'rspack.config.js');
+    const originalConfig = await fs.readFile(configPath, 'utf8');
+    await fs.writeFile(configPath, `
+const assert = require('assert');
+assert.strictEqual(process.env.METEOR_IGNORE, ${JSON.stringify(userIgnore)});
+assert.strictEqual(process.env.METEOR_IGNORE_BY_ENTRYPOINT, undefined);
+${originalConfig}`);
+
+    try {
+      const { outputLines } = await runMeteorTests(tempDir, PORT, {
+        commandOptions: ['--once'],
+        checkTestResults: true,
+        testClient: false,
+        env: {
+          METEOR_IGNORE: userIgnore,
+          METEOR_IGNORE_BY_ENTRYPOINT: JSON.stringify({
+            'unused-entry.js': '*.js',
+          }),
+        },
+      });
+      const output = outputLines.join('\n');
+      expect(output).toContain('runs the ignored test file');
+      expect(output).not.toContain('runs the re-included test file');
+      expect(output).toMatch(/1 passing/);
+    } finally {
+      await fs.writeFile(configPath, originalConfig);
+    }
+  });
 });
