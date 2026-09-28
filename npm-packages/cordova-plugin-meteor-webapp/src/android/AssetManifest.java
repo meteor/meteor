@@ -1,5 +1,7 @@
 package com.meteor.webapp;
 
+import android.net.Uri;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -73,11 +75,43 @@ final class AssetManifest {
                 String sourceMapFilePath = entryJSON.optString("sourceMap", null);
                 String sourceMapUrlPath = entryJSON.optString("sourceMapUrl", null);
 
+                for (String path : new String[] { filePath, sourceMapFilePath }) {
+                    if (path != null && !isValidFilePath(path)) {
+                        throw new WebAppException("Asset manifest contains an invalid file path: " + path);
+                    }
+                }
+
                 Entry entry = new Entry(filePath, urlPath, fileType, cacheable, hash, sourceMapFilePath, sourceMapUrlPath);
                 entries.add(entry);
             }
         } catch (JSONException e) {
             throw new WebAppException("Error parsing asset manifest", e);
         }
+    }
+
+    /** Whether a file path from the manifest stays inside the asset bundle
+     * directory: it must not be empty or absolute, and must not contain ".."
+     * segments, also after percent-decoding (asset files are resolved from a
+     * Uri that treats the path as already encoded)
+     */
+    static boolean isValidFilePath(String filePath) {
+        for (String path : new String[] { filePath, Uri.decode(filePath) }) {
+            if (path.isEmpty() || path.startsWith("/")) return false;
+            for (String segment : path.split("/", -1)) {
+                if (segment.equals("..")) return false;
+            }
+        }
+        return true;
+    }
+
+    /** Whether a version can be used as the name of the directory a downloaded
+     * asset bundle is stored in: a single path segment other than "." or "..",
+     * also after percent-decoding
+     */
+    static boolean isValidVersion(String version) {
+        for (String name : new String[] { version, Uri.decode(version) }) {
+            if (name.isEmpty() || name.equals(".") || name.equals("..") || name.contains("/")) return false;
+        }
+        return true;
     }
 }
