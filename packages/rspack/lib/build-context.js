@@ -3,6 +3,7 @@
  * @description Functions for managing build context and module files for Rspack plugin
  */
 import { RSPACK_DOCTOR_CONTEXT } from "./constants";
+import { getClientArchitectureEntries } from './architectures';
 
 const fs = require('fs');
 const path = require('path');
@@ -82,6 +83,11 @@ export function getInitialEntrypoints() {
 export function ensureRspackBuildContextExists() {
   const appDir = getMeteorAppDir();
   const buildContextPath = path.join(appDir, RSPACK_BUILD_CONTEXT);
+
+  // Multiple client compilers share the public root. Create it before any of
+  // them starts cleaning or scanning its own output directories.
+  fs.mkdirSync(path.join(appDir, 'public'), { recursive: true });
+  fs.mkdirSync(path.join(appDir, 'private'), { recursive: true });
 
   if (!fs.existsSync(buildContextPath)) {
     try {
@@ -190,6 +196,22 @@ export function ensureModuleFilesExist() {
     [getBuildFilePath({ isTest: true, isTestFullApp, isTestModule, isServer: true, role: FILE_ROLE.output })]:
       getBuildFileContent({ isTest: true, isTestFullApp, isTestModule, isServer: true, role: FILE_ROLE.output, ...testServerFiles }),
   };
+
+  const architectureEntries = [
+    ...getClientArchitectureEntries({ isTest: false, isTestFullApp: false }),
+    ...(isMeteorAppTest() ? getClientArchitectureEntries() : []),
+  ];
+  for (const entry of architectureEntries) {
+    const config = {
+      ...env,
+      ...entry,
+      outputFile: getBuildFilePath({ ...env, ...entry, role: FILE_ROLE.output, onlyFilename: true }),
+    };
+    for (const role of [commandRole.role, FILE_ROLE.entry, FILE_ROLE.output]) {
+      moduleFiles[getBuildFilePath({ ...config, role })] =
+        getBuildFileContent({ ...config, role });
+    }
+  }
 
   // Main and current test-mode scaffolds are regenerated on every run so their
   // `*-meteor.js` mainModule files are available on disk. Rspack output bundles
@@ -300,8 +322,8 @@ export function bumpServerRuntimeBuildId() {
   }
 }
 
-export function bumpClientRuntimeBuildId() {
-  if (!isMeteorAppRun() || isMeteorAppDevelopment() || isMeteorAppNative()) {
+export function bumpClientRuntimeBuildId(arch) {
+  if (!isMeteorAppRun() || (!arch && isMeteorAppDevelopment()) || isMeteorAppNative()) {
     return;
   }
 
@@ -312,7 +334,9 @@ export function bumpClientRuntimeBuildId() {
     getBuildFilePath({
       isMain: true,
       isClient: true,
-      isProduction: true,
+      isProduction: !isMeteorAppDevelopment(),
+      isDevelopment: isMeteorAppDevelopment(),
+      arch,
       role: FILE_ROLE.run,
     }),
   );
@@ -395,7 +419,8 @@ export function getBuildFilePath(config) {
   } else {
     // Full path format: {module}[-{env}]/{filename}
     const envSuffix = env ? `-${env}` : '';
-    return `${module}${envSuffix}/${filename}`;
+    const archSuffix = config.arch ? `-${config.arch.replaceAll('.', '-')}` : '';
+    return `${module}${envSuffix}${archSuffix}/${filename}`;
   }
 }
 
@@ -639,6 +664,7 @@ function getHmrCode(config, role) {
   if (
     role === FILE_ROLE.entry &&
     config?.isClient &&
+    !config?.arch &&
     !config?.isTest &&
     isMeteorAppRun() &&
     isMeteorAppDevelopment() &&
@@ -689,7 +715,7 @@ import '../../${config?.entryFile}';`;
   if (config?.outputFile &&
     (role === FILE_ROLE.build || config?.isProduction ||
       (role === FILE_ROLE.run &&
-        (config?.isServer || config?.isTest || config?.isNative)))
+        (config?.isServer || config?.isTest || config?.isNative || config?.arch)))
   ) {
     if (
       role === FILE_ROLE.run &&
@@ -741,7 +767,7 @@ try {
     const clientRuntimeBuildId =
       role === FILE_ROLE.run &&
       config?.isClient &&
-      config?.isProduction &&
+      (config?.isProduction || config?.arch) &&
       !config?.isTest &&
       !config?.isNative
         ? '\n/* rspack-client-build-id:initial */'
@@ -870,6 +896,14 @@ export function cleanBuildContextFiles() {
         path.dirname(path.join(buildContextPath, getBuildFilePath({ isMain: true, isClient: true, ...env }))),
         path.dirname(path.join(buildContextPath, getBuildFilePath({ isMain: true, isServer: true, ...env }))),
       ];
+    }
+
+    // Architecture directories have the same mode prefix as the default build.
+    const modePrefixes = [...new Set(modeDirPaths.map(dir => path.basename(dir)))];
+    for (const name of fs.readdirSync(buildContextPath)) {
+      if (modePrefixes.some(prefix => name.startsWith(`${prefix}-web-`))) {
+        modeDirPaths.push(path.join(buildContextPath, name));
+      }
     }
 
     // Remove directories if they exist (Set dedupes shared paths)
