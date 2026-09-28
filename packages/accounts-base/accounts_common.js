@@ -12,6 +12,8 @@ const VALID_CONFIG_KEYS = [
   'passwordResetTokenExpiration',
   'passwordEnrollTokenExpirationInDays',
   'passwordEnrollTokenExpiration',
+  'emailVerificationTokenExpirationInDays',
+  'emailVerificationTokenExpiration',
   'ambiguousErrorMessages',
   'bcryptRounds',
   'argon2Enabled',
@@ -214,6 +216,8 @@ export class AccountsCommon {
    * @param {Number} options.passwordResetTokenExpiration The number of milliseconds from when a link to reset password is sent until token expires and user can't reset password with the link anymore. If `passwordResetTokenExpirationInDays` is set, it takes precedent.
    * @param {Number} options.passwordEnrollTokenExpirationInDays The number of days from when a link to set initial password is sent until token expires and user can't set password with the link anymore. Defaults to 30.
    * @param {Number} options.passwordEnrollTokenExpiration The number of milliseconds from when a link to set initial password is sent until token expires and user can't set password with the link anymore. If `passwordEnrollTokenExpirationInDays` is set, it takes precedent.
+   * @param {Number} options.emailVerificationTokenExpirationInDays The number of days from when a link to verify an email address is sent until token expires and user can't verify the address or log in with the link anymore. Defaults to 3.
+   * @param {Number} options.emailVerificationTokenExpiration The number of milliseconds from when a link to verify an email address is sent until token expires and user can't verify the address or log in with the link anymore. If set, it takes precedence over `emailVerificationTokenExpirationInDays`.
    * @param {Boolean} options.ambiguousErrorMessages Return ambiguous error messages from login failures to prevent user enumeration. Defaults to `true`.
    * @param {Number} options.bcryptRounds Allows override of number of bcrypt rounds (aka work factor) used to store passwords. The default is 10.
    * @param {Boolean} options.argon2Enabled Enable argon2 algorithm usage in replacement for bcrypt. The default is `false`.
@@ -403,6 +407,14 @@ export class AccountsCommon {
     );
   }
 
+  _getEmailVerificationTokenLifetimeMs() {
+    return (
+      this._options.emailVerificationTokenExpiration ||
+      (this._options.emailVerificationTokenExpirationInDays ||
+        DEFAULT_EMAIL_VERIFICATION_TOKEN_EXPIRATION_DAYS) * 86400000
+    );
+  }
+
   _tokenExpiration(when) {
     // We pass when through the Date constructor for backwards compatibility;
     // `when` used to be a number.
@@ -456,6 +468,8 @@ const DEFAULT_LOGIN_EXPIRATION_DAYS = 90;
 const DEFAULT_PASSWORD_RESET_TOKEN_EXPIRATION_DAYS = 3;
 // how long (in days) until enrol password token expires
 const DEFAULT_PASSWORD_ENROLL_TOKEN_EXPIRATION_DAYS = 30;
+// how long (in days) until email verification token expires
+const DEFAULT_EMAIL_VERIFICATION_TOKEN_EXPIRATION_DAYS = 3;
 // Clients don't try to auto-login with a token that is going to expire within
 // .1 * DEFAULT_LOGIN_EXPIRATION_DAYS, capped at MIN_TOKEN_LIFETIME_CAP_SECS.
 // Tries to avoid abrupt disconnects from expiring tokens.

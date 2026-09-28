@@ -90,6 +90,8 @@ export namespace Accounts {
     passwordResetTokenExpirationInDays?: number | undefined;
     passwordEnrollTokenExpiration?: number | undefined;
     passwordEnrollTokenExpirationInDays?: number | undefined;
+    emailVerificationTokenExpiration?: number | undefined;
+    emailVerificationTokenExpirationInDays?: number | undefined;
     ambiguousErrorMessages?: boolean | undefined;
     bcryptRounds?: number | undefined;
     argon2Enabled?: string | false;
