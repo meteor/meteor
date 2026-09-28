@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Publish internal app statistics",
-  version: "1.0.3-beta360.1",
+  version: "1.0.3-beta360.3",
 });
 
 Package.onUse(function (api) {
