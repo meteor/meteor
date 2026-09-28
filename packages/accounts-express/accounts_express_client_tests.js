@@ -21,11 +21,19 @@ Tinytest.addAsync("accounts-express - client credentials stay on app origins", a
     };
     Accounts._useHttpOnlyCookies = true;
     const app = window.location.origin;
+    const otherPort = new URL(app);
+    otherPort.port = String(Number(otherPort.port || 80) + 1);
+    const otherScheme = new URL(app);
+    otherScheme.protocol = otherScheme.protocol === "https:" ? "http:" : "https:";
     Meteor.absoluteUrl = () => "https://meteor-root.invalid/";
     for (const url of [
       "https://outside.invalid/api",
       "//outside.invalid/api",
       "http://127.0.0.1.outside.invalid/api",
+      `${otherPort.origin}/api`,
+      `${otherScheme.origin}/api`,
+      "https://meteor-root.invalid:8443/api",
+      "http://meteor-root.invalid/api",
       new URL("https://outside.invalid/api"),
       new Request("https://outside.invalid/api"),
     ]) {
@@ -578,4 +586,39 @@ if (Meteor.isClient) {
       Meteor.logout();
     }
   });
+
+  Tinytest.addAsync(
+    "accounts-express - fetch entry points keep the token off other origins",
+    async (test) => {
+      const originalFetch = window.fetch;
+      const savedToken = Accounts._storedLoginToken;
+      const sent = [];
+
+      try {
+        Accounts._storedLoginToken = () => "synthetic-token";
+        window.fetch = async (input, init) => {
+          const request = new Request(input, init);
+          sent.push(`${request.url} ${request.headers.get("Authorization")}`);
+          return mockResponse();
+        };
+
+        const outside = "https://outside.invalid/capture";
+        await Meteor.fetch(outside, { auth: true });
+        await packageFetch(outside, { auth: true });
+        await aeFetch(outside);
+        await aeFetch(outside, { auth: false });
+        await aeFetch(testUrl);
+        test.equal(sent, [
+          `${outside} null`,
+          `${outside} null`,
+          `${outside} null`,
+          `${outside} null`,
+          `${testUrl} Bearer synthetic-token`,
+        ]);
+      } finally {
+        window.fetch = originalFetch;
+        Accounts._storedLoginToken = savedToken;
+      }
+    },
+  );
 }
