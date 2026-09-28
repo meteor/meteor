@@ -94,6 +94,53 @@ Tinytest.addAsync("accounts-express - client credentials stay on app origins", a
   }
 });
 
+Tinytest.addAsync(
+  "accounts-express - client credentials reach configured API origins",
+  async (test) => {
+    const savedToken = Accounts._storedLoginToken;
+    const savedAbsoluteUrl = Meteor.absoluteUrl;
+    const savedPackages = Meteor.settings.public.packages;
+    let sent;
+    const wrapped = createAuthFetch(async (input, init) => {
+      sent = new Request(input, init);
+      return sent;
+    });
+    try {
+      Accounts._storedLoginToken = () => "synthetic-token";
+      Meteor.settings.public.packages = {
+        ...savedPackages,
+        "accounts-express": {
+          authFetchAllowedOrigins: ["https://api.example.invalid", "not an origin"],
+        },
+      };
+      await wrapped("https://api.example.invalid/v1/me", { auth: true });
+      test.equal(sent.headers.get("Authorization"), "Bearer synthetic-token");
+      for (const url of [
+        "https://api.example.invalid:8443/v1/me",
+        "http://api.example.invalid/v1/me",
+        "https://example.invalid/v1/me",
+        "https://api.example.invalid.outside.invalid/v1/me",
+      ]) {
+        await wrapped(url, { auth: true });
+        test.isFalse(sent.headers.has("Authorization"), url);
+      }
+
+      // A missing ROOT_URL leaves the page origin trusted instead of rejecting.
+      Meteor.absoluteUrl = () => {
+        throw new Error("Must pass options.rootUrl or set ROOT_URL");
+      };
+      await wrapped("/api", { auth: true });
+      test.equal(sent.headers.get("Authorization"), "Bearer synthetic-token");
+      await wrapped("https://outside.invalid/api", { auth: true });
+      test.isFalse(sent.headers.has("Authorization"));
+    } finally {
+      Accounts._storedLoginToken = savedToken;
+      Meteor.absoluteUrl = savedAbsoluteUrl;
+      Meteor.settings.public.packages = savedPackages;
+    }
+  },
+);
+
 // Only run these tests on the client
 if (Meteor.isClient) {
   const { fetch: packageFetch } = require("meteor/fetch");

@@ -1,9 +1,23 @@
 import { Accounts } from "meteor/accounts-base";
 import { Meteor } from "meteor/meteor";
 
-function isAppOrigin(url) {
+// The page origin and the ROOT_URL origin, plus any cross-origin API hosts
+// the app lists in Meteor.settings.public.packages["accounts-express"]
+// .authFetchAllowedOrigins.
+function trustedRoots() {
+  const roots = [window.location.href];
+  try {
+    roots.push(Meteor.absoluteUrl());
+  } catch {
+    // No ROOT_URL and no page host: only the page origin is trusted.
+  }
+  const allowed = Meteor.settings?.public?.packages?.["accounts-express"]?.authFetchAllowedOrigins;
+  return Array.isArray(allowed) ? roots.concat(allowed) : roots;
+}
+
+function isTrustedOrigin(url) {
   if (url.protocol !== "http:" && url.protocol !== "https:") return false;
-  return [window.location.href, Meteor.absoluteUrl()].some((root) => {
+  return trustedRoots().some((root) => {
     try {
       return url.origin === new URL(root).origin;
     } catch {
@@ -39,7 +53,7 @@ export function createAuthFetch(originalFetch) {
       // whatwg-fetch retains relative URLs, unlike native Request. Pin its
       // destination before reading application state or calling the transport.
       if (request.url !== target.href) request.url = target.href;
-      if (!isAppOrigin(target)) {
+      if (!isTrustedOrigin(target)) {
         return originalFetch(request, { ...fetchOptions, headers });
       }
 
