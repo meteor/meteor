@@ -161,8 +161,9 @@ if (shouldEnableDevHMRProxy) {
     const pathname = parsedRequestUrl.pathname;
     const search = parsedRequestUrl.search || '';
 
-    // If this request is already under /__rspack__/, don't redirect it again.
-    if (pathname.startsWith('/__rspack__/')) {
+    // Already-proxied hot updates must not redirect back to themselves.
+    if (pathname.startsWith('/__rspack__/') ||
+        pathname.startsWith(`${rootUrlPathPrefix}/__rspack__/`)) {
       return next();
     }
 

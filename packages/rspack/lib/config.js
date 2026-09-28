@@ -184,6 +184,14 @@ export function configureMeteorForRspack() {
         isDevelopment: true,
       }),
     )}*/**`;
+  // Tests use their own HTML. Keep the mainModule wrappers for Meteor's
+  // validation, but exclude run-mode HTML that would inject stale chunks.
+  const mainHtmlIgnorePaths = isTest
+    ? [
+        `${RSPACK_BUILD_CONTEXT}/main-*/*.html`,
+        `${RSPACK_BUILD_CONTEXT}/main-*/**/*.html`,
+      ]
+    : [];
   const foldersToIgnore = [
     // Cross-process isolation: a single app directory can host several Meteor
     // instances at once (a dev server, a `meteor test` daemon, an E2E run),
@@ -225,6 +233,7 @@ export function configureMeteorForRspack() {
   const filesToIgnore = [
     ...rootFilesToIgnore,
     ...extraFilesToIgnore,
+    ...mainHtmlIgnorePaths,
     ...rspackOutputFilesToIgnore,
   ];
   const unignoredFilesAndFolders = buildUnignorePatterns(

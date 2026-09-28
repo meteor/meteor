@@ -126,6 +126,19 @@ describe('Rspack development proxy error diagnostics', () => {
     expect(response.writeHead).toHaveBeenCalledTimes(1);
   });
 
+  test.each(['js', 'json'])('does not redirect a prefixed hot-update.%s request back to itself', extension => {
+    const { rawConnectHandlers } = loadRuntime({}, { pathPrefix: '/live' });
+    const redirect = rawConnectHandlers.use.mock.calls[0][0];
+    const response = { writeHead: jest.fn(), end: jest.fn() };
+    const next = jest.fn();
+
+    redirect({ url: `/live/__rspack__/main.hash.hot-update.${extension}?cache=1` }, response, next);
+
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(response.writeHead).not.toHaveBeenCalled();
+    expect(response.end).not.toHaveBeenCalled();
+  });
+
   test('logs the first failure immediately and summarizes a burst across asset URLs', () => {
     const { proxies: [assets] } = loadRuntime();
     fail(assets);

@@ -1,5 +1,4 @@
 import { testMeteorRspackBundler } from './test-helpers';
-import { waitForMeteorOutput } from './helpers';
 
 const PORT = 3160;
 const PATH_PREFIX = '/live/';
@@ -21,12 +20,17 @@ describe('Regressions / Rspack ROOT_URL path prefix /', () => {
     env: { ROOT_URL },
     verbose: false,
     customAssertions: {
-      afterRun: assertPrefixedRuntime,
-      afterRunRebuildClient: async ({ allConsoleLogs }) => {
-        await waitForMeteorOutput(
-          allConsoleLogs,
-          /.*HMR.*Updated modules:.*/
-        );
+      afterRun: async (context) => {
+        await assertPrefixedRuntime(context);
+        await page.evaluate(() => {
+          window.__rspackE2eHmrState = 'preserved across client edit';
+        });
+      },
+      afterRunRebuildClient: async () => {
+        // The shared helper has already observed the edited client executing.
+        // A full reload would lose this state, even with client logging muted.
+        expect(await page.evaluate(() => window.__rspackE2eHmrState))
+          .toBe('preserved across client edit');
       },
       afterRunProduction: assertPrefixedRuntime,
     },

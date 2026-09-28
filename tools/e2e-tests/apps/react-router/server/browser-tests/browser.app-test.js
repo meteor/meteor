@@ -4,7 +4,10 @@ const width = 200;
 const height = 150;
 
 describe("Run browser tests", () => {
-  it("Runs browser based integration tests", async () => {
+  it("Runs browser based integration tests", async function () {
+    // Browser startup and navigation have their own 15-second budgets.
+    // Mocha's default two seconds can expire before either one completes.
+    this.timeout(60_000);
     console.log("STARTING BROWSER TEST");
 
     const props = {
@@ -37,15 +40,15 @@ describe("Run browser tests", () => {
     }
 
     const browser = await puppeteer.launch(props);
-    console.log("LAUNCHED BROWSER");
-
-    const page = await browser.newPage();
-    console.log("NEW PAGE");
-
-    await page.goto(process.env.ROOT_URL);
-    console.log("OPEN PAGE", process.env.ROOT_URL);
-
-    await page.waitForSelector("#react-target");
-    await browser.close();
+    try {
+      console.log("LAUNCHED BROWSER");
+      const page = await browser.newPage();
+      console.log("NEW PAGE");
+      await page.goto(process.env.ROOT_URL, { timeout: 15_000 });
+      console.log("OPEN PAGE", process.env.ROOT_URL);
+      await page.waitForSelector("#react-target", { timeout: 15_000 });
+    } finally {
+      await browser.close();
+    }
   });
 });

@@ -72,7 +72,9 @@ class Runner {
       });
     }
 
-    const basePath = utils.parseUrl(self.rootUrl).pathname || '';
+    // Meteor.absoluteUrl removes trailing slashes before joining the path.
+    // Match it here so a prefixed ROOT_URL does not leave HMR upgrades hanging.
+    const basePath = (utils.parseUrl(self.rootUrl).pathname || '').replace(/\/+$/, '');
     const HMRPath = basePath + '/__meteor__hmr__/websocket';
 
     self.proxy = new Proxy({

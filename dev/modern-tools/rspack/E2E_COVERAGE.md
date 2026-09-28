@@ -63,6 +63,7 @@ Core React 19 integration with custom Meteor local directory.
 | Custom rspack config (`rspack.config.cjs`) | All |
 | HMR works in dev, disabled in prod | Run, Prod |
 | `ROOT_URL=/live/` prefixes scripts, styles, images, and dynamic chunks | Run, Prod |
+| Prefixed Rspack WebSocket connects and client edits preserve browser state through HMR | Run |
 | Chunk, asset, and queried hot-update compatibility redirects preserve the prefix | Run |
 | Dynamic import chunk loads through the runtime public path | Run, Prod |
 | Rspack devserver port is released after `SIGTERM` (`regressions/port-cleanup.test.js`) | Run |
@@ -90,6 +91,7 @@ Full-featured React Router app with custom packages, Less, and advanced rspack c
 | `rspack.config.override.js` custom plugin loading | Run, Test, Build |
 | User-level `devServer.onListening` composed with meteor-rspack default | Run |
 | React + TSX environment detection | Run, Prod, Test, Build |
+| Full-app tests after development exclude stale run-mode HTML and report zero client/server failures | Test once |
 | Full-app test mode (`--full-app`) | Test |
 | Static assets in bundle (png, md) | Build |
 | Native bcrypt executes after installation in the generated deployment bundle | Build |
@@ -472,6 +474,7 @@ Where each feature is tested across apps and skeletons.
 |---------|------|-----------|
 | HMR (dev) | react, react-router, babel, coffeescript, vue, solid, svelte, monorepo, pnpm-monorepo, typescript | |
 | `ROOT_URL` path-prefix routing | react | |
+| HMR below a `ROOT_URL` prefix without a full-page reload | react | |
 | Dynamic chunk public path | react | |
 | Compatibility redirects with query strings | react | |
 | HMR disabled (prod) | all apps with HMR | |
@@ -552,9 +555,5 @@ Where each feature is tested across apps and skeletons.
 | `skipTestClient: true` test helper option | assets | |
 | Assets skipped by compiler source discovery (#14566) | assets | |
 | Boot built bundle (`node main.js`) to test assets | assets | |
-
-### Pending regression signal
-
-`rspack-root-url.test.js` also asserts that the Rspack WebSocket connects through `/live/ws` and that a client edit completes HMR below a `ROOT_URL` prefix. That assertion currently fails because no Rspack WebSocket is opened, so prefixed HMR is not listed as covered above. Keep this test as the acceptance signal for the remaining fix.
 
 The React Router fixture includes a JavaScript-only package with a `binding.gyp` native detection marker. It forces that package through `Meteor.compileWithRspack`, executes it in development and production, and verifies that its source marker is present in the generated server bundle. This proves that the helper changes bundling behavior rather than only changing detector output.
