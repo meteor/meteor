@@ -391,11 +391,12 @@ sites:
 - Twitter, Weibo, Meteor developer accounts: `requestPermissions` currently not supported
 
 External login services typically require registering and configuring
-your application before use. The easiest way to do this is with the
-[`accounts-ui` package](../packages/accounts-ui.md) which presents a step-by-step guide
-to configuring each service. However, the data can be also be entered
-manually in the `ServiceConfiguration.configurations` collection, which
-is exported by the `service-configuration` package.
+your application before use. The configuration is stored in the
+`ServiceConfiguration.configurations` collection, which is exported by the
+`service-configuration` package. Set it from your server code or from
+`Meteor.settings`, as described below. In development, the
+[`accounts-ui` package](../packages/accounts-ui.md) can also walk you through
+configuring each service from the browser.
 
 ## Configuring Services {#service-configuration}
 
@@ -444,6 +445,18 @@ The correct property name to use for the API identifier (i.e. `clientId` in the 
 | `appId`       | Facebook                                                 |
 | `clientId`    | Github, Google, Meetup, Meteor Developer Accounts, Weibo |
 | `consumerKey` | Twitter                                                  |
+
+::: warning Configuring services from the client
+The `accounts-ui` configuration dialog saves credentials through the
+`configureLoginService` method, which accepts the first configuration for a
+service from any client. So that visitors cannot configure a service before
+you do, clients can call it only in development. In production, configure
+services on the server or in `Meteor.settings`. To change this default, set
+the `allowClientServiceConfiguration` option of
+[`Accounts.config`](#AccountsCommon-config). See
+[Using the accounts-ui dialog](../packages/service-configuration.md#client-configuration)
+for details.
+:::
 
 Additionally, each external service has its own login provider package and login function. For
 example, to support GitHub login, run the following in your terminal:
