@@ -18,6 +18,12 @@ describe('Other / Legacy App Bundling /', () => {
       testServer: 'tests/server.ts',
     },
     customAssertions: {
+      async afterCreate({ tempDir }) {
+        // Root-scoped test/** must leave modern and legacy _build/test entries
+        // available while keeping these data files out of either application.
+        await fs.outputFile(path.join(tempDir, 'test/data.js'),
+          'throw new Error("test data must not be eagerly loaded");\n');
+      },
       afterRun: assertEntrypoints,
       afterRunProduction: assertEntrypoints,
       afterRunProductionRebuildClient: assertEntrypoints,

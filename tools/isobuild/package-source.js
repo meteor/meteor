@@ -1382,6 +1382,10 @@ Object.assign(PackageSource.prototype, {
     const entrypointIgnore = isApp && typeof entryModule === "string"
       ? ignoresByEntrypoint[entryModule] || ""
       : "";
+    const rootIgnoresByEntrypoint = JSON.parse(process.env.METEOR_IGNORE_ROOT_BY_ENTRYPOINT || "{}");
+    const rootEntrypointIgnore = isApp && typeof entryModule === "string"
+      ? rootIgnoresByEntrypoint[entryModule] || ""
+      : "";
     const sourceReadOptions =
       sourceProcessorSet.appReadDirectoryOptions(arch);
 
@@ -1550,14 +1554,6 @@ Object.assign(PackageSource.prototype, {
         return [];
       }
 
-      const absDir = files.pathJoin(self.sourceRoot, dir);
-      if (! inNodeModules) {
-        const ignore = optimisticReadMeteorIgnore(absDir, entrypointIgnore);
-        if (ignore) {
-          dotMeteorIgnoreFiles[dir] = ignore;
-        }
-      }
-
       let readOptions = sourceReadOptions;
       if (inNodeModules) {
         // This is an array because (in some rare cases) an npm package
@@ -1609,6 +1605,27 @@ Object.assign(PackageSource.prototype, {
         self._readAndWatchDirectory(dir, inNodeModules ? null : watchSet, readOptions),
         depth > 0 ? [] : controlFiles
       );
+
+      if (! inNodeModules) {
+        // The fresh listing already tells us whether this directory has an
+        // ignore file. Avoid a separate stat in every directory, and don't let
+        // delayed watcher notifications keep deleted rules in effect.
+        const meteorIgnorePath = files.pathJoin(dir, ".meteorignore");
+        const ignore = optimisticReadMeteorIgnore(
+          sources.includes(meteorIgnorePath)
+            ? files.pathJoin(self.sourceRoot, meteorIgnorePath)
+            : null,
+          [process.env.METEOR_IGNORE, entrypointIgnore].filter(Boolean).join(" ") || undefined,
+          // Apply generated rules from the app root and only to their selected
+          // entrypoint. Rebasing them in nested directories can hide _build/test.
+          isApp && depth === 0
+            ? [process.env.METEOR_IGNORE_ROOT, rootEntrypointIgnore].filter(Boolean).join(" ") || undefined
+            : undefined
+        );
+        if (ignore) {
+          dotMeteorIgnoreFiles[dir] = ignore;
+        }
+      }
 
       const subdirectories = self._readAndWatchDirectory(
         dir,

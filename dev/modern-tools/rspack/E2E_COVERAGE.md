@@ -297,7 +297,7 @@ Server-only app (no client entry point).
 | Server entry loads (`server/main.js loaded`) | Run |
 | Server Rspack process exits before first compilation and Meteor fails promptly | Run |
 | `.meteorignore` negation re-includes a test file an earlier pattern ignored (`regressions/meteorignore-negation.test.js`, [#14742](https://github.com/meteor/meteor/issues/14742)) | Test once |
-| User `METEOR_IGNORE` overrides file patterns in Rspack children while internal per-entrypoint ignores stay in meteor-tool (`regressions/meteorignore-negation.test.js`) | Test once |
+| User `METEOR_IGNORE` overrides file patterns in Rspack children with a root `test/` directory while internal root and per-entrypoint ignores stay in meteor-tool (`regressions/meteorignore-negation.test.js`) | Test once |
 
 ### legacy
 
@@ -306,7 +306,7 @@ Minimal app with separate modern, legacy, and Cordova entries. `legacy.test.js` 
 | What is covered | Phase |
 |----------------|-------|
 | Shared lifecycle: development/production client and server rebuilds, watched tests, tests once, deployed bundle, and reset | All |
-| Separate legacy test module executes an alias configured only for `Meteor.isLegacy`, its loader, plugin constant, and async chunk, then reruns after a source edit | Test |
+| With a root `test/` data directory, separate legacy test module executes an alias configured only for `Meteor.isLegacy`, its loader, plugin constant, and async chunk, then reruns after a source edit | Test |
 | Full-app tests render each browser's app entry and pass its matching test module, including the legacy-only configuration, after running development mode | Test |
 | Distinct client entries in production/debug bundles, covering `client`, `modern`, `legacy`, `web.browser.legacy`, and `web.cordova` | Build |
 | Legacy TypeScript imports use an alias configured only for `Meteor.isLegacy`, a custom loader, DefinePlugin constant, and asynchronous chunk | Run, Prod, Build |
@@ -330,6 +330,16 @@ Minimal app with separate modern, legacy, and Cordova entries. `legacy.test.js` 
 | Delayed server import of a previously unused Meteor package | Run |
 | CommonJS development server bundle under a `type: module` app | Run |
 | Node Inspector attach, pauses, breakpoint, source map, and mapped stack | Run |
+
+### Focused root-ignore regressions
+
+`regressions/root-ignore.test.js` creates a minimal Rspack app and runs in the
+`regressions` CI group.
+
+| What is covered | Phase |
+|----------------|-------|
+| A root `test/` data directory does not hide generated `_build/test/` entry points ([#14514](https://github.com/meteor/meteor/issues/14514)) | Test once |
+| Explicit client `testModule` and eager server discovery each execute a named test with `1 passing`, without `--full-app` | Test once |
 
 ### tla
 

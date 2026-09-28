@@ -7,20 +7,24 @@ These helpers will be useful to integrate a modern bundler like Rspack and a nat
 ## Scoping source exclusions to replacement entrypoints
 
 Integrations that replace application entrypoints can use
-`setMeteorAppIgnore(patterns, { entrypoints })` from `lib/meteor.js` to exclude
+`setMeteorAppIgnore(patterns, { root: true, entrypoints })` from `lib/meteor.js` to exclude
 their original sources only when Meteor builds those replacement modules:
 
 ```js
 setMeteorAppIgnore('client/** !client/*.html', {
+  root: true,
   entrypoints: ['_build/client-meteor.js'],
 });
 ```
 
 Other architecture-specific main or test modules keep Meteor's normal source
 compilation. Use resolved, app-relative module paths. Without `entrypoints`,
-the patterns apply to all architectures. Both forms append patterns and preserve
-the last occurrence of each pattern; `.meteorignore` and global exclusions still
-apply before the entrypoint-specific patterns.
+the patterns apply to all architectures. `root: true` matches paths from the app
+root only, so `test/**` does not also exclude `_build/test/**`. Without `root`,
+patterns retain their recursive, per-directory behavior. Both scopes append
+patterns and preserve the last occurrence of each pattern. Root-scoped rules
+follow `.meteorignore` and recursive exclusions; within each scope, global rules
+precede entrypoint-specific rules.
 
 `setMeteorAppEntrypoints({ mainModule, testModule })` accepts architecture maps alongside the existing client/server shortcuts. Map entries replace only the specified keys and preserve `false` values. Integrations can also restrict a development script to selected browser programs with `setMeteorAppCustomScriptUrl(url, { archs: ['web.browser'] })`; omitting `archs` keeps the existing behavior of injecting it into every browser program.
 

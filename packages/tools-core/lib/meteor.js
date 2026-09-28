@@ -281,11 +281,13 @@ export function getUserMeteorIgnore() {
  * each exact pattern. This preserves gitignore-style "last match wins"
  * semantics while preventing unbounded growth.
  * @param {string} ignore - The pattern to be ignored.
- * @param {Object} options
- * @param {string[]} options.entrypoints - Apply only when one of these modules is
+ * @param {Object} [options] - Ignore scope.
+ * @param {boolean} [options.root=false] - Match build-tool rules from the app root only.
+ * @param {string[]} [options.entrypoints] - Apply only when one of these modules is
  * the architecture's entrypoint. Omit to apply to all architectures.
  */
-export function setMeteorAppIgnore(ignore, { entrypoints } = {}) {
+export function setMeteorAppIgnore(ignore, { root = false, entrypoints } = {}) {
+  const envName = root ? 'METEOR_IGNORE_ROOT' : 'METEOR_IGNORE';
   const newPatterns = ignore.trim().split(/\s+/).filter(Boolean);
 
   if (newPatterns.length === 0) {
@@ -310,15 +312,16 @@ export function setMeteorAppIgnore(ignore, { entrypoints } = {}) {
   }
 
   if (entrypoints) {
-    const byEntrypoint = JSON.parse(process.env.METEOR_IGNORE_BY_ENTRYPOINT || '{}');
+    const byEntrypointEnv = `${envName}_BY_ENTRYPOINT`;
+    const byEntrypoint = JSON.parse(process.env[byEntrypointEnv] || '{}');
     for (const entrypoint of entrypoints) {
       if (typeof entrypoint === 'string') {
         byEntrypoint[entrypoint] = appendPatterns(byEntrypoint[entrypoint]);
       }
     }
-    process.env.METEOR_IGNORE_BY_ENTRYPOINT = JSON.stringify(byEntrypoint);
+    process.env[byEntrypointEnv] = JSON.stringify(byEntrypoint);
   } else {
-    process.env.METEOR_IGNORE = appendPatterns(process.env.METEOR_IGNORE);
+    process.env[envName] = appendPatterns(process.env[envName]);
   }
 }
 

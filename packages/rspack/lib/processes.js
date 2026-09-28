@@ -79,7 +79,11 @@ import {
 // Rspack's native code prints this marker when it aborts, e.g. when its
 // persistent cache was corrupted by a previous hard kill mid-write.
 const RSPACK_PANIC_PATTERN = 'Panic occurred at runtime';
-const RSPACK_UNSET_ENV = ['METEOR_IGNORE_BY_ENTRYPOINT'];
+const RSPACK_UNSET_ENV = [
+  'METEOR_IGNORE_ROOT',
+  'METEOR_IGNORE_BY_ENTRYPOINT',
+  'METEOR_IGNORE_ROOT_BY_ENTRYPOINT',
+];
 
 /**
  * Builds the environment passed to Rspack child processes.
@@ -92,7 +96,7 @@ const RSPACK_UNSET_ENV = ['METEOR_IGNORE_BY_ENTRYPOINT'];
  * expansion grows to tens of kilobytes, wasting execve arg+env budget (risking
  * E2BIG on constrained systems).
  *
- * Per-entrypoint replacement rules are internal to meteor-tool and are removed
+ * Root-scoped and per-entrypoint rules are internal to meteor-tool and removed
  * again by spawnProcess after its parent-environment merge.
  *
  * Setting METEOR_IGNORE here is enough on its own: spawnProcess merges `options.env` over

@@ -29,6 +29,10 @@ describe('Regressions / .meteorignore negation patterns /', () => {
 
     await linkLocalRspack(tempDir);
 
+    // Generated test/** rules must not hide the eager _build/test entrypoints.
+    await fs.outputFile(path.join(tempDir, 'test/data.js'),
+      'throw new Error("test data must not be eagerly loaded");\n');
+
     await fs.outputFile(
       path.join(tempDir, 'imports', 'included.tests.js'),
       testFile('included', 'runs the re-included test file'),
@@ -76,6 +80,8 @@ describe('Regressions / .meteorignore negation patterns /', () => {
 const assert = require('assert');
 assert.strictEqual(process.env.METEOR_IGNORE, ${JSON.stringify(userIgnore)});
 assert.strictEqual(process.env.METEOR_IGNORE_BY_ENTRYPOINT, undefined);
+assert.strictEqual(process.env.METEOR_IGNORE_ROOT, undefined);
+assert.strictEqual(process.env.METEOR_IGNORE_ROOT_BY_ENTRYPOINT, undefined);
 ${originalConfig}`);
 
     try {
@@ -85,6 +91,10 @@ ${originalConfig}`);
         testClient: false,
         env: {
           METEOR_IGNORE: userIgnore,
+          METEOR_IGNORE_ROOT: '/unused-source/**',
+          METEOR_IGNORE_ROOT_BY_ENTRYPOINT: JSON.stringify({
+            'unused-entry.js': '*.js',
+          }),
           METEOR_IGNORE_BY_ENTRYPOINT: JSON.stringify({
             'unused-entry.js': '*.js',
           }),

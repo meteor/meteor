@@ -263,7 +263,7 @@ export function configureMeteorForRspack() {
     `!/${RSPACK_BUILD_CONTEXT}/**`,
     ...testIgnorePaths,
     otherMainIgnorePath,
-    'node_modules/**',
+    '**/node_modules/**',
     ...extraFoldersToIgnore,
   ].filter(Boolean);
   const rootFilesToIgnore = [
@@ -387,8 +387,9 @@ export function configureMeteorForRspack() {
   // Generated files must stay out of architectures with their own entrypoint.
   // Only the architectures using our replacement entries re-include them and
   // exclude the sources compiled by Rspack.
-  setMeteorAppIgnore(`/_build /_build-* /${RSPACK_BUILD_CONTEXT}`);
+  setMeteorAppIgnore(`/_build /_build-* /${RSPACK_BUILD_CONTEXT}`, { root: true });
   setMeteorAppIgnore(meteorAppIgnores, {
+    root: true,
     entrypoints: Object.values(appEntrypoints),
   });
 
@@ -399,6 +400,7 @@ export function configureMeteorForRspack() {
   );
   if (architectureDirectories.length) {
     setMeteorAppIgnore(architectureDirectories.map(dir => `/${dir}`).join(' '), {
+      root: true,
       entrypoints: Object.values(appEntrypoints),
     });
   }
@@ -410,7 +412,7 @@ export function configureMeteorForRspack() {
       `/${RSPACK_BUILD_CONTEXT}/**`,
       `!/${directory}`,
       `!/${directory}/**`,
-    ].join(' '), { entrypoints: [modulePath] });
+    ].join(' '), { root: true, entrypoints: [modulePath] });
   }
 
   // Set entry points in environment variables if they exist
@@ -490,11 +492,11 @@ export function applyDelegatedExtensions(extensions, { arch } = {}) {
       : Object.values(getMeteorAppEntrypoints());
     setMeteorAppIgnore(
       [...ignorePatterns, ...unignoredFilesAndFolders].join(' '),
-      { entrypoints: entrypoints.filter(value => typeof value === 'string') },
+      { root: true, entrypoints: entrypoints.filter(value => typeof value === 'string') },
     );
 
     if (isMeteorAppDebug() || isMeteorAppConfigModernVerbose()) {
-      logInfo(`[i] Rspack delegated extensions: ${extensions.join(', ')} (ignored in entry folders)\n    ${process.env.METEOR_IGNORE_BY_ENTRYPOINT}`);
+      logInfo(`[i] Rspack delegated extensions: ${extensions.join(', ')} (ignored in entry folders)\n    ${process.env.METEOR_IGNORE_ROOT_BY_ENTRYPOINT}`);
     }
   }
 }

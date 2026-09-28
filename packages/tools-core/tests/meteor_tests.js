@@ -297,29 +297,76 @@ Tinytest.add(
 );
 
 Tinytest.add(
-  "tools-core - setMeteorAppIgnore - scopes patterns to entrypoints",
+  "tools-core - setMeteorAppIgnore - isolates root-scoped build-tool rules",
   function (test) {
     const previousIgnore = process.env.METEOR_IGNORE;
-    const previousByEntrypoint = process.env.METEOR_IGNORE_BY_ENTRYPOINT;
+    const previousRootIgnore = process.env.METEOR_IGNORE_ROOT;
+
+    try {
+      process.env.METEOR_IGNORE = "user/**";
+      process.env.METEOR_IGNORE_ROOT = "!client/meteor.css";
+      // Ignore client CSS except meteor.css: the final ! rule keeps that file.
+      // Reapplying the rules must preserve this exception without duplicates.
+      setMeteorAppIgnore("client/*.css !client/meteor.css", { root: true });
+      setMeteorAppIgnore("client/*.css !client/meteor.css", { root: true });
+      test.equal(process.env.METEOR_IGNORE_ROOT, "client/*.css !client/meteor.css");
+      test.equal(process.env.METEOR_IGNORE, "user/**");
+
+      setMeteorAppIgnore("legacy/**");
+      test.equal(process.env.METEOR_IGNORE, "user/** legacy/**");
+      test.equal(process.env.METEOR_IGNORE_ROOT, "client/*.css !client/meteor.css");
+    } finally {
+      for (const [name, value] of [
+        ["METEOR_IGNORE", previousIgnore],
+        ["METEOR_IGNORE_ROOT", previousRootIgnore],
+      ]) {
+        if (value === undefined) {
+          delete process.env[name];
+        } else {
+          process.env[name] = value;
+        }
+      }
+    }
+  }
+);
+
+Tinytest.add(
+  "tools-core - setMeteorAppIgnore - scopes root and recursive patterns to entrypoints",
+  function (test) {
+    const names = ['METEOR_IGNORE', 'METEOR_IGNORE_ROOT',
+      'METEOR_IGNORE_BY_ENTRYPOINT', 'METEOR_IGNORE_ROOT_BY_ENTRYPOINT'];
+    const previous = names.map(name => [name, process.env[name]]);
     try {
       process.env.METEOR_IGNORE = "private/**";
-      delete process.env.METEOR_IGNORE_BY_ENTRYPOINT;
-      setMeteorAppIgnore("client/** !client/meteor.css", {
-        entrypoints: ['_build/client.js', '_build/client-tests.js'],
-      });
-      setMeteorAppIgnore("client/*.css !client/meteor.css", {
-        entrypoints: ['_build/client.js'],
-      });
+      process.env.METEOR_IGNORE_ROOT = "root-only/**";
+      process.env.METEOR_IGNORE_BY_ENTRYPOINT = '{}';
+      process.env.METEOR_IGNORE_ROOT_BY_ENTRYPOINT = '{}';
+      for (const root of [false, true]) {
+        const patterns = root ? 'root-client' : 'client';
+        setMeteorAppIgnore(`${patterns}/** !${patterns}/meteor.css`, {
+          root, entrypoints: ['_build/client.js', '_build/client-tests.js'],
+        });
+        for (let repeat = 0; repeat < 2; repeat += 1) {
+          setMeteorAppIgnore(`${patterns}/*.css !${patterns}/meteor.css`, {
+            root, entrypoints: ['_build/client.js'],
+          });
+        }
+      }
       test.equal(process.env.METEOR_IGNORE, "private/**");
+      test.equal(process.env.METEOR_IGNORE_ROOT, "root-only/**");
       test.equal(JSON.parse(process.env.METEOR_IGNORE_BY_ENTRYPOINT), {
         '_build/client.js': 'client/** client/*.css !client/meteor.css',
         '_build/client-tests.js': 'client/** !client/meteor.css',
       });
+      test.equal(JSON.parse(process.env.METEOR_IGNORE_ROOT_BY_ENTRYPOINT), {
+        '_build/client.js': 'root-client/** root-client/*.css !root-client/meteor.css',
+        '_build/client-tests.js': 'root-client/** !root-client/meteor.css',
+      });
     } finally {
-      if (previousIgnore === undefined) delete process.env.METEOR_IGNORE;
-      else process.env.METEOR_IGNORE = previousIgnore;
-      if (previousByEntrypoint === undefined) delete process.env.METEOR_IGNORE_BY_ENTRYPOINT;
-      else process.env.METEOR_IGNORE_BY_ENTRYPOINT = previousByEntrypoint;
+      for (const [name, value] of previous) {
+        if (value === undefined) delete process.env[name];
+        else process.env[name] = value;
+      }
     }
   }
 );
