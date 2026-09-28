@@ -1154,6 +1154,7 @@ Object.assign(PackageSource.prototype, {
             sourceArch: this,
             ignoreFiles,
             isApp: true,
+            mainModule,
             testModule,
             nodeModulesToRecompile,
           };
@@ -1365,6 +1366,7 @@ Object.assign(PackageSource.prototype, {
     watchSet,
     isApp,
     sourceArch,
+    mainModule,
     testModule,
     nodeModulesToRecompile = new Set,
     loopChecker = new SymlinkLoopChecker(this.sourceRoot),
@@ -1373,6 +1375,13 @@ Object.assign(PackageSource.prototype, {
     const self = this;
     const arch = sourceArch.arch;
     const isWeb = archinfo.matches(arch, "web");
+    // Integrations can scope source exclusions to their replacement entrypoints
+    // without hiding dependencies of other architecture-specific entrypoints.
+    const entryModule = global.testCommandMetadata?.isTest ? testModule : mainModule;
+    const ignoresByEntrypoint = JSON.parse(process.env.METEOR_IGNORE_BY_ENTRYPOINT || "{}");
+    const entrypointIgnore = isApp && typeof entryModule === "string"
+      ? ignoresByEntrypoint[entryModule] || ""
+      : "";
     const sourceReadOptions =
       sourceProcessorSet.appReadDirectoryOptions(arch);
 
@@ -1543,7 +1552,7 @@ Object.assign(PackageSource.prototype, {
 
       const absDir = files.pathJoin(self.sourceRoot, dir);
       if (! inNodeModules) {
-        const ignore = optimisticReadMeteorIgnore(absDir);
+        const ignore = optimisticReadMeteorIgnore(absDir, entrypointIgnore);
         if (ignore) {
           dotMeteorIgnoreFiles[dir] = ignore;
         }

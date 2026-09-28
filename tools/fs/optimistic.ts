@@ -338,7 +338,7 @@ makeOptimistic("readJsonOrNull", (
   }
 });
 
-export const optimisticReadMeteorIgnore = wrap((dir: string) => {
+export const optimisticReadMeteorIgnore = wrap((dir: string, additionalPatterns = "") => {
   const meteorIgnorePath = pathJoin(dir, ".meteorignore");
   const meteorIgnoreStat = optimisticStatOrNull(meteorIgnorePath);
 
@@ -350,8 +350,9 @@ export const optimisticReadMeteorIgnore = wrap((dir: string) => {
     );
   }
 
-  const customMeteorIgnore = process.env.METEOR_IGNORE;
-  if (customMeteorIgnore != null) {
+  const customMeteorIgnore = [process.env.METEOR_IGNORE, additionalPatterns]
+    .filter(Boolean).join(" ");
+  if (customMeteorIgnore) {
     ignoreConfig = ignoreConfig || ignore();
     const allCustomMeteorIgnores = customMeteorIgnore.trim().split(/\s+/);
     ignoreConfig = ignoreConfig.add(allCustomMeteorIgnores);

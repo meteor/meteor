@@ -123,6 +123,7 @@ function createSwcConfig({
   externalHelpers,
   isDevEnvironment,
   isClient,
+  isLegacy,
   isAngularEnabled,
 }) {
   const defaultConfig = {
@@ -133,7 +134,7 @@ function createSwcConfig({
         ...(isJsxEnabled && { jsx: true }),
         ...(isAngularEnabled && { decorators: true }),
       },
-      target: isClient ? 'es2015' : 'es2022',
+      target: isLegacy ? 'es5' : isClient ? 'es2015' : 'es2022',
       ...(isReactEnabled && {
         transform: {
           react: {
@@ -257,6 +258,10 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     Meteor.chunksContext ||
     process.env.RSPACK_CHUNKS_CONTEXT ||
     `build-chunks${(meteorLocalDirName && `-${meteorLocalDirName}`) || ""}`;
+  const clientOutputContext = Meteor.clientOutputContext || '';
+  const clientOutputDir = path.resolve(projectDir, 'public', clientOutputContext);
+  const clientChunkPrefix = clientOutputContext ? '' : `${chunksContext}/`;
+  const clientAssetContext = path.posix.relative(clientOutputContext, assetsContext);
 
   // Compute build paths before loading user config (needed by Meteor helpers below)
   const outputPath = Meteor.outputPath;
@@ -267,6 +272,9 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   const isTest = !!Meteor.isTest;
   const isClient = !!Meteor.isClient;
   const isServer = !!Meteor.isServer;
+  const isLegacy = !!Meteor.isLegacy;
+  Meteor.isLegacy = isLegacy;
+  const arch = Meteor.arch;
   const isRun = !!Meteor.isRun;
   const isBuild = !!Meteor.isBuild;
   const isReactEnabled = !!Meteor.isReactEnabled;
@@ -312,7 +320,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   // reassigned after load once mode is fully resolved.
   let cacheStrategy = createCacheStrategy(
     initialMode,
-    (Meteor.isClient && "client") || "server",
+    arch || (Meteor.isClient && "client") || "server",
     { projectConfigPath, configPath, buildContext }
   );
   let swcConfigRule = createSwcConfig({
@@ -321,8 +329,9 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     isJsxEnabled,
     isTsxEnabled,
     externalHelpers: enableSwcExternalHelpers,
-    isDevEnvironment: isRun && initialIsDev && !isTest && !isNative,
+    isDevEnvironment: isRun && initialIsDev && !isTest && !isNative && !arch,
     isClient,
+    isLegacy,
     isAngularEnabled,
   });
   Meteor.swcConfigOptions = swcConfigRule.options;
@@ -355,7 +364,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     return new HtmlRspackPlugin({
       inject: false,
       cache: true,
-      filename: `../${buildContext}/${outputDir}/index.html`,
+      filename: path.relative(clientOutputDir,
+        path.resolve(projectDir, buildContext, outputDir, 'index.html')).replaceAll(path.sep, '/'),
       templateContent: `
           <head>
             <% for tag in htmlRspackPlugin.tags.headTags { %>
@@ -401,7 +411,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
 
   cacheStrategy = createCacheStrategy(
     mode,
-    (Meteor.isClient && "client") || "server",
+    arch || (Meteor.isClient && "client") || "server",
     // buildContext must be passed here too: this reassignment is the
     // effective cache strategy, and omitting it made the cache directory
     // collide across build contexts (e.g. custom METEOR_LOCAL_DIR setups).
@@ -418,7 +428,6 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   );
 
   // Determine output directories
-  const clientOutputDir = path.resolve(projectDir, "public");
   const serverOutputDir = path.resolve(projectDir, "private");
 
 
@@ -446,7 +455,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     console.log("[i] Meteor flags:", Meteor);
   }
 
-  const isDevEnvironment = isRun && isDev && !isTest && !isNative;
+  const isDevEnvironment = isRun && isDev && !isTest && !isNative && !arch;
   swcConfigRule = createSwcConfig({
     isTypescriptEnabled,
     isReactEnabled,
@@ -455,6 +464,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     externalHelpers: enableSwcExternalHelpers,
     isDevEnvironment,
     isClient,
+    isLegacy,
     isAngularEnabled,
   });
   Meteor.swcConfigOptions = swcConfigRule.options;
@@ -492,7 +502,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     ...(Meteor.isBlazeEnabled && {
       externals: /\.html$/,
       isEagerImport: (module) => module.endsWith(".html"),
-      ...((isProd || (isTest && isClient)) && {
+      ...((isProd || arch || (isTest && isClient)) && {
         lastImports: [`./${outputFilename}`],
       }),
     }),
@@ -505,7 +515,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     const filename = _fileInfo.filename;
     const isPublic = filename.startsWith("/") || filename.startsWith("public");
     if (isPublic) return `[name][ext][query]`;
-    return `${assetsContext}/[hash][ext][query]`;
+    return `${isClient ? clientAssetContext : assetsContext}/[hash][ext][query]`;
   };
 
   const rsdoctorModule = isBundleVisualizerEnabled
@@ -537,6 +547,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     : { stats: "errors-warnings", infrastructureLogging: { level: "warn" } };
 
   const clientEntry =
+    arch && !(isTest && isTestEager) ? path.resolve(projectDir, buildContext, entryPath) :
     isClient && isTest && isTestEager && isTestFullApp
       ? generateEagerTestFile({
           isAppTest: true,
@@ -544,7 +555,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
           buildContext,
           ignoreEntries: ["**/server/**"],
           meteorIgnoreEntries,
-          prefix: "client",
+          prefix: arch || "client",
           extraEntry: path.resolve(process.cwd(), Meteor.mainClientEntry),
           globalImportPath: path.resolve(projectDir, buildContext, entryPath),
         })
@@ -556,13 +567,13 @@ module.exports = async function (inMeteor = {}, argv = {}) {
           buildContext,
           ignoreEntries: ["**/server/**"],
           meteorIgnoreEntries,
-          prefix: "client",
+          prefix: arch || "client",
           globalImportPath: path.resolve(projectDir, buildContext, entryPath),
         })
       : isClient && isTest && testEntry
       ? path.resolve(process.cwd(), testEntry)
       : path.resolve(process.cwd(), buildContext, entryPath);
-  const clientNameConfig = `[${(isTest && "test-") || ""}client-rspack]`;
+  const clientNameConfig = `[${(isTest && "test-") || ""}${arch || 'client'}-rspack]`;
 
   // Default onListening provided by meteor-rspack. Kept as a named
   // reference so we can detect a user-supplied override after merge
@@ -603,7 +614,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   // Base client config
   let clientConfig = {
     name: clientNameConfig,
-    target: "web",
+    target: isLegacy ? ["web", "es5"] : "web",
     mode,
     entry: clientEntry,
     output: {
@@ -611,27 +622,28 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       filename: (_module) => {
         const chunkName = _module.chunk?.name;
         const isMainChunk = !chunkName || chunkName === "main";
-        const chunkSuffix = `${chunksContext}/[id]${
+        const chunkSuffix = `${clientChunkPrefix}[id]${
           isProd ? ".[chunkhash]" : ""
         }.js`;
         if (isDevEnvironment) {
           if (isMainChunk) return outputFilename;
           return chunkSuffix;
         }
-        if (isMainChunk) return `../${buildContext}/${outputPath}`;
+        if (isMainChunk) return path.relative(clientOutputDir,
+          path.resolve(projectDir, buildContext, outputPath)).replaceAll(path.sep, '/');
         return chunkSuffix;
       },
       library: { type: "commonjs2" },
-      publicPath: "/",
-      chunkFilename: `${chunksContext}/[id]${isProd ? ".[chunkhash]" : ""}.js`,
+      publicPath: clientOutputContext ? `/${clientOutputContext}/` : "/",
+      chunkFilename: `${clientChunkPrefix}[id]${isProd ? ".[chunkhash]" : ""}.js`,
       assetModuleFilename,
-      cssFilename: `${chunksContext}/[name]${
+      cssFilename: `${clientChunkPrefix}[name]${
         isProd ? ".[contenthash]" : ""
       }.css`,
-      cssChunkFilename: `${chunksContext}/[id]${
+      cssChunkFilename: `${clientChunkPrefix}[id]${
         isProd ? ".[contenthash]" : ""
       }.css`,
-      ...(isProd && { clean: { keep: keepOutsideBuild() } }),
+      ...(isProd && { clean: clientOutputContext ? true : { keep: keepOutsideBuild() } }),
     },
     optimization: {
       usedExports: true,
