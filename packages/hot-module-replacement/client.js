@@ -13,8 +13,9 @@ var initialVersions = __meteor_runtime_config__.autoupdate.versions[arch];
 var lastUpdated = initialVersions.versionHmr;
 var hmrSecret = __meteor_runtime_config__._hmrSecret;
 
-// Cordova doesn't need the hmrSecret, though cordova is also unable to tell
-// if Meteor needs to be restarted to enable HMR.
+// Cordova always tries to connect since it is unable to tell if Meteor needs
+// to be restarted to enable HMR. `meteor run` adds the hmrSecret to the
+// Cordova bootstrap page, and hot code push updates it after a restart.
 //
 // HMR is also skipped during `meteor test` and `meteor test --full-app`.
 // The build pipeline already turns HMR off in those runs, so nothing gets

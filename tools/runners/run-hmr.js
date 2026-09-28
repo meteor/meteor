@@ -2,12 +2,51 @@ import WS from 'ws';
 import runLog from './run-log.js';
 import crypto from 'crypto';
 import Anser from "anser";
-import { CordovaBuilder } from '../cordova/builder.js';
+
+// Client messages are small, so there is no need to buffer the ws default of
+// 100 MiB.
+const MAX_MESSAGE_SIZE = 64 * 1024;
+
+// The websocket accepts connections from anything that can reach the proxy,
+// so messages are validated before they are used. Returns null when the
+// message was not sent by the hot-module-replacement client.
+function parseHMRMessage(data) {
+  let message;
+  try {
+    message = JSON.parse(data);
+  } catch (e) {
+    return null;
+  }
+
+  if (!message || typeof message !== 'object') {
+    return null;
+  }
+
+  // Client archs are always web.*. This also rules out names such as
+  // __proto__ that would resolve to inherited properties in lookups by arch.
+  if (typeof message.arch !== 'string' || !message.arch.startsWith('web.')) {
+    return null;
+  }
+
+  switch (message.type) {
+    case 'register':
+      return message;
+
+    case 'request-changes':
+      // after is undefined when the client has no HMR version, for example
+      // with `meteor run --production`
+      if (message.after !== undefined && typeof message.after !== 'number') {
+        return null;
+      }
+      return message;
+
+    default:
+      return null;
+  }
+}
 
 export class HMRServer {
-  constructor({
-    proxy, hmrPath, secret, projectContext, cordovaServerPort
-}) {
+  constructor({ proxy, hmrPath, secret, projectContext }) {
     this.proxy = proxy;
     this.projectContext = projectContext;
 
@@ -24,14 +63,6 @@ export class HMRServer {
     this.cacheKeys = new Map();
     this.trimmedArchUntil = new Map();
     this.firstBuild = null;
-
-    if (!cordovaServerPort) {
-     cordovaServerPort = CordovaBuilder.createCordovaServerPort(
-          projectContext.appIdentifier
-        );
-    }
-
-    this.cordovaOrigin = `http://localhost:${cordovaServerPort}`;
   }
 
   start() {
@@ -41,11 +72,12 @@ export class HMRServer {
 
     this.wsServer = new WS.Server({
       noServer: true,
+      maxPayload: MAX_MESSAGE_SIZE,
     });
     this.proxy.server.on('upgrade', (req, res, head) => {
       if (req.url === this.hmrPath) {
         this.wsServer.handleUpgrade(req, res, head, (conn) => {
-          this._handleWsConn(conn, req);
+          this._handleWsConn(conn);
         });
       }
     });
@@ -58,19 +90,40 @@ export class HMRServer {
     this.connByArch = new Map();
   }
 
-  _handleWsConn(conn, req) {
+  _secretMatches(secret) {
+    if (typeof secret !== 'string') {
+      return false;
+    }
+
+    // Compare byte lengths, since timingSafeEqual throws when they differ
+    const secretBuffer = Buffer.from(secret);
+    return secretBuffer.length === this.secretBuffer.length &&
+      crypto.timingSafeEqual(secretBuffer, this.secretBuffer);
+  }
+
+  _handleWsConn(conn) {
     let registered = false;
     let connArch = null;
-    let fromCordova = this.cordovaOrigin && req.headers.origin === this.cordovaOrigin;
 
-    conn.on('message', (_message) => {
-      const message = JSON.parse(_message);
+    // ws reports invalid frames and oversized messages as an error on the
+    // socket, and then closes it. Without a listener the error would be
+    // thrown and stop the tool.
+    conn.on('error', () => {});
+
+    conn.on('message', (data) => {
+      const message = parseHMRMessage(data);
+
+      if (!message) {
+        conn.close();
+        return;
+      }
 
       switch (message.type) {
         case 'register': {
-          const { arch, appId, secret = '' } = message;
+          const { arch, appId, secret } = message;
+          const isThisApp = appId === this.projectContext.appIdentifier;
 
-          if (appId !== this.projectContext.appIdentifier) {
+          if (!isThisApp) {
             // A different app is trying to request changes
             conn.send(JSON.stringify({
               type: 'register-failed',
@@ -78,14 +131,11 @@ export class HMRServer {
             }));
           }
 
-          let secretsMatch =
-            secret.length === Buffer.byteLength(this.secretBuffer) &&
-            crypto.timingSafeEqual(Buffer.from(secret), this.secretBuffer);
-
-          if (
-            !fromCordova &&
-            !secretsMatch
-          ) {
+          // Every client, Cordova included, must send the secret. Only pages
+          // served during this run have it, while clients other than browsers
+          // can send any Origin header. A different app is also sent
+          // wrong-secret, which stops its client from reconnecting.
+          if (!isThisApp || !this._secretMatches(secret)) {
             conn.send(JSON.stringify({
               type: 'register-failed',
               reason: 'wrong-secret'
@@ -139,9 +189,6 @@ export class HMRServer {
 
           break;
         }
-
-        default:
-          throw new Error(`Unknown HMR message ${message.type}`);
       }
     });
 

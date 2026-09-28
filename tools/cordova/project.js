@@ -251,7 +251,7 @@ outdated platforms`);
 
   // Preparing
 
-  async prepareFromAppBundle(bundlePath, pluginVersions) {
+  async prepareFromAppBundle(bundlePath, pluginVersions, options = {}) {
     assert(bundlePath);
     assert(pluginVersions);
 
@@ -265,7 +265,8 @@ outdated platforms`);
       { mobileServerUrl: this.options.mobileServerUrl,
         cordovaServerPort: this.options.cordovaServerPort,
         settingsFile: this.options.settingsFile,
-        buildMode: this.options.buildMode }
+        buildMode: this.options.buildMode,
+        hmrSecret: options.hmrSecret }
     );
 
     await builder.processControlFile();
