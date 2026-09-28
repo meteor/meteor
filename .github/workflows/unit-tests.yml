@@ -6,6 +6,7 @@ on:
       - 'tools/**'
       - 'scripts/**'
       - 'packages/rspack/**'
+      - 'npm-packages/meteor-rspack/**'
       - 'package.json'
       - '.github/workflows/unit-tests.yml'
   push:

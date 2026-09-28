@@ -34,7 +34,7 @@ is available; those runs do not execute `afterRunBuiltApp` assertions.
 
 | What is covered | Test |
 |-----------------|------|
-| Packed `@meteorjs/rspack` consumer installs its runtime dependencies, applies `npm audit fix`, and reports zero critical production vulnerabilities | `rspack-audit.test.js` |
+| Packed `@meteorjs/rspack` consumer uses the React skeleton dependency graph, applies both `npm audit fix` and `npm audit fix --force`, retains compatible Rspack versions and valid peers, excludes the old elliptic polyfill chain, reports zero critical vulnerabilities, and builds and executes a bundle through the Rspack CLI (#14310) | `rspack-audit.test.js` |
 | Fresh `meteor create --package` output completes both client and server Tinytests with the default browser driver and no browser errors, without adding a separate jQuery dependency (#14735) | `regressions/test-in-browser.test.js` |
 
 ---
@@ -63,6 +63,7 @@ Core React 19 integration with custom Meteor local directory.
 | Custom rspack config (`rspack.config.cjs`) | All |
 | HMR works in dev, disabled in prod | Run, Prod |
 | Rspack devserver port is released after `SIGTERM` (`regressions/port-cleanup.test.js`) | Run |
+| Rapid server edits during slow startup and shutdown preserve the dev server, apply the final edit, allow a later client refresh, and can replace an app that stops answering IPC (`regressions/rapid-server-restarts.test.js`, #14755) | Run |
 | `--port` with a host prefix derives a valid rspack devserver port (`regressions/host-prefixed-port.test.js`) | Run |
 | Client test Node compatibility (`Buffer`, `buffer`, `crypto`, `timers/promises`) | Test |
 | Cordova bundle stays modern when `meteor.modern` is unset (`regressions/cordova-modern-default.test.js`) | Build |
@@ -271,6 +272,20 @@ Meteor app inside a pnpm workspace monorepo, with shared code in `workspace:*` p
 | Built app boots; workspace packages + `color` tree imported in production bundle | Build |
 | HMR works in dev, disabled in prod | Run, Prod |
 
+### workspace
+
+Minimal Meteor app with two external npm workspaces and an internal command tarball;
+Build only, without Rspack. POSIX symlinks; Windows command shims are not covered.
+Covered by `workspace-bin-portability.test.js`.
+
+| What is covered | Phase |
+|----------------|-------|
+| npm installs the command as a real directory and both workspaces as external symlinks | Init |
+| Relative and absolute workspace `.bin` links resolve to the packaged command or copied second workspace after source removal | Build |
+| Commands retain executable mode and read their package-relative JSON resources | Build |
+| Links survive server runtime dependency installation | Build |
+| Built server invokes both workspace commands at request time and returns `portable:cross-portable` to Chromium | Build |
+
 ### server-only
 
 Server-only app (no client entry point).
@@ -433,6 +448,7 @@ Where each feature is tested across apps and skeletons.
 | `Assets`/`Npm` server globals in the dev bundle | server-only regression | |
 | Delayed server Meteor package import | server-only regression | |
 | Monorepo layout | monorepo, pnpm-monorepo | pnpm |
+| Source-independent workspace executable links (POSIX) | workspace | |
 | Workspace-aware Rspack dependency auto-install | monorepo (npm, Yarn Classic) | pnpm |
 | pnpm workspace (`workspace:*` packages, `corepack pnpm install`) | pnpm-monorepo | pnpm |
 | Transitive npm dependency resolution (pnpm store) | pnpm-monorepo | pnpm |

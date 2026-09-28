@@ -23,14 +23,14 @@
   },
   "devDependencies": {
     "@meteorjs/rspack": "^3.0.0-beta.2",
-    "@rspack/cli": "^2.2.0",
-    "@rspack/core": "^2.2.0",
-    "@rspack/dev-server": "^2.2.0",
+    "@rspack/cli": "^2.2.7",
+    "@rspack/core": "^2.2.7",
+    "@rspack/dev-server": "^2.2.1",
     "babel-loader": "10.0.0",
     "babel-preset-solid": "^1.8.15",
     "playwright": "1.59.0",
     "solid-js": "^1.9.4",
     "solid-refresh": "0.7.5",
-    "@swc/core": "^1.15.32"
+    "@swc/core": "^1.16.2"
   }
 }

@@ -601,7 +601,7 @@ export class AccountsServer extends AccountsCommon {
     };
 
     if (result.userId) {
-      attempt.user = this.users.findOneAsync(result.userId, {fields: this._options.defaultFieldSelector});
+      attempt.user = await this.users.findOneAsync(result.userId, {fields: this._options.defaultFieldSelector});
     }
 
     await this._validateLogin(methodInvocation.connection, attempt);
@@ -1833,20 +1833,23 @@ function defaultValidateNewUserHook(user) {
     return true;
   }
 
-  let emailIsGood = false;
-  if (user.emails && user.emails.length > 0) {
-    emailIsGood = user.emails.reduce(
-      (prev, email) => prev || this._testEmailDomain(email.address), false
-    );
-  } else if (user.services && Object.values(user.services).length > 0) {
-    // Find any email of any service and check it
-    emailIsGood = Object.values(user.services).reduce(
-      (prev, service) => service.email && this._testEmailDomain(service.email),
-      false,
-    );
+  const hasValidEmail = (user) => {
+    // Option A: user-provided emails
+    if (user.emails?.length) {
+      return user.emails.some(email => this._testEmailDomain(email.address));
+    }
+
+    // Option B: any connected service email
+    if (user.services) {
+      return Object.values(user.services).some(
+        service => service?.email && this._testEmailDomain(service.email)
+      );
+    }
+
+    return false;
   }
 
-  if (emailIsGood) {
+  if (hasValidEmail(user)) {
     return true;
   }
 
