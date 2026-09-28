@@ -1124,6 +1124,14 @@ When the user visits the link in this email, the callback registered with
 [`Accounts.onEmailVerificationLink`](#Accounts-onEmailVerificationLink) will
 be called.
 
+Verification links expire after 3 days by default. Use the
+`emailVerificationTokenExpirationInDays` option of
+[`Accounts.config`](#AccountsCommon-config) to change this. Changing, resetting
+or setting the user's password (`Accounts.changePassword`, `Accounts.resetPassword`,
+`Accounts.setPasswordAsync`) revokes the user's outstanding verification links,
+because they would otherwise still log the user in. Send a new verification
+email if the address still needs to be verified.
+
 To customize the contents of the email, see
 [`Accounts.emailTemplates`](#Accounts-emailTemplates).
 

@@ -184,6 +184,7 @@ Accounts.config({
   loginExpirationInDays: 90, // session token lifetime (default: 90; set to null to never expire)
   passwordResetTokenExpirationInDays: 3, // password reset link lifetime (default: 3 days)
   passwordEnrollTokenExpirationInDays: 30, // account enrollment link lifetime (default: 30 days)
+  emailVerificationTokenExpirationInDays: 3, // email verification link lifetime (default: 3 days)
 });
 ```
 
