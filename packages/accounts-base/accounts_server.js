@@ -790,8 +790,22 @@ export class AccountsServer extends AccountsCommon {
 
     // Allow a one-time configuration for a login service. Modifications
     // to this collection are also allowed in insecure mode.
-    methods.configureLoginService = async (options) => {
+    methods.configureLoginService = async function (options) {
       check(options, Match.ObjectIncluding({service: String}));
+      // Any client can call this method, so by default only accept client
+      // calls in development. Otherwise a visitor could supply the first
+      // configuration of a service in production before the app owner does.
+      // Calls from server code have no connection and are always allowed.
+      const allowClient = accounts._options.allowClientServiceConfiguration
+        ?? Meteor.isDevelopment;
+      if (this.connection && !allowClient) {
+        throw new Meteor.Error(
+          403,
+          "Configuring login services from the client is disabled. " +
+            "Use ServiceConfiguration on the server instead."
+        );
+      }
+
       // Don't let random users configure a service we haven't added yet (so
       // that when we do later add it, it's set up with their configuration
       // instead of ours).

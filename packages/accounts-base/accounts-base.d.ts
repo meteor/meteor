@@ -82,6 +82,7 @@ export namespace Accounts {
   function config(options: {
     sendVerificationEmail?: boolean | undefined;
     forbidClientAccountCreation?: boolean | undefined;
+    allowClientServiceConfiguration?: boolean | undefined;
     restrictCreationByEmailDomain?: string | Function | undefined;
     loginExpiration?: number | undefined;
     loginExpirationInDays?: number | undefined;

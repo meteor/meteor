@@ -87,6 +87,32 @@ ServiceConfiguration.configurations.upsertAsync(
 );
 ```
 
+### Using the accounts-ui dialog (development only) {#client-configuration}
+
+When a service has no configuration yet, [`accounts-ui`](./accounts-ui.md) together with the matching `*-config-ui` package (for example `github-config-ui`) shows a "Configure ... Login" button. The dialog behind that button saves the credentials with the `configureLoginService` method, and that method accepts only the first configuration for each service.
+
+Any client can call this method, not just the app owner. On a deployed app, a visitor could configure a service before you do: sign-ins would then use the visitor's OAuth credentials, and the dialog could no longer be used to fix it. For this reason, clients can call `configureLoginService` only in development (`Meteor.isDevelopment`). In production, the method rejects client calls with a `403` error, so configure services with `settings.json` or with server code as shown above. Calls made by server code are not affected.
+
+You can change the default with the `allowClientServiceConfiguration` option, either with [`Accounts.config`](../api/accounts.md#AccountsCommon-config) on the server or in `Meteor.settings.packages.accounts`:
+
+- `false` rejects client calls in every environment. Use this if other people can reach your development server.
+- `true` accepts client calls in every environment, including production. Only use this if nobody but you can reach the app until every service is configured, and remove it afterwards.
+
+```js
+import { Accounts } from 'meteor/accounts-base';
+
+// Server code
+Accounts.config({ allowClientServiceConfiguration: false });
+```
+
+If a service already has a configuration you did not create, remove it on the server and configure the service again. `settings.json` and `upsertAsync` with `$set` only update the fields you pass, so they keep any other fields the old document had:
+
+```javascript
+import { ServiceConfiguration } from 'meteor/service-configuration';
+
+await ServiceConfiguration.configurations.removeAsync({ service: 'github' });
+```
+
 ## Facebook
 
 ### Setting up Facebook OAuth

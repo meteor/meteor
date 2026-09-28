@@ -26,6 +26,15 @@ and [`sendEnrollmentEmail`](../api/accounts.md#Accounts-sendEnrollmentEmail). Th
 do not have to be manually placed in HTML: they are automatically activated
 when the URLs are loaded.
 
+## Configuring login services
+
+When an OAuth service has no configuration yet and its `*-config-ui` package
+is installed (for example `github-config-ui`), the login widget shows a
+"Configure ... Login" button that guides you through setting up the service.
+By default this dialog only works in development. In production, configure
+services on the server or in `Meteor.settings`. See
+[Using the accounts-ui dialog](./service-configuration.md#client-configuration).
+
 ## Customizing the UI
 
 If you want to control the look and feel of your accounts system a little more, we recommend reading the [useraccounts](/tutorials/accounts/accounts#useraccounts) section of the Meteor Guide.
