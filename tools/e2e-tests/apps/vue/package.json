@@ -18,9 +18,9 @@
   },
   "devDependencies": {
     "@meteorjs/rspack": "^3.0.0-beta.2",
-    "@rspack/cli": "^2.2.0",
-    "@rspack/core": "^2.2.0",
-    "@rspack/dev-server": "^2.2.0",
+    "@rspack/cli": "^2.2.7",
+    "@rspack/core": "^2.2.7",
+    "@rspack/dev-server": "^2.2.1",
     "@tailwindcss/postcss": "^4.1.12",
     "@types/meteor": "^2.9.7",
     "postcss": "^8.5.6",
@@ -28,7 +28,7 @@
     "playwright": "1.59.0",
     "tailwindcss": "^4.1.12",
     "vue-loader": "^17.4.2",
-    "@swc/core": "^1.15.32"
+    "@swc/core": "^1.16.2"
   },
   "meteor": {
     "modern": true,
