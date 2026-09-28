@@ -1,6 +1,6 @@
 Package.describe({
   name: "fetch",
-  version: '0.2.1-beta360.1',
+  version: '0.2.1-beta360.2',
   summary: "Isomorphic modern/legacy/Node polyfill for WHATWG fetch()",
   documentation: "README.md"
 });
