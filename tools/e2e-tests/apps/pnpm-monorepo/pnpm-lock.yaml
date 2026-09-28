@@ -23,8 +23,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/ui
       '@swc/helpers':
-        specifier: ^0.5.17
-        version: 0.5.21
+        specifier: ^0.5.23
+        version: 0.5.23
       meteor-node-stubs:
         specifier: ^1.2.12
         version: 1.2.27
@@ -41,7 +41,11 @@ importers:
 
   packages/server-tools: {}
 
-  packages/ui: {}
+  packages/ui:
+    dependencies:
+      '@example/shared':
+        specifier: workspace:*
+        version: link:../domain
 
 packages:
 
@@ -49,8 +53,8 @@ packages:
     resolution: {integrity: sha512-JiDShH45zKHWyGe4ZNVRrCjBz8Nh9TMmZG1kh4QTK8hCBTWBi8Da+i7s1fJw7/lYpM4ccepSNfqzZ/QvABBi5g==}
     engines: {node: '>=6.9.0'}
 
-  '@swc/helpers@0.5.21':
-    resolution: {integrity: sha512-jI/VAmtdjB/RnI8GTnokyX7Ug8c+g+ffD6QRLa6XQewtnGyukKkKSk3wLTM3b5cjt1jNh9x0jfVlagdN2gDKQg==}
+  '@swc/helpers@0.5.23':
+    resolution: {integrity: sha512-5lSsMOTXURePglDfvuAQUqkGek9Hg2kksOYay2m0+XR++b2NWYL/4sWyuvVBIs8oKnJaxkdi9whaL/sqN13afw==}
 
   available-typed-arrays@1.0.7:
     resolution: {integrity: sha512-wvUjBtSGN7+7SjNpq/9M2Tg350UZD3q62IFZLbRAR1bSMlCo1ZaeW+BJ+D090e4hIIZLBcTDWe4Mh4jvUDajzQ==}
@@ -237,7 +241,7 @@ snapshots:
 
   '@babel/runtime@7.29.2': {}
 
-  '@swc/helpers@0.5.21':
+  '@swc/helpers@0.5.23':
     dependencies:
       tslib: 2.8.1
 

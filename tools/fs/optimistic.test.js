@@ -95,3 +95,15 @@ test("handles an ignore file deleted after the directory was listed", () => {
   expect(rules.ignores("legacy.js")).toBe(true);
   expect(rules.ignores("root.js")).toBe(true);
 });
+
+
+test("does not reuse a matcher after its environment patterns change", () => {
+  const before = optimisticReadMeteorIgnore(null, "user.js", "root.js");
+  expect(before.ignores("root.js")).toBe(true);
+
+  const after = optimisticReadMeteorIgnore(null, "other.js", "root.js !root.js");
+  expect(after.ignores("root.js")).toBe(false);
+  expect(after.ignores("user.js")).toBe(false);
+  expect(after.ignores("other.js")).toBe(true);
+  expect(before.ignores("root.js")).toBe(true);
+});

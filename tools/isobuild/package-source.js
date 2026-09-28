@@ -1154,6 +1154,7 @@ Object.assign(PackageSource.prototype, {
             sourceArch: this,
             ignoreFiles,
             isApp: true,
+            mainModule,
             testModule,
             nodeModulesToRecompile,
           };
@@ -1365,6 +1366,7 @@ Object.assign(PackageSource.prototype, {
     watchSet,
     isApp,
     sourceArch,
+    mainModule,
     testModule,
     nodeModulesToRecompile = new Set,
     loopChecker = new SymlinkLoopChecker(this.sourceRoot),
@@ -1373,6 +1375,17 @@ Object.assign(PackageSource.prototype, {
     const self = this;
     const arch = sourceArch.arch;
     const isWeb = archinfo.matches(arch, "web");
+    // Integrations can scope source exclusions to their replacement entrypoints
+    // without hiding dependencies of other architecture-specific entrypoints.
+    const entryModule = global.testCommandMetadata?.isTest ? testModule : mainModule;
+    const ignoresByEntrypoint = JSON.parse(process.env.METEOR_IGNORE_BY_ENTRYPOINT || "{}");
+    const entrypointIgnore = isApp && typeof entryModule === "string"
+      ? ignoresByEntrypoint[entryModule] || ""
+      : "";
+    const rootIgnoresByEntrypoint = JSON.parse(process.env.METEOR_IGNORE_ROOT_BY_ENTRYPOINT || "{}");
+    const rootEntrypointIgnore = isApp && typeof entryModule === "string"
+      ? rootIgnoresByEntrypoint[entryModule] || ""
+      : "";
     const sourceReadOptions =
       sourceProcessorSet.appReadDirectoryOptions(arch);
 
@@ -1602,9 +1615,12 @@ Object.assign(PackageSource.prototype, {
           sources.includes(meteorIgnorePath)
             ? files.pathJoin(self.sourceRoot, meteorIgnorePath)
             : null,
-          process.env.METEOR_IGNORE,
-          // Build-tool rules apply only from the app root.
-          isApp && depth === 0 ? process.env.METEOR_IGNORE_ROOT : undefined
+          [process.env.METEOR_IGNORE, entrypointIgnore].filter(Boolean).join(" ") || undefined,
+          // Apply generated rules from the app root and only to their selected
+          // entrypoint. Rebasing them in nested directories can hide _build/test.
+          isApp && depth === 0
+            ? [process.env.METEOR_IGNORE_ROOT, rootEntrypointIgnore].filter(Boolean).join(" ") || undefined
+            : undefined
         );
         if (ignore) {
           dotMeteorIgnoreFiles[dir] = ignore;

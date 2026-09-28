@@ -9,7 +9,7 @@
   "devDependencies": {
     "@swc/core": "^1.15.18",
     "@swc/jest": "^0.2.39",
-    "ignore": "7.0.5",
+    "ignore": "^7.0.5",
     "jest": "^30.2.0",
     "optimism": "0.18.1",
     "semver": "^7.7.2",
