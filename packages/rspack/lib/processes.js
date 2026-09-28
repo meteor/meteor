@@ -70,26 +70,36 @@ import {
   shouldLogVerbose,
   stripRspackLabel,
 } from "./logging";
-import { isMeteorAppProfile } from "../../tools-core/lib/meteor";
+import {
+  getUserMeteorIgnore,
+  isMeteorAppProfile,
+} from "../../tools-core/lib/meteor";
 
 // Rspack's native code prints this marker when it aborts, e.g. when its
 // persistent cache was corrupted by a previous hard kill mid-write.
 const RSPACK_PANIC_PATTERN = 'Panic occurred at runtime';
-const RSPACK_UNSET_ENV = ['METEOR_IGNORE'];
 
 /**
- * Builds the environment passed to Rspack child processes. METEOR_IGNORE is
- * consumed by meteor-tool, not Rspack, so it is omitted here and explicitly
- * removed again by spawnProcess after the parent environment is merged.
+ * Builds the environment passed to Rspack child processes.
+ *
+ * METEOR_IGNORE is overwritten rather than inherited. @meteorjs/rspack reads it
+ * to build the same ignore filters it builds from .meteorignore, so the app
+ * author's patterns must reach the child — but the patterns meteor-tool
+ * appends to the variable for its own bundler must not:
+ * Rspack never reads them, and on large projects their dir-times-extension
+ * expansion grows to tens of kilobytes, wasting execve arg+env budget (risking
+ * E2BIG on constrained systems).
+ *
+ * Setting it here is enough on its own: spawnProcess merges `options.env` over
+ * `process.env`, so this value wins over the one meteor-tool has been growing.
+ *
  * @param {Object} envs - Rspack-specific environment variables
  * @returns {Object} Environment variables for spawnProcess
  */
 function getRspackSpawnEnv(envs) {
-  const parentEnv = { ...process.env };
-  delete parentEnv.METEOR_IGNORE;
-
   return inheritMeteorToolNodeFlags({
-    ...parentEnv,
+    ...process.env,
+    METEOR_IGNORE: getUserMeteorIgnore(),
     ...getNodeBinEnv(),
     ...envs,
   });
@@ -551,7 +561,6 @@ export function startRspackClientServe(options = {}) {
       // SIGTERM/SIGINT on its own.
       detached: process.platform !== 'win32',
       env: getRspackSpawnEnv(envs),
-      unsetEnv: RSPACK_UNSET_ENV,
       onStdout: (data) => {
         const { cleanedData, config } = parseMeteorRspackOutput(data);
         if (config && !!config?.devServerUrl) {
@@ -670,7 +679,6 @@ export function startRspackServerWatch(options = {}) {
     // Detach for the same reason as the client serve process; see comment there.
     detached: process.platform !== 'win32',
     env: getRspackSpawnEnv(envs),
-    unsetEnv: RSPACK_UNSET_ENV,
     onStdout: (data) => {
       const { cleanedData, config } = parseMeteorRspackOutput(data);
       if (onCompile && config && (config?.compilationCount || 0) > 0) {
@@ -777,7 +785,6 @@ export function runRspackBuild({ isClient, isServer, isTest, isTestModule, isTes
       {
       cwd: appDir,
       env: getRspackSpawnEnv(envs),
-      unsetEnv: RSPACK_UNSET_ENV,
       onStdout: (data) => {
         const { cleanedData, config } = parseMeteorRspackOutput(data);
         if (onCompile && config && (config?.compilationCount || 0) > 0) {
