@@ -4,6 +4,7 @@ import {
   cleanupTempDir,
   killMeteorProcess,
   killProcessByPort,
+  resetPlaywrightPage,
   runMeteorCommand,
   wait,
   waitForMeteorOutput,
@@ -43,12 +44,15 @@ WebApp.handlers.use('/ipc-stop-responding', (req, res) => {
 describe('Regressions / Rapid server restarts /', () => {
   let tempDir;
   let meteorProcess;
+  let clientSource;
 
   beforeAll(async () => {
     ({ tempDir } = await setupMeteorRspackApp({ appName: 'react' }));
+    clientSource = await fs.readFile(path.join(tempDir, 'client/main.jsx'), 'utf8');
   }, process.env.CI ? 600000 : 300000);
 
   afterEach(async () => {
+    await resetPlaywrightPage();
     await killMeteorProcess(meteorProcess);
     meteorProcess = null;
     await killProcessByPort([APP_PORT, RSPACK_PORT]);
@@ -60,7 +64,10 @@ describe('Regressions / Rapid server restarts /', () => {
 
   it('keeps the dev server and Rspack client working after rapid server edits', async () => {
     const serverFile = path.join(tempDir, 'server/main.js');
+    const clientFile = path.join(tempDir, 'client/main.jsx');
     const publicFile = path.join(tempDir, 'public/ipc-refresh.txt');
+    // A retry must observe a new client edit, not the previous attempt's marker.
+    await fs.writeFile(clientFile, clientSource);
     await fs.writeFile(serverFile, serverSource(0));
     await fs.outputFile(publicFile, 'initial');
 
@@ -77,6 +84,7 @@ describe('Regressions / Rapid server restarts /', () => {
       meteorProcess,
     });
     await assertMeteorReactApp(APP_PORT, { title: 'react' });
+    await page.waitForFunction(() => Meteor.status().connected);
 
     async function waitForRevision(revision, timeout = 60000) {
       let status;
@@ -115,9 +123,17 @@ describe('Regressions / Rapid server restarts /', () => {
     const final = await waitForRevision(17);
     expect(final.pid).not.toBe(previous.pid);
     await assertMeteorReactApp(APP_PORT, { title: 'react' });
-    await fs.appendFile(path.join(tempDir, 'client/main.jsx'), '\nglobalThis.__ipcRefresh = "after-restarts";\n');
+    expect(await page.evaluate(() => globalThis.__ipcRefresh)).toBeUndefined();
+    await fs.appendFile(clientFile, '\nglobalThis.__ipcRefresh = "after-restarts";\n');
     await page.waitForFunction(() => globalThis.__ipcRefresh === 'after-restarts');
     await assertRspackScriptTag(APP_PORT);
+    await page.waitForFunction(() => Meteor.status().connected);
+
+    // The next phase checks meteor-tool's IPC wait, not DDP fallback while an
+    // app's event loop is deliberately blocked. Unload the client first so
+    // pending SockJS JSONP callbacks cannot race with that artificial freeze.
+    // The live client stayed open for the restart bursts and HMR check above.
+    await page.goto('about:blank');
 
     // A client refresh must not prevent a server edit from replacing an app
     // that is alive but no longer answers IPC messages.
@@ -135,6 +151,7 @@ describe('Regressions / Rapid server restarts /', () => {
     const recovered = await waitForRevision(18, 30000);
     expect(recovered.pid).not.toBe(final.pid);
     await assertMeteorReactApp(APP_PORT, { title: 'react' });
+    await page.waitForFunction(() => Meteor.status().connected);
     expect(meteorProcess.exitCode).toBeNull();
     expect(outputLines.join('\n')).not.toMatch(/Error: write EPIPE|ERR_IPC_CHANNEL_CLOSED/);
   }, 240000);
