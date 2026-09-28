@@ -579,6 +579,12 @@ export class CordovaBuilder {
       runtimeConfig.PUBLIC_SETTINGS = publicSettings;
     }
 
+    // Passed by `meteor run` so the app can register with the HMR server, the
+    // same way webapp gives it to the pages it serves
+    if (this.options.hmrSecret) {
+      runtimeConfig._hmrSecret = this.options.hmrSecret;
+    }
+
     const { Boilerplate } = await loadIsopackage('boilerplate-generator');
 
     const boilerplate = new Boilerplate(CORDOVA_ARCH, manifest, {
