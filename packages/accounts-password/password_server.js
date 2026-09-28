@@ -449,7 +449,12 @@ Meteor.methods(
           $pull: {
             "services.resume.loginTokens": { hashedToken: { $ne: currentToken } }
           },
-          $unset: { "services.password.reset": 1, ...updator.$unset }
+          // Pending email verification links would still log the user in.
+          $unset: {
+            "services.password.reset": 1,
+            "services.email.verificationTokens": 1,
+            ...updator.$unset
+          }
         }
       );
 
@@ -484,6 +489,8 @@ Accounts.setPasswordAsync =
     let updator = await getUpdatorForUserPassword(newPlaintextPassword);
     updator.$unset = updator.$unset || {};
     updator.$unset["services.password.reset"] = 1;
+    // Pending email verification links would still log the user in.
+    updator.$unset["services.email.verificationTokens"] = 1;
 
     if (options.logout) {
       updator.$unset["services.resume.loginTokens"] = 1;
@@ -806,6 +813,8 @@ Meteor.methods(
               // Update the user record by:
               // - Changing the password to the new one
               // - Forgetting about the reset token or enroll token that was just used
+              // - Forgetting about pending email verification tokens, which would
+              //   otherwise still log the user in after the password change
               // - Verifying their email, since they got the password reset via email.
               let affectedRecords = {};
               // if reason is enroll then check services.password.enroll.token field for affected records
@@ -823,6 +832,7 @@ Meteor.methods(
                     },
                     $unset: {
                       "services.password.enroll": 1,
+                      "services.email.verificationTokens": 1,
                       ...updator.$unset
                     }
                   });
@@ -841,6 +851,7 @@ Meteor.methods(
                     },
                     $unset: {
                       "services.password.reset": 1,
+                      "services.email.verificationTokens": 1,
                       ...updator.$unset
                     }
                   });
@@ -942,6 +953,15 @@ Meteor.methods(
               .services.email.verificationTokens.find(t => t.token == token);
 
           if (!tokenRecord)
+            return {
+              userId: user._id,
+              error: new Meteor.Error(403, "Verify email link expired")
+            };
+
+          // A token without a valid issue date is treated as expired.
+          const tokenIssuedAtMs = new Date(tokenRecord.when).getTime();
+          if (Number.isNaN(tokenIssuedAtMs) ||
+            (Date.now() - tokenIssuedAtMs) > Accounts._getEmailVerificationTokenLifetimeMs())
             return {
               userId: user._id,
               error: new Meteor.Error(403, "Verify email link expired")

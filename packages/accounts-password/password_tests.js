@@ -1747,6 +1747,161 @@ if (Meteor.isServer) (() => {
     }
   )
 
+  const DAY_MS = 24 * 3600 * 1000;
+  const setVerificationTokenWhen = async (userId, token, when) =>
+    await Meteor.users.updateAsync(
+      { _id: userId, 'services.email.verificationTokens.token': token },
+      when === undefined
+        ? { $unset: { 'services.email.verificationTokens.$.when': 1 } }
+        : { $set: { 'services.email.verificationTokens.$.when': when } }
+    );
+
+  Tinytest.add(
+    'passwords - verify email token lifetime configuration',
+    test => {
+      const options = Accounts._options;
+      try {
+        Accounts._options = { ...options };
+        delete Accounts._options.emailVerificationTokenExpiration;
+        delete Accounts._options.emailVerificationTokenExpirationInDays;
+        test.equal(Accounts._getEmailVerificationTokenLifetimeMs(), 3 * DAY_MS);
+        Accounts._options.emailVerificationTokenExpirationInDays = 7;
+        test.equal(Accounts._getEmailVerificationTokenLifetimeMs(), 7 * DAY_MS);
+        Accounts._options.emailVerificationTokenExpiration = 3600 * 1000;
+        test.equal(Accounts._getEmailVerificationTokenLifetimeMs(), 3600 * 1000);
+      } finally {
+        Accounts._options = options;
+      }
+    });
+
+  for (const [description, when] of [
+    ['expired', () => new Date(Date.now() - 4 * DAY_MS)],
+    ['missing its issue date', () => undefined],
+  ]) {
+    Tinytest.addAsync(
+      `passwords - verify email should not work when token is ${ description }`,
+      async test => {
+        const email = `${ Random.id() }-intercept@example.com`;
+        const userId =
+          await Accounts.createUser({ email, password: hashPasswordWithSha('password') });
+        const { token } = await Accounts.generateVerificationToken(userId, email);
+        await setVerificationTokenWhen(userId, token, when());
+        const { clientConn } = await makeTestConnAsync(test);
+        try {
+          await test.throwsAsync(
+            async () => await clientConn.callAsync('verifyEmail', token),
+            /Verify email link expired/
+          );
+          const user = await Meteor.users.findOneAsync(userId);
+          test.isFalse(user.emails[0].verified);
+          test.isFalse(user.services.resume?.loginTokens?.length);
+        } finally {
+          clientConn.close();
+          await Meteor.users.removeAsync(userId);
+        }
+      });
+  }
+
+  Tinytest.addAsync(
+    'passwords - verify email token lifetime is configurable',
+    async test => {
+      const email = `${ Random.id() }-intercept@example.com`;
+      const userId =
+        await Accounts.createUser({ email, password: hashPasswordWithSha('password') });
+      const { token } = await Accounts.generateVerificationToken(userId, email);
+      await setVerificationTokenWhen(userId, token, new Date(Date.now() - 4 * DAY_MS));
+      const { clientConn } = await makeTestConnAsync(test);
+      const options = Accounts._options;
+      try {
+        Accounts._options = { ...options, emailVerificationTokenExpirationInDays: 7 };
+        const result = await clientConn.callAsync('verifyEmail', token);
+        test.equal(result.id, userId);
+        const user = await Meteor.users.findOneAsync(userId);
+        test.isTrue(user.emails[0].verified);
+      } finally {
+        Accounts._options = options;
+        clientConn.close();
+        await Meteor.users.removeAsync(userId);
+      }
+    });
+
+  Tinytest.addAsync(
+    'passwords - verify email tokens get cleaned up',
+    async test => {
+      const email = `${ Random.id() }-intercept@example.com`;
+      const userId =
+        await Accounts.createUser({ email, password: hashPasswordWithSha('password') });
+      const { token: oldToken } = await Accounts.generateVerificationToken(userId, email);
+      await setVerificationTokenWhen(userId, oldToken, new Date(Date.now() - 4 * DAY_MS));
+      const { token: newToken } = await Accounts.generateVerificationToken(userId, email);
+
+      await Accounts._expireEmailVerificationTokens(new Date(Date.now() - DAY_MS), userId);
+      const user = await Meteor.users.findOneAsync(userId);
+      test.equal(user.services.email.verificationTokens.map(t => t.token), [newToken]);
+      await Meteor.users.removeAsync(userId);
+    });
+
+  // Changing or resetting the password must revoke outstanding verification
+  // links, like it does for reset links, so they can't log the user in.
+  for (const route of [
+    'changePassword',
+    'setPasswordAsync',
+    'setPasswordAsync without logout',
+    'resetPassword',
+    'enroll',
+  ]) {
+    Tinytest.addAsync(
+      `passwords - verify email should not work after ${ route }`,
+      async test => {
+        const email = `${ Random.id() }-intercept@example.com`;
+        const userId =
+          await Accounts.createUser({ email, password: hashPasswordWithSha('old-password') });
+        const { token } = await Accounts.generateVerificationToken(userId, email);
+        const { clientConn } = await makeTestConnAsync(test);
+        try {
+          if (route === 'changePassword') {
+            await clientConn.callAsync('login', {
+              user: { email },
+              password: hashPasswordWithSha('old-password')
+            });
+            await clientConn.callAsync(
+              'changePassword',
+              hashPasswordWithSha('old-password'),
+              hashPasswordWithSha('new-password')
+            );
+          } else if (route === 'resetPassword' || route === 'enroll') {
+            const { token: resetToken } = await Accounts.generateResetToken(
+              userId,
+              email,
+              route === 'enroll' ? 'enrollAccount' : 'resetPassword'
+            );
+            await clientConn.callAsync(
+              'resetPassword', resetToken, hashPasswordWithSha('new-password'));
+          } else {
+            await Accounts.setPasswordAsync(
+              userId, 'new-password', { logout: route === 'setPasswordAsync' });
+          }
+          const loginTokenCount = async () =>
+            (await Meteor.users.findOneAsync(userId)).services.resume?.loginTokens?.length || 0;
+          const loginTokensBefore = await loginTokenCount();
+
+          await test.throwsAsync(
+            async () => await clientConn.callAsync('verifyEmail', token),
+            /Verify email link expired/
+          );
+          test.equal(await loginTokenCount(), loginTokensBefore);
+
+          // A link issued after the password change still works.
+          const { token: newToken } = await Accounts.generateVerificationToken(userId, email);
+          const result = await clientConn.callAsync('verifyEmail', newToken);
+          test.equal(result.id, userId);
+        } finally {
+          clientConn.close();
+          await Meteor.users.removeAsync(userId);
+        }
+      });
+  }
+
   // We should be able to change the username
   Tinytest.addAsync("passwords - change username & findUserByUsername",
     async test => {

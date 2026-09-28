@@ -1174,6 +1174,41 @@ export class AccountsServer extends AccountsCommon {
     await expirePasswordToken(this, oldestValidDate, tokenFilter, userId);
   }
 
+  // Deletes expired email verification tokens from the database.
+  //
+  // Exported for tests. Also, the arguments are only used by
+  // tests. oldestValidDate is simulate expiring tokens without waiting
+  // for them to actually expire. userId is used by tests to only expire
+  // tokens for the test user.
+  async _expireEmailVerificationTokens(oldestValidDate, userId) {
+    const tokenLifetimeMs = this._getEmailVerificationTokenLifetimeMs();
+
+    // when calling from a test with extra arguments, you must specify both!
+    if ((oldestValidDate && !userId) || (!oldestValidDate && userId)) {
+      throw new Error("Bad test. Must specify both oldestValidDate and userId.");
+    }
+
+    oldestValidDate = oldestValidDate ||
+      (new Date(new Date() - tokenLifetimeMs));
+    const userFilter = userId ? {_id: userId} : {};
+
+    await this.users.updateAsync({ ...userFilter,
+      $or: [
+        { "services.email.verificationTokens.when": { $lt: oldestValidDate } },
+        { "services.email.verificationTokens.when": { $lt: +oldestValidDate } }
+      ]
+    }, {
+      $pull: {
+        "services.email.verificationTokens": {
+          $or: [
+            { when: { $lt: oldestValidDate } },
+            { when: { $lt: +oldestValidDate } }
+          ]
+        }
+      }
+    }, { multi: true });
+  }
+
   // Deletes expired tokens from the database and closes all open connections
   // associated with these tokens.
   //
@@ -1808,6 +1843,7 @@ const setExpireTokensInterval = accounts => {
    await accounts._expireTokens();
    await accounts._expirePasswordResetTokens();
    await accounts._expirePasswordEnrollTokens();
+   await accounts._expireEmailVerificationTokens();
   }, EXPIRE_TOKENS_INTERVAL_MS);
 };
 
@@ -1915,6 +1951,8 @@ const setupUsersCollection = async users => {
   // For expiring password tokens
   await users.createIndexAsync('services.password.reset.when', { sparse: true });
   await users.createIndexAsync('services.password.enroll.when', { sparse: true });
+  // For expiring email verification tokens
+  await users.createIndexAsync('services.email.verificationTokens.when', { sparse: true });
 };
 
 
