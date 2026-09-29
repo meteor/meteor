@@ -543,6 +543,13 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   ];
   const alias = {
     "/": path.resolve(process.cwd()),
+    // Linked dependencies live outside the app's node_modules. Their generated
+    // helper imports must resolve to the runtime installed by the host app.
+    ...(enableSwcExternalHelpers && {
+      "@swc/helpers": path.dirname(
+        require.resolve("@swc/helpers/package.json", { paths: [projectDir] })
+      ),
+    }),
   };
   const fallback = {
     ...(isClient && makeWebNodeBuiltinsAlias()),

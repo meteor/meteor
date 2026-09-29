@@ -32,6 +32,8 @@ the client output as ES5-compatible. Custom target or SWC loader overrides that
 remove that guarantee retain Meteor's legacy transpilation path.
 SWC detects each file's module type so compiling CommonJS dependencies to ES5
 preserves their exports and uses CommonJS helper imports.
+External SWC helpers resolve from the host app, including when compiled
+dependencies live outside it through an npm link or workspace symlink.
 
 ## Usage
 
