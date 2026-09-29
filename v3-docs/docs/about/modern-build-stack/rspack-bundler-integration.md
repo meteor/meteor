@@ -1105,15 +1105,13 @@ This helper provide a shortcut to apply the needed Rspack configuration and safe
 
 Recent `@swc/core` versions unpack their native addon into a separate user cache. On Linux, a container running as root with a host-owned home directory can fail with `Failed to load native binding` and an underlying `ERR_SWC_NATIVE_CACHE`. Clearing Meteor or Rspack's build cache does not change that directory ownership.
 
-Meteor's Rspack launcher falls back to the operating-system account's `.cache` directory when the default native cache has incompatible ownership or permissions and that account directory is suitable. An explicit `SWC_NATIVE_BINDING_CACHE` always takes precedence, including `0` (SWC's temporary mode).
-
-For releases without this fallback, or to choose another location, set a cache path owned by the container user:
+In affected containers, set a native cache path owned by the container user:
 
 ```sh
 SWC_NATIVE_BINDING_CACHE=/tmp/meteor-swc-native meteor
 ```
 
-The same variable applies to `meteor test` and `meteor build`. The path must be on a filesystem that permits loading native code; its ancestors must meet [SWC's cache requirements](https://github.com/swc-project/swc/blob/main/docs/native-addon-carriers.md). A Linux `noexec` mount cannot be used. The launcher fallback applies to Rspack child processes; commands that invoke SWC directly need their own valid cache configuration.
+The same variable applies to `meteor test` and `meteor build`. The path must be on a filesystem that permits loading native code; its ancestors must meet [SWC's cache requirements](https://github.com/swc-project/swc/blob/main/docs/native-addon-carriers.md). A Linux `noexec` mount cannot be used.
 
 ### Service Worker
 
