@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## v2.0.5, 2026-07-28
+
+- Support Cordova iOS 8's fixed `App` project layout in the bridging-header
+  hook.
+- Handle Cordova iOS 8's optional Objective-C imports in the Swift local
+  server.
+
 ## v2.0.0, 2020-10-04
 Use WebViewAssetLoader on Android with newest cordova AndroidX webview usage
 
