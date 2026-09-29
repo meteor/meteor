@@ -995,6 +995,8 @@ This is necessary because the database provider doesn't have certificates instal
 
 Updates your Meteor application while maintaining compatibility.
 
+Before updating to Meteor 3.6 with an existing local database, follow the [MongoDB 7 to 8 preparation steps](/about/install#updating-local-database). Prepare the database while it is still running under the previous release.
+
 **Usage:**
 ```bash
 meteor update
