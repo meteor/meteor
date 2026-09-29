@@ -7,6 +7,7 @@ import { getClientArchitectureEntries } from './architectures';
 
 const fs = require('fs');
 const path = require('path');
+const createIgnore = require('ignore');
 
 const { getCustomConfigFilePath } = require('./processes');
 
@@ -24,7 +25,6 @@ const {
   isMeteorAppNative,
   isMeteorAppTest,
   isMeteorAppTestFullApp,
-  getMeteorToolsRequire,
 } = require('meteor/tools-core/lib/meteor');
 
 const {
@@ -712,8 +712,6 @@ if (module.hot) {
   }
   return '';
 }
-
-const createIgnore = getMeteorToolsRequire('node_modules/ignore');
 
 /**
  * Finds nested HTML files that Meteor would traditionally load eagerly.
