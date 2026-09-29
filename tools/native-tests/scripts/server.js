@@ -32,6 +32,13 @@ function buildServerArgs({ lanIp, port }) {
   ];
 }
 
+function buildServerEnv(environment = process.env) {
+  return {
+    ...environment,
+    METEOR_FORCE_INCLUDE_ARCHS: "web.cordova",
+  };
+}
+
 /**
  * Start `meteor run` for the smoke app on the chosen LAN IP.
  *
@@ -52,6 +59,7 @@ async function startServer({ appDir, lanIp, port = 3000, meteorBin }) {
     buildServerArgs({ lanIp, port }),
     {
       cwd: appDir,
+      env: buildServerEnv(),
       stdio: "inherit",
       reject: false,
       detached: false,
@@ -72,4 +80,9 @@ async function startServer({ appDir, lanIp, port = 3000, meteorBin }) {
   };
 }
 
-module.exports = { buildServerArgs, resolveLanIp, startServer };
+module.exports = {
+  buildServerArgs,
+  buildServerEnv,
+  resolveLanIp,
+  startServer,
+};

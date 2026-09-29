@@ -1,0 +1,4 @@
+# Meteor applications and reusable workspace packages
+packages:
+  - apps/*
+  - packages/*

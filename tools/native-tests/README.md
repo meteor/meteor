@@ -10,9 +10,10 @@ contaminate the dev bundle's `node_modules`.
 
 ## Local usage
 
-Prerequisites: Node 20+, Maestro CLI, Xcode (for iOS), Android SDK + emulator
-(for Android). Cordova Android 15 requires Android API 36 and Build Tools
-36.0.0. Install the latter with `sdkmanager 'build-tools;36.0.0'` if needed.
+Prerequisites: Node 20.17.0+, Maestro CLI, Xcode (for iOS), Android SDK +
+emulator (for Android). Cordova Android 15 requires Android SDK Platform 36
+and Build Tools 36.0.0. Install the latter with
+`sdkmanager 'build-tools;36.0.0'` if needed.
 On a fresh checkout:
 
 ```sh
@@ -55,8 +56,10 @@ changes still requires publishing that plugin version and then updating
 
 ## CI
 
-See `.github/workflows/native.yml`. Runs nightly at 06:00 UTC and on PRs labeled
-`mobile`.
+See [native.yml](../../.github/workflows/native.yml). It runs nightly at 06:00 UTC
+and when the `mobile` label is added to a PR. Subsequent pushes to an already
+labeled PR do not automatically rerun this workflow; check the tested commit
+before treating a previous run as evidence for new changes.
 
 ## Troubleshooting
 

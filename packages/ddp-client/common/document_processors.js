@@ -20,7 +20,15 @@ export class DocumentProcessors {
 
     if (serverDoc) {
       // Some outstanding stub wrote here.
-      const isExisting = serverDoc.document !== undefined;
+      // Non-merging publications can add an existing document again. Keep
+      // server changes in the snapshot until outstanding stub writes settle.
+      if (serverDoc.document !== undefined && !self._resetStores) {
+        DiffSequence.applyChanges(
+          serverDoc.document,
+          msg.fields || Object.create(null),
+        );
+        return;
+      }
 
       serverDoc.document = msg.fields || Object.create(null);
       serverDoc.document._id = id;
@@ -34,8 +42,6 @@ export class DocumentProcessors {
         if (currentDoc !== undefined) msg.fields = currentDoc;
 
         self._pushUpdate(updates, msg.collection, msg);
-      } else if (isExisting) {
-        throw new Error('Server sent add for existing id: ' + msg.id);
       }
     } else {
       self._pushUpdate(updates, msg.collection, msg);

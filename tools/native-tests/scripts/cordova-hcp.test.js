@@ -153,3 +153,35 @@ test("times out while Cordova manifest version remains unchanged", async () => {
     /__cordova\/manifest\.json.*initial-v1/
   );
 });
+
+test("aborts a stalled Cordova manifest request at the deadline", async () => {
+  let requestSignal;
+  let guardTimer;
+
+  const waitResult = waitForCordovaManifestChange({
+    baseUrl: "http://127.0.0.1:3000",
+    previousVersion: "initial-v1",
+    intervalMs: 0,
+    timeoutMs: 20,
+    fetchImpl: async (_url, options) => {
+      requestSignal = options.signal;
+      return new Promise(() => {});
+    },
+  }).then(
+    () => ({ status: "resolved" }),
+    (error) => ({ status: "rejected", error })
+  );
+  const guardResult = new Promise((resolve) => {
+    guardTimer = setTimeout(() => resolve({ status: "guard-timeout" }), 250);
+  });
+
+  const result = await Promise.race([waitResult, guardResult]);
+  clearTimeout(guardTimer);
+
+  assert.equal(result.status, "rejected");
+  assert.match(
+    result.error.message,
+    /Timed out waiting for Cordova manifest .*: request timed out/
+  );
+  assert.equal(requestSignal.aborted, true);
+});

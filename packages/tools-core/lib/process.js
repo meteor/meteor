@@ -3,6 +3,26 @@ const net = require('net');
 const { logError } = require('./log');
 
 /**
+ * Determines whether a spawned command should run through a shell.
+ *
+ * On Windows, batch launchers such as .cmd and .bat require a shell, while
+ * direct executables should avoid shell parsing so argument boundaries are
+ * preserved.
+ *
+ * @param {string} command - The command to evaluate
+ * @param {Object} [options] - Spawn options
+ * @param {boolean} [options.shell] - Explicit shell override
+ * @returns {boolean} True if the command should run through a shell
+ */
+export function shouldUseShell(command, options = {}) {
+  if (typeof options.shell === 'boolean') {
+    return options.shell;
+  }
+
+  return process.platform === 'win32' && /\.(cmd|bat)$/i.test(command);
+}
+
+/**
  * Spawns a new OS process with the given command and arguments.
  * Streams output with original styling and handles errors and exit events.
  * Always preserves raw output formatting (colors, progress bars, etc.) and
@@ -12,6 +32,7 @@ const { logError } = require('./log');
  * @param {string[]} args - Arguments to pass to the command
  * @param {Object} options - Options for the spawned process
  * @param {Object} [options.env] - Environment variables to merge with process.env
+ * @param {string[]} [options.unsetEnv] - Environment variables to remove after merging
  * @param {string} [options.cwd] - Current working directory
  * @param {boolean} [options.detached] - Whether to run the process detached from the parent
  * @param {Function} [options.onStdout] - Callback for stdout data (receives decoded string)
@@ -21,13 +42,30 @@ const { logError } = require('./log');
  * @returns {Object} The spawned process with additional utility methods
  */
 export function spawnProcess(command, args, options = {}) {
+  const childEnv = {
+    ...process.env,
+    ...options.env,
+    FORCE_COLOR: '1',
+    TERM: 'xterm-256color',
+  };
+
+  for (const name of options.unsetEnv || []) {
+    delete childEnv[name];
+  }
+
   const proc = spawn(command, args, {
-    env: { ...process.env, ...(options.env || {}), FORCE_COLOR: '1', TERM: 'xterm-256color' },
+    env: childEnv,
     cwd: options.cwd || process.cwd(),
     stdio: ['pipe', 'pipe', 'pipe'],
     detached: options.detached || false,
-    ...(process.platform === 'win32' && { shell: true }),
+    shell: shouldUseShell(command, options),
   });
+
+  // Track detached spawns so stopProcess can signal the whole process group.
+  // POSIX-only: kernels deliver `proc.kill(signal)` to the immediate child PID,
+  // but wrappers like npx don't reliably forward that signal to the real binary
+  // they exec'd, leaving the grandchild (e.g. rspack devserver) holding ports.
+  proc.meteorDetached = options.detached === true;
 
   // Add a reference to track if the process is running
   proc.isRunning = true;
@@ -89,7 +127,7 @@ export function stopProcess(proc, options = {}) {
     // Set a timeout to force kill if the process doesn't exit gracefully
     const forceKillTimeout = setTimeout(() => {
       if (isProcessRunning(proc)) {
-        proc.kill('SIGKILL');
+        sendSignal(proc, 'SIGKILL');
       }
     }, timeout);
 
@@ -101,8 +139,34 @@ export function stopProcess(proc, options = {}) {
     });
 
     // Send the signal to terminate the process
-    proc.kill(signal);
+    sendSignal(proc, signal);
   });
+}
+
+/**
+ * Sends a signal to a child process. For detached children on POSIX, signals
+ * the whole process group (negative PID) so wrappers like npx propagate the
+ * signal to the real binary they spawned. Falls back to a direct PID signal
+ * if the group signal fails or on Windows.
+ *
+ * @param {Object} proc - The child process to signal
+ * @param {string} signal - The signal name (e.g. 'SIGTERM', 'SIGKILL')
+ * @returns {void}
+ */
+export function sendSignal(proc, signal) {
+  if (proc.meteorDetached && process.platform !== 'win32') {
+    try {
+      process.kill(-proc.pid, signal);
+      return;
+    } catch (e) {
+      // ESRCH means group is already gone; otherwise fall through to direct kill.
+    }
+  }
+  try {
+    proc.kill(signal);
+  } catch (e) {
+    // Best-effort: child may have already exited.
+  }
 }
 
 /**
