@@ -6,6 +6,7 @@
 import fs from "fs";
 import path from "path";
 import { getClientArchitectureEntries } from './architectures';
+import { withSwcNativeCache } from './swc-cache';
 
 const {
   spawnProcess,
@@ -109,12 +110,12 @@ function getRspackSpawnEnv(envs) {
   const parentEnv = { ...process.env };
   for (const name of RSPACK_UNSET_ENV) delete parentEnv[name];
 
-  return inheritMeteorToolNodeFlags({
+  return inheritMeteorToolNodeFlags(withSwcNativeCache({
     ...parentEnv,
     METEOR_IGNORE: getUserMeteorIgnore(),
     ...getNodeBinEnv(),
     ...envs,
-  });
+  }));
 }
 
 /**
