@@ -66,6 +66,10 @@ jobs:
     name: ${{ matrix.category }}
     runs-on: oss-vm
     timeout-minutes: 60
+    env:
+      # Container steps run as root while /github/home is owned by the host
+      # runner. SWC rejects that directory as an untrusted native cache parent.
+      SWC_NATIVE_BINDING_CACHE: /root/.cache/swc
     container:
       image: node:22-bookworm
       # --init runs tini as PID 1 so orphaned processes get reaped. Without it
