@@ -2,8 +2,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const devBundleModules = path.join(__dirname, "../dev_bundle/lib/node_modules");
-const acorn = require(path.join(devBundleModules, "acorn"));
+const acorn = require("acorn");
 
 const statsSource = fs
   .readFileSync(path.join(__dirname, "../packages/standard-minifier-js/plugin/stats.js"), "utf8")
