@@ -1,6 +1,10 @@
 # rspack
 
-The rspack package hooks into the Meteor lifecycle to run the rspack bundler independently, compiling app code while preserving Meteor packages as external. It automatically integrates the Rspack dev server and HMR mechanism, coordinates recursively discovered HTML and stylesheet files with Meteor's compilers, and manages client and server bundles for development and production. Server packages containing native addons are kept external to Rspack so Meteor can include and load them through its npm dependency handling. Applications can override false-positive native detection with `Meteor.compileWithRspack` or configure it through `Meteor.configureNativeAddonExternalization`. The package also enables user-provided Rspack configuration.
+Build Meteor apps with Rspack, with hot module replacement in development and optimized client and server bundles for production. Supports Meteor packages, custom configuration, and architecture-specific builds.
+
+The integration preserves nested HTML and stylesheets for Meteor's compilers and keeps native addon dependencies external to Rspack. Use `Meteor.compileWithRspack` or `Meteor.configureNativeAddonExternalization` to override native addon detection.
+
+## Legacy and architecture-specific entry points
 
 Starting with Meteor 3.6, explicit `meteor.mainModule` entries for `modern`, `legacy` (or `web.browser.legacy`), `web.browser`, and `web.cordova` are compiled separately through the same Rspack configuration. Aliases, loaders, and plugins apply to those entries too. Legacy compilation defaults to ES5 for both application transforms and the Rspack runtime, including Cordova when `modern.cordova` is `false`. `Meteor.arch` and `Meteor.isLegacy` are available in the Rspack configuration callback for architecture-specific adjustments. Explicit `false` disables that entry, while omitted entries retain the existing client fallback.
 

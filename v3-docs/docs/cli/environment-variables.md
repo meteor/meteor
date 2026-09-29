@@ -142,6 +142,14 @@ METEOR_IGNORE="tests" meteor run
 METEOR_IGNORE="public" meteor test --driver-package meteor/meteortesting:mocha
 ```
 
+When selecting tests with Rspack, the last matching pattern wins. A pattern starting with `!` can include files excluded by an earlier pattern. For example, to exclude `*.tests.*` files except those directly inside `imports/accounts`:
+
+```bash
+METEOR_IGNORE="**/*.tests.* !imports/accounts/*.tests.*" meteor test --driver-package meteor/meteortesting:mocha
+```
+
+Keep parent directories included: an exception for a file cannot restore an excluded parent directory. Environment patterns are applied after the patterns in `.meteorignore`.
+
 You can also exclude heavy `node_modules` sub-dependencies that are only relevant to one workflow. For example, ignore test-only packages when running the app, or ignore app-only packages when running tests:
 
 ```bash
@@ -155,7 +163,7 @@ METEOR_IGNORE="node_modules/pdfkit node_modules/sharp" meteor test --driver-pack
 This way each command only processes the files it actually needs, reducing build times on both workflows without requiring changes to your project's `.meteorignore` file.
 
 ::: info
-`METEOR_IGNORE` is automatically set when using the [Rspack bundler integration](../about/modern-build-stack/rspack-bundler-integration.md). Since Rspack handles the client and server app bundling, Meteor's bundler should only worry about what it strictly needs for the Meteor-Rspack integration. By using `METEOR_IGNORE` to exclude folders and dependencies that Rspack already manages or that are irrelevant to Meteor's side of the build, you ensure the most speed is gained from the Rspack delegation.
+The [Rspack integration](../about/modern-build-stack/rspack-bundler-integration.md) automatically excludes the app paths it bundles from Meteor's own bundling work. These automatic exclusions are separate from your `METEOR_IGNORE` settings. Your patterns and `.meteorignore` rules remain respected, including exceptions used to select tests.
 :::
 
 ## METEOR_LOCAL_DIR
