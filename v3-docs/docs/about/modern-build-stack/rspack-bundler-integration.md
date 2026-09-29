@@ -1052,6 +1052,18 @@ module.exports = defineConfig(Meteor => ({
 
 This helper provide a shortcut to apply the needed Rspack configuration and safely override defaults, so you don’t have to handle it manually.
 
+#### Native SWC cache in containers
+
+Recent `@swc/core` versions unpack their native addon into a separate user cache. On Linux, a container running as root with a host-owned home directory can fail with `Failed to load native binding` and an underlying `ERR_SWC_NATIVE_CACHE`. Clearing Meteor or Rspack's build cache does not change that directory ownership.
+
+In affected containers, set a native cache path owned by the container user:
+
+```sh
+SWC_NATIVE_BINDING_CACHE=/tmp/meteor-swc-native meteor
+```
+
+The same variable applies to `meteor test` and `meteor build`. The path must be on a filesystem that permits loading native code; its ancestors must meet [SWC's cache requirements](https://github.com/swc-project/swc/blob/main/docs/native-addon-carriers.md). A Linux `noexec` mount cannot be used.
+
 ### Service Worker
 
 ::: info
