@@ -31,17 +31,30 @@ const CONSTANTS_PATH = path.join(REPO_ROOT, 'packages', 'rspack', 'lib', 'consta
  * cache warnings omit Error.cause; an uncaught setup error preserves the actual
  * missing module or dynamic-library error before repeated startup timeouts.
  */
-async function verifySwcNativeBinding(cwd, execOpts) {
+async function verifySwcNativeBinding(cwd, execOpts, { optional = false } = {}) {
+  let swcPath;
+
+  try {
+    swcPath = require.resolve('@swc/core', { paths: [cwd] });
+  } catch (error) {
+    // Apps without a standalone SWC loader can use only the adapter's parser.
+    if (optional && error.code === 'MODULE_NOT_FOUND') {
+      return;
+    }
+
+    throw error;
+  }
+
   console.log(`Checking SWC native parser in ${cwd}...`);
 
   await execa(METEOR_NODE_EXECUTABLE, ['--eval', `
-    const swcPath = require.resolve('@swc/core');
+    const swcPath = process.argv[1];
     console.log('[SWC native parser]', process.version, process.platform, process.arch, swcPath);
 
     const swc = require(swcPath);
     swc.parseSync('const verified = true;');
     console.log('[SWC native parser]', swc.version, swc.getBinaryMetadata?.());
-  `], { cwd, stdio: 'inherit', ...execOpts });
+  `, swcPath], { cwd, stdio: 'inherit', ...execOpts });
 }
 
 async function linkLocalRspack(appDir, { env } = {}) {
@@ -93,7 +106,7 @@ async function linkLocalRspack(appDir, { env } = {}) {
   await execa('npm', ['link', RSPACK_PACKAGE_DIR], { cwd: appDir });
 
   await verifySwcNativeBinding(RSPACK_PACKAGE_DIR, execOpts);
-  await verifySwcNativeBinding(appDir, execOpts);
+  await verifySwcNativeBinding(appDir, execOpts, { optional: true });
 
   console.log('Local meteor-rspack linked successfully.');
 }
