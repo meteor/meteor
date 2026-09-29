@@ -89,6 +89,8 @@ loader. The shared client output carries a trailing compatibility marker, so
 `babel-compiler` can use the emitted file and source map for the legacy target
 without a second whole-file SWC pass. Custom configurations that override the
 target or loader do not receive the marker and keep the older legacy path.
+SWC infers each file's module type (`isModule: "unknown"`) so external helper
+imports preserve CommonJS dependency exports during ES5 compilation.
 
 When debugging an integration issue, it is usually one of: a missing externals binding, a stale build context directory, an entrypoint env var that did not reach the bundler, or a config helper that returned a fragment Rspack does not merge correctly. The places to start are `packages/rspack/lib/build-context.js` (directory state), `packages/rspack/lib/processes.js` (process and port wiring), `npm-packages/meteor-rspack/rspack.config.js` (defaults), and `npm-packages/meteor-rspack/lib/meteorRspackConfigFactory.js` (helpers).
 

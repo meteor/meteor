@@ -131,6 +131,10 @@ function createSwcConfig({
   legacyCompatibleClient,
 }) {
   const defaultConfig = {
+    // ES5 compilation also covers CommonJS dependencies. Infer each file's
+    // module type so external helpers use require instead of turning it into
+    // an ES module with incompatible exports.
+    isModule: 'unknown',
     jsc: {
       parser: {
         syntax: isTypescriptEnabled ? 'typescript' : 'ecmascript',

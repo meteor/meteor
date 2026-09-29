@@ -30,6 +30,8 @@ By doing this, your Meteor app will automatically serve `@meteorjs/rspack` and t
 Meteor skips its whole-file legacy transpilation only when this adapter marks
 the client output as ES5-compatible. Custom target or SWC loader overrides that
 remove that guarantee retain Meteor's legacy transpilation path.
+SWC detects each file's module type so compiling CommonJS dependencies to ES5
+preserves their exports and uses CommonJS helper imports.
 
 ## Usage
 
