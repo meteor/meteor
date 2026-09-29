@@ -8,7 +8,7 @@ const compilerSource = fs.readFileSync(
   "utf8",
 );
 
-function compileRspackOutput(rspackHelpers) {
+function compileRspackOutput(rspackHelpers, { arch = "web.browser", source = "already compiled" } = {}) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "meteor-rspack-map-"));
   const outputPath = path.join(directory, "app-rspack.js");
   const sourceMap = { version: 3, sources: ["app.js"], mappings: "AAAA" };
@@ -42,11 +42,11 @@ function compileRspackOutput(rspackHelpers) {
       getPathInPackage: () => outputPath,
       getFileOptions: () => ({ transpile: false }),
       getSourceHash: () => "source-hash",
-      getArch: () => "web.browser",
+      getArch: () => arch,
     };
 
     return {
-      result: compiler.processOneFileForTarget(inputFile, "already compiled"),
+      result: compiler.processOneFileForTarget(inputFile, source),
       sourceMap,
       error,
       mapPath: `${outputPath}.map`,
@@ -62,6 +62,31 @@ test("Rspack output uses JSON source maps with older Meteor tools", () => {
   expect(result.data).toBe("already compiled");
   expect(result.sourceMap).toEqual(sourceMap);
   expect(error).not.toHaveBeenCalled();
+});
+
+test("legacy target accepts Rspack output marked as compatible", () => {
+  const source = "var answer = 42;\n/* meteor-rspack-legacy-compatible */";
+  const createFileBackedSourceMap = jest.fn(mapPath => ({ path: mapPath }));
+  const { result, mapPath, error } = compileRspackOutput(
+    { createFileBackedSourceMap },
+    { arch: "web.browser.legacy", source },
+  );
+
+  expect(result.data).toBe(source);
+  expect(result.sourceMap).toEqual({ path: mapPath });
+  expect(createFileBackedSourceMap).toHaveBeenCalledWith(mapPath);
+  expect(error).not.toHaveBeenCalled();
+});
+
+test("legacy target does not bypass unmarked Rspack output", () => {
+  const createFileBackedSourceMap = jest.fn();
+  const { result } = compileRspackOutput(
+    { createFileBackedSourceMap },
+    { arch: "web.browser.legacy" },
+  );
+
+  expect(result.sourceMap).toBeNull();
+  expect(createFileBackedSourceMap).not.toHaveBeenCalled();
 });
 
 test("Rspack output uses file-backed source maps when the helper exists", () => {

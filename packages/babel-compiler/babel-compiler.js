@@ -55,6 +55,9 @@ BabelCompiler = function BabelCompiler(extraFeatures, modifyConfig) {
 var BCp = BabelCompiler.prototype;
 var excludedFileExtensionPattern = /\.(es5|min)\.js$/i;
 var hasOwn = Object.prototype.hasOwnProperty;
+// The adapter appends this marker only when its client bundle targets ES5.
+// Older Rspack adapters still need Meteor's legacy transpilation path.
+var rspackLegacyCompatibleMarker = '\n/* meteor-rspack-legacy-compatible */';
 
 function getMeteorConfig() {
   return Plugin?.getMeteorConfig() || {};
@@ -265,9 +268,10 @@ BCp.processOneFileForTarget = function (inputFile, source) {
   const isLegacyWebArch = arch.includes('legacy');
 
   // Check if the file is a Rspack output file
-  // If it is, bypass SWC/Babel and just read the file and its map file
-  // as the contents are already transpiled by Rspack.
-  if (Plugin?.rspackHelpers?.isRspackOutputFile(inputFilePath) && !isLegacyWebArch) {
+  // Bypass whole-file transpilation when Rspack produced the target syntax.
+  // Legacy requires an explicit marker from an ES5-capable adapter.
+  if (Plugin?.rspackHelpers?.isRspackOutputFile(inputFilePath) &&
+      (!isLegacyWebArch || source.endsWith(rspackLegacyCompatibleMarker))) {
     try {
       // Get the full path to the file
       const fullPath = inputFile.getPathInPackage();
