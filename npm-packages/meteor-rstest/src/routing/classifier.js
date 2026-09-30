@@ -45,7 +45,11 @@ async function classifyRstestCandidates({
   client = true,
 }) {
   const files = [...new Set(candidates.map(file => path.resolve(file)))].sort();
-  const graph = await analyzeTestEntries({ root: appRoot, entries: files });
+  const graph = await analyzeTestEntries({
+    root: appRoot,
+    entries: files,
+    externalRequests: ['@rstest/core', '@rstest/browser', '@rstest/playwright'],
+  });
   const requestsByFile = new Map(graph.map(item => [item.file, item.requests]));
   const manifest = {
     schemaVersion: 1,

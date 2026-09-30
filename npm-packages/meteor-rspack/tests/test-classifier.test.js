@@ -18,18 +18,18 @@ function write(root, filename, source) {
 test('Rspack classifies direct and transitive test dependencies per entry', async t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rspack-classifier-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-  write(root, 'node_modules/@rstest/core/package.json', JSON.stringify({
-    name: '@rstest/core',
+  write(root, 'node_modules/@test-engine/api/package.json', JSON.stringify({
+    name: '@test-engine/api',
     version: '0.0.0-test',
     main: 'index.js',
   }));
-  write(root, 'node_modules/@rstest/core/index.js', `
+  write(root, 'node_modules/@test-engine/api/index.js', `
     export const test = () => {};
     export const optional = () => import('missing-optional-tooling');
   `);
-  write(root, 'support/test-api.js', "export { test } from '@rstest/core';");
+  write(root, 'support/test-api.js', "export { test } from '@test-engine/api';");
   write(root, 'domain/items.js', "import 'meteor/mongo'; export const value = 42;");
-  const native = write(root, 'native.test.js', "import { test } from '@rstest/core'; test('native', () => {});");
+  const native = write(root, 'native.test.js', "import { test } from '@test-engine/api'; test('native', () => {});");
   const wrapped = write(root, 'wrapped.test.js', "import { test } from './support/test-api.js'; test('wrapped', () => {});");
   const runtime = write(root, 'runtime.test.js', "import { value } from './domain/items.js'; export { value };");
   const dynamic = write(root, 'dynamic.test.js', "export const load = () => import('meteor/tracker');");
@@ -43,6 +43,7 @@ test('Rspack classifies direct and transitive test dependencies per entry', asyn
 
   const result = await analyzeTestEntries({
     root,
+    externalRequests: ['@test-engine/api'],
     entries: [
       native, wrapped, runtime, dynamic, commonjs, typeOnly, unresolvedLegacy,
     ],
@@ -50,8 +51,9 @@ test('Rspack classifies direct and transitive test dependencies per entry', asyn
   const byFile = new Map(result.map(item => [item.file, item.requests]));
   const requests = file => byFile.get(file).map(item => item.request);
 
-  assert.ok(requests(native).includes('@rstest/core'));
-  assert.ok(requests(wrapped).includes('@rstest/core'));
+  assert.ok(requests(native).includes('@test-engine/api'));
+  assert.equal(requests(native).includes('missing-optional-tooling'), false);
+  assert.ok(requests(wrapped).includes('@test-engine/api'));
   assert.ok(requests(runtime).includes('meteor/mongo'));
   assert.ok(requests(dynamic).includes('meteor/tracker'));
   assert.ok(requests(commonjs).includes('meteor/random'));

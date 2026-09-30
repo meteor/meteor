@@ -74,7 +74,9 @@ function runCompiler(compiler) {
   });
 }
 
-async function analyzeTestEntries({ root, entries, target = 'node' }) {
+async function analyzeTestEntries({
+  root, entries, target = 'node', externalRequests = [],
+}) {
   const resolvedRoot = path.resolve(root);
   const files = [...new Set(entries.map(file => path.resolve(file)))].sort();
   if (files.length === 0) return [];
@@ -97,7 +99,8 @@ async function analyzeTestEntries({ root, entries, target = 'node' }) {
   };
   config.externals = [({ context, request }, callback) => {
     if (/^meteor\//.test(request || '') ||
-        /^@rstest\/(?:core|browser|playwright)(?:\/|$)/.test(request || '')) {
+        externalRequests.some(name => request === name ||
+          request?.startsWith(`${name}/`))) {
       callback(null, `commonjs ${request}`);
       return;
     }
