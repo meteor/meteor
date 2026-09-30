@@ -582,6 +582,36 @@ Tinytest.addAsync('accounts - storage', async function (test) {
   }
 });
 
+Tinytest.addAsync('accounts - AccountsClient constructor honors clientStorage', async function (test) {
+  const { conn, cleanup } = await captureConnectionMessagesClient(test);
+
+  const localAccounts = new AccountsClient({
+    connection: conn,
+    collection: 'constructor-storage-local-users',
+    clientStorage: 'local',
+  });
+  const sessionAccounts = new AccountsClient({
+    connection: conn,
+    collection: 'constructor-storage-session-users',
+    clientStorage: 'session',
+  });
+  const memoryAccounts = new AccountsClient({
+    connection: conn,
+    collection: 'constructor-storage-memory-users',
+    clientStorage: 'none',
+  });
+
+  test.equal(localAccounts.storageLocation, Meteor._localStorage);
+  test.equal(sessionAccounts.storageLocation, window.sessionStorage);
+  test.notEqual(memoryAccounts.storageLocation, Meteor._localStorage);
+  test.notEqual(memoryAccounts.storageLocation, window.sessionStorage);
+
+  memoryAccounts.storageLocation.setItem('constructor-option', 'works');
+  test.equal(memoryAccounts.storageLocation.getItem('constructor-option'), 'works');
+
+  cleanup();
+});
+
 Tinytest.addAsync('accounts - should only start subscription when connected', async function (test) {
   const { conn, messages, cleanup } = await captureConnectionMessagesClient(test);
 

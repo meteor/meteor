@@ -207,10 +207,10 @@ clean, or overwrite one another's artifacts.
 
 ### Key Dependencies
 
-- `@rspack/core` ^1.7.1
-- `@meteorjs/rspack` ^2.2.0 (configuration logic)
-- `@rspack/plugin-react-refresh` ^1.4.3
-- `swc-loader` ^0.2.6
+- `@rspack/core` ^2.2.7
+- `@meteorjs/rspack` ^3.0.0-beta.3 (configuration logic)
+- `@rspack/plugin-react-refresh` ^2.0.2
+- `swc-loader` ^0.2.7
 
 ### Integration with tools-core
 
