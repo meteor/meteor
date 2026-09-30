@@ -1,11 +1,3 @@
-// Unit tests for how `meteor deploy` handles the settings file and the deploy
-// token (MET-010): which requests carry them, and that the tool never prints
-// them.
-//
-// The real deploy.js and http-helpers.js run against an in-memory transport
-// (the `request` npm module is mocked), so these tests never touch the
-// network.
-
 const mockSettings = JSON.stringify({
   privateApiKey: 'synthetic-private-setting',
   public: { harmless: true },
@@ -67,8 +59,7 @@ let deploy;
 let Console;
 let wire;
 
-// `respond(request)` returns { statusCode, body } for Galaxy RPCs. Galaxy
-// discovery is answered with a 404, so the default deploy server is used.
+// Discovery returns 404 so RPCs use the default deploy server.
 function load(respond) {
   jest.resetModules();
   wire = [];
