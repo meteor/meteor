@@ -843,12 +843,8 @@ function isWithinRoot(root: string, candidate: string) {
   return candidate === root || candidate.startsWith(root + pathSep);
 }
 
-// A hard link's source must already exist, so resolve it fully (following any
-// symlinks along the way) and require the real location to stay inside the
-// root. Any resolution failure is treated as unsafe. This mirrors the check
-// tar-fs added in 2.1.2, and blocks the symlink-to-hard-link chain from
-// MET-004, where the source path only escapes once the kernel dereferences
-// intermediate symlinks that were extracted earlier.
+// Follow symlinks in the hard link source before checking its location.
+// Treat a source that cannot be resolved as unsafe.
 function hardLinkEscapesRoot(root: string, source: string) {
   let real;
   try {
@@ -859,11 +855,8 @@ function hardLinkEscapesRoot(root: string, source: string) {
   return ! isWithinRoot(root, real);
 }
 
-// A symlink may legitimately point at something that does not exist yet, so
-// resolve its target lexically and require it to stay inside the root, and that
-// none of the already-existing path components leading to it is itself a
-// symlink (which a later entry could use to escape). Mirrors tar-fs 2.1.2+
-// (inCwd + validateNotSymlink).
+// A symlink target may not exist yet. Check its lexical path and reject any
+// existing symlink along that path, which could redirect it outside the root.
 function symLinkEscapesRoot(root: string, linkPath: string, linkname: string) {
   const target = pathResolve(pathDirname(linkPath), linkname);
   if (! isWithinRoot(root, target)) {
@@ -894,11 +887,8 @@ function symLinkEscapesRoot(root: string, linkPath: string, linkname: string) {
   return false;
 }
 
-// No entry may be written beneath a path component that already exists and is
-// not a real directory. A symlink planted by an earlier entry (whose real depth
-// differs from its lexical depth) would otherwise let a later file or directory
-// escape the root even though its own name looks in-bounds. Mirrors the check
-// tar-fs performs for every non-directory entry (CVE-2025-48387).
+// An existing non-directory ancestor can redirect a later entry outside the
+// root, even when the entry's own path appears to be inside it.
 function destinationHasUnsafeAncestor(root: string, dest: string) {
   let current = pathDirname(dest);
   while (current !== root) {
@@ -910,7 +900,7 @@ function destinationHasUnsafeAncestor(root: string, dest: string) {
       stat = fs.lstatSync(current);
     } catch (e: any) {
       if (e.code === "ENOENT") {
-        // Not created yet; tar-fs will mkdir it as a real directory.
+        // tar-fs creates missing ancestors as directories.
         current = pathDirname(current);
         continue;
       }
@@ -924,10 +914,7 @@ function destinationHasUnsafeAncestor(root: string, dest: string) {
   return false;
 }
 
-// True if `dest` already exists as a symlink. tar-fs before 2.1.4 writes file
-// contents straight through such a link (its own name), so a file entry whose
-// name is an escaping symlink planted earlier would overwrite the link's real
-// target. Directory entries would likewise mkdir through it.
+// A file or directory at an existing symlink path would affect its target.
 function destinationIsExistingSymlink(dest: string) {
   try {
     return fs.lstatSync(dest).isSymbolicLink();
@@ -948,25 +935,17 @@ function tryExtractWithNpmTar(
 
   return new Promise((resolve, reject) => {
     const osTempDir = convertToOSPath(tempDir);
-    // Root for lexical checks (matches the paths tar-fs derives from osTempDir)
-    // and a realpath'd root for comparing resolved hard-link sources.
+    // Use the same lexical root as tar-fs; compare hard link sources against
+    // the real root after following symlinks.
     const lexicalRoot = pathResolve(osTempDir);
     const realRoot = fs.realpathSync(osTempDir);
-    // Defense in depth: tar-fs before 2.1.2 (the version currently pinned for
-    // the dev bundle) creates hard links and symlinks without checking that
-    // their target stays inside the extraction root, so a crafted archive can
-    // chain a symlink to a hard link and overwrite an arbitrary file outside
-    // it (MET-004). Reject any link whose target escapes the root; links that
-    // stay inside it (such as npm `node_modules/.bin` symlinks in isopacks)
-    // are left untouched.
     let securityError: Error | null = null;
 
     const rejectEntry = (header: any) => {
       securityError = securityError || new Error(
         "Archive contains a " + header.type + " that escapes the " +
         "extraction directory: " + header.name);
-      // Skip the entry so tar-fs never creates the escaping link, then fail
-      // the extraction once the stream drains.
+      // Skip this entry and report the error when extraction finishes.
       return true;
     };
 
@@ -981,18 +960,15 @@ function tryExtractWithNpmTar(
           return false;
         }
 
-        // `entryPath` is the on-disk destination tar-fs computed for this
-        // entry. It keeps the trailing slash of directory entries, which would
-        // make lstat follow a symlink at that path, so normalize it first.
+        // Remove a directory entry's trailing slash before lstat checks;
+        // lstat follows a symlink when the path ends in a slash.
         const name = pathResolve(entryPath);
 
-        // The root itself (e.g. a "./" entry) only ever exists as a directory.
+        // A "./" root entry is valid only as a directory.
         if (name === lexicalRoot) {
           return header.type === "directory" ? false : rejectEntry(header);
         }
 
-        // Applies to every entry: refuse to write beneath an existing
-        // non-directory (e.g. a symlink planted by an earlier entry).
         if (destinationHasUnsafeAncestor(lexicalRoot, name)) {
           return rejectEntry(header);
         }
@@ -1003,16 +979,13 @@ function tryExtractWithNpmTar(
         }
 
         if (header.type === "link") {
-          // Hard link sources are resolved relative to the extraction root,
-          // the same way tar-fs resolves them.
+          // Resolve hard link sources from the extraction root, as tar-fs does.
           const source = pathJoin(osTempDir, pathJoin("/", header.linkname));
           return hardLinkEscapesRoot(realRoot, source)
             ? rejectEntry(header) : false;
         }
 
-        // A file or directory whose own name is an existing symlink would be
-        // written through that link; reject it. Link entries unlink first and
-        // validate their own target above, so they are exempt.
+        // Link entries replace their destination and are checked above.
         if (destinationIsExistingSymlink(name)) {
           return rejectEntry(header);
         }
