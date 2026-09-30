@@ -23,6 +23,18 @@ const RSPACK_PACKAGE_DIR = path.join(REPO_ROOT, 'npm-packages', 'meteor-rspack')
 const CONSTANTS_PATH = path.join(REPO_ROOT, 'packages', 'rspack', 'lib', 'constants.js');
 
 async function linkLocalRspack(appDir, { env } = {}) {
+  if (!appDir || !fs.existsSync(appDir)) {
+    // Fail fast with the real story: when an earlier app-creation phase
+    // fails or times out, the suite's shared tempDir stays undefined and
+    // this used to surface as a confusing "missing projectDir!" from a
+    // `meteor update --npm` spawned with cwd undefined (i.e. the jest
+    // working directory), burying the initiating error.
+    throw new Error(
+      `linkLocalRspack: invalid app directory (${appDir}). ` +
+      'The test app was probably never created - look at the earlier ' +
+      'app-creation step in this suite for the initiating failure.'
+    );
+  }
   const execOpts = env ? { env: { ...process.env, ...env } } : {};
 
   console.log(`Running meteor update --npm in ${appDir}...`);

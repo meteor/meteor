@@ -720,7 +720,7 @@ Tinytest.addAsync(
       await Meteor.users.removeAsync(uid0)
     }
     await Meteor.users.removeAsync(u1.userId);
-    Accounts.selectCustomUserOnExternalLogin = null;
+    Accounts._additionalFindUserOnExternalLogin = null;
   }
 );
 

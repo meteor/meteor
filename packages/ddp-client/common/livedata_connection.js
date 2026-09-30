@@ -93,6 +93,10 @@ export class Connection {
     }
 
     self._lastSessionId = null;
+    // how many messages we've received (excluding ping/pong).
+    // when we try to reconnect to the server, it will check this against the number of messages it sent.
+    // if there is a mismatch, our info is out of date and we need a clean session.
+    self._receivedCount = 0;
     self._versionSuggestion = null; // The last proposed DDP version.
     self._version = null; // The DDP version agreed on by client and server.
     self._stores = Object.create(null); // name -> object with methods
@@ -102,6 +106,7 @@ export class Connection {
 
     self._heartbeatInterval = options.heartbeatInterval;
     self._heartbeatTimeout = options.heartbeatTimeout;
+    self._ignoredMsgsForSessionOutOfDateCheck = ['ping', 'pong'];
 
     // Tracks methods which the user has tried to call but which have not yet
     // called their user callback (ie, they are waiting on their result or for all
@@ -240,6 +245,11 @@ export class Connection {
         }
       });
     }
+
+    // Messages passed to _sendQueued while the stream was not connected.
+    // The stream drops data sent while disconnected, so these are flushed
+    // once the connection is (re-)established.
+    self._messagesQueuedUntilReconnect = [];
 
     this._streamHandlers = new ConnectionStreamHandlers(this);
 
@@ -480,8 +490,11 @@ export class Connection {
           this.connection._sendQueued({ msg: 'unsub', id: id });
           this.remove();
 
-          if (callbacks.onStop) {
-            callbacks.onStop();
+          // Use the record's current stopCallback — an autorun rerun may
+          // have replaced the one captured when this record was created,
+          // and the server-initiated stop path (nosub) already uses it.
+          if (this.stopCallback) {
+            this.stopCallback();
           }
         }
       };
@@ -1032,14 +1045,28 @@ export class Connection {
     this._stream.send(DDPCommon.stringifyDDP(obj));
   }
 
-  // Always queues the call before sending the message
-  // Used, for example, on subscription.[id].stop() to make sure a "sub" message is always called before an "unsub" message
+  // Sends the message ordered behind any sends queued by in-flight async
+  // stubs (the second argument to _send routes through the client stub
+  // queue — see queue_stub_helpers.js). If the stream is not connected the
+  // message is held until the connection is (re-)established instead: the
+  // stream drops data sent while disconnected, and e.g. the 'unsub' from
+  // subscription.stop() removes its registry record, so nothing would ever
+  // re-send it.
   // https://github.com/meteor/meteor/issues/13212
-  //
-  // This is part of the actual fix for the rest check:
-  // https://github.com/meteor/meteor/pull/13236
   _sendQueued(obj) {
-    this._send(obj, true);
+    if (this._stream.status().status === 'connected') {
+      this._send(obj, true);
+    } else {
+      this._messagesQueuedUntilReconnect.push(obj);
+    }
+  }
+
+  // Called on stream reset, after subscriptions have been re-sent, so a
+  // queued 'unsub' can never precede its subscription's 'sub'.
+  _flushMessagesQueuedUntilReconnect() {
+    const queued = this._messagesQueuedUntilReconnect;
+    this._messagesQueuedUntilReconnect = [];
+    queued.forEach(obj => this._send(obj, true));
   }
 
   // We detected via DDP-level heartbeats that we've lost the
@@ -1081,11 +1108,17 @@ export class Connection {
    * @locus Client
    */
   disconnect(...args) {
+    this._send({ msg: 'disconnect' });
     return this._stream.disconnect(...args);
   }
 
   close() {
-    return this._stream.disconnect({ _permanent: true });
+    // A closed connection can never reconnect; stop tracking it in
+    // DDP._allConnections (otherwise the registry grows forever and
+    // _allSubscriptionsReady consults dead connections).
+    DDP._removeConnection(this);
+    // _permanent is used by the underlying stream to prevent reconnection attempts
+    return this.disconnect({ _permanent: true });
   }
 
   ///
@@ -1144,10 +1177,12 @@ export class Connection {
     const self = this;
 
     if (self._resetStores || !isEmpty(updates)) {
-      // Start all store updates - keeping original loop structure
-      for (const store of Object.values(self._stores)) {
+      // Start all store updates - keeping original loop structure.
+      // Stores are keyed by name in _stores; the store wrapper object itself
+      // carries no _name property, so the batch size must come from the key.
+      for (const [name, store] of Object.entries(self._stores)) {
         await store.beginUpdate(
-          updates[store._name]?.length || 0,
+          updates[name]?.length || 0,
           self._resetStores
         );
       }
@@ -1195,10 +1230,12 @@ export class Connection {
     const self = this;
 
     if (self._resetStores || !isEmpty(updates)) {
-      // Synchronous store updates for client
-      Object.values(self._stores).forEach(store => {
+      // Synchronous store updates for client. Stores are keyed by name in
+      // _stores; the store wrapper object itself carries no _name property,
+      // so the batch size must come from the key.
+      Object.entries(self._stores).forEach(([name, store]) => {
         store.beginUpdate(
-          updates[store._name]?.length || 0,
+          updates[name]?.length || 0,
           self._resetStores
         );
       });
@@ -1395,13 +1432,33 @@ export class Connection {
     const oldOutstandingMethodBlocks = self._outstandingMethodBlocks;
     self._outstandingMethodBlocks = [];
 
-    self.onReconnect && self.onReconnect();
-    DDP._reconnectHook.each((callback) => {
-      callback(self);
+    const promises = [];
+    const pushReconnectResult = (invoke) => {
+      try {
+        const result = invoke();
+        if (result && typeof result.then === 'function') {
+          promises.push(result);
+        }
+      } catch (error) {
+        promises.push(Promise.reject(error));
+      }
+    };
+
+    if (self.onReconnect) {
+      pushReconnectResult(() => self.onReconnect());
+    }
+    DDP._reconnectHook.forEach((callback) => {
+      pushReconnectResult(() => callback(self));
       return true;
     });
 
-    self._sendOutstandingMethodBlocksMessages(oldOutstandingMethodBlocks);
+    const sendMessages = () => self._sendOutstandingMethodBlocksMessages(oldOutstandingMethodBlocks);
+    if (promises.length > 0) {
+      // Always re-send outstanding methods, even if a callback rejects.
+      Promise.allSettled(promises).then(sendMessages);
+    } else {
+      sendMessages();
+    }
   }
 
   // We can accept a hot code push if there are no methods in flight.

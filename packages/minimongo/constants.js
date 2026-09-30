@@ -130,7 +130,7 @@ export const ASYNC_CURSOR_METHODS = [
    */
   'forEach',
   /**
-   * @summary Map callback over all matching documents.  Returns an Array.
+   * @summary Map callback over all matching documents. Returns a Promise<Array>.
    * @locus Anywhere
    * @method mapAsync
    * @instance
@@ -141,7 +141,7 @@ export const ASYNC_CURSOR_METHODS = [
    *                                     itself.
    * @param {Any} [thisArg] An object which will be the value of `this` inside
    *                        `callback`.
-   * @returns {Promise}
+   * @returns {Promise<Array>}
    */
   'map',
 ];

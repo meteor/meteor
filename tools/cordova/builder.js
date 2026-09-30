@@ -1,5 +1,4 @@
 import _ from 'underscore';
-import url from 'url';
 import { Console } from '../console/console.js';
 import buildmessage from '../utils/buildmessage.js';
 import files from '../fs/files';
@@ -548,7 +547,7 @@ export class CordovaBuilder {
 
     const mobileServerUrl = this.options.mobileServerUrl;
 
-    const parsedUrl = url.parse(mobileServerUrl);
+    const parsedUrl = new URL(mobileServerUrl);
 
     const runtimeConfig = {
       meteorRelease: meteorRelease,

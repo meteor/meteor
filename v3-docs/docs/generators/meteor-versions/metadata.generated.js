@@ -54,9 +54,21 @@ export default {
     },
     {
       "version": "v3.4.1",
-      "url": "https://release-3-4-1.docs-online.meteor.com/",
+      "url": "https://release-3-4-1.docs-online.meteor.com/"
+    },
+    {
+      "version": "v3.5.0",
+      "url": "https://release-3-5-0.docs-online.meteor.com/"
+    },
+    {
+      "version": "v3.5.1",
+      "url": "https://release-3-5-1.docs-online.meteor.com/"
+    },
+    {
+      "version": "v3.5.2",
+      "url": "https://release-3-5-2.docs-online.meteor.com/",
       "isCurrent": true
     }
   ],
-  "currentVersion": "v3.4.1"
+  "currentVersion": "v3.5.2"
 }

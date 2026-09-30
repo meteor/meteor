@@ -50,23 +50,23 @@ export class Hook {
    * @param {string} [options.debugPrintExceptions] - If an `exceptionHandler` is not provided, and this option is a string,
    *   exceptions thrown by callbacks will be logged to `Meteor._debug` with this string as a description.
    */
-    constructor(options = {}) {
-      this.callbacks = new Set();
+  constructor(options = {}) {
+    this.callbacks = new Set();
 
-      // Whether to wrap callbacks with Meteor.bindEnvironment
-      const { bindEnvironment = true, wrapAsync = true } = options;
-      this.bindEnvironment = !!bindEnvironment;
-      this.wrapAsync = !!wrapAsync;
+    // Whether to wrap callbacks with Meteor.bindEnvironment
+    const { bindEnvironment = true, wrapAsync = true } = options;
+    this.bindEnvironment = !!bindEnvironment;
+    this.wrapAsync = !!wrapAsync;
 
-      if (options.exceptionHandler) {
-        this.exceptionHandler = options.exceptionHandler;
-      } else if (options.debugPrintExceptions) {
-        if (typeof options.debugPrintExceptions !== "string") {
-          throw new Error("Hook option debugPrintExceptions should be a string");
-        }
-        this.exceptionHandler = options.debugPrintExceptions;
+    if (options.exceptionHandler) {
+      this.exceptionHandler = options.exceptionHandler;
+    } else if (options.debugPrintExceptions) {
+      if (typeof options.debugPrintExceptions !== "string") {
+        throw new Error("Hook option debugPrintExceptions should be a string");
       }
+      this.exceptionHandler = options.debugPrintExceptions;
     }
+  }
 
   /**
    * Clears all registered callbacks from this Hook instance.
@@ -115,12 +115,14 @@ export class Hook {
    *   - `stop`: A function that, when called, unregisters this specific callback from the hook.
    */
   register(callback) {
-    const exceptionHandler = this.exceptionHandler || function (exception) {
-      // Note: this relies on the undocumented fact that if bindEnvironment's
-      // onException throws, and you are invoking the callback either in the
-      // browser or from within a Fiber in Node, the exception is propagated.
-      throw exception;
-    };
+    const exceptionHandler =
+      this.exceptionHandler ||
+      function (exception) {
+        // Note: this relies on the undocumented fact that if bindEnvironment's
+        // onException throws, and you are invoking the callback either in the
+        // browser or from within a Fiber in Node, the exception is propagated.
+        throw exception;
+      };
 
     if (this.bindEnvironment) {
       callback = Meteor.bindEnvironment(callback, exceptionHandler);
@@ -138,7 +140,7 @@ export class Hook {
       callback,
       stop: () => {
         this.callbacks.delete(callback);
-      }
+      },
     };
   }
 
@@ -154,7 +156,12 @@ export class Hook {
    * @param iterator
    */
   forEach(iterator) {
-    for (const callback of this.callbacks) {
+    // Snapshot first so a callback can safely unregister itself (or other
+    // callbacks) without disturbing this iteration. The Set is also re-checked
+    // each step in case a callback removed a later one in the snapshot.
+    const snapshot = Array.from(this.callbacks);
+    for (const callback of snapshot) {
+      if (!this.callbacks.has(callback)) continue;
       if (!iterator(callback)) break;
     }
   }
@@ -169,7 +176,7 @@ export class Hook {
    */
   async forEachAsync(iterator) {
     for (const callback of this.callbacks) {
-      if (!await iterator(callback)) break;
+      if (!(await iterator(callback))) break;
     }
   }
 
@@ -226,15 +233,14 @@ function wrapHookWithErrorHandling(func, onException, _this) {
  * @returns {Function} A function that handles exceptions.
  */
 function normalizeHookExceptionHandler(exceptionHandler) {
-  if (typeof exceptionHandler === 'function') {
+  if (typeof exceptionHandler === "function") {
     return exceptionHandler;
   }
 
-  const description = typeof exceptionHandler === 'string'
-    ? exceptionHandler
-    : "callback of async function";
+  const description =
+    typeof exceptionHandler === "string" ? exceptionHandler : "callback of async function";
 
   return function defaultHookExceptionHandler(error) {
     Meteor._debug(`Exception in ${description}`, error);
-  }
+  };
 }

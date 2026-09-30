@@ -17,11 +17,12 @@ export function getMeteorAppDir() {
 
 /**
  * Reads and parses the package.json file of the Meteor application.
+ * @param {string} [cwd] The directory containing the application's package.json file.
  * @returns {Object} The parsed content of the package.json file.
  */
-export function getMeteorAppPackageJson() {
+export function getMeteorAppPackageJson(cwd = getMeteorAppDir()) {
   return JSON.parse(
-    fs.readFileSync(`${getMeteorAppDir()}/package.json`, 'utf-8')
+    fs.readFileSync(path.join(cwd, 'package.json'), 'utf-8')
   );
 }
 
@@ -62,10 +63,15 @@ export function isMeteorAppConfigModernVerbose() {
 
 /**
  * Retrieves the auto install deps flag from the app's package.json.
- * @returns {Boolean|*}
+ * @param {Object} [options]
+ * @param {string} [options.cwd] Read configuration from this directory.
+ * @returns {boolean}
  */
-export function hasMeteorAppConfigAutoInstallDeps() {
-  const { autoInstallDeps = true } = getMeteorAppConfig() || {};
+export function hasMeteorAppConfigAutoInstallDeps(options = {}) {
+  const config = options.cwd
+    ? getMeteorAppPackageJson(options.cwd)?.meteor
+    : getMeteorAppConfig();
+  const { autoInstallDeps = true } = config || {};
   return !!autoInstallDeps;
 }
 
@@ -80,11 +86,16 @@ export function hasMeteorAppConfigAutoInstallDeps() {
  */
 export function getMeteorAppEntrypoints() {
   const meteorConfig = getMeteorAppConfig();
+  const testModule = meteorConfig?.testModule;
+  const sharedTestModule = typeof testModule === "string"
+    ? testModule
+    : undefined;
+
   return {
     mainClient: meteorConfig?.mainModule?.client,
     mainServer: meteorConfig?.mainModule?.server,
-    testClient: meteorConfig?.testModule?.client || meteorConfig?.testModule,
-    testServer: meteorConfig?.testModule?.server || meteorConfig?.testModule,
+    testClient: testModule?.client || sharedTestModule,
+    testServer: testModule?.server || sharedTestModule,
   };
 }
 
@@ -185,11 +196,36 @@ export function setMeteorAppEntrypoints({
 
 /**
  * Sets patterns to be ignored by the Meteor application in the environment variable.
- * Appends the new ignore pattern to any existing ones.
+ * Appends new patterns while deduplicating by keeping the last occurrence of
+ * each exact pattern. This preserves gitignore-style "last match wins"
+ * semantics while preventing unbounded growth.
  * @param {string} ignore - The pattern to be ignored.
  */
 export function setMeteorAppIgnore(ignore) {
-  process.env.METEOR_IGNORE = `${process.env.METEOR_IGNORE || ''} ${ignore}`.trim();
+  const currentPatterns = (process.env.METEOR_IGNORE || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  const newPatterns = ignore.trim().split(/\s+/).filter(Boolean);
+
+  if (newPatterns.length === 0) {
+    return;
+  }
+
+  const combinedPatterns = [...currentPatterns, ...newPatterns];
+  const seenPatterns = new Set();
+  const dedupedPatterns = [];
+
+  for (let index = combinedPatterns.length - 1; index >= 0; index -= 1) {
+    const pattern = combinedPatterns[index];
+
+    if (!seenPatterns.has(pattern)) {
+      seenPatterns.add(pattern);
+      dedupedPatterns.push(pattern);
+    }
+  }
+
+  process.env.METEOR_IGNORE = dedupedPatterns.reverse().join(' ');
 }
 
 /**

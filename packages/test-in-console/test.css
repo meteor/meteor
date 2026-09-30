@@ -5,4 +5,5 @@
  * makes sure that at least one `.css` file can always be found, when the
  * tests are run.
  */
-.test { }
+.test {
+}

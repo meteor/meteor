@@ -1,4 +1,4 @@
-const uuid = require("uuid");
+const { v4: uuid } = require("uuid");
 
 const { encode, decode } = require("arson");
 

@@ -1,11 +1,11 @@
 Package.describe({
-  version: "3.0.2",
+  version: "3.1.0",
   summary:
     "Package used to enable two factor authentication through OTP protocol",
 });
 
 Npm.depends({
-  "node-2fa": "2.0.3",
+  "otpauth": "9.5.0",
   "qrcode-svg": "1.1.0",
 });
 
