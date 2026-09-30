@@ -8,7 +8,7 @@ const {
   applyRstestCoverageToSwcRule,
   readRstestCoveragePlan,
   resolveRstestCoverageSwcPlugin,
-} = require('../lib/rstest-coverage.js');
+} = require('../src/rspack/coverage.js');
 
 function coveragePlan(overrides = {}) {
   return {

@@ -1,13 +1,5 @@
-const path = require('path');
-
-const RSTEST_CORE_ENTRY = path.join(
-  'node_modules',
-  '@rstest',
-  'core',
-  'dist',
-  'index.js',
-);
-
+// Isobuild evaluates package imports before the hosted file runtime starts.
+// Defer public API access until the provider registers that runtime.
 const RSTEST_RUNTIME_SHIM = `
 const check = name => {
   if (!globalThis.RSTEST_API?.[name]) {
@@ -45,14 +37,4 @@ export const rstest = utilities('rstest');
 export const rs = utilities('rs');
 `;
 
-function rstestRuntimeShimFor({ absPath, testRunner }) {
-  if (testRunner !== 'rstest') return null;
-  const normalized = path.normalize(absPath);
-  if (!normalized.endsWith(RSTEST_CORE_ENTRY)) return null;
-  return RSTEST_RUNTIME_SHIM;
-}
-
-module.exports = {
-  RSTEST_RUNTIME_SHIM,
-  rstestRuntimeShimFor,
-};
+module.exports = { RSTEST_RUNTIME_SHIM };

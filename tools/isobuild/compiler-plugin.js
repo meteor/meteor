@@ -4,6 +4,7 @@ var buildPluginModule = require('./build-plugin.js');
 var colonConverter = require('../utils/colon-converter.js');
 var files = require('../fs/files');
 var compiler = require('./compiler.js');
+var testRunnerContext = require('../tool-env/test-runner-context.js');
 var linker = require('./linker.js');
 var _ = require('underscore');
 var Profile = require('../tool-env/profile').Profile;
@@ -622,10 +623,10 @@ class ResourceSlot {
     let lazy = this._getOption("lazy", options);
 
     const packageName = this.packageSourceBatch.unibuild.pkg.name;
-    if (process.env.METEOR_TEST_RUNNER === "rstest" &&
+    if (testRunnerContext.getTestRunnerIsobuildOptions().lazyTestPackages &&
         /^local-test[:_]/.test(packageName || "")) {
-      // Rstest package tests are evaluated by the generated Rspack loader
-      // after the upstream runtime is installed in the real Meteor host.
+      // A provider can defer package test evaluation until its runtime has
+      // initialized in the Meteor host.
       return true;
     }
 
@@ -1441,6 +1442,8 @@ export class PackageSourceBatch {
         nodeModulesPaths,
         watchSet: entry.importScannerWatchSet,
         cacheDir: batch.scannerCacheDir,
+        moduleReplacements:
+          testRunnerContext.getTestRunnerIsobuildOptions().moduleReplacements,
       });
 
       await scanner.addInputFiles(entry.files);

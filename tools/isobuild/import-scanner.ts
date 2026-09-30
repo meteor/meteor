@@ -29,7 +29,7 @@ import {
 } from "../fs/files";
 import rspackHelpers from "../tool-env/rspack";
 
-const { rstestRuntimeShimFor } = require('./rstest-runtime-alias.js');
+const { getModuleReplacement } = require('./module-replacements.js');
 
 const { SourceNode, SourceMapConsumer } = require("source-map");
 
@@ -346,6 +346,7 @@ export type ImportScannerOptions = {
   sourceRoot: string;
   nodeModulesPaths: string[];
   cacheDir: string;
+  moduleReplacements?: { module: string; source: string }[];
 }
 
 interface RawFile {
@@ -399,6 +400,7 @@ export default class ImportScanner {
   private bundleArch: string;
   private sourceRoot: string;
   private nodeModulesPaths: string[];
+  private moduleReplacements: { module: string; source: string }[];
   private defaultHandlers: DefaultHandlers;
   private resolver: Resolver;
 
@@ -415,11 +417,13 @@ export default class ImportScanner {
     sourceRoot,
     nodeModulesPaths = [],
     cacheDir,
+    moduleReplacements = [],
   }: ImportScannerOptions) {
     this.name = name;
     this.bundleArch = bundleArch;
     this.sourceRoot = sourceRoot;
     this.nodeModulesPaths = nodeModulesPaths;
+    this.moduleReplacements = moduleReplacements;
 
     this.defaultHandlers = new DefaultHandlers({
       cacheDir,
@@ -1301,13 +1305,10 @@ export default class ImportScanner {
       return null;
     }
 
-    const runtimeShim = rstestRuntimeShimFor({
-      absPath,
-      testRunner: process.env.METEOR_TEST_RUNNER,
-    });
-    if (runtimeShim) {
-      info.dataString = runtimeShim;
-      info.data = Buffer.from(runtimeShim, "utf8");
+    const replacement = getModuleReplacement(absPath, this.moduleReplacements);
+    if (replacement !== null) {
+      info.dataString = replacement;
+      info.data = Buffer.from(replacement, "utf8");
       info.hash = sha1(info.data);
     }
 

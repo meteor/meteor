@@ -46,7 +46,7 @@
     "lint:fix": "oxlint --fix --ignore-path .oxlintignore .",
     "install:unit": "cd tools/unit-tests && npm install",
     "test:unit": "cd tools/unit-tests && npm test",
-    "test:rstest": "node --test tools/cli/test-runners/tests/*.test.js tools/tool-env/test-runner-context.test.js tools/isobuild/rstest-runtime-alias.test.js tools/e2e-tests/scripts/link-modern-tools.test.js npm-packages/meteor-rspack/tests/*.test.js npm-packages/meteor-rstest/tests/*.test.js packages/babel-compiler/test-runner-transforms.test.js packages/rspack/lib/*.test.js packages/rstest/runtime/*.test.js packages/rstest/tests/*.test.js packages/rstest/tooling/tests/*.test.js",
+    "test:rstest": "node --test tools/cli/test-runners/tests/*.test.js tools/tool-env/test-runner-context.test.js tools/isobuild/module-replacements.test.js tools/e2e-tests/scripts/link-modern-tools.test.js npm-packages/meteor-rspack/tests/*.test.js npm-packages/meteor-rstest/tests/*.test.js packages/babel-compiler/test-runner-transforms.test.js packages/rspack/lib/*.test.js packages/rstest/runtime/*.test.js packages/rstest/tests/*.test.js packages/rstest/tooling/tests/*.test.js",
     "install:e2e": "cd tools/e2e-tests && npm install && npx playwright install --with-deps chromium chromium-headless-shell",
     "test:e2e": "cd tools/e2e-tests && npm test -- ",
     "create-app:e2e": "cd tools/e2e-tests && node scripts/create-app.js",

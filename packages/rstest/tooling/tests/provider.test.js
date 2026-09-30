@@ -9,9 +9,19 @@ const test = require('node:test');
 const {
   getPackageHarnessDevDependencies,
   resolveRstestCoverageInstrumentation,
+  resolveRstestRspackAdapter,
   RstestTestRunnerProvider,
   writePrivateJsonAtomic,
 } = require('../provider/provider.js');
+
+function createProvider(context, services = {}) {
+  return new RstestTestRunnerProvider(context, {
+    resolveRstestRspackAdapter(npmRoot) {
+      return path.join(npmRoot, 'node_modules/@meteorjs/rstest/src/rspack/index.js');
+    },
+    ...services,
+  });
+}
 
 test('package harness pins configured local Rspack npm package', () => {
   const { peerDependencies } = require('../../../../npm-packages/meteor-rstest/package.json');
@@ -45,6 +55,22 @@ test('coverage instrumentation resolves from the coordinator dependency context'
     instrumentation.babelPlugin,
     /babel-plugin-istanbul/,
   );
+});
+
+test('Rspack adapter resolves from the app coordinator dependency context', () => {
+  const npmRoot = path.resolve(__dirname, '../../../../npm-packages/meteor-rstest');
+  assert.equal(resolveRstestRspackAdapter(npmRoot),
+    path.join(npmRoot, 'src/rspack/index.js'));
+});
+
+test('Rspack adapter preserves the provider diagnostic when dependencies are missing', t => {
+  const npmRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-missing-'));
+  t.after(() => fs.rmSync(npmRoot, { recursive: true, force: true }));
+
+  assert.throws(() => resolveRstestRspackAdapter(npmRoot), {
+    code: 'METEOR_RSTEST_NPM_MISSING',
+    message: /@meteorjs\/rstest is missing.*meteor npm install/,
+  });
 });
 
 test('package transforms warn once and exclude selected custom compiler sources', () => {
@@ -237,7 +263,7 @@ test('validation rejects conflicting sides before dependency installation', asyn
   context.options.serverOnly = true;
   context.options.clientOnly = true;
   let installs = 0;
-  const provider = new RstestTestRunnerProvider(context, {
+  const provider = createProvider(context, {
     async ensureRstestInstalled() {
       installs += 1;
     },
@@ -256,7 +282,7 @@ test('unified upstream runtime reaches host/build metadata', async t => {
   context.options.project = ['meteor-runtime-server'];
   context.options.updateSnapshots = true;
   writeRuntimeFiles(context.appDir, ['upstream.test.js']);
-  const provider = new RstestTestRunnerProvider(context, {
+  const provider = createProvider(context, {
     async ensureRstestInstalled() {},
   });
 
@@ -266,7 +292,11 @@ test('unified upstream runtime reaches host/build metadata', async t => {
   assert.equal(plan.metadata.upstreamRuntime, true);
   assert.equal(plan.metadata.updateSnapshot, 'all');
   assert.equal(plan.metadata.appRoot, context.appDir);
-  assert.equal(plan.buildPluginOptions.rspack.context.upstreamRuntime, true);
+  assert.equal(plan.buildPluginOptions.rspack.context.options.upstreamRuntime, true);
+  assert.equal(plan.isobuildOptions.lazyTestPackages, true);
+  assert.equal(plan.isobuildOptions.moduleReplacements[0].module,
+    '@rstest/core/dist/index.js');
+  assert.match(plan.isobuildOptions.moduleReplacements[0].source, /RSTEST_API/);
 });
 
 test('pure tests prepare native-only plan with opaque Rspack options', async t => {
@@ -278,7 +308,7 @@ test('pure tests prepare native-only plan with opaque Rspack options', async t =
   fs.mkdirSync(path.dirname(testFile), { recursive: true });
   fs.writeFileSync(testFile, '');
   const order = [];
-  const provider = new RstestTestRunnerProvider(context, {
+  const provider = createProvider(context, {
     async ensureRstestInstalled() {
       order.push('dependencies');
     },
@@ -291,8 +321,9 @@ test('pure tests prepare native-only plan with opaque Rspack options', async t =
   assert.equal(plan.mode, 'native-only');
   assert.equal('driverPackage' in plan, false);
   assert.equal(plan.metadata.runtime, false);
+  assert.equal(plan.isobuildOptions, undefined);
   assert.equal(plan.buildPluginOptions.rspack.lifecycle, 'dependencies-only');
-  assert.equal(plan.buildPluginOptions.rspack.context.runtime, false);
+  assert.equal(plan.buildPluginOptions.rspack.context.options.runtime, false);
   assert.deepEqual(
     argumentValues(provider.nativeArgs, '--architecture'),
     ['os.test', 'web.browser']
@@ -308,7 +339,7 @@ test('colocated smart candidates classify after dependency bootstrap and drive h
   fs.writeFileSync(nativeFile, "import { test } from '@rstest/core';");
   fs.writeFileSync(runtimeFile, "import { test } from '@rstest/core'; import 'meteor/mongo';");
   const order = [];
-  const provider = new RstestTestRunnerProvider(context, {
+  const provider = createProvider(context, {
     async ensureRstestInstalled() {
       order.push('dependencies');
     },
@@ -353,7 +384,7 @@ test('explicit custom projects stay owned by user config without smart classific
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, "import { test } from 'custom-test-engine';");
   let classifications = 0;
-  const provider = new RstestTestRunnerProvider(context, {
+  const provider = createProvider(context, {
     async ensureRstestInstalled() {},
     async classifyRstestCandidates() { classifications += 1; },
   });
@@ -372,7 +403,7 @@ test('unmarked globals can remain owned by an explicit Rstest config', async t =
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, "test('config owned', () => {});");
   fs.writeFileSync(path.join(context.appDir, 'rstest.config.js'), 'module.exports = {};');
-  const provider = new RstestTestRunnerProvider(context, {
+  const provider = createProvider(context, {
     async ensureRstestInstalled() {},
     async classifyRstestCandidates() {
       return {
@@ -409,7 +440,7 @@ test('explicit generated runtime project never delegates legacy files to user co
     fs.writeFileSync(file, '');
   }
   fs.writeFileSync(path.join(context.appDir, 'rstest.config.js'), 'module.exports = {};');
-  const provider = new RstestTestRunnerProvider(context, {
+  const provider = createProvider(context, {
     async ensureRstestInstalled() {},
     async classifyRstestCandidates() {
       return {
@@ -450,7 +481,7 @@ test('normalized Meteor verbosity reaches runtime metadata and Rstest wrapper', 
   );
   fs.mkdirSync(path.dirname(testFile), { recursive: true });
   fs.writeFileSync(testFile, '');
-  const provider = new RstestTestRunnerProvider(context, {
+  const provider = createProvider(context, {
     async ensureRstestInstalled() {},
   });
 
@@ -478,7 +509,7 @@ test('native verbose reporter enables runtime detail without Meteor diagnostics'
     );
     fs.mkdirSync(path.dirname(testFile), { recursive: true });
     fs.writeFileSync(testFile, '');
-    const provider = new RstestTestRunnerProvider(context, {
+    const provider = createProvider(context, {
       async ensureRstestInstalled() {},
     });
 
@@ -504,7 +535,7 @@ test('non-verbose native reporter keeps runtime report compact', async t => {
   );
   fs.mkdirSync(path.dirname(testFile), { recursive: true });
   fs.writeFileSync(testFile, '');
-  const provider = new RstestTestRunnerProvider(context, {
+  const provider = createProvider(context, {
     async ensureRstestInstalled() {},
   });
 
@@ -529,7 +560,7 @@ test('compatibility ownership routing stays silent at every verbosity', async t 
     fs.writeFileSync(nativeFile, '');
     fs.writeFileSync(legacyFile, '');
     const warnings = [];
-    const provider = new RstestTestRunnerProvider(context, {
+    const provider = createProvider(context, {
       async ensureRstestInstalled() {},
       async classifyRstestCandidates() {
         return {
@@ -572,7 +603,7 @@ test('runtime-only selection uses config plan without leaking runtime filters to
   );
   fs.mkdirSync(path.dirname(runtimeFile), { recursive: true });
   fs.writeFileSync(runtimeFile, '');
-  const provider = new RstestTestRunnerProvider(context, {
+  const provider = createProvider(context, {
     async ensureRstestInstalled() {},
     assertRstestOptionalCapabilities() {},
     resolveRstestCoverageInstrumentation() {
@@ -629,7 +660,7 @@ test('runtime worker parent evaluates config once then starts deterministic host
       };
     },
   };
-  const provider = new RstestTestRunnerProvider(context, {
+  const provider = createProvider(context, {
     async ensureRstestInstalled() {},
     aggregateRstestWorkerResults(options) {
       aggregateCalls.push(options);
@@ -642,7 +673,7 @@ test('runtime worker parent evaluates config once then starts deterministic host
   const plan = await provider.prepare();
   assert.equal(plan.mode, 'native-only');
   assert.equal(plan.buildPluginOptions.rspack.lifecycle, 'dependencies-only');
-  assert.equal(plan.buildPluginOptions.rspack.context.runtime, false);
+  assert.equal(plan.buildPluginOptions.rspack.context.options.runtime, false);
   assert.equal(plan.metadata.verbose, false);
   assert.equal(plan.metadata.reportVerbose, true);
 
@@ -674,7 +705,7 @@ test('coverage-enabled worker parent declares the exact descriptor artifacts', a
       };
     },
   };
-  const provider = new RstestTestRunnerProvider(context, {
+  const provider = createProvider(context, {
     async ensureRstestInstalled() {},
     assertRstestOptionalCapabilities() {},
     resolveRstestCoverageInstrumentation() {
@@ -769,7 +800,7 @@ test('runtime worker child reuses parent settings and skips native Rstest', asyn
   };
   let installs = 0;
   let starts = 0;
-  const provider = new RstestTestRunnerProvider(context, {
+  const provider = createProvider(context, {
     async ensureRstestInstalled() { installs += 1; },
     startRstestProcess() { starts += 1; },
   });
@@ -783,11 +814,11 @@ test('runtime worker child reuses parent settings and skips native Rstest', asyn
     server: true,
   });
   assert.equal(
-    plan.buildPluginOptions.rspack.context.runtimeManifest,
+    plan.buildPluginOptions.rspack.context.options.runtimeManifest,
     runtimeManifest
   );
   assert.equal(
-    plan.buildPluginOptions.rspack.context.runtimeSettingsPath,
+    plan.buildPluginOptions.rspack.context.options.runtimeSettingsPath,
     runtimeSettingsPath,
   );
   assert.deepEqual(JSON.parse(fs.readFileSync(runtimeManifest, 'utf8')), [
@@ -825,7 +856,7 @@ test('native client project receives one canonical Meteor browser architecture',
   fs.mkdirSync(path.dirname(browserFile), { recursive: true });
   fs.writeFileSync(browserFile, '');
   const validations = [];
-  const provider = new RstestTestRunnerProvider(context, {
+  const provider = createProvider(context, {
     async ensureRstestInstalled() {},
     assertRstestOptionalCapabilities(options) {
       validations.push(options);
@@ -868,7 +899,7 @@ test('runtime tests prepare Meteor-host plan and package harness first', async t
     name: 'local-test:package-fixture',
     sourceRoot: context.appDir,
   }];
-  const provider = new RstestTestRunnerProvider(context, {
+  const provider = createProvider(context, {
     env: {
       METEOR_RSPACK_NPM_SPEC: '/repo/npm-packages/meteor-rspack',
     },
@@ -922,7 +953,8 @@ test('runtime tests prepare Meteor-host plan and package harness first', async t
     },
   });
   assert.equal(plan.buildPluginOptions.rspack.lifecycle, 'runtime');
-  assert.equal(plan.buildPluginOptions.rspack.context.testRunner, 'rstest');
+  assert.equal(plan.buildPluginOptions.rspack.context.adapter,
+    path.join(context.npm.root, 'node_modules/@meteorjs/rstest/src/rspack/index.js'));
   assert.equal(
     plan.buildPluginOptions.rspack.projectRoot,
     context.harnessRoot,
@@ -932,7 +964,7 @@ test('runtime tests prepare Meteor-host plan and package harness first', async t
     server: true,
   });
   const manifest = JSON.parse(fs.readFileSync(
-    plan.buildPluginOptions.rspack.context.runtimeManifest,
+    plan.buildPluginOptions.rspack.context.options.runtimeManifest,
     'utf8',
   ));
   assert.equal(manifest.schemaVersion, 2);
@@ -942,7 +974,7 @@ test('runtime tests prepare Meteor-host plan and package harness first', async t
   );
   assert.equal(manifest.testFileRoot, '');
   assert.equal(
-    plan.buildPluginOptions.rspack.context.runtimeSettingsPath,
+    plan.buildPluginOptions.rspack.context.options.runtimeSettingsPath,
     provider.runtimeSettingsPath,
   );
   assert.equal(manifest.serverFiles.length, 1);
@@ -981,7 +1013,7 @@ test('auto-install opt-out never invokes dependency installer', async t => {
     },
   });
   let installs = 0;
-  const provider = new RstestTestRunnerProvider(context, {
+  const provider = createProvider(context, {
     async ensureRstestInstalled() {
       installs += 1;
     },
@@ -1002,7 +1034,7 @@ test('package command accepts coverage for unified finalization', async t => {
     sourceRoot: context.appDir,
   }];
   context.options.coverage = true;
-  const provider = new RstestTestRunnerProvider(context, {
+  const provider = createProvider(context, {
     async ensureRstestInstalled() {},
     assertRstestOptionalCapabilities() {},
     resolveRstestCoverageInstrumentation() {
@@ -1049,7 +1081,7 @@ test('runtime coverage exposes its plan to Rspack and exact local package transf
   writeRuntimeFiles(context.appDir, ['instrumented.test.js']);
   const swcPlugin = '/integration/swc-plugin-coverage-instrument.wasm';
   const babelPlugin = '/integration/babel-plugin-istanbul.js';
-  const provider = new RstestTestRunnerProvider(context, {
+  const provider = createProvider(context, {
     async ensureRstestInstalled() {},
     assertRstestOptionalCapabilities() {},
     resolveRstestCoverageInstrumentation() {
@@ -1061,11 +1093,11 @@ test('runtime coverage exposes its plan to Rspack and exact local package transf
   const plan = await provider.prepare();
 
   assert.equal(
-    plan.buildPluginOptions.rspack.context.coveragePlanPath,
+    plan.buildPluginOptions.rspack.context.options.coveragePlanPath,
     provider.coveragePlanPath,
   );
   assert.equal(
-    plan.buildPluginOptions.rspack.context.coverageGeneration,
+    plan.buildPluginOptions.rspack.context.options.coverageGeneration,
     provider.coverageGeneration,
   );
   assert.deepEqual(plan.buildPluginOptions['babel-compiler'].sourceTransforms, {
@@ -1086,6 +1118,12 @@ test('runtime coverage exposes its plan to Rspack and exact local package transf
       }))
       .digest('hex'),
   });
+  assert.deepEqual(plan.buildPluginDependencies, {
+    cards: ['babel-compiler'],
+    notes: ['babel-compiler'],
+    tracker: ['babel-compiler'],
+    'local-test:tracker': ['babel-compiler'],
+  });
 });
 
 test('config-only coverage preflight allocates Meteor instrumentation before build', async t => {
@@ -1104,7 +1142,7 @@ test('config-only coverage preflight allocates Meteor instrumentation before bui
   }];
   const calls = [];
   const capabilities = [];
-  const provider = new RstestTestRunnerProvider(context, {
+  const provider = createProvider(context, {
     async ensureRstestInstalled() {},
     selectRstestOptionalCapabilities(options) {
       capabilities.push(options.coverage);
@@ -1143,7 +1181,7 @@ test('config-only coverage preflight allocates Meteor instrumentation before bui
   assert.deepEqual(capabilities, [true]);
   assert.match(provider.coverageGeneration, /^[a-f0-9]{32}$/);
   assert.equal(
-    plan.buildPluginOptions.rspack.context.coveragePlanPath,
+    plan.buildPluginOptions.rspack.context.options.coveragePlanPath,
     provider.coveragePlanPath,
   );
   assert.deepEqual(
@@ -1160,7 +1198,7 @@ test('full-app coverage instruments the app even without Meteor-runtime test fil
   const testFile = path.join(context.appDir, 'tests/rstest/e2e/app.test.js');
   fs.mkdirSync(path.dirname(testFile), { recursive: true });
   fs.writeFileSync(testFile, "import { test } from '@rstest/core';\n");
-  const provider = new RstestTestRunnerProvider(context, {
+  const provider = createProvider(context, {
     async ensureRstestInstalled() {},
     assertRstestOptionalCapabilities() {},
     resolveRstestCoverageInstrumentation() {
@@ -1176,8 +1214,8 @@ test('full-app coverage instruments the app even without Meteor-runtime test fil
 
   assert.equal(plan.metadata.runtime, false);
   assert.equal(plan.metadata.external, true);
-  assert.equal(plan.buildPluginOptions.rspack.context.runtime, false);
-  assert.equal(plan.buildPluginOptions.rspack.context.runtimeManifest, null);
+  assert.equal(plan.buildPluginOptions.rspack.context.options.runtime, false);
+  assert.equal(plan.buildPluginOptions.rspack.context.options.runtimeManifest, null);
   assert.equal(plan.metadata.runtimeServer, false);
   assert.equal(plan.metadata.runtimeClient, false);
   assert.deepEqual(plan.buildPluginOptions.rspack.targets, {
@@ -1185,11 +1223,11 @@ test('full-app coverage instruments the app even without Meteor-runtime test fil
     server: true,
   });
   assert.equal(
-    plan.buildPluginOptions.rspack.context.coveragePlanPath,
+    plan.buildPluginOptions.rspack.context.options.coveragePlanPath,
     provider.coveragePlanPath,
   );
   assert.equal(
-    plan.buildPluginOptions.rspack.context.coverageGeneration,
+    plan.buildPluginOptions.rspack.context.options.coverageGeneration,
     provider.coverageGeneration,
   );
 });
@@ -1221,7 +1259,7 @@ test('full-app runtime coverage separates an app-test host from the client worke
   fs.writeFileSync(runtimeFile, "import { test } from '@rstest/core';\n");
   fs.writeFileSync(externalFile, "import { test } from '@rstest/core';\n");
   fs.writeFileSync(nativeFile, "import { test } from '@rstest/core';\n");
-  const provider = new RstestTestRunnerProvider(context, {
+  const provider = createProvider(context, {
     async ensureRstestInstalled() {},
     assertRstestOptionalCapabilities() {},
     resolveRstestCoverageInstrumentation() {
@@ -1268,7 +1306,7 @@ test('mixed coverage finalizes one generation manifest and preserves exit preced
     context.options.coverage = true;
     writeRuntimeFiles(context.appDir, ['coverage.test.js']);
     const calls = [];
-    const provider = new RstestTestRunnerProvider(context, {
+    const provider = createProvider(context, {
       async ensureRstestInstalled() {},
       assertRstestOptionalCapabilities() {},
       resolveRstestCoverageInstrumentation() {
@@ -1410,7 +1448,7 @@ test('coverage completion preserves a failed deferred worker when finalization s
         };
       },
     };
-    const provider = new RstestTestRunnerProvider(context, {
+    const provider = createProvider(context, {
       async ensureRstestInstalled() {},
       assertRstestOptionalCapabilities() {},
       resolveRstestCoverageInstrumentation() {
@@ -1474,7 +1512,7 @@ test('coverage completion does not await a worker that was never started', async
     fs.mkdirSync(path.dirname(external), { recursive: true });
     fs.writeFileSync(runtimeClient, "import { test } from '@rstest/core';\n");
     fs.writeFileSync(external, "import { test } from '@rstest/core';\n");
-    const provider = new RstestTestRunnerProvider(context, {
+    const provider = createProvider(context, {
       async ensureRstestInstalled() {},
       assertRstestOptionalCapabilities() {},
       resolveRstestCoverageInstrumentation() {
@@ -1534,7 +1572,7 @@ test('mixed runs allocate coverage paths only when coverage was requested', asyn
   context.options.project = ['meteor-runtime-server'];
   context.options.coverage = false;
   writeRuntimeFiles(context.appDir, ['without-coverage.test.js']);
-  const provider = new RstestTestRunnerProvider(context, {
+  const provider = createProvider(context, {
     async ensureRstestInstalled() {},
     assertRstestOptionalCapabilities() {},
   });
@@ -1546,7 +1584,7 @@ test('mixed runs allocate coverage paths only when coverage was requested', asyn
   assert.equal(provider.coverageRoot, null);
   assert.equal(provider.runtimePlanArgs.includes('--coverage-plan-output'), false);
   assert.equal(provider.runtimePlanArgs.includes('--coverage-generation'), false);
-  assert.equal('coveragePlanPath' in plan.buildPluginOptions.rspack.context, false);
+  assert.equal('coveragePlanPath' in plan.buildPluginOptions.rspack.context.options, false);
   assert.equal('babel-compiler' in plan.buildPluginOptions, false);
 });
 
@@ -1556,7 +1594,7 @@ test('requested mixed coverage fails completion when its plan is missing', async
   context.options.project = ['meteor-runtime-server'];
   context.options.coverage = true;
   writeRuntimeFiles(context.appDir, ['missing-plan.test.js']);
-  const provider = new RstestTestRunnerProvider(context, {
+  const provider = createProvider(context, {
     async ensureRstestInstalled() {},
     assertRstestOptionalCapabilities() {},
     startRstestProcess: settingsWriter([]),
@@ -1579,7 +1617,7 @@ test('finalizer startup and completion errors preserve the original test exit', 
     context.options.project = ['meteor-runtime-server'];
     context.options.coverage = true;
     writeRuntimeFiles(context.appDir, [`${mode}-${testExitCode}.test.js`]);
-    const provider = new RstestTestRunnerProvider(context, {
+    const provider = createProvider(context, {
       async ensureRstestInstalled() {},
       assertRstestOptionalCapabilities() {},
       warn() {},
@@ -1741,7 +1779,7 @@ test('native-only coverage remains on the upstream Rstest lifecycle', async t =>
   fs.mkdirSync(path.dirname(testFile), { recursive: true });
   fs.writeFileSync(testFile, '');
   const calls = [];
-  const provider = new RstestTestRunnerProvider(context, {
+  const provider = createProvider(context, {
     async ensureRstestInstalled() {},
     assertRstestOptionalCapabilities() {},
     startRstestProcess({ args }) {
@@ -1769,7 +1807,7 @@ test('full-app coverage declares server, client, and E2E artifacts before host s
   fs.writeFileSync(testFile, "import { test } from '@rstest/core';\n");
   let externalOptions;
   let browserStarts = 0;
-  const provider = new RstestTestRunnerProvider(context, {
+  const provider = createProvider(context, {
     async ensureRstestInstalled() {},
     assertRstestOptionalCapabilities() {},
     startRstestProcess(options) {
@@ -1815,7 +1853,7 @@ test('full-app coverage declares server, client, and E2E artifacts before host s
 test('provider cleanup stops resources once in reverse start order', async t => {
   const calls = [];
   const context = createContext(t);
-  const provider = new RstestTestRunnerProvider(context);
+  const provider = createProvider(context);
   provider.resources.push(
     { async stop() { calls.push('native'); } },
     { async stop() { calls.push('browser'); } },

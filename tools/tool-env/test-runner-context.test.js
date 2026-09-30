@@ -4,6 +4,7 @@ const test = require('node:test');
 const {
   clearTestRunnerContext,
   getTestRunnerBuildOptionsFingerprint,
+  getTestRunnerIsobuildOptions,
   sameTestRunnerBuildOptionsFingerprint,
   setTestRunnerContext,
 } = require('./test-runner-context.js');
@@ -19,7 +20,7 @@ test('legacy preloaded Isopack fingerprint reuses disabled ordinary builds', t =
   );
 
   setTestRunnerContext({
-    providerId: 'rstest',
+    providerId: 'example',
     buildPluginOptions: {
       'legacy-package': { coverageGeneration: 'generation-a' },
     },
@@ -35,12 +36,12 @@ test('test-runner build fingerprint separates coverage generations and disabled 
   const disabled = getTestRunnerBuildOptionsFingerprint('local:cards');
 
   setTestRunnerContext({
-    providerId: 'rstest',
+    providerId: 'example',
+    buildPluginDependencies: { 'local:cards': ['example-compiler'] },
     buildPluginOptions: {
-      'babel-compiler': {
-        sourceTransforms: {
+      'example-compiler': {
+        instrumentation: {
           cacheKey: 'generation-a',
-          includePackages: ['local:cards'],
         },
       },
     },
@@ -52,12 +53,12 @@ test('test-runner build fingerprint separates coverage generations and disabled 
   );
 
   setTestRunnerContext({
-    providerId: 'rstest',
+    providerId: 'example',
+    buildPluginDependencies: { 'local:cards': ['example-compiler'] },
     buildPluginOptions: {
-      'babel-compiler': {
-        sourceTransforms: {
+      'example-compiler': {
+        instrumentation: {
           cacheKey: 'generation-b',
-          includePackages: ['local:cards'],
         },
       },
     },
@@ -74,7 +75,7 @@ test('test-runner build fingerprint follows options owned by the build plugin', 
   t.after(clearTestRunnerContext);
 
   setTestRunnerContext({
-    providerId: 'rstest',
+    providerId: 'example',
     buildPluginOptions: {
       rspack: { context: { coverageGeneration: 'generation-a' } },
     },
@@ -82,7 +83,7 @@ test('test-runner build fingerprint follows options owned by the build plugin', 
   const generationA = getTestRunnerBuildOptionsFingerprint('rspack');
 
   setTestRunnerContext({
-    providerId: 'rstest',
+    providerId: 'example',
     buildPluginOptions: {
       rspack: { context: { coverageGeneration: 'generation-b' } },
     },
@@ -92,4 +93,34 @@ test('test-runner build fingerprint follows options owned by the build plugin', 
   assert.notEqual(generationA, null);
   assert.notEqual(generationA, generationB);
   assert.equal(getTestRunnerBuildOptionsFingerprint('unrelated'), null);
+});
+
+test('Isobuild options are immutable and separate rewritten modules from ordinary builds', t => {
+  t.after(clearTestRunnerContext);
+  clearTestRunnerContext();
+  const input = {
+    lazyTestPackages: true,
+    moduleReplacements: [{ module: 'example/index.js', source: 'export const test = 1;' }],
+  };
+  assert.deepEqual(getTestRunnerIsobuildOptions(), {});
+  setTestRunnerContext({ isobuildOptions: input });
+  const first = getTestRunnerBuildOptionsFingerprint('example-package');
+  input.moduleReplacements[0].source = 'export const test = 2;';
+  assert.equal(getTestRunnerIsobuildOptions().moduleReplacements[0].source,
+    'export const test = 1;');
+  assert.equal(Object.isFrozen(getTestRunnerIsobuildOptions().moduleReplacements[0]), true);
+  setTestRunnerContext({ isobuildOptions: input });
+  assert.notEqual(getTestRunnerBuildOptionsFingerprint('example-package'), first);
+  clearTestRunnerContext();
+  assert.equal(getTestRunnerBuildOptionsFingerprint('example-package'), null);
+});
+
+test('build option fingerprints do not interpret a compiler-specific option schema', t => {
+  t.after(clearTestRunnerContext);
+  setTestRunnerContext({
+    buildPluginOptions: {
+      'example-compiler': { sourceTransforms: { includePackages: ['local:cards'] } },
+    },
+  });
+  assert.equal(getTestRunnerBuildOptionsFingerprint('local:cards'), null);
 });

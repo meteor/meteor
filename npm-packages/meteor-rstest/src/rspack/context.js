@@ -5,23 +5,11 @@ const {
   applyRstestCoverageToSwcRule,
   readRstestCoveragePlan,
   resolveRstestCoverageSwcPlugin,
-} = require('./rstest-coverage.js');
+} = require('./coverage.js');
 
 function hasTypescriptRstestInputs({ files = [], setupFiles = [] } = {}) {
   return [...files, ...setupFiles].some(file =>
     typeof file === 'string' && /\.(?:[cm]?ts|tsx)$/i.test(file)
-  );
-}
-
-function isRstestRuntimeBuild({
-  testRunner,
-  testRunnerContext = {},
-  isTest,
-} = {}) {
-  const runner = testRunner || testRunnerContext.testRunner;
-  const runtime = testRunnerContext.runtime;
-  return runner === 'rstest' && (
-    runtime === true || (runtime === undefined && Boolean(isTest))
   );
 }
 
@@ -39,17 +27,14 @@ function getRstestMeteorTestFlags({
 function getRstestCacheVersion({
   testRunnerContext = {},
   runtimeSettings = null,
+  inventory = null,
 } = {}) {
-  if (testRunnerContext.testRunner !== 'rstest') return null;
   return crypto.createHash('sha256').update(JSON.stringify({
     schemaVersion: 1,
     coverageGeneration: testRunnerContext.coverageGeneration || null,
     runtimeSettings,
+    inventory,
   })).digest('hex');
-}
-
-function shouldCleanRstestOutput({ isProd, isRstestTest, isWorker } = {}) {
-  return Boolean((isProd || isRstestTest) && !isWorker);
 }
 
 function readRstestRuntimeInventory({ manifest, projectDir, client }) {
@@ -114,10 +99,8 @@ module.exports = {
   getRstestCacheVersion,
   getRstestMeteorTestFlags,
   hasTypescriptRstestInputs,
-  isRstestRuntimeBuild,
   readRstestCoveragePlan,
   readRstestRuntimeInventory,
   readRstestRuntimeSettings,
   resolveRstestCoverageSwcPlugin,
-  shouldCleanRstestOutput,
 };

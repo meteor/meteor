@@ -1,9 +1,20 @@
-import { inheritMeteorToolNodeFlags, setMeteorAppIgnore } from "../lib/meteor.js";
+import { getMeteorAppDir, inheritMeteorToolNodeFlags, setMeteorAppDir, setMeteorAppIgnore } from "../lib/meteor.js";
 import {
   buildNpmInstallArgs,
   buildYarnInstallArgs,
   getPackageInstallEnvironment,
 } from "../lib/npm.js";
+
+Tinytest.add('tools-core - test host root is scoped to the active provider plan', test => {
+  try {
+    setMeteorAppDir('/temporary/test-host');
+    test.equal(getMeteorAppDir(), '/temporary/test-host');
+    setMeteorAppDir(undefined);
+    test.equal(getMeteorAppDir(), process.cwd());
+  } finally {
+    setMeteorAppDir(undefined);
+  }
+});
 
 Tinytest.add(
   "tools-core - package install args include dev dependencies portably",

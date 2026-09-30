@@ -139,6 +139,41 @@ test('provider session validates required methods', () => {
   });
 });
 
+test('execution plans carry immutable generic Isobuild capabilities and plugin dependencies', () => {
+  const plan = validateTestExecutionPlan({
+    mode: 'meteor-host',
+    buildPluginOptions: { 'example-compiler': { instrument: true } },
+    buildPluginDependencies: { 'example:package': ['example-compiler'] },
+    isobuildOptions: {
+      lazyTestPackages: true,
+      moduleReplacements: [{ module: '@example/runner/index.js', source: 'export const test = 1;' }],
+    },
+  });
+  assert.deepEqual(plan.buildPluginDependencies, {
+    'example:package': ['example-compiler'],
+  });
+  assert.equal(Object.isFrozen(plan.isobuildOptions.moduleReplacements[0]), true);
+  assert.equal(Object.isFrozen(plan.buildPluginDependencies['example:package']), true);
+  for (const isobuildOptions of [
+    { lazyTestPackages: 'yes' },
+    { moduleReplacements: {} },
+    { moduleReplacements: [{ module: '../example/index.js', source: '' }] },
+    { moduleReplacements: [{ module: '/example/index.js', source: '' }] },
+    { moduleReplacements: [{ module: 'example\\index.js', source: '' }] },
+    { moduleReplacements: [{ module: 'example/index.js', source: null }] },
+    { moduleReplacements: [
+      { module: 'example/index.js', source: '' },
+      { module: 'example/index.js', source: '' },
+    ] },
+  ]) {
+    assert.throws(() => validateTestExecutionPlan({ mode: 'meteor-host', isobuildOptions }));
+  }
+  assert.throws(() => validateTestExecutionPlan({
+    mode: 'meteor-host',
+    buildPluginDependencies: { 'example:package': ['missing-compiler'] },
+  }), /declared buildPluginOptions keys/);
+});
+
 test('provider session prepares plan and preserves provider error identity', async () => {
   const expected = new Error('provider validation failed');
   expected.code = 'EXAMPLE_VALIDATION';

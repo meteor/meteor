@@ -1,5 +1,6 @@
 let currentContext = null;
 const crypto = require('node:crypto');
+const EMPTY_OPTIONS = Object.freeze({});
 
 function cloneJsonSafe(value, path = 'test runner context', seen = new Set()) {
   if (value === null || typeof value === 'string' || typeof value === 'boolean') {
@@ -46,21 +47,26 @@ function getTestRunnerBuildOptions(packageName) {
     : undefined;
 }
 
+function getTestRunnerIsobuildOptions() {
+  return currentContext && currentContext.isobuildOptions || EMPTY_OPTIONS;
+}
+
 function getTestRunnerBuildOptionsFingerprint(packageName) {
   const buildPluginOptions = currentContext && currentContext.buildPluginOptions || {};
+  const dependencies = currentContext && currentContext.buildPluginDependencies || {};
+  const requiredPlugins = dependencies[packageName] || [];
   const options = {};
   for (const [buildPluginName, pluginOptions] of Object.entries(buildPluginOptions)) {
     const ownsOptions = buildPluginName === packageName;
-    const transformsPackage = pluginOptions && pluginOptions.sourceTransforms &&
-      Array.isArray(pluginOptions.sourceTransforms.includePackages) &&
-      pluginOptions.sourceTransforms.includePackages.includes(packageName);
-    if (ownsOptions || transformsPackage) {
+    if (ownsOptions || requiredPlugins.includes(buildPluginName)) {
       options[buildPluginName] = pluginOptions;
     }
   }
-  if (Object.keys(options).length === 0) return null;
+  const isobuildOptions = getTestRunnerIsobuildOptions();
+  if (Object.keys(options).length === 0 &&
+      Object.keys(isobuildOptions).length === 0) return null;
   return crypto.createHash('sha256')
-    .update(JSON.stringify(options))
+    .update(JSON.stringify({ buildPluginOptions: options, isobuildOptions }))
     .digest('hex');
 }
 
@@ -78,6 +84,7 @@ module.exports = {
   clearTestRunnerContext,
   getTestRunnerBuildOptions,
   getTestRunnerBuildOptionsFingerprint,
+  getTestRunnerIsobuildOptions,
   sameTestRunnerBuildOptionsFingerprint,
   setTestRunnerContext,
 };

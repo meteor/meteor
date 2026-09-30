@@ -14,7 +14,8 @@
       "types": "./runtime/index.d.ts",
       "default": "./runtime/index.mjs"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./rspack": "./src/rspack/index.js"
   },
   "type": "commonjs",
   "bin": {

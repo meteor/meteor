@@ -8,11 +8,9 @@ const {
   getRstestCacheVersion,
   getRstestMeteorTestFlags,
   hasTypescriptRstestInputs,
-  isRstestRuntimeBuild,
   readRstestRuntimeInventory,
   readRstestRuntimeSettings,
-  shouldCleanRstestOutput,
-} = require('../lib/rstest.js');
+} = require('../src/rspack/context.js');
 
 test('Rstest cache version separates coverage and runtime environment changes', () => {
   const base = {
@@ -34,25 +32,10 @@ test('Rstest cache version separates coverage and runtime environment changes', 
 
   assert.notEqual(disabled, covered);
   assert.notEqual(disabled, changedEnvironment);
-  assert.equal(getRstestCacheVersion({ testRunnerContext: {} }), null);
-});
-
-test('Rstest test builds clean stale output outside isolated workers', () => {
-  assert.equal(shouldCleanRstestOutput({
-    isProd: false,
-    isRstestTest: true,
-    isWorker: false,
-  }), true);
-  assert.equal(shouldCleanRstestOutput({
-    isProd: false,
-    isRstestTest: true,
-    isWorker: true,
-  }), false);
-  assert.equal(shouldCleanRstestOutput({
-    isProd: true,
-    isRstestTest: false,
-    isWorker: false,
-  }), true);
+  assert.notEqual(disabled, getRstestCacheVersion({
+    ...base,
+    inventory: { files: ['/runtime/new.test.js'] },
+  }));
 });
 
 test('mixed runtime and full-app builds expose both Meteor test flags', () => {
@@ -71,24 +54,6 @@ test('mixed runtime and full-app builds expose both Meteor test flags', () => {
     isTestFullApp: false,
     isRstestTest: true,
   }), { isTest: true, isAppTest: false });
-});
-
-test('Rstest runtime build accepts runner identity from provider context', () => {
-  assert.equal(isRstestRuntimeBuild({
-    testRunner: undefined,
-    testRunnerContext: { testRunner: 'rstest', runtime: true },
-    isTest: true,
-  }), true);
-  assert.equal(isRstestRuntimeBuild({
-    testRunner: undefined,
-    testRunnerContext: { runtime: true },
-    isTest: true,
-  }), false);
-  assert.equal(isRstestRuntimeBuild({
-    testRunner: 'rstest',
-    testRunnerContext: { testRunner: 'rstest', runtime: false },
-    isTest: true,
-  }), false);
 });
 
 test('Rstest runtime infers TypeScript from selected tests and setup files', () => {

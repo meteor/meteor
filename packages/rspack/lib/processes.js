@@ -428,6 +428,10 @@ export function getRspackEnv({ isClient, isServer, isTest: inIsTest, isTestLike:
     ["isVerbose", isMeteorAppConfigModernVerbose()],
     ...((isProfile && [["isProfile", isMeteorAppProfile()]]) || []),
     ["isTest", isTest],
+    ...((global.testCommandMetadata?.testFiles?.length > 0 && [[
+      "testFiles",
+      JSON.stringify(global.testCommandMetadata.testFiles),
+    ]]) || []),
     ...((isTest && testRunnerId && [["testRunner", testRunnerId]]) || []),
     ...((isTest && Object.keys(testRunnerContext).length > 0 && [[
       "testRunnerContext",

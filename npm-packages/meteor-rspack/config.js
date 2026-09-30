@@ -63,7 +63,7 @@ function createMeteorSwcRule({
  * Test-safe projection of Meteor's Rspack language configuration.
  *
  * This deliberately excludes Meteor application lifecycle plugins, generated
- * entries, externals, dev-server configuration, and output ownership. Rstest
+ * entries, externals, dev-server configuration, and output ownership. The test runner
  * supplies those pieces. Meteor-backed projects keep using rspack.config.js.
  */
 function createTestRspackConfig({
@@ -95,11 +95,11 @@ function createTestRspackConfig({
   const rejectMeteorRuntime = ({ request, contextInfo }, callback) => {
     if (/^meteor\//.test(request || '') && !allowedMeteor.has(request)) {
       const error = new Error(
-        `[Meteor Rstest] ${request} requires Meteor runtime` +
+        `[Meteor Rspack] ${request} requires Meteor runtime` +
         `${contextInfo && contextInfo.issuer ? ` (imported by ${contextInfo.issuer})` : ''}. ` +
-        'Move this test to tests/rstest/runtime/server or runtime/client, or configure an explicit alias/mock.'
+        'Run this test in a Meteor host, or configure an explicit alias/mock.'
       );
-      error.code = 'RSTEST_RUNTIME_PROJECT_REQUIRED';
+      error.code = 'METEOR_TEST_RUNTIME_REQUIRED';
       callback(error);
       return;
     }

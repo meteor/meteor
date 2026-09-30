@@ -24,11 +24,13 @@ const {
 } = require('./inventory.js');
 const {
   buildRstestArgs,
+  resolveRstestPackageJson,
   startRstestProcess,
 } = require('./process.js');
 const { RstestBrowser } = require('./browser.js');
 const { RstestExternal } = require('./external.js');
 const { rstestError } = require('./errors.js');
+const { RSTEST_RUNTIME_SHIM } = require('./runtime-api.js');
 const {
   aggregateRstestWorkerResults,
   createRstestHostDescriptors,
@@ -413,6 +415,11 @@ function requestsVerboseReporter(args = []) {
   return false;
 }
 
+function resolveRstestRspackAdapter(npmRoot) {
+  const coordinatorRequire = createRequire(resolveRstestPackageJson(npmRoot));
+  return coordinatorRequire.resolve('@meteorjs/rstest/rspack');
+}
+
 function resolveRstestCoverageInstrumentation(npmRoot) {
   const appRequire = createRequire(path.join(path.resolve(npmRoot), 'package.json'));
   const coordinatorEntry = appRequire.resolve('@meteorjs/rstest');
@@ -511,6 +518,7 @@ class RstestTestRunnerProvider {
       aggregateRstestWorkerResults,
       createRstestHostDescriptors,
       validateRstestWorkerPayload,
+      resolveRstestRspackAdapter,
       resolveRstestCoverageInstrumentation,
       env: process.env,
       warn: message => console.warn(message),
@@ -1385,6 +1393,7 @@ class RstestTestRunnerProvider {
         : selection.needsRuntime || selection.needsExternal
         ? 'meteor-host'
         : 'native-only';
+    const buildPluginDependencies = {};
     const buildPluginOptions = {
       rspack: {
         autoInstall: npm.autoInstall,
@@ -1394,19 +1403,21 @@ class RstestTestRunnerProvider {
           targets: { client: buildClient, server: buildServer },
         }),
         context: {
-          testRunner: 'rstest',
-          runtime: dedicatedRuntimeHosts ? false : selection.needsRuntime,
-          upstreamRuntime: this.upstreamRuntime,
-          external: selection.needsExternal,
-          server,
-          client,
-          runtimeManifest: this.runtimeManifest,
-          runtimeSettingsPath: this.runtimeSettingsPath,
-          npmRoot: npm.root,
-          ...(this.coveragePlanPath && {
-            coveragePlanPath: this.coveragePlanPath,
-            coverageGeneration: this.coverageGeneration,
-          }),
+          adapter: this.services.resolveRstestRspackAdapter(npm.root),
+          options: {
+            runtime: dedicatedRuntimeHosts ? false : selection.needsRuntime,
+            upstreamRuntime: this.upstreamRuntime,
+            external: selection.needsExternal,
+            server,
+            client,
+            runtimeManifest: this.runtimeManifest,
+            runtimeSettingsPath: this.runtimeSettingsPath,
+            npmRoot: npm.root,
+            ...(this.coveragePlanPath && {
+              coveragePlanPath: this.coveragePlanPath,
+              coverageGeneration: this.coverageGeneration,
+            }),
+          },
         },
       },
     };
@@ -1432,6 +1443,9 @@ class RstestTestRunnerProvider {
             cacheKey,
           },
         };
+        for (const packageName of transforms.includePackages) {
+          buildPluginDependencies[packageName] = ['babel-compiler'];
+        }
       }
     }
     this.plan = {
@@ -1449,6 +1463,16 @@ class RstestTestRunnerProvider {
         refreshProjectMetadata: true,
       }),
       metadata: this.metadata,
+      ...(mode === 'meteor-host' && selection.needsRuntime && {
+        isobuildOptions: {
+          lazyTestPackages: true,
+          moduleReplacements: [{
+            module: '@rstest/core/dist/index.js',
+            source: RSTEST_RUNTIME_SHIM,
+          }],
+        },
+      }),
+      buildPluginDependencies,
       buildPluginOptions,
     };
     return this.plan;
@@ -1798,6 +1822,7 @@ class RstestTestRunnerProvider {
 module.exports = {
   collectLocalPackageTransforms,
   getPackageHarnessDevDependencies,
+  resolveRstestRspackAdapter,
   resolveRstestCoverageInstrumentation,
   RstestTestRunnerProvider,
   writePrivateJsonAtomic,

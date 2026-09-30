@@ -2451,7 +2451,9 @@ async function doTestCommand(options) {
   //
   // As long as the Meteor CLI runs a single command as part of each
   // process, this should be safe.
-  global.testCommandMetadata = {};
+  global.testCommandMetadata = {
+    testFiles: [].concat(options['test-file'] || []).filter(Boolean),
+  };
 
   Console.setVerbose(!!options.verbose);
   if (options.headless) {
@@ -2898,8 +2900,9 @@ async function doTestCommand(options) {
     setTestRunnerContext({
       providerId: testRunnerSelection.id,
       buildPluginOptions: testRunnerPlan.buildPluginOptions || {},
+      buildPluginDependencies: testRunnerPlan.buildPluginDependencies || {},
+      isobuildOptions: testRunnerPlan.isobuildOptions || {},
     });
-    process.env.METEOR_TEST_RUNNER = testRunnerSelection.id;
     let harnessPackagesChanged = false;
     if (options['test-packages'] && testRunnerPlan.harnessPackages?.length) {
       const constraints = testRunnerPlan.harnessPackages

@@ -75,6 +75,7 @@ const {
   isMeteorAppConfigModernVerbose,
   isMeteorAppNative,
   isMeteorBundleVisualizerProject,
+  setMeteorAppDir,
 } = require('meteor/tools-core/lib/meteor');
 
 const {
@@ -89,15 +90,10 @@ const {
   isYarnProject,
 } = require('meteor/tools-core/lib/npm');
 const testRunnerBuildOptions = Plugin.getTestRunnerBuildOptions() || {};
+setMeteorAppDir(testRunnerBuildOptions.projectRoot);
 const isTestRunnerDependencyOnly =
   testRunnerBuildOptions.lifecycle === 'dependencies-only';
-const isTestRunnerRuntime = testRunnerBuildOptions.lifecycle === 'runtime' &&
-  testRunnerBuildOptions.context?.runtime === true;
-if (isTestRunnerRuntime && testRunnerBuildOptions.projectRoot) {
-  process.env.METEOR_RSPACK_PROJECT_ROOT =
-    testRunnerBuildOptions.projectRoot;
-  process.env.METEOR_RSTEST_PACKAGE_HOST = '1';
-}
+const isTestRunnerRuntime = testRunnerBuildOptions.lifecycle === 'runtime';
 const dependencyOptions = { autoInstall: testRunnerBuildOptions.autoInstall };
 const shouldRunRspackAppLifecycle = isMeteorAppRun() ||
   isMeteorAppBuild() ||
@@ -202,7 +198,9 @@ if (shouldRunRspackCompilerLifecycle) {
     ensureRspackConfigExists();
 
     // Configure Meteor settings for Rspack
-    configureMeteorForRspack();
+    configureMeteorForRspack({
+      isTestRunnerHost: isTestRunnerRuntime,
+    });
 
     // Set native mode flag so the server module can skip dev proxy setup
     if (isMeteorAppNative()) {

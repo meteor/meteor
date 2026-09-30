@@ -32,6 +32,39 @@ function validateRecord(value, path) {
   return cloneJsonSafe(value, path);
 }
 
+function validateIsobuildOptions(value) {
+  const options = validateRecord(value, 'isobuildOptions');
+  const normalized = {};
+  if (options.lazyTestPackages !== undefined) {
+    if (typeof options.lazyTestPackages !== 'boolean') {
+      throw contractError('isobuildOptions.lazyTestPackages must be a boolean');
+    }
+    normalized.lazyTestPackages = options.lazyTestPackages;
+  }
+  if (options.moduleReplacements !== undefined) {
+    if (!Array.isArray(options.moduleReplacements)) {
+      throw contractError('isobuildOptions.moduleReplacements must be an array');
+    }
+    const modules = new Set();
+    normalized.moduleReplacements = options.moduleReplacements.map(entry => {
+      if (!entry || typeof entry.module !== 'string' ||
+          entry.module.includes('\\') ||
+          entry.module.split('/').some(part => !part || part === '.' || part === '..')) {
+        throw contractError('moduleReplacements entries must specify a relative npm module path');
+      }
+      if (typeof entry.source !== 'string') {
+        throw contractError('moduleReplacements entries must specify source text');
+      }
+      if (modules.has(entry.module)) {
+        throw contractError(`moduleReplacements has duplicate module "${entry.module}"`);
+      }
+      modules.add(entry.module);
+      return { module: entry.module, source: entry.source };
+    });
+  }
+  return cloneJsonSafe(normalized, 'isobuildOptions');
+}
+
 function validateTestExecutionPlan(plan) {
   if (!plan || typeof plan !== 'object' || Array.isArray(plan)) {
     throw contractError('test execution plan must be an object');
@@ -100,6 +133,25 @@ function validateTestExecutionPlan(plan) {
       }
     }
     normalized.buildPluginOptions = options;
+  }
+  if (plan.buildPluginDependencies !== undefined) {
+    const dependencies = validateRecord(
+      plan.buildPluginDependencies,
+      'buildPluginDependencies'
+    );
+    for (const [packageName, pluginNames] of Object.entries(dependencies)) {
+      if (!packageName || !Array.isArray(pluginNames) ||
+          pluginNames.some(name => typeof name !== 'string' || !name ||
+            !Object.prototype.hasOwnProperty.call(normalized.buildPluginOptions || {}, name))) {
+        throw contractError(
+          'buildPluginDependencies must map package names to declared buildPluginOptions keys'
+        );
+      }
+    }
+    normalized.buildPluginDependencies = dependencies;
+  }
+  if (plan.isobuildOptions !== undefined) {
+    normalized.isobuildOptions = validateIsobuildOptions(plan.isobuildOptions);
   }
   return Object.freeze(normalized);
 }

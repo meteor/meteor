@@ -10,69 +10,6 @@ const {
 // Module identifiers in bundled JS must use '/' regardless of OS.
 const toPosix = (p) => p.replace(/\\/g, '/');
 
-const createRstestTestFileRegistration = ({
-  isRstestTest,
-}) => {
-  if (!isRstestTest) return undefined;
-  return {
-    module: 'meteor/rstest',
-    exportName: '__registerTestFileLoader',
-    mode: 'sync',
-    runtimeFactory: {
-      module: '@meteorjs/rstest/runtime',
-      exportName: 'createMeteorRstestFileRuntime',
-      registrationExportName: '__setRstestRuntimeFactory',
-    },
-  };
-};
-
-const createRstestRuntimeAlias = ({
-  upstreamRuntime,
-  projectDir,
-  npmRoot,
-  resolveModule = require.resolve,
-}) => {
-  if (!upstreamRuntime) return undefined;
-  const searchPaths = [npmRoot, projectDir].filter(Boolean);
-  const runtimePath = resolveModule(
-    '@rstest/core/internal/browser-runtime',
-    { paths: searchPaths },
-  );
-  const meteorRuntimePath = resolveModule(
-    '@meteorjs/rstest/runtime',
-    { paths: searchPaths },
-  );
-  return {
-    '@rstest/core$': runtimePath,
-    '@meteorjs/rstest/runtime$': meteorRuntimePath,
-  };
-};
-
-const enforceRstestRuntimeAlias = (config, alias) => {
-  if (!alias) return config;
-  config.resolve ||= {};
-  config.resolve.alias = {
-    ...(config.resolve.alias || {}),
-    ...alias,
-  };
-  return config;
-};
-
-const enforceRstestRuntimeOptimization = (config, upstreamRuntime) => {
-  if (!upstreamRuntime) return config;
-  // Meteor test hosts expose development variants of shared npm modules.
-  // Keep embedded Rstest modules on same condition set; mixing production
-  // react-dom with host-owned development React breaks shared internals.
-  config.mode = 'development';
-  config.optimization ||= {};
-  config.optimization.usedExports = false;
-  config.optimization.minimize = false;
-  // Rstest hoists module mocks ahead of imports inside each test module.
-  // Scope hoisting would move bundled imports above that transformed call.
-  config.optimization.concatenateModules = false;
-  return config;
-};
-
 /**
  * Generates eager test files dynamically
  * @param {Object} options - Options for generating the test file
@@ -81,6 +18,7 @@ const enforceRstestRuntimeOptimization = (config, upstreamRuntime) => {
  * @param {string} [options.discoveryRoot] - Root scanned by the eager context
  * @param {string} [options.testFileRoot] - Logical prefix used in reported test IDs
  * @param {string[]} [options.includeFiles] - Exact files allowed under discoveryRoot
+ * @param {string[]} [options.testFiles] - Project-relative filename filters for eager discovery
  * @param {string[]} [options.setupFiles] - Runtime setup modules loaded once per test file
  * @param {{module: string, exportName: string, mode?: 'sync'|'lazy', runtimeFactory?: {module: string, exportName: string, registrationExportName: string}}} [options.testFileRegistration]
  *        Optional module API wrapping each discovered test-file evaluation
@@ -97,6 +35,7 @@ const generateEagerTestFile = ({
   discoveryRoot = projectDir,
   testFileRoot,
   includeFiles,
+  testFiles = [],
   setupFiles = [],
   testFileRegistration,
   buildContext,
@@ -126,9 +65,6 @@ const generateEagerTestFile = ({
     "**/public/**",
     "**/private/**",
     "**/packages/**",
-    "**/tests/rstest/pure/**",
-    "**/tests/rstest/browser/**",
-    "**/tests/rstest/e2e/**",
     `**/${buildContext}/**`,
     ...inIgnoreEntries,
   ];
@@ -154,7 +90,7 @@ const generateEagerTestFile = ({
     path.isAbsolute(testFileRoot) ||
     testFileRoot.split(/[\\/]/).includes('..')
   )) {
-    throw new Error('Rstest testFileRoot must be a project-relative path.');
+    throw new Error('Test file root must be a project-relative path.');
   }
   const relativeDiscoveryPath = path.relative(projectDir, resolvedDiscoveryRoot);
   const relativeDiscoveryRoot = testFileRoot === undefined
@@ -168,18 +104,25 @@ const generateEagerTestFile = ({
     .map(filePath => path.relative(resolvedDiscoveryRoot, filePath))
     .filter(relative => relative && !relative.startsWith(`..${path.sep}`))
     .map(relative => toPosix(relative).replace(/[|\\{}()[\]^$+*?.-]/g, '\\$&'));
+  const testFileFilters = includeFiles ? [] : testFiles.map(file =>
+    toPosix(path.isAbsolute(file) ? path.relative(projectDir, file) : file)
+      .replace(/[|\\{}()[\]^$+*?.-]/g, '\\$&')
+  );
+  const filenamePattern = isAppTest
+    ? '\\.app-(?:test|spec)s?\\.[^.]+$'
+    : '\\.(?:test|spec)s?\\.[^.]+$';
   const regExp = includeFiles
     ? includedRelativeFiles.length > 0
       ? new RegExp(`^(?:\\./)?(?:${includedRelativeFiles.join('|')})$`).toString()
       : '/a^/'
-    : isAppTest
-      ? "/\\.app-(?:test|spec)s?\\.[^.]+$/"
-      : "/\\.(?:test|spec)s?\\.[^.]+$/";
+    : new RegExp(testFileFilters.length
+      ? `^(?=.*(?:${testFileFilters.join('|')})).*${filenamePattern}`
+      : filenamePattern).toString();
 
   const registrationIteration = testFileRegistration
     ? `.map((file) => __meteorRegisterTestFile(
     [__meteorTestFileRoot, file.replace(/^\\.\\//, '')].filter(Boolean).join('/'),
-    () => (__meteorRstestSetupLoaders[file] || []).reduce(
+    () => (__meteorTestSetupLoaders[file] || []).reduce(
       (pending, loadSetup) => pending.then(loadSetup),
       Promise.resolve(),
     ).then(() => ctx(file)),
@@ -189,11 +132,11 @@ const generateEagerTestFile = ({
   const registrationImport = testFileRegistration
     ? `import { ${testFileRegistration.exportName} as __meteorRegisterTestFile${
       runtimeFactory
-        ? `, ${runtimeFactory.registrationExportName} as __meteorSetRstestRuntimeFactory`
+        ? `, ${runtimeFactory.registrationExportName} as __meteorSetTestRuntimeFactory`
         : ''
     } } from ${JSON.stringify(testFileRegistration.module)};\n${
       runtimeFactory
-        ? `import { ${runtimeFactory.exportName} as __meteorCreateRstestRuntime } from ${JSON.stringify(runtimeFactory.module)};\n__meteorSetRstestRuntimeFactory(__meteorCreateRstestRuntime);\n`
+        ? `import { ${runtimeFactory.exportName} as __meteorCreateTestRuntime } from ${JSON.stringify(runtimeFactory.module)};\n__meteorSetTestRuntimeFactory(__meteorCreateTestRuntime);\n`
         : ''
     }`
     : '';
@@ -206,14 +149,14 @@ const generateEagerTestFile = ({
       const key = `./${relative}`;
       const loaders = setupFiles.map((setupFile, index) => {
         const query = encodeURIComponent(`${relative}:${index}`);
-        const request = `${toPosix(setupFile)}?meteor-rstest-setup=${query}`;
+        const request = `${toPosix(setupFile)}?meteor-test-setup=${query}`;
         return `() => import(/* webpackMode: "eager" */ ${JSON.stringify(request)})`;
       });
       return `${JSON.stringify(key)}: [${loaders.join(', ')}]`;
     })
     : [];
   const setupLoaderMap = testFileRegistration
-    ? `const __meteorRstestSetupLoaders = {${setupLoaderEntries.join(',')}};\n`
+    ? `const __meteorTestSetupLoaders = {${setupLoaderEntries.join(',')}};\n`
     : '';
   const discoveryContent = fs.existsSync(resolvedDiscoveryRoot) ? `{
   const ctx = import.meta.webpackContext('${toPosix(resolvedDiscoveryRoot)}', {
@@ -257,9 +200,5 @@ ${extraContent}`;
 };
 
 module.exports = {
-  createRstestRuntimeAlias,
-  createRstestTestFileRegistration,
-  enforceRstestRuntimeAlias,
-  enforceRstestRuntimeOptimization,
   generateEagerTestFile,
 };

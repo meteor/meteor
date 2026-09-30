@@ -12,7 +12,7 @@ module.exports = {
     // These suites use node:test lifecycle hooks and run via test:rstest.
     "<rootDir>/tools/cli/test-runners/tests/",
     "<rootDir>/tools/tool-env/test-runner-context.test.js",
-    "<rootDir>/tools/isobuild/rstest-runtime-alias.test.js",
+    "<rootDir>/tools/isobuild/module-replacements.test.js",
     "/node_modules/",
     "<rootDir>/tools/e2e-tests/",
     "<rootDir>/tools/native-tests/",
