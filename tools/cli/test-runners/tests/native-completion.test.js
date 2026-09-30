@@ -30,3 +30,32 @@ test('native-only completion runs before cleanup and retains a non-zero executio
     'clearContext',
   ]);
 });
+
+test('native process rejection still stops the provider and clears build context', async () => {
+  const expected = new Error('native process failed');
+  const calls = [];
+  await assert.rejects(completeNativeOnlyTestRunner({
+    completion: Promise.reject(expected),
+    session: {
+      async completeRun() { calls.push('completeRun'); },
+      async stop() { calls.push('stop'); },
+    },
+    clearContext() { calls.push('clearContext'); },
+  }), error => error === expected);
+  assert.deepEqual(calls, ['stop', 'clearContext']);
+});
+
+test('native process failure remains primary when provider cleanup also fails', async () => {
+  const expected = new Error('native process failed');
+  const cleanupError = new Error('provider stop failed');
+  let cleared = false;
+  await assert.rejects(completeNativeOnlyTestRunner({
+    completion: Promise.reject(expected),
+    session: {
+      async stop() { throw cleanupError; },
+    },
+    clearContext() { cleared = true; },
+  }), error => error === expected);
+  assert.equal(cleared, true);
+  assert.equal(expected.cleanupError, cleanupError);
+});

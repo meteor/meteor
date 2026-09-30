@@ -15,6 +15,7 @@ const {
 const {
   completeNativeOnlyTestRunner,
 } = require('./test-runners/native-completion.js');
+const { cleanupTestRunner } = require('./test-runners/provider-cleanup.js');
 var httpHelpers = require('../utils/http-helpers.js');
 var archinfo = require('../utils/archinfo');
 var catalog = require('../packaging/catalog/catalog.js');
@@ -2930,24 +2931,29 @@ async function doTestCommand(options) {
       preHost = await testRunnerSession.startBeforeHost({ updateMetadata });
     } catch (error) {
       Console.error(error.message);
-      await testRunnerSession.stop();
-      require('../tool-env/test-runner-context.js').clearTestRunnerContext();
+      await cleanupTestRunner({
+        session: testRunnerSession,
+        clearContext: () =>
+          require('../tool-env/test-runner-context.js').clearTestRunnerContext(),
+        error,
+      });
       return 1;
     }
     if (preHost && preHost.exitCode && preHost.exitCode !== 0) {
-      await testRunnerSession.stop();
-      require('../tool-env/test-runner-context.js').clearTestRunnerContext();
+      await cleanupTestRunner({
+        session: testRunnerSession,
+        clearContext: () =>
+          require('../tool-env/test-runner-context.js').clearTestRunnerContext(),
+      });
       return preHost.exitCode;
     }
     testRunnerProcess = preHost && preHost.process;
     if (testRunnerPlan.mode === 'native-only') {
-      const code = testRunnerProcess
-        ? await testRunnerProcess.completion
-        : preHost && preHost.exitCode || 0;
       try {
         return await completeNativeOnlyTestRunner({
           session: testRunnerSession,
-          exitCode: code,
+          exitCode: preHost && preHost.exitCode || 0,
+          completion: testRunnerProcess && testRunnerProcess.completion,
           clearContext: () =>
             require('../tool-env/test-runner-context.js').clearTestRunnerContext(),
         });
@@ -2993,6 +2999,7 @@ async function doTestCommand(options) {
   options.testRunnerProcess = testRunnerProcess;
   options.updateTestRunnerMetadata = updateTestRunnerMetadataPayload;
 
+  let executionError;
   try {
     return await runTestAppForPackages(projectContext, Object.assign(
       options,
@@ -3003,9 +3010,16 @@ async function doTestCommand(options) {
         proxyHost: parsedServerUrl.hostname,
       }
     ));
+  } catch (error) {
+    executionError = error;
+    throw error;
   } finally {
-    if (testRunnerSession) await testRunnerSession.stop();
-    require('../tool-env/test-runner-context.js').clearTestRunnerContext();
+    await cleanupTestRunner({
+      session: testRunnerSession,
+      clearContext: () =>
+        require('../tool-env/test-runner-context.js').clearTestRunnerContext(),
+      error: executionError,
+    });
   }
 }
 
