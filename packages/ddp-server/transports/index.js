@@ -1,6 +1,27 @@
 import { createSockJSTransport } from './sockjs.js';
 import { createUwsTransport } from './uws.js';
 
+/**
+ * Socket contract
+ *
+ * A transport emits 'connection' with a socket object, and the rest of
+ * ddp-server drives that socket through this interface only:
+ *
+ *   on('data', cb)     receive one decoded text frame per call
+ *   on('close', cb)    called once when the socket is gone
+ *   send(string)       queue one text frame
+ *   close()            close the socket AFTER flushing what send() queued
+ *   isClosed           truthy once closed
+ *   protocol           'websocket' or 'websocket-raw'
+ *   headers            the upgrade request headers
+ *   setWebsocketTimeout(ms)
+ *
+ * The flushing guarantee in close() is load-bearing: livedata_server ends
+ * DDP version negotiation by sending 'failed' and closing in the same tick,
+ * so a close that discards queued frames silently breaks negotiation. A
+ * transport whose native close does not flush must adapt it, as uws.js does.
+ */
+
 const TRANSPORTS = {
   sockjs: createSockJSTransport,
   uws: createUwsTransport,

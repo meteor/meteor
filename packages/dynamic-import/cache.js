@@ -1,4 +1,5 @@
 var dbPromise;
+var dbConnection;
 
 var canUseCache =
   // The server doesn't benefit from dynamic module fetching, and almost
@@ -45,7 +46,15 @@ function withDB(callback) {
 
     request.onerror = makeOnError(reject, "indexedDB.open");
     request.onsuccess = function (event) {
-      resolve(event.target.result);
+      var db = dbConnection = event.target.result;
+      db.onclose = function () {
+        forgetDB(db);
+      };
+      db.onversionchange = function () {
+        db.close();
+        forgetDB(db);
+      };
+      resolve(db);
     };
   });
 
@@ -54,15 +63,36 @@ function withDB(callback) {
   });
 }
 
+function forgetDB(db) {
+  // A late close event from an old connection must not discard a newer one.
+  if (dbConnection === db) {
+    dbConnection = null;
+    dbPromise = null;
+  }
+}
+
+function safeTransaction(db, mode) {
+  try {
+    return db.transaction(["sourcesByVersion"], mode);
+  } catch (error) {
+    // Browsers can close IndexedDB connections while a page is suspended.
+    // Treat this as a cache miss and let the next operation reopen the DB.
+    forgetDB(db);
+    db.close();
+    return null;
+  }
+}
+
 var objectStoreMap = {
   sourcesByVersion: { keyPath: "version" }
 };
 
 function makeOnError(reject, source) {
   return function (event) {
+    var error = event.target.error;
     reject(new Error(
       "IndexedDB failure in " + source + " " +
-        JSON.stringify(event.target)
+        (error ? error.name + ": " + error.message : "Unknown error")
     ));
 
     // Returning true from an onerror callback function prevents an
@@ -97,9 +127,10 @@ exports.checkMany = function (versions) {
       return sourcesById;
     }
 
-    var txn = db.transaction([
-      "sourcesByVersion"
-    ], "readonly");
+    var txn = safeTransaction(db, "readonly");
+    if (! txn) {
+      return sourcesById;
+    }
 
     var sourcesByVersion = txn.objectStore("sourcesByVersion");
 
@@ -165,9 +196,10 @@ function flushSetMany() {
       return;
     }
 
-    var setTxn = db.transaction([
-      "sourcesByVersion"
-    ], "readwrite");
+    var setTxn = safeTransaction(db, "readwrite");
+    if (! setTxn) {
+      return;
+    }
 
     var sourcesByVersion = setTxn.objectStore("sourcesByVersion");
 
@@ -184,5 +216,8 @@ function flushSetMany() {
         });
       })
     );
+  }).catch(function () {
+    // This promise is discarded by setTimeout. Cache write failures must not
+    // surface as unhandled rejections or interfere with dynamic imports.
   });
 }

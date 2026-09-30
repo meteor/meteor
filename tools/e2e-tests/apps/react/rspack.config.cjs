@@ -21,6 +21,16 @@ module.exports = defineConfig(Meteor => {
     : p => p?.constructor?.name === 'CustomConsoleLogPlugin';
   return {
     ...Meteor.disablePlugins(disabledPluginMatches),
+    ...Meteor.extendSwcConfig({
+      jsc: {
+        transform: {
+          react: {
+            runtime: 'automatic',
+          },
+          reactCompiler: true,
+        },
+      },
+    }),
     resolve: {
       alias: {
         "@public": path.resolve(__dirname, "public"),
