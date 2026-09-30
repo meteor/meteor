@@ -68,30 +68,67 @@ if (shouldEnableDevHMRProxy) {
   // Target URL for the Rspack dev server
   const target = `http://localhost:${process.env.RSPACK_DEVSERVER_PORT}`;
 
-  const rspackProxy = httpProxy.createProxyServer({});
+  const createRspackProxy = (scope) => {
+    const proxy = httpProxy.createProxyServer({});
+    const recentErrors = new Map();
 
-  // Don't let a transient dev-server hiccup (e.g. during a restart) crash the
-  // app process; respond with a 502 / close the socket instead.
-  rspackProxy.on('error', (err, req, resOrSocket) => {
-    if (resOrSocket && typeof resOrSocket.writeHead === 'function') {
-      if (!resOrSocket.headersSent) {
-        resOrSocket.writeHead(502, { 'Content-Type': 'text/plain' });
+    // Log the first failure immediately, then summarize repeats after 5s.
+    // Group by error code within this proxy's scope/target, not request URL:
+    // a dev-server restart can fail many different assets and HMR reconnects.
+    const logProxyError = (err, req) => {
+      const error = err.code || err.message;
+      const previous = recentErrors.get(error);
+      if (previous) {
+        previous.repeats++;
+        return;
       }
-      resOrSocket.end('Rspack dev server proxy error.');
-    } else if (resOrSocket && typeof resOrSocket.destroy === 'function') {
-      resOrSocket.destroy();
-    }
-  });
+
+      console.error(
+        `[rspack-proxy:${scope}] upstream error ${error} for ${req.method} ${req.url} -> ${target}`
+      );
+
+      const entry = { repeats: 0 };
+      recentErrors.set(error, entry);
+      setTimeout(() => {
+        recentErrors.delete(error);
+        if (entry.repeats > 0) {
+          console.error(
+            `[rspack-proxy:${scope}] upstream error ${error}: suppressed ${entry.repeats} additional ${entry.repeats === 1 ? 'failure' : 'failures'} in the last 5s -> ${target}`
+          );
+        }
+      }, 5000).unref();
+    };
+
+    proxy.on('error', (err, req, resOrSocket) => {
+      logProxyError(err, req);
+
+      // Don't let a transient dev-server hiccup (e.g. during a restart) crash
+      // the app process; respond with a 502 / close the socket instead.
+      if (resOrSocket && typeof resOrSocket.writeHead === 'function') {
+        if (!resOrSocket.headersSent) {
+          resOrSocket.writeHead(502, { 'Content-Type': 'text/plain' });
+        }
+        resOrSocket.end('Rspack dev server proxy error.');
+      } else if (resOrSocket && typeof resOrSocket.destroy === 'function') {
+        resOrSocket.destroy();
+      }
+    });
+
+    return proxy;
+  };
+  const assetsProxy = createRspackProxy('assets');
+  const wsProxy = createRspackProxy('ws');
 
   // Proxy all dev asset requests under the rspack prefix. connect strips the
   // mount prefix from req.url before calling the handler, so this proxies
   // "/__rspack__/foo" -> "<devserver>/foo", matching the previous
-  // http-proxy-middleware behavior.
+  // http-proxy-middleware behavior. This also supports integrations whose
+  // output.publicPath does not include /__rspack__/.
   WebApp.connectHandlers.use('/__rspack__', (req, res) => {
-    rspackProxy.web(req, res, { target, changeOrigin: true });
+    assetsProxy.web(req, res, { target, changeOrigin: true });
   });
   WebApp.connectHandlers.use('/ws', (req, res) => {
-    rspackProxy.web(req, res, { target });
+    wsProxy.web(req, res, { target });
   });
 
   // Proxy HMR WebSocket upgrades. Scope to Rspack's own paths so Meteor's
@@ -111,9 +148,9 @@ if (shouldEnableDevHMRProxy) {
       }
     }
     if (url.startsWith('/__rspack__')) {
-      rspackProxy.ws(req, socket, head, { target, changeOrigin: true });
+      assetsProxy.ws(req, socket, head, { target, changeOrigin: true });
     } else if (url === '/ws' || url.startsWith('/ws?') || url.startsWith('/ws/')) {
-      rspackProxy.ws(req, socket, head, { target });
+      wsProxy.ws(req, socket, head, { target });
     }
   });
 
@@ -139,6 +176,14 @@ if (shouldEnableDevHMRProxy) {
 
     // 2) match "/build-chunks/<anything>"
     const bundlesMatch = req.url.match(RSPACK_CHUNKS_REGEX);
+    const assetsMatch = req.url.match(RSPACK_ASSETS_REGEX);
+    // Explicit architecture builds are written to disk and served by Meteor.
+    // Only the default client's in-memory output belongs to the HMR server.
+    if (/^web\.(?:browser(?:\.legacy)?|cordova)\//.test(
+      (bundlesMatch || assetsMatch)?.[1] || ''
+    )) {
+      return next();
+    }
     if (bundlesMatch) {
       // Redirect "/bundles/foo.js" → "/__rspack__/build-chunks/foo.js"
       const target = `${rootUrlPathPrefix}/__rspack__/${rspackChunksContext}/${bundlesMatch[1]}`;
@@ -147,7 +192,6 @@ if (shouldEnableDevHMRProxy) {
     }
 
     // 3) match "/build-assets/<anything>"
-    const assetsMatch = req.url.match(RSPACK_ASSETS_REGEX);
     if (assetsMatch) {
       // Redirect "/build-assets/foo.js" → "/__rspack__/build-assets/foo.js"
       const target = `${rootUrlPathPrefix}/__rspack__/${rspackAssetsContext}/${assetsMatch[1]}`;
