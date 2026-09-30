@@ -86,6 +86,65 @@ selftest.define("typescript template works", async function () {
     useTracker("native-types-resolution", async () => 42);
   `);
 
+  // These imports must resolve from the built packages through generated
+  // adapters, without the repository's direct declaration-file mappings.
+  s.write("native-ddp-types-resolution.ts", `
+    import { Meteor } from "meteor/meteor";
+    import { DDP } from "meteor/ddp-client";
+    import { DDPCommon } from "meteor/ddp-common";
+    import { DDP as AggregateDDP, DDPCommon as AggregateCommon } from "meteor/ddp";
+    import { LocalCollection, Sorter } from "meteor/minimongo";
+    import { IdMap } from "meteor/id-map";
+    import type { MinimongoId } from "meteor/minimongo";
+
+    const connection = DDP.connect("http://localhost:3000", { retry: false });
+    connection.close();
+    connection.onReconnect = null;
+    DDP.onReconnect(reconnected => reconnected.close()).stop();
+    AggregateDDP.connect("http://localhost:3000").close();
+    connection.subscribe("documents").subscriptionId.toUpperCase();
+    Meteor.subscribe("documents").subscriptionId.toUpperCase();
+    // @ts-expect-error The generated connection type must retain its hook signature.
+    connection.onReconnect = 123;
+    // @ts-expect-error Subscription IDs are strings, not numbers or any.
+    connection.subscribe("documents").subscriptionId.toFixed();
+
+    const invocation = new DDPCommon.MethodInvocation({
+      isSimulation: false,
+      connection: null,
+      userId: null,
+      randomSeed: () => "seed",
+      async setUserId() {},
+    });
+    invocation.setUserId(null).then(() => invocation.unblock());
+    DDPCommon.makeRpcSeed(null, "method").toUpperCase();
+    new DDPCommon.Heartbeat({
+      heartbeatInterval: 30000,
+      heartbeatTimeout: 15000,
+      sendPing() {},
+      onTimeout() {},
+    }).messageReceived();
+    const randomStream = new AggregateCommon.RandomStream({ seed: "seed" });
+    DDPCommon.RandomStream.get({ randomStream }).id().toUpperCase();
+    // @ts-expect-error The generated helper return type must remain a string.
+    DDPCommon.makeRpcSeed(invocation, "method").toFixed();
+
+    const document = { _id: "restored", value: 1 };
+    const query = {
+      ordered: false as const,
+      results: new IdMap<MinimongoId, typeof document>(),
+      projectionFn(fields: Partial<typeof document>) { return fields; },
+      added() {},
+    };
+    LocalCollection._insertInResultsSync(query, document);
+    LocalCollection._insertInResultsAsync(query, document).then(() => {});
+    new Sorter<typeof document>({ value: 1 }).getComparator({
+      distances: new IdMap<MinimongoId, number>(),
+    })(document, document);
+    // @ts-expect-error Unordered results must support insertion by document ID.
+    LocalCollection._insertInResultsSync({ ...query, results: [] }, document);
+  `);
+
   run = s.run(
     "node",
     "node_modules/typescript/bin/tsc",
