@@ -1,3 +1,4 @@
+// Server-only BabelCompiler support. Keep ES2017 syntax for legacy plugin hosts.
 (function (global) {
   function isPlainObject(value) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -133,7 +134,7 @@
       swcPlugins,
       babelPlugins,
     };
-    selected.cacheFingerprint = fingerprint({ packageName, ...selected });
+    selected.cacheFingerprint = fingerprint(Object.assign({ packageName }, selected));
     return selected;
   }
 
@@ -195,4 +196,4 @@
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = api;
   }
-})(globalThis);
+})(typeof globalThis !== 'undefined' ? globalThis : global);

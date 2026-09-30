@@ -42,7 +42,7 @@ const packages = {
   "audit-argument-checks": {},
   autopublish: {},
   "babel-compiler": {
-    serverFiles: ["babel.js", "babel-compiler.js"],
+    serverFiles: ["babel.js", "babel-compiler.js", "test-runner-transforms.js"],
     ignoredFiles: ["babel-compiler.js"],
   },
   "babel-runtime": {},
@@ -188,6 +188,7 @@ function listPackageFiles(rootPath) {
         dirent.name === "tests.js" ||
         dirent.name.endsWith("_tests.js") ||
         dirent.name.endsWith("_test.js") ||
+        dirent.name.endsWith(".test.js") ||
         dirent.name.endsWith("-tests.js")
       ) {
         continue;

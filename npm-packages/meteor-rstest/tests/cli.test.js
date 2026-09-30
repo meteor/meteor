@@ -31,11 +31,12 @@ test('Meteor Rstest CLI returns zero after native Rstest run', t => {
   });
   t.after(() => fs.rmSync(appRoot, { recursive: true, force: true }));
 
-  const result = run(appRoot);
+  const resultPath = path.join(appRoot, 'result.json');
+  const result = run(appRoot, ['--result-output', resultPath]);
 
   assert.equal(result.status, 0, result.stderr || result.stdout);
   assert.match(result.stdout, /CLI pass/);
-  assert.match(result.stdout, /"passedTests": 1/);
+  assert.equal(JSON.parse(fs.readFileSync(resultPath, 'utf8')).summary.passedTests, 1);
 });
 
 test('Meteor Rstest CLI preserves failing exit status and name filter', t => {
@@ -47,11 +48,15 @@ test('Meteor Rstest CLI preserves failing exit status and name filter', t => {
   });
   t.after(() => fs.rmSync(appRoot, { recursive: true, force: true }));
 
-  const result = run(appRoot, ['--test-name-pattern', '^selected failure$']);
+  const resultPath = path.join(appRoot, 'result.json');
+  const result = run(appRoot, [
+    '--test-name-pattern', '^selected failure$',
+    '--result-output', resultPath,
+  ]);
 
   assert.equal(result.status, 1, result.stderr || result.stdout);
   assert.match(result.stdout + result.stderr, /selected failure/);
-  assert.match(result.stdout + result.stderr, /"skippedTests": 1/);
+  assert.equal(JSON.parse(fs.readFileSync(resultPath, 'utf8')).summary.skippedTests, 1);
 });
 
 test('dynamic Meteor config receives context once through native Rstest CLI', t => {
