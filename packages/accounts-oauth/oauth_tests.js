@@ -9,8 +9,6 @@ import { ServiceConfiguration } from 'meteor/service-configuration';
 const testService = 'configure-login-service-test';
 const { configurations } = ServiceConfiguration;
 
-// Registers an OAuth service that has no configuration yet, runs `fn`, and
-// removes the service and its configuration afterwards.
 const withUnconfiguredService = async fn => {
   Accounts.oauth.registerService(testService);
   await configurations.removeAsync({ service: testService });
@@ -53,8 +51,6 @@ const withEnvironment = async (
   }
 };
 
-// Calls `configureLoginService` over a new DDP connection, optionally logged in
-// with `resumeToken`, and returns the error it failed with (or null).
 const configureFromClient = async (configuration, resumeToken) => {
   const connection = DDP.connect(Meteor.absoluteUrl());
   try {
@@ -104,7 +100,6 @@ Tinytest.addAsync(
         await configurations.findOneAsync({ service: testService });
       test.isFalse(stored, `client stored ${JSON.stringify(stored)}`);
 
-      // The owner can still configure the service from the server.
       await configurations.upsertAsync(
         { service: testService },
         { $set: { clientId: 'owner-client-id', secret: 'owner-secret' } }
@@ -151,7 +146,6 @@ Tinytest.addAsync(
         await configurations.findOneAsync({ service: testService });
       test.equal(configuration.clientId, attackerConfiguration.clientId);
 
-      // A configuration can only be supplied once.
       const secondError = await configureFromClient({
         ...attackerConfiguration,
         clientId: 'other-client-id',
