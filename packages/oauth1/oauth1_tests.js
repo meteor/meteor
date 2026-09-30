@@ -169,6 +169,38 @@ Tinytest.add("oauth1 - headers are encoded correctly", test => {
   );
 });
 
+Tinytest.add("oauth1 - _queryParamsWithAuthTokenUrl adds oauth_token to URL", test => {
+  const mockBinding = { requestToken: 'my-token' };
+  const result = OAuth._queryParamsWithAuthTokenUrl(
+    'https://provider.com/oauth?existing=1', mockBinding, {}, []
+  );
+  const parsed = new URL(result);
+  test.equal(parsed.searchParams.get('oauth_token'), 'my-token');
+  test.equal(parsed.searchParams.get('existing'), '1');
+});
+
+Tinytest.add("oauth1 - _queryParamsWithAuthTokenUrl merges whitelisted query params", test => {
+  const mockBinding = { requestToken: 'tok' };
+  const result = OAuth._queryParamsWithAuthTokenUrl(
+    'https://provider.com/oauth', mockBinding,
+    { query: { screen_name: 'user1', secret: 'x' } },
+    ['screen_name']
+  );
+  const parsed = new URL(result);
+  test.equal(parsed.searchParams.get('screen_name'), 'user1');
+  test.isNull(parsed.searchParams.get('secret'));
+});
+
+Tinytest.add("oauth1 - _queryParamsWithAuthTokenUrl excludes non-whitelisted params", test => {
+  const mockBinding = { requestToken: 'tok' };
+  const result = OAuth._queryParamsWithAuthTokenUrl(
+    'https://provider.com/oauth', mockBinding,
+    { query: { not_allowed: 'val' } }, []
+  );
+  const parsed = new URL(result);
+  test.isNull(parsed.searchParams.get('not_allowed'));
+});
+
 Tinytest.add("oauth1 - auth header string is built correctly", test => {
   const binding = new OAuth1Binding();
   const headers = {

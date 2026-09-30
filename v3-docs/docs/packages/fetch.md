@@ -31,6 +31,8 @@ Package.onUse((api) => {
 
 You can import `fetch`, `Headers`, `Request` and `Response` classes from `meteor/fetch`.
 
+> When the [`accounts-express`](./accounts-express.md) package is added, `fetch` from this package also supports `auth` and `token` options for automatic authentication. See the [accounts-express documentation](./accounts-express.md#authenticated-fetch) for details.
+
 ```js
 import { fetch, Headers, Request, Response } from "meteor/fetch";
 ```

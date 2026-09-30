@@ -20,4 +20,4 @@ static-html             # Define static page content in .html files
 hot-module-replacement  # Update client in development without reloading the page
 zodern:types            # Enable types from meteor/atmosphere packages
 
-rspack
+rspack                  # Integrate Rspack into Meteor for client and server app bundling

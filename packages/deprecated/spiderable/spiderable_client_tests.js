@@ -1,8 +1,5 @@
 Tinytest.add("spiderable - default hooks registered", function (test, expect) {
-  test.equal(
-    _.keys(Spiderable._onReadyHook.callbacks).length,
-    2
-  );
+  test.equal(Spiderable._onReadyHook.size(), 2);
 });
 
 Tinytest.add("spiderable - is not ready while initial subscriptions aren't started", function (test, expect) {
@@ -39,21 +36,12 @@ Tinytest.add("spiderable - default hooks can ready", function (test, expect) {
 });
 
 Tinytest.add("spiderable - is not ready with a custom hook", function (test, expect) {
-  var callbacks = {}
-  test.equal(
-    _.keys(Spiderable._onReadyHook.callbacks).length,
-    2
-  );
+  test.equal(Spiderable._onReadyHook.size(), 2);
 
   //clear all/default callbacks
-  _.each(Spiderable._onReadyHook.callbacks, function (value,key,list) {
-    callbacks[key] = value;
-    delete list[key];
-  });
-  test.equal(
-    _.keys(Spiderable._onReadyHook.callbacks).length,
-    0
-  );
+  var callbacks = Spiderable._onReadyHook.asArray()
+  Spiderable._onReadyHook.clear();
+  test.equal(Spiderable._onReadyHook.size(), 0);
 
 
   // actually test not ready
@@ -62,41 +50,21 @@ Tinytest.add("spiderable - is not ready with a custom hook", function (test, exp
 
 
   // clear new callback
-  _.each(Spiderable._onReadyHook.callbacks, function (value,key,list) {
-    delete list[key];
-  });
-  test.equal(
-    _.keys(Spiderable._onReadyHook.callbacks).length,
-    0
-  );
+  Spiderable._onReadyHook.clear();
+  test.equal(Spiderable._onReadyHook.size(), 0);
 
   // restore callbacks
-  _.each(callbacks, function (value,key,list) {
-    Spiderable._onReadyHook.callbacks[key] = value;
-  });
-  test.equal(
-    _.keys(Spiderable._onReadyHook.callbacks).length,
-    2
-  );
+  Spiderable._onReadyHook.fromArray(callbacks);
+  test.equal(Spiderable._onReadyHook.size(), 2);
 });
 
 Tinytest.add("spiderable - is ready with a custom hook", function (test, expect) {
-  var callbacks = {}
-  test.equal(
-    _.keys(Spiderable._onReadyHook.callbacks).length,
-    2
-  );
+  test.equal(Spiderable._onReadyHook.size(), 2);
 
   //clear all callbacks
-  _.each(Spiderable._onReadyHook.callbacks, function (value,key,list) {
-    callbacks[key] = value;
-    delete list[key];
-  });
-  test.equal(
-    _.keys(Spiderable._onReadyHook.callbacks).length,
-    0
-  );
-
+  var callbacks = Spiderable._onReadyHook.asArray();
+  Spiderable._onReadyHook.clear();
+  test.equal(Spiderable._onReadyHook.size(), 0);
 
   // actually test ready
   Spiderable.addReadyCondition(function () { return true; });
@@ -104,20 +72,10 @@ Tinytest.add("spiderable - is ready with a custom hook", function (test, expect)
 
 
   // clear new callback
-  _.each(Spiderable._onReadyHook.callbacks, function (value,key,list) {
-    delete list[key];
-  });
-  test.equal(
-    _.keys(Spiderable._onReadyHook.callbacks).length,
-    0
-  );
+  Spiderable._onReadyHook.clear();
+  test.equal(Spiderable._onReadyHook.size(), 0);
 
   // restore callbacks
-  _.each(callbacks, function (value,key,list) {
-    Spiderable._onReadyHook.callbacks[key] = value;
-  });
-  test.equal(
-    _.keys(Spiderable._onReadyHook.callbacks).length,
-    2
-  );
+  Spiderable._onReadyHook.fromArray(callbacks);
+  test.equal(Spiderable._onReadyHook.size(), 2);
 });

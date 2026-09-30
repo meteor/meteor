@@ -37,7 +37,6 @@ export default class PuppeteerClient extends Client {
   async connect() {
     this._checkInitialized();
 
-    // Note for Travis and CircleCI to run sandbox must be turned off.
     // From a security perspective this is not ideal, in the future would be worthwhile
     // to configure to include only for CI based setups
     this.browser = await this.npmPackageExports.launch({

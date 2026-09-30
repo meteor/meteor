@@ -538,24 +538,35 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     // assert.strictEqual(files.pathBasename(options.from), "node_modules");
     assert.strictEqual(files.pathBasename(options.to), "node_modules");
 
+    const absFrom = realpath(options.from);
+    // Bundler scratch written during the build; transient and not part
+    // of the bundle. Matched by absolute path so a `.cache/` shipped
+    // inside a published package isn't dropped.
+    const rootCache = files.pathJoin(absFrom, ".cache");
+
     if (options.symlink) {
       // If we're going to use symlinks to speed up this copy, then we
       // need to make sure we've reserved all directories that are not
       // package directories, such as the node_modules directory itself,
       // as well as node_modules/meteor and the parent directories of any
       // scoped npm packages.
-      this._ensureAllNonPackageDirectories(
-        realpath(options.from),
-        options.to
-      );
+      this._ensureAllNonPackageDirectories(absFrom, options.to, rootCache);
     }
 
+    const userFilter = options.filter;
     // Call this._copyDirectory rather than this.copyDirectory so that the
     // subBuilder hacks from Builder#enter won't apply a second time.
-    return this._copyDirectory(options);
+    return this._copyDirectory(Object.assign({}, options, {
+      filter: (absPath, isDirectory) => {
+        if (isDirectory && absPath === rootCache) return false;
+        return userFilter ? userFilter(absPath, isDirectory) : true;
+      },
+    }));
   }
 
-  _ensureAllNonPackageDirectories(absFromDir, relToDir) {
+  _ensureAllNonPackageDirectories(absFromDir, relToDir, skipPath) {
+    if (skipPath && absFromDir === skipPath) return;
+
     const dirStat = optimisticStatOrNull(absFromDir);
     if (! (dirStat && dirStat.isDirectory())) {
       return;
@@ -574,10 +585,21 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
     this._ensureDirectory(relToDir);
 
-    optimisticReaddir(absFromDir).forEach(item => {
+    let entries;
+    try {
+      entries = optimisticReaddir(absFromDir);
+    } catch (e) {
+      // The directory may have vanished between stat and readdir (e.g.
+      // a bundler tool rewriting files underneath us). Skip it.
+      if (e.code === "ENOENT") return;
+      throw e;
+    }
+
+    entries.forEach(item => {
       this._ensureAllNonPackageDirectories(
         files.pathJoin(absFromDir, item),
-        files.pathJoin(relToDir, item)
+        files.pathJoin(relToDir, item),
+        skipPath
       );
     });
   }
@@ -658,7 +680,17 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
       this._ensureDirectory(relTo);
 
-      for (const item of optimisticReaddir(absFrom)) {
+      let items;
+      try {
+        items = optimisticReaddir(absFrom);
+      } catch (e) {
+        // The directory may have disappeared mid-walk (e.g. a bundler
+        // tool rewriting files underneath us). Skip it.
+        if (e.code === "ENOENT") return;
+        throw e;
+      }
+
+      for (const item of items) {
         let thisAbsFrom = files.pathResolve(absFrom, item);
         const thisRelTo = files.pathJoin(relTo, item);
 

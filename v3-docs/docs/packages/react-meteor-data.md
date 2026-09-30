@@ -193,7 +193,7 @@ export default withTracker(({ listId }) => {
 
 The returned component will, when rendered, render `Foo` (the "lower-order" component) with its provided props in addition to the result of the reactive function. So `Foo` will receive `{ listId }` (provided by its parent) as well as `{ currentUser, listLoading, tasks }` (added by the `withTracker` HOC).
 
-For more information, see the [React article](http://guide.meteor.com/react.html) in the Meteor Guide.
+For more information, see the [React tutorial](/tutorials/react/index).
 
 ### `withTracker({ reactiveFn, pure, skipUpdate })`
 

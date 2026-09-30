@@ -7,6 +7,8 @@ var config = require('../meteor-services/config.js');
 var utils = require('../utils/utils.js');
 var httpHelpers = require('../utils/http-helpers.js');
 var compiler = require('../isobuild/compiler.js');
+var PackageSource = require('../isobuild/package-source.js');
+var archinfo = require('../utils/archinfo');
 var catalog = require('../packaging/catalog/catalog.js');
 var catalogRemote = require('../packaging/catalog/catalog-remote.js');
 var isopack = require('../isobuild/isopack.js');
@@ -1771,13 +1773,33 @@ async function getLaterReleaseVersions(releaseTrack, releaseVersion) {
     releaseTrack, orderKey);
 }
 
+async function compileMeteorApp(options) {
+  var projectContext = new projectContextModule.ProjectContext({
+    projectDir: options.appDir,
+    serverArchitectures: [archinfo.host()],
+    allowIncompatibleUpdate: options["allow-incompatible-update"],
+  });
+  await main.captureAndExit("=> Errors prevented the build:", async () => await projectContext.prepareProjectForBuild());
+  await buildmessage.capture({
+    title: "updating the application"
+  }, async function () {
+    var packageSource = new PackageSource();
+    packageSource.initFromAppDir(projectContext, [/~$/, /^\.#/, /^(\.meteor\/|\.git\/|Thumbs\.db|\.DS_Store\/?|Icon\r|ehthumbs\.db|\..*\.sw.|#.*#)$/]);
+    await compiler.compile(packageSource, {
+      packageMap: projectContext.packageMap,
+      isopackCache: projectContext.isopackCache,
+    });
+  });
+}
+
 main.registerCommand({
   name: 'update',
   options: {
     patch: { type: Boolean },
     "packages-only": { type: Boolean },
     "allow-incompatible-update": { type: Boolean },
-    "all-packages": { type: Boolean }
+    "all-packages": { type: Boolean },
+    npm: { type: Boolean },
   },
   // We have to be able to work without a release, since 'meteor
   // update' is how you fix apps that don't have a release.
@@ -1807,6 +1829,12 @@ main.registerCommand({
   if (release.explicit && options["patch"]) {
     Console.error("You cannot patch update to a specific release.");
     return 1;
+  }
+
+  // Compile the app to resolve NPM dependencies bump coming from plugins
+  if (options["npm"]) {
+    await compileMeteorApp(options);
+    return 0;
   }
 
   var releaseUpdateStatus = await maybeUpdateRelease(options);

@@ -19,6 +19,6 @@ hot-module-replacement         # Update client in development without reloading 
 
 static-html                    # Define static page content in .html files
 
-rspack
+rspack                  # Integrate Rspack into Meteor for client and server app bundling
 
 ~prototype~

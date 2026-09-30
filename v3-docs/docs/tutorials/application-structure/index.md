@@ -10,7 +10,7 @@ After reading this article, you'll know:
 
 ## Universal JavaScript
 
-Meteor is a *full-stack* framework for building JavaScript applications. This means Meteor applications differ from most applications in that they include code that runs on the client, inside a web browser or Cordova mobile app, code that runs on the server, inside a [Node.js](http://nodejs.org/) container, and _common_ code that runs in both environments. The [Meteor build tool](https://guide.meteor.com/build-tool) allows you to specify what JavaScript code, including any supporting UI templates, CSS rules, and static assets, to run in each environment using a combination of ES2015 `import` and `export` and the Meteor build system [default file load order](#default-file-load-order) rules.
+Meteor is a *full-stack* framework for building JavaScript applications. This means Meteor applications differ from most applications in that they include code that runs on the client, inside a web browser or Cordova mobile app, code that runs on the server, inside a [Node.js](http://nodejs.org/) container, and _common_ code that runs in both environments. The [Meteor build tool](/about/build-tool) allows you to specify what JavaScript code, including any supporting UI templates, CSS rules, and static assets, to run in each environment using a combination of ES2015 `import` and `export` and the Meteor build system [default file load order](#default-file-load-order) rules.
 
 ### ES2015 modules
 
@@ -31,7 +31,7 @@ import './loading.html';              // import Blaze compiled HTML from relativ
 import '/imports/ui/style.css';       // import CSS from absolute path
 ```
 
-> For more ways to import styles, see the [Build System](https://guide.meteor.com/build-tool#css-importing) article.
+> For more ways to import styles, see the [Build System](/about/build-tool#css-importing) article.
 
 Meteor also supports the standard ES2015 modules `export` syntax:
 
@@ -71,7 +71,7 @@ If you need to `require` from an ES2015 module with a `default` export, you can 
 
 ### Using CoffeeScript
 
-See the Docs: [CoffeeScript](https://docs.meteor.com/packages/coffeescript.html#coffeescript)
+See the Docs: [CoffeeScript](/packages/coffeescript#coffeescript)
 
 ```cs
 // lists.coffee
@@ -265,13 +265,13 @@ By default, any JavaScript files in your Meteor application folder are bundled a
 
 - **tests**
 
-  Any directory named `tests/` is not loaded anywhere. Use this for any test code you want to run using a test runner outside of [Meteor's built-in test tools](https://guide.meteor.com/testing.html).
+  Any directory named `tests/` is not loaded anywhere. Use this for any test code you want to run using a test runner outside of [Meteor's built-in test tools](/tutorials/testing/testing).
 
 The following directories are also not loaded as part of your app code:
 
 - Files/directories whose names start with a dot, like `.meteor` and `.git`
 - `packages/`: Used for local packages
-- `cordova-build-override/`: Used for [advanced mobile build customizations](https://guide.meteor.com/mobile.html#advanced-build)
+- `cordova-build-override/`: Used for [advanced mobile build customizations](/about/cordova#advanced-build)
 - `programs`: For legacy reasons
 
 ### Files outside special directories
@@ -283,6 +283,8 @@ CSS and HTML files outside special directories are loaded on the client only and
 ## Splitting into multiple apps
 
 If you are writing a sufficiently complex system, there can come a time where it makes sense to split your code up into multiple applications. For example you may want to create a separate application for the administration UI (rather than checking permissions all through the admin part of your site, you can check once), or separate the code for the mobile and desktop versions of your app.
+
+For a practical admin/customer setup with shared collections and selected files, see [Sharing Code and Data Between Meteor Apps](/tutorials/multiple-meteor-apps/).
 
 Another very common use case is splitting a worker process away from your main application so that expensive jobs do not impact the user experience of your visitors by locking up a single web server.
 
@@ -298,11 +300,13 @@ However there are some challenges to splitting your code in this way that should
 
 ### Sharing code
 
-The primary challenge is properly sharing code between the different applications you are building. The simplest approach to deal with this issue is to deploy the *same* application on different web servers, controlling the behavior via different [settings](https://guide.meteor.com/deployment.html#environment). This approach allows you to deploy different versions with different scaling behavior but doesn't enjoy most of the other advantages stated above.
+The primary challenge is properly sharing code between the different applications you are building. The simplest approach to deal with this issue is to deploy the *same* application on different web servers, controlling the behavior via different [settings](/tutorials/deployment/deployment#environment). This approach allows you to deploy different versions with different scaling behavior but doesn't enjoy most of the other advantages stated above.
 
 If you want to create Meteor applications with separate code, you'll have some modules that you'd like to share between them. If those modules are something the wider world could use, you should consider [publishing them to a package system](../../packages/#writing-atmosphere-packages), either npm or Atmosphere, depending on whether the code is Meteor-specific or otherwise.
 
 If the code is private, or of no interest to others, it typically makes sense to include the same module in both applications (you *can* do this with [private npm modules](https://docs.npmjs.com/about-private-packages)). There are several ways to do this:
+
+- keep Meteor-specific code in a local package that both apps load through [`METEOR_PACKAGE_DIRS`](/cli/environment-variables#meteor-package-dirs).
 
 - a straightforward approach is to include the common code as a [git submodule](https://git-scm.com/book/en/v2/Git-Tools-Submodules) of both applications.
 
@@ -353,5 +357,6 @@ accounts2.loginWithToken(token);
 
 You can see a proof of concept of this architecture in an [example repository](https://github.com/tmeasday/multi-app-accounts).
 
-
 Another pattern is to have another app which acts as identity provider for your apps. The [leaonline:oauth2-server](https://atmospherejs.com/leaonline/oauth2-server) package can be used to create an OAuth2 server in one Meteor app, and then other apps can use the standard `accounts-oauth` packages to authenticate users against it.
+
+Browser single sign-on between separate app origins is a separate concern. See [Accounts and authorization](/tutorials/multiple-meteor-apps/#accounts-and-authorization) for the security boundaries in an admin/customer setup.

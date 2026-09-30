@@ -20,4 +20,5 @@ hot-module-replacement  # Update client in development without reloading the pag
 ~prototype~
 static-html             # Define static page content in .html files
 react-meteor-data       # React higher-order component for reactively tracking Meteor data
-rspack
+
+rspack                  # Integrate Rspack into Meteor for client and server app bundling

@@ -17,6 +17,7 @@ Package.onUse(function (api) {
 Package.onTest(function (api) {
   api.use('mongo');
   api.use('mongo-decimal');
+  api.use('ejson');
   api.use('insecure');
   api.use(['tinytest']);
   api.addFiles('decimal_tests.js', ['client', 'server']);

@@ -1,0 +1,95 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+language: "en-US"
+
+reviews:
+  profile: "chill"                      # community repo — keep it welcoming
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false                           # serious OSS platform
+  in_progress_fortune: false            # noise
+  review_status: false
+  review_details: false
+  commit_status: true
+  collapse_walkthrough: true
+  changed_files_summary: true
+  sequence_diagrams: false              # overkill for package-level PRs
+  estimate_code_review_effort: true
+  assess_linked_issues: true
+  related_issues: true
+  related_prs: true
+  suggested_labels: true
+  auto_apply_labels: false
+  suggested_reviewers: true
+  auto_assign_reviewers: false
+
+  # Exclude generated, build, and Meteor-internal files
+  path_filters:
+    - "!**/node_modules/**"
+    - "!**/.meteor/**"
+    - "!**/bundle/**"
+    - "!**/programs/**"
+    - "!**/*.min.js"
+    - "!**/cordova-build/**"
+    - "!**/package-lock.json"
+
+  path_instructions:
+    - path: "packages/**"
+      instructions: >
+        This is a core Meteor Atmosphere package. Focus on API backwards
+        compatibility, DDP/reactivity correctness, and client/server split.
+        Avoid nitpicking style — the codebase has legacy patterns.
+    - path: "tools/**"
+      instructions: >
+        This is the Meteor build tool (Isobuild). Be thorough about
+        correctness, edge cases, and performance in the CLI/build pipeline.
+    - path: "npm-packages/**"
+      instructions: >
+        These are npm packages published from the Meteor monorepo.
+        Check for correct exports, peer dependency handling, and Node.js compatibility.
+    - path: "v3-docs/**"
+      instructions: >
+        Documentation for Meteor v3. Check for accuracy, clarity, and
+        correct code examples. Grammar and spelling matter here.
+    - path: "scripts/**"
+      instructions: >
+        Build and CI scripts. Focus on correctness, portability, and
+        error handling.
+
+  auto_review:
+    enabled: true
+    drafts: false
+    auto_incremental_review: true
+    auto_pause_after_reviewed_commits: 3
+    ignore_title_keywords:
+      - "WIP"
+      - "DO NOT MERGE"
+    base_branches: []
+
+  finishing_touches:
+    docstrings:
+      enabled: false    # legacy JS — too much noise across 100s of packages
+    unit_tests:
+      enabled: true
+    simplify:
+      enabled: false
+
+  tools:
+    shellcheck:
+      enabled: true       # ✅ they have .sh scripts in /scripts
+    markdownlint:
+      enabled: true       # ✅ heavy docs contribution
+    languagetool:
+      enabled: true       # ✅ useful for international doc contributors
+      level: "default"
+      disabled_categories:
+        - "TYPOGRAPHY"    # too nitpicky for code comments
+    ruff:
+      enabled: false      # ❌ not a Python project
+    biome:
+      enabled: false      # ❌ they use ESLint already (.eslintignore exists)
+    ast-grep:
+      essential_rules: true
+
+chat:
+  auto_reply: true

@@ -114,7 +114,7 @@ export const watchAndHashDeps = Profile(
       if (dep.type === 'dependency') {
         fileCount += 1;
         const fileHash = hashAndWatchFile(dep.file);
-        hash.update(fileHash).update('\0');
+        hash.update(fileHash || 'deleted').update('\0');
       } else if (dep.type === 'dir-dependency') {
         if (dep.dir in globsByDir) {
           globsByDir[dep.dir].push(dep.glob || '**');
