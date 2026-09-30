@@ -20,19 +20,14 @@ module.exports = {
       module: { type: "commonjs" },
     }],
   },
-  // Playwright configuration
-  globals: {
-    'jest-playwright': {
-      browsers: ['chromium'],
-      launchOptions: {
-        headless: true,
-      }
-    }
-  },
+  // Playwright configuration lives in jest-playwright.config.js (the
+  // jest-playwright-preset only reads from there, not from globals).
+  // See that file for HEADED, SLOWMO, DEVTOOLS, RECORD toggles.
   maxWorkers: 1,
   // Force Jest to exit after all tests complete, even if there are
   // dangling async operations (e.g., orphan rspack child processes).
-  forceExit: true,
+  // Disabled when RECORD=1 so the video flush on context.close() can complete.
+  forceExit: !process.env.RECORD,
   reporters: [
     'default',
     '<rootDir>/summary-reporter.js',

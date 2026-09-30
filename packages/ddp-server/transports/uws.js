@@ -2,12 +2,6 @@ import { EventEmitter } from 'events';
 import net from 'node:net';
 
 /**
- * uWebSockets.js transport — high-performance WebSocket via uWebSockets.js.
- *
- * Unlike other transports, uWebSockets.js runs its own internal server on a
- * separate port. HTTP upgrade requests on /websocket are proxied from the
- * main Meteor HTTP server to the uWS server via a raw TCP connection.
- *
  * Configuration via Meteor.settings:
  *   { "packages": { "ddp-server": { "transport": "uws", "uws": { "port": 5001, "host": "127.0.0.1", "payloadLength": 48, "timeout": 45 } } } }
  */
@@ -18,7 +12,7 @@ export function createUwsTransport() {
       const emitter = new EventEmitter();
       const uws = Npm.require('uWebSockets.js');
 
-      const settings = __meteor_runtime_config__?.meteorSettings?.packages?.['ddp-server']?.uws || {};
+      const settings = Meteor.settings?.packages?.['ddp-server']?.uws || {};
       const uwsPort = Number(settings.port) || 5001;
       const uwsPayloadLength = Number(settings.payloadLength) || 48;
       const uwsSocketTimeout = Number(settings.timeout) || 45;
@@ -53,7 +47,7 @@ export function createUwsTransport() {
           socket.on = function (event, callback) {
             const map = event === 'close' ? closeListeners
               : event === 'data' ? messageListeners
-              : null;
+                : null;
             if (!map) return;
             const list = map.get(socket);
             if (list) {
@@ -111,10 +105,25 @@ export function createUwsTransport() {
         }
       });
 
-      uwsApp.listen(uwsHost, uwsPort, (token) => {
+      // Pass LIBUS_LISTEN_EXCLUSIVE_PORT so uWS does not enable SO_REUSEPORT
+      // on this listening socket. With SO_REUSEPORT (uWS's default), two
+      // Meteor processes in the same kernel network namespace will both
+      // succeed in binding the same `(host, port)` tuple, and the kernel
+      // will then load-balance inbound connections between them — splitting
+      // WS upgrade traffic across unrelated app processes. With EXCLUSIVE,
+      // the second instance gets EADDRINUSE and `token` is false here, so
+      // we throw a loud, actionable error instead of silently leaking
+      // traffic. Operators running multiple Meteor instances on one host
+      // must pick a distinct `Meteor.settings.packages["ddp-server"].uws.port`
+      // (or `host`) per process.
+      uwsApp.listen(uwsHost, uwsPort, uws.LIBUS_LISTEN_EXCLUSIVE_PORT, (token) => {
         if (!token) {
           throw new Error(
-            'uWebSockets.js: failed to listen on ' + uwsHost + ':' + uwsPort
+            'uWebSockets.js: failed to listen on ' + uwsHost + ':' + uwsPort +
+            ' (address already in use). Another Meteor instance in this ' +
+            'network namespace is already bound to this port. Set a ' +
+            'distinct Meteor.settings.packages["ddp-server"].uws.port ' +
+            '(or .host) for each instance.'
           );
         }
       });
@@ -123,7 +132,7 @@ export function createUwsTransport() {
       WebApp.rawConnectHandlers.use(function (req, res, next) {
         const pathname = new URL(req.url, 'http://localhost').pathname;
         if (pathname === pathPrefix + '/websocket' ||
-            pathname === pathPrefix + '/websocket/') {
+          pathname === pathPrefix + '/websocket/') {
           res.writeHead(400, { 'Content-Type': 'text/plain' });
           res.end('Not a valid websocket request');
         } else {
@@ -152,7 +161,7 @@ function proxyWebsocketToUws(httpServer, pathPrefix, uwsHost, uwsPort) {
     const pathname = new URL(req.url, 'http://localhost').pathname;
 
     if (pathname === pathPrefix + '/websocket' ||
-        pathname === pathPrefix + '/websocket/') {
+      pathname === pathPrefix + '/websocket/') {
 
       // Build the raw HTTP upgrade request to forward to uWS
       const uwsSocket = net.createConnection(uwsPort, uwsHost, function () {

@@ -8,23 +8,25 @@ Before moving production traffic to Change Streams, validate that your MongoDB d
 
 ## Requirements and Limitations
 
-- MongoDB 4.0+ on a replica set or sharded cluster (Change Streams are not available on standalone or some shared-tier deployments).
+- MongoDB 6+ on a replica set or sharded cluster (Change Streams are not available on standalone or some shared-tier deployments).
 - Works only for unordered observers. Publications that rely on ordered callbacks (`addedBefore`, `movedBefore`) will keep using another driver.
 - Selectors must compile with `Minimongo.Matcher`. Unsupported selectors fall back to the next configured driver.
 - If Change Streams are unavailable, Meteor automatically moves to the next driver in your configured order.
 
 ## Choosing the Reactivity Driver Order
 
-Meteor picks the first available driver from the configured list. Starting in Meteor 3.5, the default order is `changeStreams`, then `oplog`, then `polling` (long polling). You can change this globally:
+Starting in Meteor 3.5, Change Streams are enabled by default — you do **not** need to configure `settings.json` to turn them on. Meteor picks the first available driver from the order `changeStreams`, then `oplog`, then `polling` (long polling), automatically falling back to the next entry when the current one is unavailable.
 
-- Environment variable: `METEOR_REACTIVITY_ORDER=changeStreams,oplog,polling`
+You only need to configure the reactivity order if you want to **override** this default — for example, to force `oplog` ahead of (or instead of) Change Streams:
+
+- Environment variable: `METEOR_REACTIVITY_ORDER=oplog,polling`
 - Settings file:
 
 ```json
 {
   "packages": {
     "mongo": {
-      "reactivity": ["changeStreams", "oplog", "polling"]
+      "reactivity": ["oplog", "polling"]
     }
   }
 }
