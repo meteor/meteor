@@ -782,10 +782,8 @@ export class AccountsServer extends AccountsCommon {
     // to this collection are also allowed in insecure mode.
     methods.configureLoginService = async function (options) {
       check(options, Match.ObjectIncluding({service: String}));
-      // Any client can call this method, so by default only accept client
-      // calls in development. Otherwise a visitor could supply the first
-      // configuration of a service in production before the app owner does.
-      // Calls from server code have no connection and are always allowed.
+      // A client could claim an unconfigured service before the app owner.
+      // Server calls have no connection and remain allowed.
       const allowClient = accounts._options.allowClientServiceConfiguration
         ?? Meteor.isDevelopment;
       if (this.connection && !allowClient) {
