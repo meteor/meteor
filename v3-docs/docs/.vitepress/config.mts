@@ -1,6 +1,7 @@
 import { defineConfig } from "vitepress";
 import metadata from "../generators/meteor-versions/metadata.generated";
 import llmstxt from "vitepress-plugin-llms";
+import { checkThemeLinks } from "./check-theme-links.mjs";
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
@@ -19,14 +20,21 @@ export default defineConfig({
     hostname: "https://v3-docs.meteor.com",
   },
   ignoreDeadLinks: [/^http:\/\/localhost/],
+  buildEnd(siteConfig) {
+    checkThemeLinks({
+      themeConfig: siteConfig.site.themeConfig,
+      pages: siteConfig.pages,
+    });
+  },
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     nav: [
       {
         text: "Docs",
-        activeMatch: `^/(guide|docs|examples)/`,
+        activeMatch: `^/(guide|docs|examples|ai)/`,
         items: [
           { text: "Quick Start", link: "/about/install" },
+          { text: "Agent Skills", link: "/ai/agent-skills" },
           { text: "Examples", link: "https://github.com/meteor/examples" },
           {
             text: "Meteor.js 2 Docs",
@@ -201,6 +209,10 @@ export default defineConfig({
                 link: "/about/modern-build-stack/rspack-bundler-integration.md",
               },
             ]
+          },
+          {
+            text: "Agent Skills",
+            link: "/ai/agent-skills",
           },
           {
             text: "Cordova",

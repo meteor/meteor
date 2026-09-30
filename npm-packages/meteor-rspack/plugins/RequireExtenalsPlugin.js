@@ -172,8 +172,24 @@ class RequireExternalsPlugin {
       // 2) Re-load existing requires from disk on every run
       const existing = this._readExistingRequires();
 
-      // 2a) Compute the *current* externals in this build
-      const info = stats.toJson({ modules: true });
+      // 2a) Compute the *current* externals in this build.
+      // Only module names are needed, so start from `all: false` instead of
+      // serializing the whole stats object (chunks, assets, reasons, ...)
+      // on every compilation — a fixed cost per rebuild that grows with app
+      // size. `cachedModules: true` keeps unchanged modules in the list on
+      // incremental rebuilds, so their requires are not wrongly removed.
+      // `orphanModules: true` is required in production: module
+      // concatenation absorbs the externals' importers, marking the
+      // external modules themselves as orphans, and without this flag
+      // they vanish from the list entirely — which stripped every
+      // mirrored require (meteor/*, Blaze .html) from the meteor entry.
+      // See meteor/meteor#14568.
+      const info = stats.toJson({
+        all: false,
+        modules: true,
+        cachedModules: true,
+        orphanModules: true,
+      });
       const current = new Set();
       for (const m of info.modules) {
         const matchInfo = this._isExternalModule(m.name);
@@ -497,17 +513,22 @@ class RequireExternalsPlugin {
 
   _readExistingRequires() {
     const existing = new Set();
+    // Generated Rspack bridge imports are not managed externals. Relative
+    // imports such as Blaze HTML files still belong to this plugin.
+    const isRspackBridgeImport = (modulePath) =>
+      typeof modulePath === 'string' &&
+      /(?:^|[/\\])[^/\\]*-rspack\.(?:js|cjs)$/.test(modulePath);
     try {
       const content = fs.readFileSync(this.filePath, 'utf-8');
       // Check for require statements
       let match;
       while ((match = STANDALONE_REQUIRE_REGEX.exec(content)) !== null) {
-        existing.add(match[1]);
+        if (!isRspackBridgeImport(match[1])) existing.add(match[1]);
       }
 
       // Also check for import statements (used in the new format)
       while ((match = STANDALONE_IMPORT_REGEX.exec(content)) !== null) {
-        existing.add(match[1]);
+        if (!isRspackBridgeImport(match[1])) existing.add(match[1]);
       }
     } catch {
       // ignore if file missing or unreadable

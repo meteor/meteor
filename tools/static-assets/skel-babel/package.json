@@ -10,14 +10,14 @@
   "dependencies": {
     "@babel/runtime": "^7.23.5",
     "@swc/helpers": "^0.5.17",
-    "meteor-node-stubs": "^1.2.12",
+    "meteor-node-stubs": "^1.2.30",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.28.3",
     "@babel/preset-react": "^7.23.3",
-    "@meteorjs/rspack": "^2.1.0",
+    "@meteorjs/rspack": "^2.2.0",
     "@rsdoctor/rspack-plugin": "^1.5.7",
     "@rspack/cli": "^1.7.1",
     "@rspack/core": "^1.7.1",
