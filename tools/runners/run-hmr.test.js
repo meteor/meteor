@@ -1,5 +1,3 @@
-// Unit tests for the HMR websocket message handling in run-hmr.js
-
 const { EventEmitter } = require('events');
 
 // run-hmr.js only needs these modules for code paths that are not exercised
@@ -195,7 +193,6 @@ describe('HMRServer websocket', () => {
       register(conn, { appId: 'wrong-app' });
       send(conn, { type: 'request-changes', arch: ARCH, after: 0 });
 
-      // wrong-secret is what stops the client from reconnecting
       expect(conn.sent).toEqual([
         { type: 'register-failed', reason: 'wrong-app' },
         { type: 'register-failed', reason: 'wrong-secret' },

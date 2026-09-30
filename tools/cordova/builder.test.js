@@ -1,5 +1,3 @@
-// Unit tests for the runtime config in the Cordova bootstrap page
-
 // builder.js pulls in most of the Meteor tool-chain. None of it is needed to
 // generate the bootstrap page, so it is stubbed out.
 jest.mock('../console/console.js', () => ({ Console: {} }));
@@ -16,7 +14,6 @@ jest.mock('../packaging/release.js', () => ({
 }));
 jest.mock('../tool-env/isopackets.js', () => ({
   loadIsopackage: async () => ({
-    // Returns the runtime config instead of rendering the page
     Boilerplate: class {
       constructor(arch, manifest, { baseDataExtension }) {
         this.config = baseDataExtension.meteorRuntimeConfig;
