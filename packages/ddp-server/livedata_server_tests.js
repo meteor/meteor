@@ -33,6 +33,20 @@ function pollUntil(conditionFn, timeoutMs = POLL_TIMEOUT_MS) {
   });
 }
 
+function trackOnConnectionCalls() {
+  const callsBySessionId = new Map();
+  const handle = Meteor.onConnection(({ id }) => {
+    callsBySessionId.set(id, (callsBySessionId.get(id) || 0) + 1);
+  });
+
+  return {
+    callsBySessionId,
+    stop() {
+      handle.stop();
+    },
+  };
+}
+
 Tinytest.addAsync(
   "livedata server - connectionHandle.onClose()",
   function (test, onComplete) {
@@ -727,66 +741,68 @@ Tinytest.addAsync(
   "livedata server - DDP resumption: onConnection not called on resume",
   async function (test) {
     await withTestGracePeriod(async () => {
-      let onConnectionCallCount = 0;
-      let lastConnectionId = null;
-
-      const handle = Meteor.onConnection(function (conn) {
-        onConnectionCallCount++;
-        lastConnectionId = conn.id;
-      });
+      const connectionCalls = trackOnConnectionCalls();
 
       // Create initial connection
       const clientConn = DDP.connect(Meteor.absoluteUrl(), { retry: false });
 
-      // Wait for connection with timeout
-      await pollUntil(() => clientConn._lastSessionId);
+      try {
+        // Wait for this connection's session and onConnection callback.
+        await pollUntil(() =>
+          clientConn._lastSessionId &&
+          connectionCalls.callsBySessionId.has(clientConn._lastSessionId)
+        );
 
-      const originalSessionId = clientConn._lastSessionId;
-      test.equal(onConnectionCallCount, 1, "onConnection should be called once on initial connect");
-      test.equal(lastConnectionId, originalSessionId);
+        const originalSessionId = clientConn._lastSessionId;
+        test.equal(
+          connectionCalls.callsBySessionId.get(originalSessionId),
+          1,
+          "onConnection should be called once on initial connect"
+        );
 
-      // Get the server session and verify it exists
-      const serverSession = Meteor.server.sessions.get(originalSessionId);
-      test.isTrue(serverSession, "Server session should exist");
+        // Get the server session and verify it exists
+        const serverSession = Meteor.server.sessions.get(originalSessionId);
+        test.isTrue(serverSession, "Server session should exist");
 
-      // Simulate unexpected disconnect
-      clientConn._stream._lostConnection();
+        // Simulate unexpected disconnect
+        clientConn._stream._lostConnection();
 
-      // Wait a bit (less than grace period)
-      await sleep(WITHIN_GRACE_PERIOD_MS);
+        // Wait a bit (less than grace period)
+        await sleep(WITHIN_GRACE_PERIOD_MS);
 
-      // Session should still exist
-      test.isTrue(
-        Meteor.server.sessions.has(originalSessionId),
-        "Session should still exist during grace period"
-      );
+        // Session should still exist
+        test.isTrue(
+          Meteor.server.sessions.has(originalSessionId),
+          "Session should still exist during grace period"
+        );
 
-      // Reconnect - this should resume the session
-      clientConn._stream.reconnect();
+        // Reconnect - this should resume the session
+        clientConn._stream.reconnect();
 
-      // Wait for reconnection with timeout
-      await pollUntil(() => clientConn.status().connected);
+        // A completed method round trip proves that the resumed session is
+        // active on both sides, without relying on client status timing.
+        const resumedSessionId = await clientConn.callAsync(
+          "livedata_server_test_inner"
+        );
 
-      // Give it a moment to process
-      await sleep(WITHIN_GRACE_PERIOD_MS);
+        // IMPORTANT: Assert that session was actually resumed (same session ID)
+        // If this fails, the test is not actually testing resumption
+        test.equal(
+          resumedSessionId,
+          originalSessionId,
+          "Session should be resumed with same session ID"
+        );
 
-      // IMPORTANT: Assert that session was actually resumed (same session ID)
-      // If this fails, the test is not actually testing resumption
-      test.equal(
-        clientConn._lastSessionId,
-        originalSessionId,
-        "Session should be resumed with same session ID"
-      );
-
-      // onConnection should NOT have been called again for a resumed session
-      test.equal(
-        onConnectionCallCount,
-        1,
-        "onConnection should not be called again on session resume"
-      );
-
-      handle.stop();
-      clientConn.disconnect();
+        // onConnection should NOT have been called again for the resumed session.
+        test.equal(
+          connectionCalls.callsBySessionId.get(originalSessionId),
+          1,
+          "onConnection should not be called again on session resume"
+        );
+      } finally {
+        connectionCalls.stop();
+        clientConn.disconnect();
+      }
     });
   }
 );
@@ -796,49 +812,53 @@ Tinytest.addAsync(
   "livedata server - DDP resumption: server close prevents resumption",
   async function (test) {
     await withTestGracePeriod(async () => {
-      let onConnectionCallCount = 0;
-
-      const handle = Meteor.onConnection(function (conn) {
-        onConnectionCallCount++;
-      });
+      const connectionCalls = trackOnConnectionCalls();
 
       // Create initial connection
       const clientConn = DDP.connect(Meteor.absoluteUrl(), { retry: true });
 
-      // Wait for connection with timeout
-      await pollUntil(() => clientConn._lastSessionId);
+      try {
+        // Wait for this connection's session and onConnection callback.
+        await pollUntil(() =>
+          clientConn._lastSessionId &&
+          connectionCalls.callsBySessionId.has(clientConn._lastSessionId)
+        );
 
-      const originalSessionId = clientConn._lastSessionId;
-      test.equal(onConnectionCallCount, 1, "onConnection should be called once on initial connect");
+        const originalSessionId = clientConn._lastSessionId;
+        test.equal(
+          connectionCalls.callsBySessionId.get(originalSessionId),
+          1,
+          "onConnection should be called once on initial connect"
+        );
 
-      // Get the server session
-      const serverSession = Meteor.server.sessions.get(originalSessionId);
-      test.isTrue(serverSession, "Server session should exist");
+        // Get the server session
+        const serverSession = Meteor.server.sessions.get(originalSessionId);
+        test.isTrue(serverSession, "Server session should exist");
 
-      // Server-initiated close (kick the client)
-      serverSession.connectionHandle.close();
+        // Server-initiated close (kick the client)
+        serverSession.connectionHandle.close();
 
-      // Wait for client to reconnect with new session (retry is enabled)
-      await pollUntil(() =>
-        clientConn.status().connected && clientConn._lastSessionId !== originalSessionId
-      );
+        // Wait for the replacement session's onConnection callback.
+        await pollUntil(() =>
+          clientConn._lastSessionId !== originalSessionId &&
+          connectionCalls.callsBySessionId.has(clientConn._lastSessionId)
+        );
 
-      // Should have a NEW session (not resumed)
-      test.notEqual(
-        clientConn._lastSessionId,
-        originalSessionId,
-        "Should have a new session ID after server-initiated close"
-      );
-
-      // onConnection should have been called again (new session, not resumed)
-      test.equal(
-        onConnectionCallCount,
-        2,
-        "onConnection should be called again after server-initiated close"
-      );
-
-      handle.stop();
-      clientConn.disconnect();
+        const replacementSessionId = clientConn._lastSessionId;
+        test.notEqual(
+          replacementSessionId,
+          originalSessionId,
+          "Should have a new session ID after server-initiated close"
+        );
+        test.equal(
+          connectionCalls.callsBySessionId.get(replacementSessionId),
+          1,
+          "onConnection should be called for the replacement session"
+        );
+      } finally {
+        connectionCalls.stop();
+        clientConn.disconnect();
+      }
     });
   }
 );
@@ -848,55 +868,61 @@ Tinytest.addAsync(
   "livedata server - DDP resumption: graceful disconnect prevents resumption",
   async function (test) {
     await withTestGracePeriod(async () => {
-      let onConnectionCallCount = 0;
-
-      const handle = Meteor.onConnection(function (conn) {
-        onConnectionCallCount++;
-      });
+      const connectionCalls = trackOnConnectionCalls();
 
       // Create initial connection with retry enabled
       const clientConn = DDP.connect(Meteor.absoluteUrl(), { retry: true });
 
-      // Wait for connection with timeout
-      await pollUntil(() => clientConn._lastSessionId);
+      try {
+        // Wait for this connection's session and onConnection callback.
+        await pollUntil(() =>
+          clientConn._lastSessionId &&
+          connectionCalls.callsBySessionId.has(clientConn._lastSessionId)
+        );
 
-      const originalSessionId = clientConn._lastSessionId;
-      test.equal(onConnectionCallCount, 1, "onConnection should be called once on initial connect");
+        const originalSessionId = clientConn._lastSessionId;
+        test.equal(
+          connectionCalls.callsBySessionId.get(originalSessionId),
+          1,
+          "onConnection should be called once on initial connect"
+        );
 
-      // Graceful disconnect (sends disconnect message)
-      clientConn.disconnect();
+        // Graceful disconnect (sends disconnect message)
+        clientConn.disconnect();
 
-      // Wait for session to be removed
-      await sleep(WITHIN_GRACE_PERIOD_MS);
+        // Wait for session to be removed
+        await sleep(WITHIN_GRACE_PERIOD_MS);
 
-      // Session should be removed immediately
-      test.isFalse(
-        Meteor.server.sessions.has(originalSessionId),
-        "Session should be removed after graceful disconnect"
-      );
+        // Session should be removed immediately
+        test.isFalse(
+          Meteor.server.sessions.has(originalSessionId),
+          "Session should be removed after graceful disconnect"
+        );
 
-      // Reconnect
-      clientConn.reconnect();
+        // Reconnect
+        clientConn.reconnect();
 
-      // Wait for reconnection with timeout
-      await pollUntil(() => clientConn.status().connected);
+        // Wait for the replacement session's onConnection callback.
+        await pollUntil(() =>
+          clientConn._lastSessionId !== originalSessionId &&
+          connectionCalls.callsBySessionId.has(clientConn._lastSessionId)
+        );
 
-      // Should have a NEW session (not resumed, because we gracefully disconnected)
-      test.notEqual(
-        clientConn._lastSessionId,
-        originalSessionId,
-        "Should have a new session ID after graceful disconnect and reconnect"
-      );
-
-      // onConnection should have been called again
-      test.equal(
-        onConnectionCallCount,
-        2,
-        "onConnection should be called again after graceful disconnect"
-      );
-
-      handle.stop();
-      clientConn.disconnect();
+        const replacementSessionId = clientConn._lastSessionId;
+        test.notEqual(
+          replacementSessionId,
+          originalSessionId,
+          "Should have a new session ID after graceful disconnect and reconnect"
+        );
+        test.equal(
+          connectionCalls.callsBySessionId.get(replacementSessionId),
+          1,
+          "onConnection should be called for the replacement session"
+        );
+      } finally {
+        connectionCalls.stop();
+        clientConn.disconnect();
+      }
     });
   }
 );
@@ -906,65 +932,172 @@ Tinytest.addAsync(
   "livedata server - DDP resumption: count mismatch creates new session",
   async function (test) {
     await withTestGracePeriod(async () => {
-      let onConnectionCallCount = 0;
-
-      const handle = Meteor.onConnection(function (conn) {
-        onConnectionCallCount++;
-      });
+      const connectionCalls = trackOnConnectionCalls();
 
       // Create initial connection
       const clientConn = DDP.connect(Meteor.absoluteUrl(), { retry: false });
 
-      // Wait for connection with timeout
-      await pollUntil(() => clientConn._lastSessionId);
+      try {
+        // Wait for this connection's session and onConnection callback.
+        await pollUntil(() =>
+          clientConn._lastSessionId &&
+          connectionCalls.callsBySessionId.has(clientConn._lastSessionId)
+        );
 
-      const originalSessionId = clientConn._lastSessionId;
-      test.equal(onConnectionCallCount, 1, "onConnection should be called once on initial connect");
+        const originalSessionId = clientConn._lastSessionId;
+        test.equal(
+          connectionCalls.callsBySessionId.get(originalSessionId),
+          1,
+          "onConnection should be called once on initial connect"
+        );
 
-      // Get the server session
-      const serverSession = Meteor.server.sessions.get(originalSessionId);
-      test.isTrue(serverSession, "Server session should exist");
+        // Get the server session
+        const serverSession = Meteor.server.sessions.get(originalSessionId);
+        test.isTrue(serverSession, "Server session should exist");
 
-      // Artificially increment sentCount to create a mismatch
-      // This simulates messages sent by server that client didn't receive
-      serverSession.sentCount += 5;
+        // Artificially increment sentCount to create a mismatch
+        // This simulates messages sent by server that client didn't receive
+        serverSession.sentCount += 5;
 
-      // Simulate unexpected disconnect
+        // Simulate unexpected disconnect
+        clientConn._stream._lostConnection();
+
+        // Wait a bit (less than grace period)
+        await sleep(WITHIN_GRACE_PERIOD_MS);
+
+        // Session should still exist during grace period
+        test.isTrue(
+          Meteor.server.sessions.has(originalSessionId),
+          "Session should still exist during grace period"
+        );
+
+        // Reconnect - this should NOT resume due to count mismatch
+        clientConn._stream.reconnect();
+
+        // Wait for the replacement session's onConnection callback.
+        await pollUntil(() =>
+          clientConn._lastSessionId !== originalSessionId &&
+          connectionCalls.callsBySessionId.has(clientConn._lastSessionId)
+        );
+
+        const replacementSessionId = clientConn._lastSessionId;
+        test.notEqual(
+          replacementSessionId,
+          originalSessionId,
+          "Should have a new session ID when counts mismatch"
+        );
+        test.equal(
+          connectionCalls.callsBySessionId.get(replacementSessionId),
+          1,
+          "onConnection should be called for the replacement session"
+        );
+      } finally {
+        connectionCalls.stop();
+        clientConn.disconnect();
+      }
+    });
+  }
+);
+
+// Test that send() on a removed session is a safe no-op
+Tinytest.addAsync(
+  "livedata server - DDP resumption: send after session removal is a no-op",
+  async function (test) {
+    await withTestGracePeriod(async () => {
+      const { clientConn, serverConn } = await getTestConnections(test);
+      const session = Meteor.server.sessions.get(serverConn.id);
+
+      // Unexpected disconnect: session enters its grace period and buffers.
       clientConn._stream._lostConnection();
-
-      // Wait a bit (less than grace period)
       await sleep(WITHIN_GRACE_PERIOD_MS);
-
-      // Session should still exist during grace period
       test.isTrue(
-        Meteor.server.sessions.has(originalSessionId),
-        "Session should still exist during grace period"
+        Array.isArray(session.messageQueue),
+        "session should buffer messages during the grace period"
       );
 
-      // Reconnect - this should NOT resume due to count mismatch
-      clientConn._stream.reconnect();
+      // Let the grace period expire — the session is removed.
+      await sleep(AFTER_GRACE_PERIOD_MS);
+      test.isFalse(Meteor.server.sessions.has(serverConn.id));
 
-      // Wait for reconnection with timeout
-      await pollUntil(() => clientConn.status().connected);
+      // The buffer must be gone, and a late send (e.g. a deferred
+      // write-fence callback) must not buffer toward an overflow that
+      // would invoke the nulled _pendingRemoveFunction and throw.
+      test.isNull(session.messageQueue);
+      session.send({ msg: 'added', collection: 'x', id: '1', fields: {} });
+      test.isNull(session.messageQueue);
+    });
+  }
+);
 
-      // Give it a moment to process
+// Test that a server-initiated close during the grace period removes the
+// session immediately instead of silently doing nothing
+Tinytest.addAsync(
+  "livedata server - DDP resumption: connection close during grace period removes session",
+  async function (test) {
+    await withTestGracePeriod(async () => {
+      const { clientConn, serverConn } = await getTestConnections(test);
+      const sessionId = serverConn.id;
+      const session = Meteor.server.sessions.get(sessionId);
+
+      // Unexpected disconnect: session enters its grace period.
+      clientConn._stream._lostConnection();
       await sleep(WITHIN_GRACE_PERIOD_MS);
-
-      // Should have a NEW session (counts didn't match)
-      test.notEqual(
-        clientConn._lastSessionId,
-        originalSessionId,
-        "Should have a new session ID when counts mismatch"
+      test.isTrue(
+        Meteor.server.sessions.has(sessionId),
+        "session should be in its grace period"
       );
 
-      // onConnection should have been called again (new session)
-      test.equal(
-        onConnectionCallCount,
-        2,
-        "onConnection should be called again when counts mismatch"
+      // Server explicitly closes the connection: the session must not
+      // remain resumable.
+      session.connectionHandle.close();
+      test.isFalse(
+        Meteor.server.sessions.has(sessionId),
+        "server-initiated close should remove the session immediately"
       );
+    });
+  }
+);
 
-      handle.stop();
+// Test that messages buffered during the grace period are delivered on
+// resume, and that the resumed session gets a fresh grace period later
+Tinytest.addAsync(
+  "livedata server - DDP resumption: grace-period messages delivered on resume",
+  async function (test) {
+    await withTestGracePeriod(async () => {
+      const clientConn = DDP.connect(Meteor.absoluteUrl(), { retry: false });
+      await pollUntil(() => clientConn._lastSessionId);
+      const sessionId = clientConn._lastSessionId;
+      const session = Meteor.server.sessions.get(sessionId);
+
+      // Record raw messages arriving on the client stream.
+      const received = [];
+      clientConn._stream.on('message', raw => received.push(raw));
+
+      // Unexpected disconnect, then buffer a message during the grace period.
+      clientConn._stream._lostConnection();
+      await sleep(WITHIN_GRACE_PERIOD_MS);
+      session.send({
+        msg: 'added', collection: 'resume-order', id: 'q1', fields: {}
+      });
+      test.isTrue(Array.isArray(session.messageQueue));
+
+      // Resume.
+      clientConn._stream.reconnect();
+      await pollUntil(() => clientConn.status().connected);
+      await sleep(WITHIN_GRACE_PERIOD_MS);
+      test.equal(clientConn._lastSessionId, sessionId,
+        "session should have been resumed");
+
+      // The buffered message reached the client...
+      test.isTrue(
+        received.some(raw => raw.indexOf('"q1"') !== -1),
+        "message buffered during the grace period should be delivered on resume"
+      );
+      // ...the queue is detached...
+      test.isUndefined(session.messageQueue);
+      // ...and no stale flag denies the session its next grace period.
+      test.isFalse(!!session._expectingDisconnect);
+
       clientConn.disconnect();
     });
   }
@@ -1042,5 +1175,77 @@ Tinytest.addAsync(
     );
 
     delete asyncCleanupTracker[trackerId];
+  }
+);
+// A crossbar listen handle's stop() must be idempotent. A second stop()
+// used to decrement the listener count again, silently deleting the
+// collection's remaining listeners once it hit zero (and throwing on any
+// later stop). Observer teardown races make double-stop plausible.
+Tinytest.addAsync(
+  "livedata server - crossbar listen handle stop is idempotent",
+  async function (test) {
+    const crossbar = new DDPServer._Crossbar({});
+    let fired = 0;
+    const handleA = crossbar.listen(
+      { collection: 'crossbar-idempotent-stop' },
+      function () {}
+    );
+    const handleB = crossbar.listen(
+      { collection: 'crossbar-idempotent-stop' },
+      function () {
+        fired++;
+      }
+    );
+
+    handleA.stop();
+    handleA.stop(); // no-op, must not disturb other listeners
+
+    await crossbar.fire({ collection: 'crossbar-idempotent-stop', id: 'x' });
+    test.equal(fired, 1);
+
+    handleB.stop(); // must not throw
+  }
+);
+
+// added() lazily creates the per-collection accounting Set; removed() read it
+// unguarded. Publication strategies can change per collection at runtime, so
+// an add under a no-accounting strategy followed by a remove under an
+// accounting one threw a TypeError out of the publish handler.
+Meteor.publish('livedata_server_test_strategy_flip', function () {
+  const collection = 'strategy-flip-collection';
+  Meteor.server.setPublicationStrategy(
+    collection,
+    DDPServer.publicationStrategies.NO_MERGE_NO_HISTORY
+  );
+  try {
+    this.added(collection, 'doc1', { a: 1 });
+    Meteor.server.setPublicationStrategy(
+      collection,
+      DDPServer.publicationStrategies.SERVER_MERGE
+    );
+    this.removed(collection, 'doc1');
+  } finally {
+    // Fully restore global state: remove the per-collection override rather
+    // than leaving an explicit (if default-equivalent) entry behind.
+    delete Meteor.server._publicationStrategies[collection];
+  }
+  this.ready();
+});
+
+Tinytest.addAsync(
+  "livedata server - removed() after publication strategy change does not throw",
+  async function (test) {
+    const { clientConn } = await getTestConnections(test);
+    try {
+      await new Promise((resolve, reject) => {
+        clientConn.subscribe('livedata_server_test_strategy_flip', {
+          onReady: resolve,
+          onError: reject,
+        });
+      });
+      test.isTrue(true, 'subscription became ready without a handler error');
+    } finally {
+      clientConn.disconnect();
+    }
   }
 );

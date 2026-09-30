@@ -177,14 +177,14 @@ const generateEagerTestFile = ({
       : "/\\.(?:test|spec)s?\\.[^.]+$/";
 
   const registrationIteration = testFileRegistration
-    ? `.forEach((file) => __meteorRegisterTestFile(
+    ? `.map((file) => __meteorRegisterTestFile(
     [__meteorTestFileRoot, file.replace(/^\\.\\//, '')].filter(Boolean).join('/'),
     () => (__meteorRstestSetupLoaders[file] || []).reduce(
       (pending, loadSetup) => pending.then(loadSetup),
       Promise.resolve(),
     ).then(() => ctx(file)),
   ))`
-    : '.forEach(ctx)';
+    : '.map(ctx)';
   const runtimeFactory = testFileRegistration?.runtimeFactory;
   const registrationImport = testFileRegistration
     ? `import { ${testFileRegistration.exportName} as __meteorRegisterTestFile${
@@ -222,14 +222,14 @@ const generateEagerTestFile = ({
     exclude: ${excludeFoldersRegex.toString()},
     mode: ${testFileRegistration ? `'${registrationMode}'` : "'eager'"},
   });
-  ctx.keys().filter((k) => {
+  await Promise.all(ctx.keys().filter((k) => {
     ${
       excludeMeteorIgnoreRegex
         ? `// Only exclude based on *relative* path segments.
     return !MeteorIgnoreRegex.test(k);`
         : "return true;"
     }
-  })${registrationIteration};
+  })${registrationIteration});
 }` : '';
   const extraContent = extraEntry ? `{
   const extra = import.meta.webpackContext('${toPosix(path.dirname(
@@ -239,7 +239,7 @@ const generateEagerTestFile = ({
     regExp: ${new RegExp(`${path.basename(extraEntry)}$`).toString()},
     mode: 'eager',
   });
-  extra.keys().forEach(extra);
+  await Promise.all(extra.keys().map(extra));
 }` : '';
   const content = `${registrationImport}${
     globalImportPath ? `import '${toPosix(globalImportPath)}';\n\n` : ""

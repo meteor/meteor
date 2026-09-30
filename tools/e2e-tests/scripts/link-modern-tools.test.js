@@ -60,11 +60,6 @@ test('local mirror persists Rspack and Rstest specs in app package metadata', ()
     },
     {
       command: 'npm',
-      args: ['install', '--no-package-lock'],
-      cwd: path.join(repoRoot, 'npm-packages/meteor-rstest'),
-    },
-    {
-      command: 'npm',
       args: [
         'install',
         '--no-save',
@@ -83,10 +78,10 @@ test('local mirror persists Rspack and Rstest specs in app package metadata', ()
       command: 'npm',
       args: [
         'install',
-        '--save-dev',
+        '--save',
         '--no-package-lock',
         '--install-links=false',
-        path.join(repoRoot, 'npm-packages/meteor-rstest'),
+        path.join(repoRoot, 'npm-packages/meteor-rspack'),
       ],
       cwd: appDir,
     },
@@ -94,10 +89,13 @@ test('local mirror persists Rspack and Rstest specs in app package metadata', ()
       command: 'npm',
       args: [
         'install',
-        '--save',
+        '--save-dev',
         '--no-package-lock',
         '--install-links=false',
-        path.join(repoRoot, 'npm-packages/meteor-rspack'),
+        path.join(repoRoot, 'npm-packages/meteor-rstest'),
+        '--save-exact',
+        '@rspack/core@2.1.8',
+        '@rspack/cli@2.1.8',
       ],
       cwd: appDir,
     },

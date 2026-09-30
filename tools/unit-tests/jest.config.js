@@ -9,6 +9,10 @@ module.exports = {
     "<rootDir>/scripts/**/*.test.js",
   ],
   testPathIgnorePatterns: [
+    // These suites use node:test lifecycle hooks and run via test:rstest.
+    "<rootDir>/tools/cli/test-runners/tests/",
+    "<rootDir>/tools/tool-env/test-runner-context.test.js",
+    "<rootDir>/tools/isobuild/rstest-runtime-alias.test.js",
     "/node_modules/",
     "<rootDir>/tools/e2e-tests/",
     "<rootDir>/tools/native-tests/",
@@ -33,6 +37,13 @@ module.exports = {
     "^.+\\.js$": [require.resolve("@swc/jest"), {
       jsc: {
         parser: { syntax: "ecmascript" },
+        target: "es2022",
+      },
+      module: { type: "commonjs" },
+    }],
+    "^.+\\.ts$": [require.resolve("@swc/jest"), {
+      jsc: {
+        parser: { syntax: "typescript" },
         target: "es2022",
       },
       module: { type: "commonjs" },

@@ -51,6 +51,8 @@ meteor add rspack
 
 On first run, the package installs the required Rspack setup at the project level. It compiles your app code with Rspack to get the full benefit of this integration.
 
+You can opt out of automatic installs and manage these npm dependencies yourself with `meteor.autoInstallDeps=false`. See [Required npm dependencies](./modern-build-stack/rspack-bundler-integration.md#required-npm-dependencies).
+
 > See the [**"Rspack Bundler Integration"** section](./modern-build-stack/rspack-bundler-integration.md) for migration requirements and config customization.
 
 ## Learn more

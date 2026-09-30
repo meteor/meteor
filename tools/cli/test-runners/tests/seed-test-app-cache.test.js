@@ -65,7 +65,7 @@ test('worker cache seeding dereferences nested mutable-cache links', async t => 
     pathDirname: path.dirname,
     mkdir_p(directory) { fs.mkdirSync(directory, { recursive: true }); },
     async cp_r(source, target, { preserveSymlinks }) {
-      fs.cpSync(source, target, {
+      await fs.promises.cp(source, target, {
         recursive: true,
         dereference: !preserveSymlinks,
       });

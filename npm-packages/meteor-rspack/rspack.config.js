@@ -4,7 +4,6 @@ const fs = require('fs');
 const { inspect } = require('node:util');
 const path = require('path');
 const { merge } = require('rspack-merge');
-const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
 
 const { mergeSplitOverlap } = require("./lib/mergeRulesSplitOverlap.js");
 const { createMeteorSwcRule } = require('./config.js');
@@ -53,7 +52,7 @@ const {
 const { loadUserAndOverrideConfig } = require('./lib/meteorRspackConfigHelpers.js');
 const { prepareMeteorRspackConfig } = require("./lib/meteorRspackConfigFactory");
 const { extractLocalDependencies } = require('./lib/localDependenciesHelpers.js');
-
+const { createTestClientNodePolyfillConfig } = require("./lib/testClientNodePolyfills.js");
 
 // Safe require that doesn't throw if the module isn't found
 function safeRequire(moduleName) {
@@ -126,7 +125,7 @@ function createCacheStrategy(
       storage: {
         type: "filesystem",
         directory: `node_modules/.cache/rspack/${
-          [buildContext, side].filter(Boolean).join('-') || 'default'
+          [buildContext, side, mode].filter(Boolean).join('-') || 'default'
         }`,
       },
       ...(buildDependencies.length > 0 && {
@@ -468,7 +467,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   // Additional ignore entries
   const additionalEntries = [
     "**/.meteor/local/**",
-    "**/dist/**",
+    path.join(projectDir, "dist", "**").replace(/\\/g, "/"),
     ...(isTest && isTestEager
       ? [`**/${buildContext}/**`, "**/.meteor/local/**", "node_modules/**"]
       : []),
@@ -543,7 +542,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     ...(Meteor.isBlazeEnabled && {
       externals: /\.html$/,
       isEagerImport: (module) => module.endsWith(".html"),
-      ...(isProd && {
+      ...((isProd || (isTest && isClient)) && {
         lastImports: [`./${outputFilename}`],
       }),
     }),
@@ -873,6 +872,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       roots: [path.resolve(process.cwd())],
       modules: ["node_modules", path.resolve(projectDir)],
       conditionNames: ["import", "require", "node", "default"],
+      roots: [path.resolve(projectDir)],
     },
     externals,
     externalsType: "commonjs2",
@@ -908,8 +908,12 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       isDevEnvironment || isNative || isTest
         ? "source-map"
         : "hidden-source-map",
-    ...((isDevEnvironment || (isTest && !isTestEager) || isNative) &&
-      cacheStrategy),
+    // Apply the persistent cache to production builds too (the client
+    // config always has it); previously `meteor build` recompiled the
+    // entire server bundle cold every time. Eager server test builds are
+    // still excluded, since their generated entry changes on every run.
+    // See meteor/meteor#14568.
+    ...(!(isTest && isTestEager) && cacheStrategy),
     ...lazyCompilationConfig,
     ...loggingConfig,
   };
@@ -952,7 +956,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
           optimization: {
             splitChunks: false,
           },
-          plugins: [new NodePolyfillPlugin()],
+          ...createTestClientNodePolyfillConfig(),
         }
       : {};
 

@@ -6,11 +6,18 @@ on:
       - "meteor"
       - "tools/e2e-tests/**"
       - "packages/rspack/**"
+      - "packages/rstest/**"
       - "packages/tools-core/**"
       - "packages/babel-compiler/**"
       - "packages/meteor-tool/**"
       - "npm-packages/meteor-rspack/**"
+      - "npm-packages/meteor-rstest/**"
+      - "tools/cli/**"
+      - "tools/runners/**"
+      - "tools/tool-env/**"
       - "tools/isobuild/**"
+      - "scripts/dev-bundle-tool-package.js"
+      - "tools/fs/safe-watcher.ts"
       - "tools/static-assets/skel-**"
       - ".github/workflows/e2e-tests.yml"
 
@@ -26,18 +33,25 @@ env:
   # Force "localhost" to resolve to 127.0.0.1; runner prefers ::1, which
   # breaks local proxies to IPv4-only dev servers (ECONNREFUSED).
   NODE_OPTIONS: "--max_old_space_size=16384 --dns-result-order=ipv4first"
+  # npm submits an audit request with every install. Meteor runs many installs
+  # when caches are cold, and this workflow does not consume their automatic
+  # audit reports. Avoid making E2E reliability depend on npm's audit endpoint.
+  npm_config_audit: "false"
   # Per-test Jest retry count. Consumed by tools/e2e-tests/jest.setup.js.
   METEOR_E2E_TEST_RETRIES: 1
-
 
 jobs:
   test:
     name: ${{ matrix.category }}
     runs-on: oss-vm
-    timeout-minutes: 60
+    timeout-minutes: 90
     container:
       image: node:22-bookworm
+      # --init runs tini as PID 1 so orphaned processes get reaped. Without it
+      # the container's PID 1 is `tail -f /dev/null`, which never calls wait(),
+      # leaving every orphan (chrome, mongod, sh, ...) as a permanent zombie.
       options: >-
+        --init
         --cpus 6
         --memory 16g
         --security-opt seccomp=unconfined
@@ -64,6 +78,22 @@ jobs:
           - Svelte
           - Typescript
           - Vue
+        include:
+          - category: Rstest
+            test_pattern: 'Meteor \+ Rstest integration (?!.*(?:coverage|test-packages))'
+            timeout_minutes: 30
+          - category: Rstest Coverage
+            test_pattern: 'Meteor \+ Rstest integration .*coverage'
+            timeout_minutes: 30
+          - category: Rstest Packages
+            test_pattern: 'Meteor \+ Rstest integration (?!.*coverage).*test-packages'
+            timeout_minutes: 30
+          # Server Runtime is the largest coherent regression suite. Keep it
+          # separate while sending new regression tests to the general shard.
+          - category: Server Runtime
+            test_pattern: 'Regressions / Server Runtime'
+          - category: Regressions
+            test_pattern: 'Regressions / (?!Server Runtime)'
 
     steps:
       - name: Install Docker CLI
@@ -127,8 +157,8 @@ jobs:
       - name: Run tests for ${{ matrix.category }}
         id: test-run
         continue-on-error: true
-        timeout-minutes: 20
-        run: METEOR_ALLOW_SUPERUSER=1 npm run test:e2e -- -t="${{ matrix.category }}"
+        timeout-minutes: ${{ matrix.timeout_minutes || 20 }}
+        run: METEOR_ALLOW_SUPERUSER=1 npm run test:e2e -- -t="${{ matrix.test_pattern || matrix.category }}"
 
       - name: Clean up before retry
         if: steps.test-run.outcome == 'failure'
@@ -147,7 +177,7 @@ jobs:
 
       - name: Retry failed tests for ${{ matrix.category }}
         if: steps.test-run.outcome == 'failure'
-        timeout-minutes: 25
+        timeout-minutes: ${{ matrix.timeout_minutes || 25 }}
         run: |
           echo "::warning::First attempt failed, retrying..."
-          METEOR_ALLOW_SUPERUSER=1 npm run test:e2e -- -t="${{ matrix.category }}"
+          METEOR_ALLOW_SUPERUSER=1 npm run test:e2e -- -t="${{ matrix.test_pattern || matrix.category }}"

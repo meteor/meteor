@@ -47,7 +47,6 @@ function createLocalModernToolsLinkPlan({
   const rspackDir = path.join(repoRoot, 'npm-packages', 'meteor-rspack');
   const rstestDir = path.join(repoRoot, 'npm-packages', 'meteor-rstest');
   const prepareRstest = includeRstest ? [
-    { command: 'npm', args: ['install', '--no-package-lock'], cwd: rstestDir },
     {
       command: 'npm',
       args: [
@@ -66,7 +65,17 @@ function createLocalModernToolsLinkPlan({
       packageSpecs: {
         '@meteorjs/rstest': { source: rstestDir, save: 'dev' },
       },
-    })
+    }).map(step => ({
+      ...step,
+      // Rstest's adapter requires the branch's exact Rspack version. An app
+      // may already have a newer version from its initial registry install.
+      args: [
+        ...step.args,
+        '--save-exact',
+        `@rspack/core@${rspackVersion}`,
+        `@rspack/cli@${rspackVersion}`,
+      ],
+    }))
     : [];
   const persistAppRspack = createLocalPackageLinkPlan({
     destinationRoot: appDir,
@@ -89,12 +98,18 @@ function createLocalModernToolsLinkPlan({
     },
     ...prepareRstest,
     { command: 'npm', args: ['install', 'ignore-loader', '--save'], cwd: appDir },
-    ...persistAppRstest,
     ...persistAppRspack,
+    ...persistAppRstest,
   ];
 }
 
 async function linkLocalModernTools(appDir, { env, includeRstest = true } = {}) {
+  if (!appDir || !fs.existsSync(appDir)) {
+    throw new Error(
+      `linkLocalModernTools: invalid app directory (${appDir}). ` +
+      'The test app was probably never created; check the earlier app-creation step.'
+    );
+  }
   const rspackVersion = readRspackVersion();
   const plan = createLocalModernToolsLinkPlan({
     appDir,

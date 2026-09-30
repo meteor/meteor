@@ -3,6 +3,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 const os = require('node:os');
 const test = require('node:test');
+const { execFileSync } = require('node:child_process');
 
 const { createTestRspackConfig } = require('../config.js');
 const {
@@ -81,6 +82,7 @@ test('Meteor eager entry excludes every native Rstest-owned root', t => {
     buildContext: '_build',
     ignoreEntries: ['**/tests/legacy/**'],
   });
+  execFileSync(process.execPath, ['--check', generated]);
   const content = fs.readFileSync(generated, 'utf8');
   const match = content.match(/exclude: (\/.*\/[gimyus]*),\n/);
   assert.ok(match, 'generated entry contains executable exclusion regex');
@@ -130,6 +132,7 @@ test('Rstest runtime eager entry scans only its deterministic Meteor root', t =>
     testFileRoot: '',
     buildContext: '_build',
   });
+  execFileSync(process.execPath, ['--check', generated]);
   const content = fs.readFileSync(generated, 'utf8');
 
   assert.equal(
@@ -156,6 +159,7 @@ test('Rstest runtime eager entry can compile an exact CLI-selected file', t => {
     includeFiles: [selected],
     buildContext: '_build',
   });
+  execFileSync(process.execPath, ['--check', generated]);
   const content = fs.readFileSync(generated, 'utf8');
 
   assert.equal(content.includes('selected\\.test\\.js'), true);
@@ -178,6 +182,7 @@ test('Rstest runtime eager entry registers app-relative source files', t => {
       exportName: '__registerTestFileLoader',
     },
   });
+  execFileSync(process.execPath, ['--check', generated]);
   const content = fs.readFileSync(generated, 'utf8');
 
   assert.match(
@@ -211,6 +216,7 @@ test('Rstest package entry registers files relative to external discovery root',
       exportName: '__registerTestFileLoader',
     },
   });
+  execFileSync(process.execPath, ['--check', generated]);
   const content = fs.readFileSync(generated, 'utf8');
 
   assert.match(content, /const __meteorTestFileRoot = "";/);
@@ -240,6 +246,7 @@ test('Rstest runtime entry loads isolated setup modules before each test file', 
       exportName: '__registerTestFileLoader',
     },
   });
+  execFileSync(process.execPath, ['--check', generated]);
   const content = fs.readFileSync(generated, 'utf8');
 
   assert.match(content, /meteor-rstest-setup=first\.test\.js%3A0/);
@@ -270,6 +277,7 @@ test('Rstest upstream runtime entry registers deferred app-relative loaders', t 
       },
     },
   });
+  execFileSync(process.execPath, ['--check', generated]);
   const content = fs.readFileSync(generated, 'utf8');
 
   assert.match(
@@ -416,10 +424,11 @@ test('ordinary Meteor eager entry does not register Rstest source files', t => {
     projectDir: projectRoot,
     buildContext: '_build',
   });
+  execFileSync(process.execPath, ['--check', generated]);
   const content = fs.readFileSync(generated, 'utf8');
 
   assert.doesNotMatch(content, /__meteorRegisterTestFile/);
-  assert.match(content, /\.forEach\(ctx\)/);
+  assert.match(content, /\.map\(ctx\)/);
   assert.match(content, /mode: 'eager'/);
 });
 

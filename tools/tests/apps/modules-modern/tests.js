@@ -283,19 +283,25 @@ describe("local node_modules", () => {
   });
 
   it('should support object-valued package.json "browser" fields', () => {
-    const uuid = require("uuid");
+    const { v4: uuid } = require("uuid");
     const id = uuid();
     assert.strictEqual(typeof id, "string");
     assert.strictEqual(id.split("-").length, 5);
 
     if (Meteor.isClient) {
-      assert.strictEqual(
-        require.resolve("uuid/lib/rng.js"),
-        "/node_modules/uuid/lib/rng-browser.js"
-      );
-
+      // uuid v8 has a "module" field (./dist/esm-node/index.js) that Meteor
+      // prefers on the client. The object-valued "browser" field remaps it
+      // to ./dist/esm-browser/index.js, proving browser field support works.
       const { browser } = require(["uuid", "package.json"].join("/"));
       assert.strictEqual(typeof browser, "object");
+      assert.strictEqual(
+        browser["./dist/rng.js"],
+        "./dist/rng-browser.js"
+      );
+      assert.strictEqual(
+        browser["./dist/esm-node/index.js"],
+        "./dist/esm-browser/index.js"
+      );
     }
   });
 

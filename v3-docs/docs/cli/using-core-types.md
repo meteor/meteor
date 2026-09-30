@@ -5,6 +5,9 @@ Using core types with zodern:types
 
 For MeteorJS in its version 2.8.1 we have introduced to our core packages an integration with the [zodern:types](https://github.com/zodern/meteor-types) package. 
 This package allows you to use the TypeScript types for the Meteor core packages in your TypeScript code or JavaScript code. 
+
+To write and compile `.ts`/`.tsx` files, ensure the [`typescript` package](/packages/typescript) is included; it is included by default in new applications. This guide covers configuring editor and `tsc` support for Meteor's **core packages**.
+
 in order to use the types you need to install the package by running the command:
 
 ```bash
