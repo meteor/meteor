@@ -1,15 +1,13 @@
 import { Accounts } from "meteor/accounts-base";
 import { Meteor } from "meteor/meteor";
 
-// The page origin and the ROOT_URL origin, plus any cross-origin API hosts
-// the app lists in Meteor.settings.public.packages["accounts-express"]
-// .authFetchAllowedOrigins.
+// Auth tokens may go only to the page, ROOT_URL, or configured API origins.
 function trustedRoots() {
   const roots = [window.location.href];
   try {
     roots.push(Meteor.absoluteUrl());
   } catch {
-    // No ROOT_URL and no page host: only the page origin is trusted.
+    // Keep the page origin when ROOT_URL is unavailable.
   }
   const allowed = Meteor.settings?.public?.packages?.["accounts-express"]?.authFetchAllowedOrigins;
   return Array.isArray(allowed) ? roots.concat(allowed) : roots;

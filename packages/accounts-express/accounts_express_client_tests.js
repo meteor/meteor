@@ -125,7 +125,6 @@ Tinytest.addAsync(
         test.isFalse(sent.headers.has("Authorization"), url);
       }
 
-      // A missing ROOT_URL leaves the page origin trusted instead of rejecting.
       Meteor.absoluteUrl = () => {
         throw new Error("Must pass options.rootUrl or set ROOT_URL");
       };
