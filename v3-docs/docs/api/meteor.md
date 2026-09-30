@@ -258,6 +258,7 @@ invocation object, which provides the following:
 - `userId`: the id of the current user.
 - `setUserId`: a function that associates the current client with a user.
 - `connection`: on the server, the [connection](#Meteor-onConnection) this method call was received on.
+- `name`: the name of the method currently being invoked. Useful for shared logic, logging, or rate-limiting helpers that need to know which method is running without hardcoding its name.
 
 Calling `methods` on the client defines _stub_ functions associated with
 server methods of the same name. You don't have to define a stub for
