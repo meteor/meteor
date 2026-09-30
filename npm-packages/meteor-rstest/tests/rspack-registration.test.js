@@ -1,31 +1,31 @@
-const assert = require('node:assert/strict');
-const test = require('node:test');
+const assert = require("node:assert/strict");
+const test = require("node:test");
 
 const {
   appendMeteorModuleMockGuard,
   createMeteorRstestPlugins,
   enforceMeteorRstestPlugins,
-} = require('../src/rspack/runtime.js');
+} = require("../src/rspack/runtime.js");
 const {
   createRstestRuntimeAlias,
   createRstestTestFileRegistration,
   enforceRstestRuntimeAlias,
   enforceRstestRuntimeOptimization,
-} = require('../src/rspack/registration.js');
+} = require("../src/rspack/registration.js");
 
-test('unified Rstest runtime selects deferred loader registration only for Rstest builds', () => {
+test("unified Rstest runtime selects deferred loader registration only for Rstest builds", () => {
   assert.deepEqual(
     createRstestTestFileRegistration({
       isRstestTest: true,
     }),
     {
-      module: 'meteor/rstest',
-      exportName: '__registerTestFileLoader',
-      mode: 'sync',
+      module: "meteor/rstest",
+      exportName: "__registerTestFileLoader",
+      mode: "sync",
       runtimeFactory: {
-        module: '@meteorjs/rstest/runtime',
-        exportName: 'createMeteorRstestFileRuntime',
-        registrationExportName: '__setRstestRuntimeFactory',
+        module: "@meteorjs/rstest/runtime",
+        exportName: "createMeteorRstestFileRuntime",
+        registrationExportName: "__setRstestRuntimeFactory",
       },
     },
   );
@@ -37,37 +37,37 @@ test('unified Rstest runtime selects deferred loader registration only for Rstes
   );
 });
 
-test('Rstest upstream runtime alias resolves from harness and overrides user alias', () => {
+test("Rstest upstream runtime alias resolves from harness and overrides user alias", () => {
   const resolutions = [];
   const alias = createRstestRuntimeAlias({
     upstreamRuntime: true,
-    projectDir: '/meteor-app',
-    npmRoot: '/meteor-harness',
+    projectDir: "/meteor-app",
+    npmRoot: "/meteor-harness",
     resolveModule(request, options) {
       resolutions.push({ request, options });
-      return request === '@meteorjs/rstest/runtime'
-        ? '/meteor-harness/node_modules/@meteorjs/rstest/src/runtime/index.js'
-        : '/meteor-harness/node_modules/@rstest/core/dist/browser-runtime/index.js';
+      return request === "@meteorjs/rstest/runtime"
+        ? "/meteor-harness/node_modules/@meteorjs/rstest/src/runtime/index.js"
+        : "/meteor-harness/node_modules/@rstest/core/dist/browser-runtime/index.js";
     },
   });
 
   assert.deepEqual(resolutions, [
     {
-      request: '@rstest/core/internal/browser-runtime',
-      options: { paths: ['/meteor-harness', '/meteor-app'] },
+      request: "@rstest/core/internal/browser-runtime",
+      options: { paths: ["/meteor-harness", "/meteor-app"] },
     },
     {
-      request: '@meteorjs/rstest/runtime',
-      options: { paths: ['/meteor-harness', '/meteor-app'] },
+      request: "@meteorjs/rstest/runtime",
+      options: { paths: ["/meteor-harness", "/meteor-app"] },
     },
   ]);
   assert.deepEqual(alias, {
-    '@rstest/core$': '/meteor-harness/node_modules/@rstest/core/dist/browser-runtime/index.js',
-    '@meteorjs/rstest/runtime$':
-      '/meteor-harness/node_modules/@meteorjs/rstest/src/runtime/index.js',
+    "@rstest/core$": "/meteor-harness/node_modules/@rstest/core/dist/browser-runtime/index.js",
+    "@meteorjs/rstest/runtime$":
+      "/meteor-harness/node_modules/@meteorjs/rstest/src/runtime/index.js",
   });
 
-  const config = { resolve: { alias: { '@rstest/core$': '/user/wrong.js' } } };
+  const config = { resolve: { alias: { "@rstest/core$": "/user/wrong.js" } } };
   enforceRstestRuntimeAlias(config, alias);
   assert.deepEqual(config.resolve.alias, alias);
   assert.equal(createRstestRuntimeAlias({ upstreamRuntime: false }), undefined);
@@ -82,10 +82,10 @@ test('Rstest upstream runtime alias resolves from harness and overrides user ali
     concatenateModules: false,
     sideEffects: true,
   });
-  assert.equal(optimized.mode, 'development');
+  assert.equal(optimized.mode, "development");
 });
 
-test('Meteor Rstest compiler plugins preserve upstream transforms after user config', () => {
+test("Meteor Rstest compiler plugins preserve upstream transforms after user config", () => {
   class RstestPlugin {
     constructor(options) {
       this.options = options;
@@ -93,8 +93,8 @@ test('Meteor Rstest compiler plugins preserve upstream transforms after user con
   }
   const plugins = createMeteorRstestPlugins({
     upstreamRuntime: true,
-    projectDir: '/meteor-app',
-    runtimeCodePath: '/rstest/mockRuntimeCode.js',
+    projectDir: "/meteor-app",
+    runtimeCodePath: "/rstest/mockRuntimeCode.js",
     rspack: { experiments: { RstestPlugin } },
   });
 
@@ -103,25 +103,19 @@ test('Meteor Rstest compiler plugins preserve upstream transforms after user con
     injectModulePathName: true,
     importMetaPathName: true,
     hoistMockModule: true,
-    manualMockRoot: '/meteor-app/__mocks__',
+    manualMockRoot: "/meteor-app/__mocks__",
   });
-  assert.equal(plugins[1].runtimeCodePath, '/rstest/mockRuntimeCode.js');
+  assert.equal(plugins[1].runtimeCodePath, "/rstest/mockRuntimeCode.js");
 
-  const config = { plugins: [{ constructor: { name: 'UserPlugin' } }] };
+  const config = { plugins: [{ constructor: { name: "UserPlugin" } }] };
   enforceMeteorRstestPlugins(config, plugins);
   enforceMeteorRstestPlugins(config, plugins);
-  assert.deepEqual(config.plugins, [
-    { constructor: { name: 'UserPlugin' } },
-    ...plugins,
-  ]);
-  assert.deepEqual(
-    createMeteorRstestPlugins({ upstreamRuntime: false }),
-    [],
-  );
+  assert.deepEqual(config.plugins, [{ constructor: { name: "UserPlugin" } }, ...plugins]);
+  assert.deepEqual(createMeteorRstestPlugins({ upstreamRuntime: false }), []);
 });
 
-test('Meteor Rstest mock runtime blocks Meteor-owned module replacement', () => {
-  const runtime = appendMeteorModuleMockGuard('UPSTREAM_RUNTIME');
+test("Meteor Rstest mock runtime blocks Meteor-owned module replacement", () => {
+  const runtime = appendMeteorModuleMockGuard("UPSTREAM_RUNTIME");
 
   assert.match(runtime, /UPSTREAM_RUNTIME/);
   assert.match(runtime, /METEOR_RSTEST_ATMOSPHERE_MOCK_UNSUPPORTED/);

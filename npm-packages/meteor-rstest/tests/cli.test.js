@@ -1,45 +1,45 @@
-const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const os = require('node:os');
-const path = require('node:path');
-const { spawnSync } = require('node:child_process');
-const test = require('node:test');
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
+const { spawnSync } = require("node:child_process");
+const test = require("node:test");
 
-const packageRoot = path.resolve(__dirname, '..');
-const bin = path.join(packageRoot, 'bin/meteor-rstest.js');
+const packageRoot = path.resolve(__dirname, "..");
+const bin = path.join(packageRoot, "bin/meteor-rstest.js");
 
-function createApp({ source, configSource = 'module.exports = { globals: true };' }) {
-  const appRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-cli-'));
-  const testsRoot = path.join(appRoot, 'tests/rstest/pure/server');
+function createApp({ source, configSource = "module.exports = { globals: true };" }) {
+  const appRoot = fs.mkdtempSync(path.join(os.tmpdir(), "meteor-rstest-cli-"));
+  const testsRoot = path.join(appRoot, "tests/rstest/pure/server");
   fs.mkdirSync(testsRoot, { recursive: true });
-  fs.writeFileSync(path.join(testsRoot, 'cli.test.js'), source);
-  fs.writeFileSync(path.join(appRoot, 'rstest.config.js'), configSource);
+  fs.writeFileSync(path.join(testsRoot, "cli.test.js"), source);
+  fs.writeFileSync(path.join(appRoot, "rstest.config.js"), configSource);
   return appRoot;
 }
 
 function run(appRoot, args = []) {
-  return spawnSync(process.execPath, [bin, '--cwd', appRoot, '--once', ...args], {
+  return spawnSync(process.execPath, [bin, "--cwd", appRoot, "--once", ...args], {
     cwd: appRoot,
-    encoding: 'utf8',
-    env: { ...process.env, NO_COLOR: '1' },
+    encoding: "utf8",
+    env: { ...process.env, NO_COLOR: "1" },
   });
 }
 
-test('Meteor Rstest CLI returns zero after native Rstest run', t => {
+test("Meteor Rstest CLI returns zero after native Rstest run", (t) => {
   const appRoot = createApp({
     source: "test('CLI pass', () => expect(6 * 7).toBe(42));",
   });
   t.after(() => fs.rmSync(appRoot, { recursive: true, force: true }));
 
-  const resultPath = path.join(appRoot, 'result.json');
-  const result = run(appRoot, ['--result-output', resultPath]);
+  const resultPath = path.join(appRoot, "result.json");
+  const result = run(appRoot, ["--result-output", resultPath]);
 
   assert.equal(result.status, 0, result.stderr || result.stdout);
   assert.match(result.stdout, /CLI pass/);
-  assert.equal(JSON.parse(fs.readFileSync(resultPath, 'utf8')).summary.passedTests, 1);
+  assert.equal(JSON.parse(fs.readFileSync(resultPath, "utf8")).summary.passedTests, 1);
 });
 
-test('Meteor Rstest CLI preserves failing exit status and name filter', t => {
+test("Meteor Rstest CLI preserves failing exit status and name filter", (t) => {
   const appRoot = createApp({
     source: `
       test('selected failure', () => expect('meteor').toBe('rstest'));
@@ -48,18 +48,20 @@ test('Meteor Rstest CLI preserves failing exit status and name filter', t => {
   });
   t.after(() => fs.rmSync(appRoot, { recursive: true, force: true }));
 
-  const resultPath = path.join(appRoot, 'result.json');
+  const resultPath = path.join(appRoot, "result.json");
   const result = run(appRoot, [
-    '--test-name-pattern', '^selected failure$',
-    '--result-output', resultPath,
+    "--test-name-pattern",
+    "^selected failure$",
+    "--result-output",
+    resultPath,
   ]);
 
   assert.equal(result.status, 1, result.stderr || result.stdout);
   assert.match(result.stdout + result.stderr, /selected failure/);
-  assert.equal(JSON.parse(fs.readFileSync(resultPath, 'utf8')).summary.skippedTests, 1);
+  assert.equal(JSON.parse(fs.readFileSync(resultPath, "utf8")).summary.skippedTests, 1);
 });
 
-test('dynamic Meteor config receives context once through native Rstest CLI', t => {
+test("dynamic Meteor config receives context once through native Rstest CLI", (t) => {
   const marker = path.join(os.tmpdir(), `meteor-rstest-config-${process.pid}-${Date.now()}.txt`);
   const appRoot = createApp({
     source: "test('context config', () => expect(true).toBe(true));",
@@ -80,20 +82,22 @@ test('dynamic Meteor config receives context once through native Rstest CLI', t 
     fs.rmSync(marker, { force: true });
   });
 
-  const result = run(appRoot, [
-    '--verbose',
-    '--server-only',
-    '--architecture', 'os.test.x86_64',
-  ]);
+  const result = run(appRoot, ["--verbose", "--server-only", "--architecture", "os.test.x86_64"]);
 
   assert.equal(result.status, 0, result.stderr || result.stdout);
-  assert.equal(fs.readFileSync(marker, 'utf8'), 'test|true|false|true|os.test.x86_64\n');
+  assert.equal(fs.readFileSync(marker, "utf8"), "test|true|false|true|os.test.x86_64\n");
 });
 
-test('package runtime plan evaluates dynamic config once with distinct harness root', t => {
-  const marker = path.join(os.tmpdir(), `meteor-rstest-package-config-${process.pid}-${Date.now()}.txt`);
-  const output = path.join(os.tmpdir(), `meteor-rstest-package-plan-${process.pid}-${Date.now()}.json`);
-  const harnessRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-harness-'));
+test("package runtime plan evaluates dynamic config once with distinct harness root", (t) => {
+  const marker = path.join(
+    os.tmpdir(),
+    `meteor-rstest-package-config-${process.pid}-${Date.now()}.txt`,
+  );
+  const output = path.join(
+    os.tmpdir(),
+    `meteor-rstest-package-plan-${process.pid}-${Date.now()}.json`,
+  );
+  const harnessRoot = fs.mkdtempSync(path.join(os.tmpdir(), "meteor-rstest-harness-"));
   const appRoot = createApp({
     source: "test('must not run in package plan', () => expect(false).toBe(true));",
     configSource: `
@@ -116,17 +120,16 @@ test('package runtime plan evaluates dynamic config once with distinct harness r
   });
 
   const result = run(appRoot, [
-    '--package-tests',
-    '--harness-root', harnessRoot,
-    '--runtime-plan-output', output,
+    "--package-tests",
+    "--harness-root",
+    harnessRoot,
+    "--runtime-plan-output",
+    output,
   ]);
 
   assert.equal(result.status, 0, result.stderr || result.stdout);
-  assert.equal(
-    fs.readFileSync(marker, 'utf8'),
-    `test-packages|true|${harnessRoot}\n`,
-  );
-  assert.deepEqual(JSON.parse(fs.readFileSync(output, 'utf8')), {
+  assert.equal(fs.readFileSync(marker, "utf8"), `test-packages|true|${harnessRoot}\n`);
+  assert.deepEqual(JSON.parse(fs.readFileSync(output, "utf8")), {
     schemaVersion: 1,
     generation: null,
     testTimeout: 4321,
@@ -150,11 +153,12 @@ test('package runtime plan evaluates dynamic config once with distinct harness r
   });
 });
 
-test('native run writes generation-bound runtime settings atomically', t => {
+test("native run writes generation-bound runtime settings atomically", (t) => {
   const output = path.join(os.tmpdir(), `meteor-rstest-settings-${process.pid}-${Date.now()}.json`);
   const appRoot = createApp({
     source: "test('settings run', () => expect(true).toBe(true));",
-    configSource: 'module.exports = { globals: true, testTimeout: 9876, hookTimeout: 2345, maxConcurrency: 7 };',
+    configSource:
+      "module.exports = { globals: true, testTimeout: 9876, hookTimeout: 2345, maxConcurrency: 7 };",
   });
   t.after(() => {
     fs.rmSync(appRoot, { recursive: true, force: true });
@@ -162,14 +166,16 @@ test('native run writes generation-bound runtime settings atomically', t => {
   });
 
   const result = run(appRoot, [
-    '--runtime-settings-output', output,
-    '--runtime-settings-generation', 'generation-7',
+    "--runtime-settings-output",
+    output,
+    "--runtime-settings-generation",
+    "generation-7",
   ]);
 
   assert.equal(result.status, 0, result.stderr || result.stdout);
-  assert.deepEqual(JSON.parse(fs.readFileSync(output, 'utf8')), {
+  assert.deepEqual(JSON.parse(fs.readFileSync(output, "utf8")), {
     schemaVersion: 1,
-    generation: 'generation-7',
+    generation: "generation-7",
     testTimeout: 9876,
     hookTimeout: 2345,
     maxConcurrency: 7,
@@ -191,13 +197,23 @@ test('native run writes generation-bound runtime settings atomically', t => {
   });
 });
 
-test('native run writes its generation-bound coverage plan before Meteor compilation', t => {
-  const planOutput = path.join(os.tmpdir(), `meteor-rstest-coverage-plan-${process.pid}-${Date.now()}.json`);
-  const settingsOutput = path.join(os.tmpdir(), `meteor-rstest-coverage-settings-${process.pid}-${Date.now()}.json`);
-  const artifact = path.join(os.tmpdir(), `meteor-rstest-coverage-artifact-${process.pid}-${Date.now()}.json`);
+test("native run writes its generation-bound coverage plan before Meteor compilation", (t) => {
+  const planOutput = path.join(
+    os.tmpdir(),
+    `meteor-rstest-coverage-plan-${process.pid}-${Date.now()}.json`,
+  );
+  const settingsOutput = path.join(
+    os.tmpdir(),
+    `meteor-rstest-coverage-settings-${process.pid}-${Date.now()}.json`,
+  );
+  const artifact = path.join(
+    os.tmpdir(),
+    `meteor-rstest-coverage-artifact-${process.pid}-${Date.now()}.json`,
+  );
   const appRoot = createApp({
     source: "test('coverage plan', () => expect(true).toBe(true));",
-    configSource: "module.exports = { coverage: { enabled: true, provider: 'istanbul', exclude: ['**/*.test.js'] } };",
+    configSource:
+      "module.exports = { coverage: { enabled: true, provider: 'istanbul', exclude: ['**/*.test.js'] } };",
   });
   t.after(() => {
     fs.rmSync(appRoot, { recursive: true, force: true });
@@ -206,55 +222,59 @@ test('native run writes its generation-bound coverage plan before Meteor compila
   });
 
   const result = run(appRoot, [
-    '--runtime-plan-output', settingsOutput,
-    '--coverage',
-    '--coverage-plan-output', planOutput,
-    '--coverage-generation', 'generation-8',
-    '--coverage-artifact', artifact,
+    "--runtime-plan-output",
+    settingsOutput,
+    "--coverage",
+    "--coverage-plan-output",
+    planOutput,
+    "--coverage-generation",
+    "generation-8",
+    "--coverage-artifact",
+    artifact,
   ]);
 
   assert.equal(result.status, 0, result.stderr || result.stdout);
-  assert.deepEqual(JSON.parse(fs.readFileSync(planOutput, 'utf8')), {
+  assert.deepEqual(JSON.parse(fs.readFileSync(planOutput, "utf8")), {
     schemaVersion: 1,
-    generation: 'generation-8',
+    generation: "generation-8",
     enabled: true,
-    provider: 'istanbul',
+    provider: "istanbul",
     root: appRoot,
     include: [],
-    exclude: ['**/*.test.js'],
+    exclude: ["**/*.test.js"],
     allowExternal: false,
     artifactRoot: path.dirname(artifact),
     policy: {
       schemaVersion: 1,
       enabled: true,
-      provider: 'istanbul',
-      reporters: ['text', 'html', 'clover', 'json'],
-      reportsDirectory: 'coverage',
+      provider: "istanbul",
+      reporters: ["text", "html", "clover", "json"],
+      reportsDirectory: "coverage",
       include: [],
-      exclude: ['**/*.test.js'],
+      exclude: ["**/*.test.js"],
       reportOnFailure: false,
       clean: true,
       allowExternal: false,
     },
   });
-  assert.deepEqual(JSON.parse(fs.readFileSync(settingsOutput, 'utf8')).coverage, {
+  assert.deepEqual(JSON.parse(fs.readFileSync(settingsOutput, "utf8")).coverage, {
     schemaVersion: 1,
-    generation: 'generation-8',
+    generation: "generation-8",
     enabled: true,
-    provider: 'istanbul',
+    provider: "istanbul",
     root: appRoot,
     include: [],
-    exclude: ['**/*.test.js'],
+    exclude: ["**/*.test.js"],
     allowExternal: false,
     artifactRoot: path.dirname(artifact),
     policy: {
       schemaVersion: 1,
       enabled: true,
-      provider: 'istanbul',
-      reporters: ['text', 'html', 'clover', 'json'],
-      reportsDirectory: 'coverage',
+      provider: "istanbul",
+      reporters: ["text", "html", "clover", "json"],
+      reportsDirectory: "coverage",
       include: [],
-      exclude: ['**/*.test.js'],
+      exclude: ["**/*.test.js"],
       reportOnFailure: false,
       clean: true,
       allowExternal: false,
@@ -262,7 +282,7 @@ test('native run writes its generation-bound coverage plan before Meteor compila
   });
 });
 
-test('coverage preflight activates config-only Istanbul before Meteor build', t => {
+test("coverage preflight activates config-only Istanbul before Meteor build", (t) => {
   const output = path.join(
     os.tmpdir(),
     `meteor-rstest-coverage-preflight-${process.pid}-${Date.now()}.json`,
@@ -281,16 +301,16 @@ test('coverage preflight activates config-only Istanbul before Meteor build', t 
     fs.rmSync(output, { force: true });
   });
 
-  const result = run(appRoot, ['--coverage-preflight-output', output]);
+  const result = run(appRoot, ["--coverage-preflight-output", output]);
 
   assert.equal(result.status, 0, result.stderr || result.stdout);
-  assert.deepEqual(JSON.parse(fs.readFileSync(output, 'utf8')), {
+  assert.deepEqual(JSON.parse(fs.readFileSync(output, "utf8")), {
     schemaVersion: 1,
     enabled: true,
-    provider: 'istanbul',
-    reporters: ['text'],
-    reportsDirectory: 'coverage',
-    include: ['imports/**/*.js'],
+    provider: "istanbul",
+    reporters: ["text"],
+    reportsDirectory: "coverage",
+    include: ["imports/**/*.js"],
     exclude: [],
     reportOnFailure: false,
     clean: true,
@@ -299,7 +319,7 @@ test('coverage preflight activates config-only Istanbul before Meteor build', t 
   assert.doesNotMatch(result.stdout + result.stderr, /preflight must not execute tests/);
 });
 
-test('coverage preflight rejects config-only V8 for a Meteor lane', t => {
+test("coverage preflight rejects config-only V8 for a Meteor lane", (t) => {
   const output = path.join(
     os.tmpdir(),
     `meteor-rstest-v8-preflight-${process.pid}-${Date.now()}.json`,
@@ -313,7 +333,7 @@ test('coverage preflight rejects config-only V8 for a Meteor lane', t => {
     fs.rmSync(output, { force: true });
   });
 
-  const result = run(appRoot, ['--coverage-preflight-output', output]);
+  const result = run(appRoot, ["--coverage-preflight-output", output]);
 
   assert.equal(result.status, 1);
   assert.match(result.stderr, /Meteor-hosted coverage requires the Istanbul provider/);
@@ -321,7 +341,7 @@ test('coverage preflight rejects config-only V8 for a Meteor lane', t => {
   assert.doesNotMatch(result.stdout + result.stderr, /v8 preflight must not execute tests/);
 });
 
-test('mixed native run persists imported source coverage before Meteor host start', t => {
+test("mixed native run persists imported source coverage before Meteor host start", (t) => {
   const settingsOutput = path.join(
     os.tmpdir(),
     `meteor-rstest-native-settings-${process.pid}-${Date.now()}.json`,
@@ -331,18 +351,20 @@ test('mixed native run persists imported source coverage before Meteor host star
     `meteor-rstest-native-artifact-${process.pid}-${Date.now()}.json`,
   );
   const appRoot = createApp({
-    source: "import { answer } from '../../../../imports/answer.js'; test('native capture', () => expect(answer()).toBe(42));",
-    configSource: "module.exports = { globals: true, coverage: { enabled: true, provider: 'istanbul', include: ['imports/**/*.js'], exclude: ['**/*.test.js'] } };",
+    source:
+      "import { answer } from '../../../../imports/answer.js'; test('native capture', () => expect(answer()).toBe(42));",
+    configSource:
+      "module.exports = { globals: true, coverage: { enabled: true, provider: 'istanbul', include: ['imports/**/*.js'], exclude: ['**/*.test.js'] } };",
   });
-  fs.mkdirSync(path.join(appRoot, 'imports'), { recursive: true });
+  fs.mkdirSync(path.join(appRoot, "imports"), { recursive: true });
   fs.writeFileSync(
-    path.join(appRoot, 'imports/answer.js'),
-    'export function answer() { return 42; }\n',
+    path.join(appRoot, "imports/answer.js"),
+    "export function answer() { return 42; }\n",
   );
   fs.symlinkSync(
-    path.join(packageRoot, 'node_modules'),
-    path.join(appRoot, 'node_modules'),
-    'junction',
+    path.join(packageRoot, "node_modules"),
+    path.join(appRoot, "node_modules"),
+    "junction",
   );
   t.after(() => {
     fs.rmSync(appRoot, { recursive: true, force: true });
@@ -351,26 +373,39 @@ test('mixed native run persists imported source coverage before Meteor host star
   });
 
   const result = run(appRoot, [
-    '--runtime-settings-output', settingsOutput,
-    '--runtime-settings-generation', 'generation-native-capture',
-    '--coverage',
-    '--coverage-generation', 'generation-native-capture',
-    '--coverage-artifact', artifact,
+    "--runtime-settings-output",
+    settingsOutput,
+    "--runtime-settings-generation",
+    "generation-native-capture",
+    "--coverage",
+    "--coverage-generation",
+    "generation-native-capture",
+    "--coverage-artifact",
+    artifact,
   ]);
 
   assert.equal(result.status, 0, result.stderr || result.stdout);
-  const nativeArtifact = JSON.parse(fs.readFileSync(artifact, 'utf8'));
+  const nativeArtifact = JSON.parse(fs.readFileSync(artifact, "utf8"));
   const answerCoverage = Object.entries(nativeArtifact.coverage).find(([file]) =>
-    file.replaceAll('\\', '/').endsWith('/imports/answer.js')
+    file.replaceAll("\\", "/").endsWith("/imports/answer.js"),
   );
   assert.ok(answerCoverage);
-  assert.ok(Object.values(answerCoverage[1].s).some(count => count > 0));
+  assert.ok(Object.values(answerCoverage[1].s).some((count) => count > 0));
 });
 
-test('disabled coverage ignores wrapper plan and artifact options', t => {
-  const planOutput = path.join(os.tmpdir(), `meteor-rstest-disabled-plan-${process.pid}-${Date.now()}.json`);
-  const settingsOutput = path.join(os.tmpdir(), `meteor-rstest-disabled-settings-${process.pid}-${Date.now()}.json`);
-  const artifact = path.join(os.tmpdir(), `meteor-rstest-disabled-artifact-${process.pid}-${Date.now()}.json`);
+test("disabled coverage ignores wrapper plan and artifact options", (t) => {
+  const planOutput = path.join(
+    os.tmpdir(),
+    `meteor-rstest-disabled-plan-${process.pid}-${Date.now()}.json`,
+  );
+  const settingsOutput = path.join(
+    os.tmpdir(),
+    `meteor-rstest-disabled-settings-${process.pid}-${Date.now()}.json`,
+  );
+  const artifact = path.join(
+    os.tmpdir(),
+    `meteor-rstest-disabled-artifact-${process.pid}-${Date.now()}.json`,
+  );
   const appRoot = createApp({
     source: "test('disabled coverage plan', () => expect(true).toBe(true));",
     configSource: "module.exports = { coverage: { enabled: false, provider: 'istanbul' } };",
@@ -383,27 +418,43 @@ test('disabled coverage ignores wrapper plan and artifact options', t => {
   });
 
   const result = run(appRoot, [
-    '--runtime-plan-output', settingsOutput,
-    '--coverage-plan-output', planOutput,
-    '--coverage-generation', 'generation-disabled',
-    '--coverage-artifact', artifact,
+    "--runtime-plan-output",
+    settingsOutput,
+    "--coverage-plan-output",
+    planOutput,
+    "--coverage-generation",
+    "generation-disabled",
+    "--coverage-artifact",
+    artifact,
   ]);
 
   assert.equal(result.status, 0, result.stderr || result.stdout);
   assert.equal(fs.existsSync(planOutput), false);
   assert.equal(fs.existsSync(artifact), false);
-  assert.equal(Object.hasOwn(JSON.parse(fs.readFileSync(settingsOutput, 'utf8')), 'coverage'), false);
+  assert.equal(
+    Object.hasOwn(JSON.parse(fs.readFileSync(settingsOutput, "utf8")), "coverage"),
+    false,
+  );
 });
 
-test('classification CLI writes routing manifest without evaluating user config', t => {
-  const marker = path.join(os.tmpdir(), `meteor-rstest-classify-config-${process.pid}-${Date.now()}.txt`);
-  const candidates = path.join(os.tmpdir(), `meteor-rstest-candidates-${process.pid}-${Date.now()}.json`);
-  const output = path.join(os.tmpdir(), `meteor-rstest-classification-${process.pid}-${Date.now()}.json`);
+test("classification CLI writes routing manifest without evaluating user config", (t) => {
+  const marker = path.join(
+    os.tmpdir(),
+    `meteor-rstest-classify-config-${process.pid}-${Date.now()}.txt`,
+  );
+  const candidates = path.join(
+    os.tmpdir(),
+    `meteor-rstest-candidates-${process.pid}-${Date.now()}.json`,
+  );
+  const output = path.join(
+    os.tmpdir(),
+    `meteor-rstest-classification-${process.pid}-${Date.now()}.json`,
+  );
   const appRoot = createApp({
     source: "test('classification only', () => expect(true).toBe(true));",
     configSource: `require('node:fs').writeFileSync(${JSON.stringify(marker)}, 'evaluated'); module.exports = { globals: true };`,
   });
-  const testFile = path.join(appRoot, 'tests/rstest/pure/server/cli.test.js');
+  const testFile = path.join(appRoot, "tests/rstest/pure/server/cli.test.js");
   fs.writeFileSync(candidates, JSON.stringify([testFile]));
   t.after(() => {
     fs.rmSync(appRoot, { recursive: true, force: true });
@@ -413,11 +464,13 @@ test('classification CLI writes routing manifest without evaluating user config'
   });
 
   const result = run(appRoot, [
-    '--classify-candidates', candidates,
-    '--classification-output', output,
+    "--classify-candidates",
+    candidates,
+    "--classification-output",
+    output,
   ]);
 
   assert.equal(result.status, 0, result.stderr || result.stdout);
   assert.equal(fs.existsSync(marker), false);
-  assert.deepEqual(JSON.parse(fs.readFileSync(output, 'utf8')).nativeNodeFiles, [testFile]);
+  assert.deepEqual(JSON.parse(fs.readFileSync(output, "utf8")).nativeNodeFiles, [testFile]);
 });

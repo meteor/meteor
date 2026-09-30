@@ -1,16 +1,14 @@
 function assertTestPath(testPath) {
-  const segments = typeof testPath === 'string' ? testPath.split('/') : [];
+  const segments = typeof testPath === "string" ? testPath.split("/") : [];
   if (
-    typeof testPath !== 'string' ||
+    typeof testPath !== "string" ||
     testPath.length === 0 ||
-    testPath.startsWith('/') ||
-    testPath.includes('\\') ||
-    testPath.includes('\0') ||
-    segments.some(segment => segment === '' || segment === '.' || segment === '..')
+    testPath.startsWith("/") ||
+    testPath.includes("\\") ||
+    testPath.includes("\0") ||
+    segments.some((segment) => segment === "" || segment === "." || segment === "..")
   ) {
-    throw new TypeError(
-      '[Meteor Rstest] Test path must be a safe app-relative POSIX path.',
-    );
+    throw new TypeError("[Meteor Rstest] Test path must be a safe app-relative POSIX path.");
   }
 }
 
@@ -32,13 +30,11 @@ function createFileLoaderRegistry() {
   return {
     register(testPath, load) {
       assertTestPath(testPath);
-      if (typeof load !== 'function') {
-        throw new TypeError('[Meteor Rstest] Test file loader must be a function.');
+      if (typeof load !== "function") {
+        throw new TypeError("[Meteor Rstest] Test file loader must be a function.");
       }
       if (loaders.has(testPath)) {
-        throw new Error(
-          `[Meteor Rstest] Test file is already registered: ${testPath}`,
-        );
+        throw new Error(`[Meteor Rstest] Test file is already registered: ${testPath}`);
       }
       loaders.set(testPath, load);
       resolveReadiness();
@@ -53,8 +49,8 @@ function createFileLoaderRegistry() {
     },
 
     setRuntimeFactory(factory) {
-      if (typeof factory !== 'function') {
-        throw new TypeError('[Meteor Rstest] Runtime factory must be a function.');
+      if (typeof factory !== "function") {
+        throw new TypeError("[Meteor Rstest] Runtime factory must be a function.");
       }
       // Rspack watch rebuilds evaluate a fresh bundle factory in same Meteor
       // process. Latest successful bundle must own subsequent file runtimes.
@@ -64,7 +60,7 @@ function createFileLoaderRegistry() {
 
     getRuntimeFactory() {
       if (!runtimeFactory) {
-        throw new Error('[Meteor Rstest] Upstream runtime factory was not registered.');
+        throw new Error("[Meteor Rstest] Upstream runtime factory was not registered.");
       }
       return runtimeFactory;
     },
@@ -72,18 +68,20 @@ function createFileLoaderRegistry() {
     waitUntilReady({ timeoutMs = 600000 } = {}) {
       if (isReady()) return Promise.resolve();
       if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
-        return Promise.reject(new TypeError(
-          '[Meteor Rstest] Runtime bundle readiness timeout must be positive.',
-        ));
+        return Promise.reject(
+          new TypeError("[Meteor Rstest] Runtime bundle readiness timeout must be positive."),
+        );
       }
       return new Promise((resolve, reject) => {
         const waiter = {
           resolve,
           timeout: setTimeout(() => {
             readinessWaiters.delete(waiter);
-            reject(new Error(
-              '[Meteor Rstest] Rspack runtime bundle did not register its factory and test files.',
-            ));
+            reject(
+              new Error(
+                "[Meteor Rstest] Rspack runtime bundle did not register its factory and test files.",
+              ),
+            );
           }, timeoutMs),
         };
         readinessWaiters.add(waiter);

@@ -1,31 +1,22 @@
-const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const os = require('node:os');
-const path = require('node:path');
-const test = require('node:test');
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
+const test = require("node:test");
 
-const { defineConfig } = require('../index.js');
-const {
-  runtimeSettingsFromConfig,
-} = require('../src/coordinator.js');
-const {
-  createGeneratedConfig,
-} = require('../src/generated-config.js');
-const {
-  MeteorCoverageCaptureReporter,
-} = require('../src/coverage/reporter.js');
-const {
-  createMeteorRstestContext,
-  withMeteorRstestContext,
-} = require('../src/config/context.js');
+const { defineConfig } = require("../index.js");
+const { runtimeSettingsFromConfig } = require("../src/coordinator.js");
+const { createGeneratedConfig } = require("../src/generated-config.js");
+const { MeteorCoverageCaptureReporter } = require("../src/coverage/reporter.js");
+const { createMeteorRstestContext, withMeteorRstestContext } = require("../src/config/context.js");
 
 function makeContext(overrides = {}) {
   return createMeteorRstestContext({
-    appRoot: '/tmp/meteor-app',
-    configRoot: '/tmp/meteor-app',
-    harnessRoot: '/tmp/meteor-harness',
-    localDir: '/tmp/meteor-local',
-    command: 'test',
+    appRoot: "/tmp/meteor-app",
+    configRoot: "/tmp/meteor-app",
+    harnessRoot: "/tmp/meteor-harness",
+    localDir: "/tmp/meteor-local",
+    command: "test",
     once: true,
     fullApp: false,
     packageTests: false,
@@ -35,17 +26,17 @@ function makeContext(overrides = {}) {
   });
 }
 
-test('object config remains directly usable by native Rstest', () => {
-  const config = { test: { include: ['tests/rstest/pure/**/*.test.js'] } };
+test("object config remains directly usable by native Rstest", () => {
+  const config = { test: { include: ["tests/rstest/pure/**/*.test.js"] } };
 
   assert.equal(defineConfig(config), config);
 });
 
-test('Meteor runtime settings project serializable upstream semantics and validation', t => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-config-'));
-  const setupFile = path.join(root, 'support', 'setup.js');
+test("Meteor runtime settings project serializable upstream semantics and validation", (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "meteor-rstest-config-"));
+  const setupFile = path.join(root, "support", "setup.js");
   fs.mkdirSync(path.dirname(setupFile), { recursive: true });
-  fs.writeFileSync(setupFile, '');
+  fs.writeFileSync(setupFile, "");
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   assert.deepEqual(runtimeSettingsFromConfig({}), {
     testTimeout: 30000,
@@ -67,66 +58,71 @@ test('Meteor runtime settings project serializable upstream semantics and valida
     includeTaskLocation: false,
     setupFiles: [],
   });
-  assert.deepEqual(runtimeSettingsFromConfig({
-    root,
-    setupFiles: ['<rootDir>/support/setup.js'],
-    maxConcurrency: 3,
-    retry: 2,
-    globals: true,
-    clearMocks: true,
-    expect: { poll: { interval: 10 } },
-    snapshotFormat: { printBasicPrototype: false },
-    env: { FEATURE: 'enabled' },
-    disableConsoleIntercept: false,
-  }), {
-    testTimeout: 30000,
-    hookTimeout: 10000,
-    maxConcurrency: 3,
-    retry: 2,
-    globals: true,
-    clearMocks: true,
-    resetMocks: false,
-    restoreMocks: false,
-    unstubEnvs: false,
-    unstubGlobals: false,
-    expect: { poll: { interval: 10 } },
-    snapshotFormat: { printBasicPrototype: false },
-    env: { FEATURE: 'enabled' },
-    silent: false,
-    disableConsoleIntercept: false,
-    printConsoleTrace: false,
-    includeTaskLocation: false,
-    setupFiles: [setupFile],
-  });
+  assert.deepEqual(
+    runtimeSettingsFromConfig({
+      root,
+      setupFiles: ["<rootDir>/support/setup.js"],
+      maxConcurrency: 3,
+      retry: 2,
+      globals: true,
+      clearMocks: true,
+      expect: { poll: { interval: 10 } },
+      snapshotFormat: { printBasicPrototype: false },
+      env: { FEATURE: "enabled" },
+      disableConsoleIntercept: false,
+    }),
+    {
+      testTimeout: 30000,
+      hookTimeout: 10000,
+      maxConcurrency: 3,
+      retry: 2,
+      globals: true,
+      clearMocks: true,
+      resetMocks: false,
+      restoreMocks: false,
+      unstubEnvs: false,
+      unstubGlobals: false,
+      expect: { poll: { interval: 10 } },
+      snapshotFormat: { printBasicPrototype: false },
+      env: { FEATURE: "enabled" },
+      silent: false,
+      disableConsoleIntercept: false,
+      printConsoleTrace: false,
+      includeTaskLocation: false,
+      setupFiles: [setupFile],
+    },
+  );
   assert.throws(
     () => runtimeSettingsFromConfig({ maxConcurrency: 0 }),
-    error => {
-      assert.equal(error.code, 'METEOR_RSTEST_INVALID_MAX_CONCURRENCY');
+    (error) => {
+      assert.equal(error.code, "METEOR_RSTEST_INVALID_MAX_CONCURRENCY");
       assert.match(error.message, /positive integer/);
       return true;
     },
   );
   assert.throws(
     () => runtimeSettingsFromConfig({ retry: -1 }),
-    error => error.code === 'METEOR_RSTEST_INVALID_RETRY',
+    (error) => error.code === "METEOR_RSTEST_INVALID_RETRY",
   );
   assert.throws(
     () => runtimeSettingsFromConfig({ expect: { plugin() {} } }),
-    error => error.code === 'METEOR_RSTEST_RUNTIME_CONFIG_NOT_SERIALIZABLE',
+    (error) => error.code === "METEOR_RSTEST_RUNTIME_CONFIG_NOT_SERIALIZABLE",
   );
   assert.throws(
-    () => runtimeSettingsFromConfig({ root, setupFiles: ['./missing.js'] }),
-    error => error.code === 'METEOR_RSTEST_SETUP_FILE_NOT_FOUND',
+    () => runtimeSettingsFromConfig({ root, setupFiles: ["./missing.js"] }),
+    (error) => error.code === "METEOR_RSTEST_SETUP_FILE_NOT_FOUND",
   );
 });
 
-test('mixed coverage writes a runtime plan and defers only native coverage finalization', async t => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-coverage-config-'));
-  const configPath = path.join(root, 'rstest.config.js');
-  const planOutput = path.join(root, 'coverage-plan.json');
-  const settingsOutput = path.join(root, 'runtime-settings.json');
-  const artifactPath = path.join(root, 'artifacts', 'native.json');
-  fs.writeFileSync(configPath, `module.exports = {
+test("mixed coverage writes a runtime plan and defers only native coverage finalization", async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "meteor-rstest-coverage-config-"));
+  const configPath = path.join(root, "rstest.config.js");
+  const planOutput = path.join(root, "coverage-plan.json");
+  const settingsOutput = path.join(root, "runtime-settings.json");
+  const artifactPath = path.join(root, "artifacts", "native.json");
+  fs.writeFileSync(
+    configPath,
+    `module.exports = {
     reporters: 'dot',
     coverage: {
       enabled: true,
@@ -136,70 +132,75 @@ test('mixed coverage writes a runtime plan and defers only native coverage final
       thresholds: { lines: 100 },
       clean: true,
     },
-  };`);
+  };`,
+  );
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
 
   const config = await createGeneratedConfig({
-    context: makeContext({ appRoot: root, configRoot: root, localDir: path.join(root, '.meteor', 'local') }),
+    context: makeContext({
+      appRoot: root,
+      configRoot: root,
+      localDir: path.join(root, ".meteor", "local"),
+    }),
     configPath,
     runtimeSettingsOutput: settingsOutput,
-    runtimeSettingsGeneration: 'generation-5',
+    runtimeSettingsGeneration: "generation-5",
     coveragePlanOutput: planOutput,
-    coverageGeneration: 'generation-5',
+    coverageGeneration: "generation-5",
     coverageArtifact: artifactPath,
     cliCoverageEnabled: true,
     deferNativeReport: true,
   })();
 
-  assert.deepEqual(JSON.parse(fs.readFileSync(planOutput, 'utf8')), {
+  assert.deepEqual(JSON.parse(fs.readFileSync(planOutput, "utf8")), {
     schemaVersion: 1,
-    generation: 'generation-5',
+    generation: "generation-5",
     enabled: true,
-    provider: 'istanbul',
+    provider: "istanbul",
     root,
-    include: ['imports/**/*.js'],
+    include: ["imports/**/*.js"],
     exclude: [],
     allowExternal: false,
     artifactRoot: path.dirname(artifactPath),
     policy: {
       schemaVersion: 1,
       enabled: true,
-      provider: 'istanbul',
-      reporters: ['text'],
+      provider: "istanbul",
+      reporters: ["text"],
       thresholds: { lines: 100 },
-      reportsDirectory: 'coverage',
-      include: ['imports/**/*.js'],
+      reportsDirectory: "coverage",
+      include: ["imports/**/*.js"],
       exclude: [],
       reportOnFailure: false,
       clean: true,
       allowExternal: false,
     },
   });
-  assert.deepEqual(JSON.parse(fs.readFileSync(settingsOutput, 'utf8')).coverage, {
+  assert.deepEqual(JSON.parse(fs.readFileSync(settingsOutput, "utf8")).coverage, {
     schemaVersion: 1,
-    generation: 'generation-5',
+    generation: "generation-5",
     enabled: true,
-    provider: 'istanbul',
+    provider: "istanbul",
     root,
-    include: ['imports/**/*.js'],
+    include: ["imports/**/*.js"],
     exclude: [],
     allowExternal: false,
     artifactRoot: path.dirname(artifactPath),
     policy: {
       schemaVersion: 1,
       enabled: true,
-      provider: 'istanbul',
-      reporters: ['text'],
+      provider: "istanbul",
+      reporters: ["text"],
       thresholds: { lines: 100 },
-      reportsDirectory: 'coverage',
-      include: ['imports/**/*.js'],
+      reportsDirectory: "coverage",
+      include: ["imports/**/*.js"],
       exclude: [],
       reportOnFailure: false,
       clean: true,
       allowExternal: false,
     },
   });
-  assert.equal(config.reporters[0], 'dot');
+  assert.equal(config.reporters[0], "dot");
   assert.ok(config.reporters[1] instanceof MeteorCoverageCaptureReporter);
   assert.deepEqual(config.coverage.reporters, []);
   assert.equal(config.coverage.thresholds, undefined);
@@ -207,33 +208,33 @@ test('mixed coverage writes a runtime plan and defers only native coverage final
   assert.equal(config.coverage.clean, false);
 });
 
-test('generated external Istanbul coverage appends the Playwright setup exactly once', async t => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-external-config-'));
-  const configPath = path.join(root, 'rstest.config.js');
-  const userSetup = path.join(root, 'user-setup.mjs');
-  const integrationSetup = path.resolve(
-    __dirname,
-    '../src/coverage/playwright-setup.mjs',
-  );
-  const e2eTest = path.join(root, 'tests', 'rstest', 'e2e', 'app.test.js');
+test("generated external Istanbul coverage appends the Playwright setup exactly once", async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "meteor-rstest-external-config-"));
+  const configPath = path.join(root, "rstest.config.js");
+  const userSetup = path.join(root, "user-setup.mjs");
+  const integrationSetup = path.resolve(__dirname, "../src/coverage/playwright-setup.mjs");
+  const e2eTest = path.join(root, "tests", "rstest", "e2e", "app.test.js");
   fs.mkdirSync(path.dirname(e2eTest), { recursive: true });
-  fs.writeFileSync(e2eTest, '');
-  fs.writeFileSync(userSetup, '');
-  fs.writeFileSync(configPath, `module.exports = {
+  fs.writeFileSync(e2eTest, "");
+  fs.writeFileSync(userSetup, "");
+  fs.writeFileSync(
+    configPath,
+    `module.exports = {
     setupFiles: [${JSON.stringify(userSetup)}],
     coverage: { enabled: true, provider: 'istanbul' },
-  };`);
+  };`,
+  );
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const input = {
     context: makeContext({
       appRoot: root,
       configRoot: root,
-      localDir: path.join(root, '.meteor', 'local'),
-      phase: 'external',
+      localDir: path.join(root, ".meteor", "local"),
+      phase: "external",
       fullApp: true,
     }),
     configPath,
-    coverageGeneration: 'abcdef1234567890abcdef1234567890',
+    coverageGeneration: "abcdef1234567890abcdef1234567890",
     cliCoverageEnabled: true,
     hasMeteorRuntime: true,
   };
@@ -245,22 +246,24 @@ test('generated external Istanbul coverage appends the Playwright setup exactly 
   assert.deepEqual(first.coverage.reporters, []);
   assert.equal(first.coverage.thresholds, undefined);
   assert.equal(first.coverage.clean, false);
-  assert.deepEqual(
-    first.projects.find(project => project.name === 'meteor-e2e').setupFiles,
-    [userSetup, integrationSetup],
-  );
-  assert.deepEqual(
-    second.projects.find(project => project.name === 'meteor-e2e').setupFiles,
-    [userSetup, integrationSetup],
-  );
+  assert.deepEqual(first.projects.find((project) => project.name === "meteor-e2e").setupFiles, [
+    userSetup,
+    integrationSetup,
+  ]);
+  assert.deepEqual(second.projects.find((project) => project.name === "meteor-e2e").setupFiles, [
+    userSetup,
+    integrationSetup,
+  ]);
 });
 
-test('deferred mixed phases use one canonical CLI coverage policy', async t => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-policy-config-'));
-  const configPath = path.join(root, 'rstest.config.js');
-  const planOutput = path.join(root, 'plan.json');
-  const artifactPath = path.join(root, 'artifacts', 'native.json');
-  fs.writeFileSync(configPath, `module.exports = { coverage: {
+test("deferred mixed phases use one canonical CLI coverage policy", async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "meteor-rstest-policy-config-"));
+  const configPath = path.join(root, "rstest.config.js");
+  const planOutput = path.join(root, "plan.json");
+  const artifactPath = path.join(root, "artifacts", "native.json");
+  fs.writeFileSync(
+    configPath,
+    `module.exports = { coverage: {
     enabled: false,
     provider: 'v8',
     reporters: ['html'],
@@ -269,44 +272,45 @@ test('deferred mixed phases use one canonical CLI coverage policy', async t => {
     include: ['config/**/*.js'],
     exclude: ['config-excluded/**'],
     reportOnFailure: false,
-  } };`);
+  } };`,
+  );
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
 
   const config = await createGeneratedConfig({
     context: makeContext({
       appRoot: root,
       configRoot: root,
-      localDir: path.join(root, '.meteor', 'local'),
+      localDir: path.join(root, ".meteor", "local"),
     }),
     configPath,
     coveragePlanOutput: planOutput,
-    coverageGeneration: 'canonical-generation',
+    coverageGeneration: "canonical-generation",
     coverageArtifact: artifactPath,
     cliCoverageEnabled: false,
     coverageCliArgs: [
-      '--coverage.enabled',
-      '--coverage.provider=istanbul',
-      '--coverage.reporters=text',
-      '--coverage.thresholds.lines=97',
-      '--coverage.reportsDirectory=cli-coverage',
-      '--coverage.include=imports/**/*.js',
-      '--coverage.exclude=**/generated/**',
-      '--coverage.reportOnFailure',
+      "--coverage.enabled",
+      "--coverage.provider=istanbul",
+      "--coverage.reporters=text",
+      "--coverage.thresholds.lines=97",
+      "--coverage.reportsDirectory=cli-coverage",
+      "--coverage.include=imports/**/*.js",
+      "--coverage.exclude=**/generated/**",
+      "--coverage.reportOnFailure",
     ],
     deferNativeReport: true,
     hasMeteorRuntime: true,
   })();
-  const plan = JSON.parse(fs.readFileSync(planOutput, 'utf8'));
+  const plan = JSON.parse(fs.readFileSync(planOutput, "utf8"));
 
   assert.deepEqual(plan.policy, {
     schemaVersion: 1,
     enabled: true,
-    provider: 'istanbul',
-    reporters: ['text'],
+    provider: "istanbul",
+    reporters: ["text"],
     thresholds: { lines: 97 },
-    reportsDirectory: 'cli-coverage',
-    include: ['imports/**/*.js'],
-    exclude: ['**/generated/**'],
+    reportsDirectory: "cli-coverage",
+    include: ["imports/**/*.js"],
+    exclude: ["**/generated/**"],
     reportOnFailure: true,
     clean: true,
     allowExternal: false,
@@ -317,25 +321,32 @@ test('deferred mixed phases use one canonical CLI coverage policy', async t => {
   assert.equal(config.coverage.clean, false);
 });
 
-test('disabled coverage ignores wrapper plan and artifact options', async t => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-disabled-coverage-'));
-  const configPath = path.join(root, 'rstest.config.js');
-  const planOutput = path.join(root, 'coverage-plan.json');
-  const settingsOutput = path.join(root, 'runtime-settings.json');
-  const artifactPath = path.join(root, 'artifacts', 'native.json');
-  fs.writeFileSync(configPath, `module.exports = {
+test("disabled coverage ignores wrapper plan and artifact options", async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "meteor-rstest-disabled-coverage-"));
+  const configPath = path.join(root, "rstest.config.js");
+  const planOutput = path.join(root, "coverage-plan.json");
+  const settingsOutput = path.join(root, "runtime-settings.json");
+  const artifactPath = path.join(root, "artifacts", "native.json");
+  fs.writeFileSync(
+    configPath,
+    `module.exports = {
     reporters: 'dot',
     coverage: { enabled: false, provider: 'istanbul' },
-  };`);
+  };`,
+  );
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
 
   const config = await createGeneratedConfig({
-    context: makeContext({ appRoot: root, configRoot: root, localDir: path.join(root, '.meteor', 'local') }),
+    context: makeContext({
+      appRoot: root,
+      configRoot: root,
+      localDir: path.join(root, ".meteor", "local"),
+    }),
     configPath,
     runtimeSettingsOutput: settingsOutput,
-    runtimeSettingsGeneration: 'generation-disabled',
+    runtimeSettingsGeneration: "generation-disabled",
     coveragePlanOutput: planOutput,
-    coverageGeneration: 'generation-disabled',
+    coverageGeneration: "generation-disabled",
     coverageArtifact: artifactPath,
     cliCoverageEnabled: false,
     deferNativeReport: true,
@@ -344,17 +355,22 @@ test('disabled coverage ignores wrapper plan and artifact options', async t => {
 
   assert.equal(fs.existsSync(planOutput), false);
   assert.equal(fs.existsSync(artifactPath), false);
-  assert.equal(Object.hasOwn(JSON.parse(fs.readFileSync(settingsOutput, 'utf8')), 'coverage'), false);
-  assert.equal(config.reporters, 'dot');
+  assert.equal(
+    Object.hasOwn(JSON.parse(fs.readFileSync(settingsOutput, "utf8")), "coverage"),
+    false,
+  );
+  assert.equal(config.reporters, "dot");
   assert.equal(config.coverage.enabled, false);
-  assert.equal(config.coverage.provider, 'istanbul');
+  assert.equal(config.coverage.provider, "istanbul");
   assert.equal(config.setupFiles, undefined);
 });
 
-test('native-only coverage leaves upstream reporters and coverage settings untouched', async t => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-native-coverage-'));
-  const configPath = path.join(root, 'rstest.config.js');
-  fs.writeFileSync(configPath, `module.exports = {
+test("native-only coverage leaves upstream reporters and coverage settings untouched", async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "meteor-rstest-native-coverage-"));
+  const configPath = path.join(root, "rstest.config.js");
+  fs.writeFileSync(
+    configPath,
+    `module.exports = {
     reporters: 'dot',
     coverage: {
       enabled: true,
@@ -364,117 +380,119 @@ test('native-only coverage leaves upstream reporters and coverage settings untou
       thresholds: { lines: 100 },
       clean: true,
     },
-  };`);
+  };`,
+  );
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
 
   const config = await createGeneratedConfig({
-    context: makeContext({ appRoot: root, configRoot: root, localDir: path.join(root, '.meteor', 'local') }),
+    context: makeContext({
+      appRoot: root,
+      configRoot: root,
+      localDir: path.join(root, ".meteor", "local"),
+    }),
     configPath,
-    coverageGeneration: 'generation-6',
+    coverageGeneration: "generation-6",
     cliCoverageEnabled: true,
     deferNativeReport: false,
     hasMeteorRuntime: false,
   })();
 
-  assert.equal(config.reporters, 'dot');
+  assert.equal(config.reporters, "dot");
   assert.deepEqual(config.coverage, {
     enabled: true,
-    provider: 'v8',
-    include: ['imports/**/*.js'],
-    reporters: ['text'],
+    provider: "v8",
+    include: ["imports/**/*.js"],
+    reporters: ["text"],
     thresholds: { lines: 100 },
     clean: true,
   });
   assert.equal(config.setupFiles, undefined);
 });
 
-test('Meteor config factory receives immutable normalized context once', async () => {
+test("Meteor config factory receives immutable normalized context once", async () => {
   let calls = 0;
-  const config = defineConfig(async context => {
+  const config = defineConfig(async (context) => {
     calls += 1;
     assert.equal(context.schemaVersion, 1);
-    assert.equal(context.command, 'test-packages');
+    assert.equal(context.command, "test-packages");
     assert.equal(context.packageTests, true);
-    assert.equal(context.appRoot, '/tmp/meteor-app');
+    assert.equal(context.appRoot, "/tmp/meteor-app");
     assert.equal(context.verbose, true);
     assert.ok(Object.isFrozen(context));
     assert.ok(Object.isFrozen(context.architectures));
-    return { test: { name: 'custom' } };
+    return { test: { name: "custom" } };
   });
 
   const context = makeContext({
-    command: 'test-packages',
+    command: "test-packages",
     packageTests: true,
     verbose: true,
-    architectures: ['server', 'web.browser'],
+    architectures: ["server", "web.browser"],
   });
   const resolved = await withMeteorRstestContext(context, () => config());
 
-  assert.deepEqual(resolved, { test: { name: 'custom' } });
+  assert.deepEqual(resolved, { test: { name: "custom" } });
   assert.equal(calls, 1);
 });
 
-test('Meteor context crosses separately installed coordinator copies', async t => {
-  const duplicateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-context-'));
-  const duplicatePath = path.join(duplicateRoot, 'context.js');
-  fs.copyFileSync(
-    path.resolve(__dirname, '../src/config/context.js'),
-    duplicatePath,
-  );
+test("Meteor context crosses separately installed coordinator copies", async (t) => {
+  const duplicateRoot = fs.mkdtempSync(path.join(os.tmpdir(), "meteor-rstest-context-"));
+  const duplicatePath = path.join(duplicateRoot, "context.js");
+  fs.copyFileSync(path.resolve(__dirname, "../src/config/context.js"), duplicatePath);
   t.after(() => fs.rmSync(duplicateRoot, { recursive: true, force: true }));
 
   const duplicateContext = require(duplicatePath);
-  const config = defineConfig(context => ({ command: context.command }));
+  const config = defineConfig((context) => ({ command: context.command }));
   const resolved = await duplicateContext.withMeteorRstestContext(
-    makeContext({ command: 'test-packages' }),
+    makeContext({ command: "test-packages" }),
     () => config(),
   );
 
-  assert.deepEqual(resolved, { command: 'test-packages' });
+  assert.deepEqual(resolved, { command: "test-packages" });
 });
 
-test('Meteor context normalizes verbosity to a frozen boolean', () => {
+test("Meteor context normalizes verbosity to a frozen boolean", () => {
   const quiet = makeContext();
-  const verbose = makeContext({ verbose: 'enabled' });
+  const verbose = makeContext({ verbose: "enabled" });
 
   assert.equal(quiet.verbose, false);
   assert.equal(verbose.verbose, true);
   assert.ok(Object.isFrozen(verbose));
 });
 
-test('Meteor context preserves an absolute routing manifest', () => {
+test("Meteor context preserves an absolute routing manifest", () => {
   const context = makeContext({
-    routingManifest: '/tmp/meteor-local/rstest/routing.json',
+    routingManifest: "/tmp/meteor-local/rstest/routing.json",
   });
 
-  assert.equal(
-    context.routingManifest,
-    '/tmp/meteor-local/rstest/routing.json',
-  );
+  assert.equal(context.routingManifest, "/tmp/meteor-local/rstest/routing.json");
   assert.ok(Object.isFrozen(context));
   assert.throws(
-    () => makeContext({ routingManifest: 'relative/routing.json' }),
+    () => makeContext({ routingManifest: "relative/routing.json" }),
     /routingManifest must be an absolute path/,
   );
 });
 
-test('Meteor context factory fails clearly when called by standalone Rstest', () => {
+test("Meteor context factory fails clearly when called by standalone Rstest", () => {
   const config = defineConfig(() => ({}));
 
-  assert.throws(() => config(), error => {
-    assert.equal(error.code, 'METEOR_RSTEST_CONTEXT_REQUIRED');
-    assert.match(error.message, /run this config through meteor test/i);
-    return true;
-  });
+  assert.throws(
+    () => config(),
+    (error) => {
+      assert.equal(error.code, "METEOR_RSTEST_CONTEXT_REQUIRED");
+      assert.match(error.message, /run this config through meteor test/i);
+      return true;
+    },
+  );
 });
 
-test('context rejects missing absolute roots', () => {
+test("context rejects missing absolute roots", () => {
   assert.throws(
-    () => createMeteorRstestContext({ appRoot: 'relative/app' }),
-    error => {
-      assert.equal(error.code, 'METEOR_RSTEST_INVALID_CONTEXT');
+    () => createMeteorRstestContext({ appRoot: "relative/app" }),
+    (error) => {
+      assert.equal(error.code, "METEOR_RSTEST_INVALID_CONTEXT");
       assert.match(error.message, /appRoot must be an absolute path/);
       return true;
-    }
+    },
   );
 });

@@ -1,9 +1,9 @@
-const crypto = require('node:crypto');
-const fs = require('node:fs');
-const path = require('node:path');
+const crypto = require("node:crypto");
+const fs = require("node:fs");
+const path = require("node:path");
 
-const { validateResult } = require('../../runtime/coordinator.js');
-const { formatRuntimeReport } = require('../../runtime/reporter.js');
+const { validateResult } = require("../../runtime/coordinator.js");
+const { formatRuntimeReport } = require("../../runtime/reporter.js");
 
 const WORKER_PAYLOAD_SCHEMA_VERSION = 1;
 const GENERATION_PATTERN = /^[a-f0-9]{32,128}$/i;
@@ -16,62 +16,52 @@ function workerError(code, message) {
 
 function inside(parent, child) {
   const relative = path.relative(parent, child);
-  return relative === '' || (
-    !relative.startsWith(`..${path.sep}`) &&
-    relative !== '..' &&
-    !path.isAbsolute(relative)
+  return (
+    relative === "" ||
+    (!relative.startsWith(`..${path.sep}`) && relative !== ".." && !path.isAbsolute(relative))
   );
 }
 
 function canonicalRuntimeFiles({ appDir, files, allowEmpty = false }) {
-  if (!path.isAbsolute(appDir || '')) {
-    throw workerError(
-      'METEOR_RSTEST_WORKER_APP_ROOT',
-      'Runtime worker app root must be absolute.'
-    );
+  if (!path.isAbsolute(appDir || "")) {
+    throw workerError("METEOR_RSTEST_WORKER_APP_ROOT", "Runtime worker app root must be absolute.");
   }
-  if (!Array.isArray(files) || !allowEmpty && files.length === 0) {
+  if (!Array.isArray(files) || (!allowEmpty && files.length === 0)) {
     throw workerError(
-      'METEOR_RSTEST_WORKER_EMPTY',
-      'Runtime workers require at least one runtime-server file.'
+      "METEOR_RSTEST_WORKER_EMPTY",
+      "Runtime workers require at least one runtime-server file.",
     );
   }
   const realAppDir = fs.realpathSync(appDir);
   const seen = new Set();
-  const normalized = files.map(file => {
-    if (typeof file !== 'string' || !path.isAbsolute(file)) {
+  const normalized = files.map((file) => {
+    if (typeof file !== "string" || !path.isAbsolute(file)) {
       throw workerError(
-        'METEOR_RSTEST_WORKER_FILE',
-        'Runtime worker files must be absolute paths.'
+        "METEOR_RSTEST_WORKER_FILE",
+        "Runtime worker files must be absolute paths.",
       );
     }
     let canonical;
     try {
       canonical = fs.realpathSync(file);
     } catch {
-      throw workerError(
-        'METEOR_RSTEST_WORKER_FILE',
-        `Runtime worker file does not exist: ${file}`
-      );
+      throw workerError("METEOR_RSTEST_WORKER_FILE", `Runtime worker file does not exist: ${file}`);
     }
     if (!inside(realAppDir, canonical)) {
       throw workerError(
-        'METEOR_RSTEST_WORKER_FILE',
-        `Runtime worker file must be inside Meteor app root: ${file}`
+        "METEOR_RSTEST_WORKER_FILE",
+        `Runtime worker file must be inside Meteor app root: ${file}`,
       );
     }
     if (seen.has(canonical)) {
-      throw workerError(
-        'METEOR_RSTEST_WORKER_DUPLICATE',
-        'Runtime worker files must be unique.'
-      );
+      throw workerError("METEOR_RSTEST_WORKER_DUPLICATE", "Runtime worker files must be unique.");
     }
     seen.add(canonical);
     return canonical;
   });
   normalized.sort((left, right) => {
-    const leftRelative = path.relative(realAppDir, left).split(path.sep).join('/');
-    const rightRelative = path.relative(realAppDir, right).split(path.sep).join('/');
+    const leftRelative = path.relative(realAppDir, left).split(path.sep).join("/");
+    const rightRelative = path.relative(realAppDir, right).split(path.sep).join("/");
     return leftRelative < rightRelative ? -1 : leftRelative > rightRelative ? 1 : 0;
   });
   return normalized;
@@ -80,8 +70,8 @@ function canonicalRuntimeFiles({ appDir, files, allowEmpty = false }) {
 function partitionRuntimeFiles({ appDir, files, requestedWorkers }) {
   if (!Number.isSafeInteger(requestedWorkers) || requestedWorkers < 1) {
     throw workerError(
-      'METEOR_RSTEST_WORKER_COUNT',
-      'Runtime worker count must be a positive integer.'
+      "METEOR_RSTEST_WORKER_COUNT",
+      "Runtime worker count must be a positive integer.",
     );
   }
   const normalized = canonicalRuntimeFiles({ appDir, files });
@@ -97,16 +87,16 @@ function removeIfPresent(filename) {
   try {
     fs.unlinkSync(filename);
   } catch (error) {
-    if (error.code !== 'ENOENT') throw error;
+    if (error.code !== "ENOENT") throw error;
   }
 }
 
 function writePrivateJson(filename, value) {
   fs.mkdirSync(path.dirname(filename), { recursive: true, mode: 0o700 });
-  const temporary = `${filename}.${process.pid}.${crypto.randomBytes(8).toString('hex')}.tmp`;
+  const temporary = `${filename}.${process.pid}.${crypto.randomBytes(8).toString("hex")}.tmp`;
   try {
     fs.writeFileSync(temporary, `${JSON.stringify(value)}\n`, {
-      encoding: 'utf8',
+      encoding: "utf8",
       mode: 0o600,
     });
     fs.renameSync(temporary, filename);
@@ -118,11 +108,8 @@ function writePrivateJson(filename, value) {
 }
 
 function assertGeneration(generation) {
-  if (typeof generation !== 'string' || !GENERATION_PATTERN.test(generation)) {
-    throw workerError(
-      'METEOR_RSTEST_WORKER_GENERATION',
-      'Runtime worker generation is invalid.'
-    );
+  if (typeof generation !== "string" || !GENERATION_PATTERN.test(generation)) {
+    throw workerError("METEOR_RSTEST_WORKER_GENERATION", "Runtime worker generation is invalid.");
   }
 }
 
@@ -136,38 +123,39 @@ function createRstestHostDescriptors({
   runtimeSettingsPath,
   coverageRoot,
 }) {
-  if (!path.isAbsolute(localDir || '') ||
-      !path.isAbsolute(runtimeSettingsPath || '')) {
+  if (!path.isAbsolute(localDir || "") || !path.isAbsolute(runtimeSettingsPath || "")) {
     throw workerError(
-      'METEOR_RSTEST_WORKER_PATH',
-      'Runtime worker coordination paths must be absolute.'
+      "METEOR_RSTEST_WORKER_PATH",
+      "Runtime worker coordination paths must be absolute.",
     );
   }
   assertGeneration(generation);
   let normalizedCoverageRoot;
   if (coverageRoot !== undefined) {
-    if (typeof coverageRoot !== 'string' || !path.isAbsolute(coverageRoot) ||
-        path.dirname(path.resolve(coverageRoot)) !==
-          path.join(path.resolve(localDir), 'rstest', 'coverage')) {
-      throw workerError(
-        'METEOR_RSTEST_WORKER_PATH',
-        'Runtime worker coverage root is invalid.'
-      );
+    if (
+      typeof coverageRoot !== "string" ||
+      !path.isAbsolute(coverageRoot) ||
+      path.dirname(path.resolve(coverageRoot)) !==
+        path.join(path.resolve(localDir), "rstest", "coverage")
+    ) {
+      throw workerError("METEOR_RSTEST_WORKER_PATH", "Runtime worker coverage root is invalid.");
     }
     normalizedCoverageRoot = path.resolve(coverageRoot);
     assertGeneration(path.basename(normalizedCoverageRoot));
   }
   const normalizedFiles = canonicalRuntimeFiles({ appDir, files });
-  const normalizedClientFiles = new Set(canonicalRuntimeFiles({
-    appDir,
-    files: clientFiles,
-    allowEmpty: true,
-  }));
+  const normalizedClientFiles = new Set(
+    canonicalRuntimeFiles({
+      appDir,
+      files: clientFiles,
+      allowEmpty: true,
+    }),
+  );
   for (const clientFile of normalizedClientFiles) {
     if (!normalizedFiles.includes(clientFile)) {
       throw workerError(
-        'METEOR_RSTEST_WORKER_FILE',
-        'Runtime worker client file is outside the selected runtime files.'
+        "METEOR_RSTEST_WORKER_FILE",
+        "Runtime worker client file is outside the selected runtime files.",
       );
     }
   }
@@ -176,25 +164,27 @@ function createRstestHostDescriptors({
     files: normalizedFiles,
     requestedWorkers,
   });
-  const workersRoot = path.join(localDir, 'rstest', 'workers');
+  const workersRoot = path.join(localDir, "rstest", "workers");
   const descriptors = partitions.map((runtimeFiles, index) => {
     const id = `server-${index + 1}`;
     const runtimeManifest = path.join(workersRoot, `${id}-files.json`);
     const resultPath = path.join(workersRoot, `${id}-result.json`);
     writePrivateJson(runtimeManifest, {
       schemaVersion: 2,
-      serverFiles: runtimeFiles.filter(file => !normalizedClientFiles.has(file)),
-      clientFiles: runtimeFiles.filter(file => normalizedClientFiles.has(file)),
+      serverFiles: runtimeFiles.filter((file) => !normalizedClientFiles.has(file)),
+      clientFiles: runtimeFiles.filter((file) => normalizedClientFiles.has(file)),
     });
     removeIfPresent(resultPath);
     return Object.freeze({
       id,
       commandOptions: Object.freeze({
         project: Object.freeze([
-          ...(runtimeFiles.some(file => !normalizedClientFiles.has(file))
-            ? ['meteor-runtime-server'] : []),
-          ...(runtimeFiles.some(file => normalizedClientFiles.has(file))
-            ? ['meteor-runtime-client'] : []),
+          ...(runtimeFiles.some((file) => !normalizedClientFiles.has(file))
+            ? ["meteor-runtime-server"]
+            : []),
+          ...(runtimeFiles.some((file) => normalizedClientFiles.has(file))
+            ? ["meteor-runtime-client"]
+            : []),
         ]),
       }),
       payload: Object.freeze({
@@ -205,10 +195,7 @@ function createRstestHostDescriptors({
         runtimeSettingsPath,
         resultPath,
         ...(normalizedCoverageRoot && {
-          coveragePath: path.join(
-            normalizedCoverageRoot,
-            `worker-${id}.json`,
-          ),
+          coveragePath: path.join(normalizedCoverageRoot, `worker-${id}.json`),
         }),
       }),
     });
@@ -221,104 +208,106 @@ function createRstestHostDescriptors({
 }
 
 function validateCoordinationPath(value, label) {
-  if (typeof value !== 'string' || !path.isAbsolute(value)) {
+  if (typeof value !== "string" || !path.isAbsolute(value)) {
     throw workerError(
-      'METEOR_RSTEST_WORKER_PATH',
-      `Runtime worker ${label} path must be absolute.`
+      "METEOR_RSTEST_WORKER_PATH",
+      `Runtime worker ${label} path must be absolute.`,
     );
   }
   return path.normalize(value);
 }
 
 function validateRstestWorkerPayload({ appDir, worker }) {
-  if (!worker || typeof worker !== 'object' || Array.isArray(worker) ||
-      typeof worker.id !== 'string') {
-    throw workerError(
-      'METEOR_RSTEST_WORKER_IDENTITY',
-      'Runtime worker identity is invalid.'
-    );
+  if (
+    !worker ||
+    typeof worker !== "object" ||
+    Array.isArray(worker) ||
+    typeof worker.id !== "string"
+  ) {
+    throw workerError("METEOR_RSTEST_WORKER_IDENTITY", "Runtime worker identity is invalid.");
   }
   const payload = worker.payload;
-  if (!payload || typeof payload !== 'object' || Array.isArray(payload) ||
-      payload.schemaVersion !== WORKER_PAYLOAD_SCHEMA_VERSION) {
-    throw workerError(
-      'METEOR_RSTEST_WORKER_SCHEMA',
-      'Runtime worker payload schema is invalid.'
-    );
+  if (
+    !payload ||
+    typeof payload !== "object" ||
+    Array.isArray(payload) ||
+    payload.schemaVersion !== WORKER_PAYLOAD_SCHEMA_VERSION
+  ) {
+    throw workerError("METEOR_RSTEST_WORKER_SCHEMA", "Runtime worker payload schema is invalid.");
   }
   assertGeneration(payload.generation);
   const runtimeFiles = canonicalRuntimeFiles({
     appDir,
     files: payload.runtimeFiles,
   });
-  const runtimeManifest = validateCoordinationPath(
-    payload.runtimeManifest,
-    'manifest'
-  );
-  const runtimeSettingsPath = validateCoordinationPath(
-    payload.runtimeSettingsPath,
-    'settings'
-  );
-  const resultPath = validateCoordinationPath(payload.resultPath, 'result');
+  const runtimeManifest = validateCoordinationPath(payload.runtimeManifest, "manifest");
+  const runtimeSettingsPath = validateCoordinationPath(payload.runtimeSettingsPath, "settings");
+  const resultPath = validateCoordinationPath(payload.resultPath, "result");
   if (path.basename(runtimeManifest) !== `${worker.id}-files.json`) {
     throw workerError(
-      'METEOR_RSTEST_WORKER_PATH',
-      'Runtime worker manifest path does not match worker identity.'
+      "METEOR_RSTEST_WORKER_PATH",
+      "Runtime worker manifest path does not match worker identity.",
     );
   }
   if (path.basename(resultPath) !== `${worker.id}-result.json`) {
     throw workerError(
-      'METEOR_RSTEST_WORKER_PATH',
-      'Runtime worker result path does not match worker identity.'
+      "METEOR_RSTEST_WORKER_PATH",
+      "Runtime worker result path does not match worker identity.",
     );
   }
   const coordinationRoot = path.dirname(path.dirname(runtimeManifest));
-  if (path.dirname(runtimeSettingsPath) !== coordinationRoot ||
-      path.dirname(resultPath) !== path.dirname(runtimeManifest)) {
+  if (
+    path.dirname(runtimeSettingsPath) !== coordinationRoot ||
+    path.dirname(resultPath) !== path.dirname(runtimeManifest)
+  ) {
     throw workerError(
-      'METEOR_RSTEST_WORKER_PATH',
-      'Runtime worker coordination paths do not share one root.'
+      "METEOR_RSTEST_WORKER_PATH",
+      "Runtime worker coordination paths do not share one root.",
     );
   }
   let coveragePath;
   let coverageGeneration;
   if (payload.coveragePath !== undefined) {
-    coveragePath = validateCoordinationPath(payload.coveragePath, 'coverage');
+    coveragePath = validateCoordinationPath(payload.coveragePath, "coverage");
     const coverageRoot = path.dirname(coveragePath);
     coverageGeneration = path.basename(coverageRoot);
-    if (path.basename(coveragePath) !== `worker-${worker.id}.json` ||
-        path.dirname(coverageRoot) !== path.join(coordinationRoot, 'coverage')) {
+    if (
+      path.basename(coveragePath) !== `worker-${worker.id}.json` ||
+      path.dirname(coverageRoot) !== path.join(coordinationRoot, "coverage")
+    ) {
       throw workerError(
-        'METEOR_RSTEST_WORKER_PATH',
-        'Runtime worker coverage path does not match worker identity and root.'
+        "METEOR_RSTEST_WORKER_PATH",
+        "Runtime worker coverage path does not match worker identity and root.",
       );
     }
     try {
       assertGeneration(coverageGeneration);
     } catch {
       throw workerError(
-        'METEOR_RSTEST_WORKER_PATH',
-        'Runtime worker coverage path has an invalid generation.'
+        "METEOR_RSTEST_WORKER_PATH",
+        "Runtime worker coverage path has an invalid generation.",
       );
     }
     let coveragePlan;
     try {
-      coveragePlan = JSON.parse(
-        fs.readFileSync(runtimeSettingsPath, 'utf8')
-      ).coverage;
+      coveragePlan = JSON.parse(fs.readFileSync(runtimeSettingsPath, "utf8")).coverage;
     } catch (error) {
       throw workerError(
-        'METEOR_RSTEST_WORKER_PATH',
-        `Runtime worker coverage settings are invalid: ${error.message}`
+        "METEOR_RSTEST_WORKER_PATH",
+        `Runtime worker coverage settings are invalid: ${error.message}`,
       );
     }
-    if (!coveragePlan || coveragePlan.schemaVersion !== 1 ||
-        coveragePlan.enabled !== true || coveragePlan.provider !== 'istanbul' ||
-        coveragePlan.generation !== coverageGeneration ||
-        path.resolve(coveragePlan.artifactRoot || '') !== coverageRoot) {
+    if (
+      !coveragePlan ||
+      coveragePlan.schemaVersion !== 1 ||
+      coveragePlan.enabled !== true ||
+      coveragePlan.provider !== "istanbul" ||
+      coveragePlan.generation !== coverageGeneration ||
+      path.resolve(coveragePlan.artifactRoot || "") !== coverageRoot
+    ) {
       throw workerError(
-        'METEOR_RSTEST_WORKER_PATH',
-        'Runtime worker coverage path does not match the enabled generation.'
+        "METEOR_RSTEST_WORKER_PATH",
+        "Runtime worker coverage path does not match the enabled generation.",
       );
     }
   }
@@ -326,13 +315,16 @@ function validateRstestWorkerPayload({ appDir, worker }) {
   let serverFiles;
   let clientFiles;
   try {
-    const parsedManifest = JSON.parse(fs.readFileSync(runtimeManifest, 'utf8'));
+    const parsedManifest = JSON.parse(fs.readFileSync(runtimeManifest, "utf8"));
     if (Array.isArray(parsedManifest)) {
       serverFiles = canonicalRuntimeFiles({ appDir, files: parsedManifest });
       clientFiles = [];
-    } else if (parsedManifest && parsedManifest.schemaVersion === 2 &&
-        Array.isArray(parsedManifest.serverFiles) &&
-        Array.isArray(parsedManifest.clientFiles)) {
+    } else if (
+      parsedManifest &&
+      parsedManifest.schemaVersion === 2 &&
+      Array.isArray(parsedManifest.serverFiles) &&
+      Array.isArray(parsedManifest.clientFiles)
+    ) {
       serverFiles = canonicalRuntimeFiles({
         appDir,
         files: parsedManifest.serverFiles,
@@ -345,34 +337,34 @@ function validateRstestWorkerPayload({ appDir, worker }) {
       });
       if (serverFiles.length === 0 && clientFiles.length === 0) {
         throw workerError(
-          'METEOR_RSTEST_WORKER_EMPTY',
-          'Runtime worker manifest has no runtime files.'
+          "METEOR_RSTEST_WORKER_EMPTY",
+          "Runtime worker manifest has no runtime files.",
         );
       }
     } else {
       throw workerError(
-        'METEOR_RSTEST_WORKER_MANIFEST',
-        'Runtime worker manifest schema is invalid.'
+        "METEOR_RSTEST_WORKER_MANIFEST",
+        "Runtime worker manifest schema is invalid.",
       );
     }
     const unique = new Set([...serverFiles, ...clientFiles]);
     if (unique.size !== serverFiles.length + clientFiles.length) {
       throw workerError(
-        'METEOR_RSTEST_WORKER_MANIFEST',
-        'Runtime worker manifest assigns one file to multiple architectures.'
+        "METEOR_RSTEST_WORKER_MANIFEST",
+        "Runtime worker manifest assigns one file to multiple architectures.",
       );
     }
     manifestFiles = canonicalRuntimeFiles({ appDir, files: [...unique] });
   } catch (error) {
     throw workerError(
-      'METEOR_RSTEST_WORKER_MANIFEST',
-      `Runtime worker manifest is invalid: ${error.message}`
+      "METEOR_RSTEST_WORKER_MANIFEST",
+      `Runtime worker manifest is invalid: ${error.message}`,
     );
   }
   if (JSON.stringify(manifestFiles) !== JSON.stringify(runtimeFiles)) {
     throw workerError(
-      'METEOR_RSTEST_WORKER_MANIFEST',
-      'Runtime worker manifest does not match assigned files.'
+      "METEOR_RSTEST_WORKER_MANIFEST",
+      "Runtime worker manifest does not match assigned files.",
     );
   }
   return Object.freeze({
@@ -391,37 +383,42 @@ function validateRstestWorkerPayload({ appDir, worker }) {
 function loadWorkerResult({ descriptor, index, total }) {
   let payload;
   try {
-    payload = JSON.parse(fs.readFileSync(descriptor.payload.resultPath, 'utf8'));
+    payload = JSON.parse(fs.readFileSync(descriptor.payload.resultPath, "utf8"));
   } catch (error) {
     throw workerError(
-      'METEOR_RSTEST_WORKER_RESULT_MISSING',
-      `Worker ${descriptor.id} result is missing or invalid: ${error.message}`
+      "METEOR_RSTEST_WORKER_RESULT_MISSING",
+      `Worker ${descriptor.id} result is missing or invalid: ${error.message}`,
     );
   }
-  if (!payload || payload.protocolVersion !== 1 ||
-      payload.generation !== descriptor.payload.generation ||
-      !payload.worker || payload.worker.id !== descriptor.id ||
-      payload.worker.index !== index || payload.worker.total !== total ||
-      !validateResult(payload.result)) {
+  if (
+    !payload ||
+    payload.protocolVersion !== 1 ||
+    payload.generation !== descriptor.payload.generation ||
+    !payload.worker ||
+    payload.worker.id !== descriptor.id ||
+    payload.worker.index !== index ||
+    payload.worker.total !== total ||
+    !validateResult(payload.result)
+  ) {
     throw workerError(
-      'METEOR_RSTEST_WORKER_RESULT_INVALID',
-      `Worker ${descriptor.id} result protocol, generation, identity, or result is invalid.`
+      "METEOR_RSTEST_WORKER_RESULT_INVALID",
+      `Worker ${descriptor.id} result protocol, generation, identity, or result is invalid.`,
     );
   }
   return payload.result;
 }
 
 function infrastructureCase(worker, messages) {
-  const message = messages.join(' ');
+  const message = messages.join(" ");
   return {
     name: `Meteor Rstest worker ${worker}`,
     fullName: `Meteor Rstest worker ${worker}`,
-    status: 'fail',
+    status: "fail",
     duration: 0,
     worker,
-    architecture: 'coordinator',
+    architecture: "coordinator",
     error: {
-      name: 'Error',
+      name: "Error",
       message,
     },
   };
@@ -432,7 +429,7 @@ function aggregateRstestWorkerResults({
   outcome,
   verbose = false,
   colors = !process.env.METEOR_DISABLE_COLORS && !process.env.NO_COLOR,
-  log = message => console.log(message),
+  log = (message) => console.log(message),
 }) {
   const stats = { total: 0, passed: 0, failed: 0, skipped: 0, todo: 0 };
   const cases = [];
@@ -440,10 +437,8 @@ function aggregateRstestWorkerResults({
   let infrastructureFailure = false;
   let signalFailure = false;
 
-  for (const status of outcome && Array.isArray(outcome.workers)
-    ? outcome.workers
-    : []) {
-    if (!status || typeof status.id !== 'string' || statuses.has(status.id)) {
+  for (const status of outcome && Array.isArray(outcome.workers) ? outcome.workers : []) {
+    if (!status || typeof status.id !== "string" || statuses.has(status.id)) {
       infrastructureFailure = true;
       continue;
     }
@@ -470,30 +465,30 @@ function aggregateRstestWorkerResults({
       messages.push(`[Meteor Rstest] Worker ${descriptor.id} has no process status.`);
     } else {
       statuses.delete(descriptor.id);
-      if (status.error && typeof status.error === 'object' &&
-          typeof status.error.code === 'string' &&
-          typeof status.error.message === 'string') {
+      if (
+        status.error &&
+        typeof status.error === "object" &&
+        typeof status.error.code === "string" &&
+        typeof status.error.message === "string"
+      ) {
         infrastructureFailure = true;
         messages.push(
           `[Meteor Rstest] Worker ${descriptor.id} infrastructure failure ` +
-          `${status.error.code}: ${status.error.message}`
+            `${status.error.code}: ${status.error.message}`,
         );
       } else if (status.signal) {
         signalFailure = true;
-        messages.push(
-          `[Meteor Rstest] Worker ${descriptor.id} exited on ${status.signal}.`
-        );
-      } else if (!Number.isSafeInteger(status.code) ||
-          status.code < 0 || status.code > 1) {
+        messages.push(`[Meteor Rstest] Worker ${descriptor.id} exited on ${status.signal}.`);
+      } else if (!Number.isSafeInteger(status.code) || status.code < 0 || status.code > 1) {
         infrastructureFailure = true;
         messages.push(
           `[Meteor Rstest] Worker ${descriptor.id} exited with infrastructure ` +
-          `status ${String(status.code)}.`
+            `status ${String(status.code)}.`,
         );
       } else if (workerResult && status.code !== (workerResult.ok ? 0 : 1)) {
         infrastructureFailure = true;
         messages.push(
-          `[Meteor Rstest] Worker ${descriptor.id} exit status conflicts with its result.`
+          `[Meteor Rstest] Worker ${descriptor.id} exit status conflicts with its result.`,
         );
       }
     }
@@ -517,12 +512,11 @@ function aggregateRstestWorkerResults({
     infrastructureFailure = true;
     stats.total += 1;
     stats.failed += 1;
-    cases.push(infrastructureCase(
-      'coordinator',
-      [`[Meteor Rstest] Received unexpected worker status: ${[
-        ...statuses.keys(),
-      ].join(', ')}.`]
-    ));
+    cases.push(
+      infrastructureCase("coordinator", [
+        `[Meteor Rstest] Received unexpected worker status: ${[...statuses.keys()].join(", ")}.`,
+      ]),
+    );
   }
 
   const result = {
@@ -530,23 +524,21 @@ function aggregateRstestWorkerResults({
     stats,
     cases,
   };
-  log(formatRuntimeReport({
-    entries: [{
-      architecture: 'workers',
-      label: `Meteor runtime · ${descriptors.length} workers`,
-      result,
-    }],
-    verbose,
-    colors,
-  }));
+  log(
+    formatRuntimeReport({
+      entries: [
+        {
+          architecture: "workers",
+          label: `Meteor runtime · ${descriptors.length} workers`,
+          result,
+        },
+      ],
+      verbose,
+      colors,
+    }),
+  );
   return Object.freeze({
-    exitCode: signalFailure
-      ? 255
-      : infrastructureFailure
-        ? 254
-        : stats.failed > 0
-          ? 1
-          : 0,
+    exitCode: signalFailure ? 255 : infrastructureFailure ? 254 : stats.failed > 0 ? 1 : 0,
     result,
   });
 }

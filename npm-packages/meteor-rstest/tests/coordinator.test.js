@@ -1,24 +1,21 @@
-const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const os = require('node:os');
-const path = require('node:path');
-const test = require('node:test');
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
+const test = require("node:test");
 
-const { createMeteorRstestContext } = require('../src/config/context.js');
-const {
-  finalizeRstestConfig,
-  runMeteorRstest,
-} = require('../src/coordinator.js');
+const { createMeteorRstestContext } = require("../src/config/context.js");
+const { finalizeRstestConfig, runMeteorRstest } = require("../src/coordinator.js");
 
 function createFixture(source) {
-  const appRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-'));
-  const root = path.join(appRoot, 'tests/rstest/pure/server');
+  const appRoot = fs.mkdtempSync(path.join(os.tmpdir(), "meteor-rstest-"));
+  const root = path.join(appRoot, "tests/rstest/pure/server");
   fs.mkdirSync(root, { recursive: true });
-  fs.writeFileSync(path.join(root, 'math.test.js'), source);
+  fs.writeFileSync(path.join(root, "math.test.js"), source);
   return appRoot;
 }
 
-test('coordinator runs pure tests with real Rstest and Rspack', async t => {
+test("coordinator runs pure tests with real Rstest and Rspack", async (t) => {
   const appRoot = createFixture(`
     test('adds with Rspack', () => {
       expect(20 + 22).toBe(42);
@@ -41,7 +38,7 @@ test('coordinator runs pure tests with real Rstest and Rspack', async t => {
   });
 });
 
-test('coordinator projection supports Meteor defines, CSS, and static assets', async t => {
+test("coordinator projection supports Meteor defines, CSS, and static assets", async (t) => {
   const appRoot = createFixture(`
     import './fixture.css';
     import logo from './fixture.svg';
@@ -50,9 +47,9 @@ test('coordinator projection supports Meteor defines, CSS, and static assets', a
       expect(typeof logo).toBe('string');
     });
   `);
-  const root = path.join(appRoot, 'tests/rstest/pure/server');
-  fs.writeFileSync(path.join(root, 'fixture.css'), '.fixture { color: red; }');
-  fs.writeFileSync(path.join(root, 'fixture.svg'), '<svg xmlns="http://www.w3.org/2000/svg"/>');
+  const root = path.join(appRoot, "tests/rstest/pure/server");
+  fs.writeFileSync(path.join(root, "fixture.css"), ".fixture { color: red; }");
+  fs.writeFileSync(path.join(root, "fixture.svg"), '<svg xmlns="http://www.w3.org/2000/svg"/>');
   t.after(() => fs.rmSync(appRoot, { recursive: true, force: true }));
 
   const result = await runMeteorRstest({
@@ -63,27 +60,27 @@ test('coordinator projection supports Meteor defines, CSS, and static assets', a
   assert.equal(result.ok, true, JSON.stringify(result.unhandledErrors, null, 2));
 });
 
-test('coordinator composes compatible user Rspack tools after Meteor projection', async t => {
+test("coordinator composes compatible user Rspack tools after Meteor projection", async (t) => {
   const appRoot = createFixture(`
     import value from 'domain-value';
     test('custom Rspack alias', () => expect(value).toBe(42));
   `);
-  const mockPath = path.join(appRoot, 'domain-value.js');
-  fs.writeFileSync(mockPath, 'export default 42;');
+  const mockPath = path.join(appRoot, "domain-value.js");
+  fs.writeFileSync(mockPath, "export default 42;");
   t.after(() => fs.rmSync(appRoot, { recursive: true, force: true }));
 
   const result = await runMeteorRstest({
     context: createMeteorRstestContext({ appRoot, once: true }),
     inlineConfig: {
       globals: true,
-      tools: { rspack: { resolve: { alias: { 'domain-value': mockPath } } } },
+      tools: { rspack: { resolve: { alias: { "domain-value": mockPath } } } },
     },
   });
 
   assert.equal(result.ok, true, JSON.stringify(result.unhandledErrors, null, 2));
 });
 
-test('coordinator forwards Rstest name filtering and structured failures', async t => {
+test("coordinator forwards Rstest name filtering and structured failures", async (t) => {
   const appRoot = createFixture(`
     test('selected case', () => expect(true).toBe(false));
     test('unselected case', () => expect(true).toBe(true));
@@ -93,39 +90,39 @@ test('coordinator forwards Rstest name filtering and structured failures', async
   const result = await runMeteorRstest({
     context: createMeteorRstestContext({ appRoot, once: true }),
     inlineConfig: { globals: true },
-    testNamePattern: '^selected case$',
+    testNamePattern: "^selected case$",
   });
 
   assert.equal(result.ok, false);
   assert.equal(result.stats.tests.failed, 1);
   assert.equal(result.stats.tests.passed, 0);
-  assert.equal(result.files[0].results[0].name, 'selected case');
+  assert.equal(result.files[0].results[0].name, "selected case");
 });
 
-test('coordinator generates opt-in real-browser project from browser root', async t => {
-  const appRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-browser-'));
+test("coordinator generates opt-in real-browser project from browser root", async (t) => {
+  const appRoot = fs.mkdtempSync(path.join(os.tmpdir(), "meteor-rstest-browser-"));
   t.after(() => fs.rmSync(appRoot, { recursive: true, force: true }));
-  fs.mkdirSync(path.join(appRoot, 'tests/rstest/browser'), { recursive: true });
+  fs.mkdirSync(path.join(appRoot, "tests/rstest/browser"), { recursive: true });
 
   const config = await finalizeRstestConfig({
     context: createMeteorRstestContext({ appRoot, once: true, ci: true }),
     userConfig: { globals: true },
   });
-  const project = config.projects.find(item => item.name === 'meteor-browser');
+  const project = config.projects.find((item) => item.name === "meteor-browser");
 
   assert.ok(project);
   assert.equal(project.browser.enabled, true);
-  assert.equal(project.browser.provider, 'playwright');
-  assert.equal(project.browser.browser, 'chromium');
+  assert.equal(project.browser.provider, "playwright");
+  assert.equal(project.browser.browser, "chromium");
   assert.equal(project.browser.headless, true);
   assert.equal(project.testEnvironment, undefined);
 });
 
-test('coordinator constrains generated projects to requested Meteor side', async t => {
-  const appRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-sides-'));
+test("coordinator constrains generated projects to requested Meteor side", async (t) => {
+  const appRoot = fs.mkdtempSync(path.join(os.tmpdir(), "meteor-rstest-sides-"));
   t.after(() => fs.rmSync(appRoot, { recursive: true, force: true }));
-  for (const root of ['pure/server', 'pure/client', 'browser']) {
-    fs.mkdirSync(path.join(appRoot, 'tests/rstest', root), { recursive: true });
+  for (const root of ["pure/server", "pure/client", "browser"]) {
+    fs.mkdirSync(path.join(appRoot, "tests/rstest", root), { recursive: true });
   }
 
   const serverConfig = await finalizeRstestConfig({
@@ -136,9 +133,10 @@ test('coordinator constrains generated projects to requested Meteor side', async
       client: false,
     }),
   });
-  assert.deepEqual(serverConfig.projects.map(project => project.name), [
-    'meteor-pure-server',
-  ]);
+  assert.deepEqual(
+    serverConfig.projects.map((project) => project.name),
+    ["meteor-pure-server"],
+  );
 
   const clientConfig = await finalizeRstestConfig({
     context: createMeteorRstestContext({
@@ -148,13 +146,13 @@ test('coordinator constrains generated projects to requested Meteor side', async
       client: true,
     }),
   });
-  assert.deepEqual(clientConfig.projects.map(project => project.name), [
-    'meteor-pure-client',
-    'meteor-browser',
-  ]);
+  assert.deepEqual(
+    clientConfig.projects.map((project) => project.name),
+    ["meteor-pure-client", "meteor-browser"],
+  );
 });
 
-test('Meteor verbosity selects native verbose reporter without overriding user reporters', async t => {
+test("Meteor verbosity selects native verbose reporter without overriding user reporters", async (t) => {
   const appRoot = createFixture(`test('works', () => expect(true).toBe(true));`);
   t.after(() => fs.rmSync(appRoot, { recursive: true, force: true }));
   const context = createMeteorRstestContext({
@@ -166,86 +164,111 @@ test('Meteor verbosity selects native verbose reporter without overriding user r
   const generatedDefault = await finalizeRstestConfig({ context });
   const explicitDot = await finalizeRstestConfig({
     context,
-    userConfig: { reporters: 'dot' },
+    userConfig: { reporters: "dot" },
   });
   const explicitTuple = await finalizeRstestConfig({
     context,
-    userConfig: { reporters: [['default', { summary: false }]] },
+    userConfig: { reporters: [["default", { summary: false }]] },
   });
 
-  assert.equal(generatedDefault.reporters, 'verbose');
-  assert.equal(explicitDot.reporters, 'dot');
-  assert.deepEqual(explicitTuple.reporters, [['default', { summary: false }]]);
+  assert.equal(generatedDefault.reporters, "verbose");
+  assert.equal(explicitDot.reporters, "dot");
+  assert.deepEqual(explicitTuple.reporters, [["default", { summary: false }]]);
 });
 
-test('coordinator rejects direct Meteor imports from pure project discovery', async t => {
+test("coordinator rejects direct Meteor imports from pure project discovery", async (t) => {
   const appRoot = createFixture(`
     import { Mongo } from 'meteor/mongo';
     test('invalid pure test', () => expect(Mongo).toBeDefined());
   `);
   t.after(() => fs.rmSync(appRoot, { recursive: true, force: true }));
 
-  await assert.rejects(() => finalizeRstestConfig({
-    context: createMeteorRstestContext({ appRoot, once: true }),
-  }), error => {
-    assert.equal(error.code, 'RSTEST_RUNTIME_PROJECT_REQUIRED');
-    assert.match(error.message, /tests\/rstest\/runtime\/server/);
-    return true;
-  });
+  await assert.rejects(
+    () =>
+      finalizeRstestConfig({
+        context: createMeteorRstestContext({ appRoot, once: true }),
+      }),
+    (error) => {
+      assert.equal(error.code, "RSTEST_RUNTIME_PROJECT_REQUIRED");
+      assert.match(error.message, /tests\/rstest\/runtime\/server/);
+      return true;
+    },
+  );
 });
 
-test('coordinator rejects project and root forms that bypass Meteor ownership', async t => {
+test("coordinator rejects project and root forms that bypass Meteor ownership", async (t) => {
   const appRoot = createFixture(`test('works', () => expect(true).toBe(true));`);
   t.after(() => fs.rmSync(appRoot, { recursive: true, force: true }));
   const context = createMeteorRstestContext({ appRoot, once: true });
 
-  await assert.rejects(() => finalizeRstestConfig({
-    context,
-    userConfig: { projects: ['./nested.config.js'] },
-  }), /cannot be ownership-validated/);
-  await assert.rejects(() => finalizeRstestConfig({
-    context,
-    userConfig: { root: path.join(appRoot, 'nested') },
-  }), /conflicts with Meteor app root/);
-  await assert.rejects(() => finalizeRstestConfig({
-    context,
-    userConfig: {
-      projects: [{
-        name: 'overlapping-project',
-        root: path.join(appRoot, 'tests/rstest/pure'),
-      }],
+  await assert.rejects(
+    () =>
+      finalizeRstestConfig({
+        context,
+        userConfig: { projects: ["./nested.config.js"] },
+      }),
+    /cannot be ownership-validated/,
+  );
+  await assert.rejects(
+    () =>
+      finalizeRstestConfig({
+        context,
+        userConfig: { root: path.join(appRoot, "nested") },
+      }),
+    /conflicts with Meteor app root/,
+  );
+  await assert.rejects(
+    () =>
+      finalizeRstestConfig({
+        context,
+        userConfig: {
+          projects: [
+            {
+              name: "overlapping-project",
+              root: path.join(appRoot, "tests/rstest/pure"),
+            },
+          ],
+        },
+      }),
+    (error) => {
+      assert.equal(error.code, "METEOR_RSTEST_PROJECT_ROOT_CONFLICT");
+      return true;
     },
-  }), error => {
-    assert.equal(error.code, 'METEOR_RSTEST_PROJECT_ROOT_CONFLICT');
-    return true;
-  });
-  await assert.rejects(() => finalizeRstestConfig({
-    context,
-    userConfig: { projects: [{ name: 'implicit-app-root' }] },
-  }), error => {
-    assert.equal(error.code, 'METEOR_RSTEST_PROJECT_ROOT_CONFLICT');
-    return true;
-  });
+  );
+  await assert.rejects(
+    () =>
+      finalizeRstestConfig({
+        context,
+        userConfig: { projects: [{ name: "implicit-app-root" }] },
+      }),
+    (error) => {
+      assert.equal(error.code, "METEOR_RSTEST_PROJECT_ROOT_CONFLICT");
+      return true;
+    },
+  );
 });
 
-test('smart routing owns exact files while preserving app-root user projects', async t => {
-  const appRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-smart-'));
+test("smart routing owns exact files while preserving app-root user projects", async (t) => {
+  const appRoot = fs.mkdtempSync(path.join(os.tmpdir(), "meteor-rstest-smart-"));
   t.after(() => fs.rmSync(appRoot, { recursive: true, force: true }));
-  const ownedFile = path.join(appRoot, 'imports/math.rstest.test.js');
-  const routingManifest = path.join(appRoot, '.meteor/local/rstest/routes.json');
+  const ownedFile = path.join(appRoot, "imports/math.rstest.test.js");
+  const routingManifest = path.join(appRoot, ".meteor/local/rstest/routes.json");
   fs.mkdirSync(path.dirname(ownedFile), { recursive: true });
   fs.mkdirSync(path.dirname(routingManifest), { recursive: true });
   fs.writeFileSync(ownedFile, `test('smart', () => expect(true).toBe(true));`);
-  fs.writeFileSync(routingManifest, JSON.stringify({
-    schemaVersion: 1,
-    nativeNodeFiles: [ownedFile],
-    nativeDomFiles: [],
-    browserFiles: [],
-    runtimeServerFiles: [],
-    runtimeClientFiles: [],
-    externalFiles: [],
-    legacyFiles: [],
-  }));
+  fs.writeFileSync(
+    routingManifest,
+    JSON.stringify({
+      schemaVersion: 1,
+      nativeNodeFiles: [ownedFile],
+      nativeDomFiles: [],
+      browserFiles: [],
+      runtimeServerFiles: [],
+      runtimeClientFiles: [],
+      externalFiles: [],
+      legacyFiles: [],
+    }),
+  );
 
   const config = await finalizeRstestConfig({
     context: createMeteorRstestContext({
@@ -254,38 +277,39 @@ test('smart routing owns exact files while preserving app-root user projects', a
       routingManifest,
     }),
     userConfig: {
-      projects: [{ name: 'custom', root: appRoot, include: ['**/*.test.js'] }],
+      projects: [{ name: "custom", root: appRoot, include: ["**/*.test.js"] }],
     },
   });
 
-  const generated = config.projects.find(project =>
-    project.name === 'meteor-pure-server'
-  );
-  const custom = config.projects.find(project => project.name === 'custom');
-  assert.deepEqual(generated.include, ['imports/math.rstest.test.js']);
-  assert.ok(custom.exclude.includes('imports/math.rstest.test.js'));
+  const generated = config.projects.find((project) => project.name === "meteor-pure-server");
+  const custom = config.projects.find((project) => project.name === "custom");
+  assert.deepEqual(generated.include, ["imports/math.rstest.test.js"]);
+  assert.ok(custom.exclude.includes("imports/math.rstest.test.js"));
 });
 
-test('smart routing preserves top-level config for otherwise unowned tests', async t => {
-  const appRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-top-level-'));
+test("smart routing preserves top-level config for otherwise unowned tests", async (t) => {
+  const appRoot = fs.mkdtempSync(path.join(os.tmpdir(), "meteor-rstest-top-level-"));
   t.after(() => fs.rmSync(appRoot, { recursive: true, force: true }));
-  const runtimeFile = path.join(appRoot, 'imports/items.meteor.rstest.test.js');
-  const legacyFile = path.join(appRoot, 'imports/config-owned.test.js');
-  const routingManifest = path.join(appRoot, '.meteor/local/rstest/routes.json');
+  const runtimeFile = path.join(appRoot, "imports/items.meteor.rstest.test.js");
+  const legacyFile = path.join(appRoot, "imports/config-owned.test.js");
+  const routingManifest = path.join(appRoot, ".meteor/local/rstest/routes.json");
   fs.mkdirSync(path.dirname(runtimeFile), { recursive: true });
   fs.mkdirSync(path.dirname(routingManifest), { recursive: true });
-  fs.writeFileSync(runtimeFile, '');
-  fs.writeFileSync(legacyFile, '');
-  fs.writeFileSync(routingManifest, JSON.stringify({
-    schemaVersion: 1,
-    nativeNodeFiles: [],
-    nativeDomFiles: [],
-    browserFiles: [],
-    runtimeServerFiles: [runtimeFile],
-    runtimeClientFiles: [],
-    externalFiles: [],
-    legacyFiles: [legacyFile],
-  }));
+  fs.writeFileSync(runtimeFile, "");
+  fs.writeFileSync(legacyFile, "");
+  fs.writeFileSync(
+    routingManifest,
+    JSON.stringify({
+      schemaVersion: 1,
+      nativeNodeFiles: [],
+      nativeDomFiles: [],
+      browserFiles: [],
+      runtimeServerFiles: [runtimeFile],
+      runtimeClientFiles: [],
+      externalFiles: [],
+      legacyFiles: [legacyFile],
+    }),
+  );
 
   const config = await finalizeRstestConfig({
     context: createMeteorRstestContext({
@@ -293,9 +317,9 @@ test('smart routing preserves top-level config for otherwise unowned tests', asy
       once: true,
       routingManifest,
     }),
-    userConfig: { include: ['imports/config-owned.test.js'], globals: true },
+    userConfig: { include: ["imports/config-owned.test.js"], globals: true },
   });
 
   assert.equal(config.projects, undefined);
-  assert.ok(config.exclude.includes('imports/items.meteor.rstest.test.js'));
+  assert.ok(config.exclude.includes("imports/items.meteor.rstest.test.js"));
 });

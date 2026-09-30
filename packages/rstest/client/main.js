@@ -1,11 +1,9 @@
-import { Meteor } from 'meteor/meteor';
+import { Meteor } from "meteor/meteor";
 
-const api = require('../runtime/singleton.js');
-const { executeUpstreamTests } = require('../runtime/upstream-runtime.js');
-const {
-  createMeteorClientSnapshotEnvironment,
-} = require('./snapshot-environment.js');
-const { completeClientRun } = require('./coverage.js');
+const api = require("../runtime/singleton.js");
+const { executeUpstreamTests } = require("../runtime/upstream-runtime.js");
+const { createMeteorClientSnapshotEnvironment } = require("./snapshot-environment.js");
+const { completeClientRun } = require("./coverage.js");
 
 export const __registerTestFileLoader = api.registerTestFileLoader;
 export const __setRstestRuntimeFactory = api.setRstestRuntimeFactory;
@@ -19,15 +17,15 @@ export function runTests() {
 }
 
 async function executeTests() {
-  const metadata = await Meteor.callAsync('rstest/getMetadata');
+  const metadata = await Meteor.callAsync("rstest/getMetadata");
   if (!metadata || metadata.protocolVersion !== 1) {
-    throw new Error('[Meteor Rstest] Invalid runtime metadata protocol payload.');
+    throw new Error("[Meteor Rstest] Invalid runtime metadata protocol payload.");
   }
   await api.waitUntilRstestRuntimeReady();
   const runtimeOptions = {
-    ...(metadata.runtimeConfig || {}),
+    ...metadata.runtimeConfig,
     testNamePattern: metadata.testNamePattern,
-    updateSnapshot: metadata.updateSnapshot || 'none',
+    updateSnapshot: metadata.updateSnapshot || "none",
     testTimeout: metadata.runtimeConfig?.testTimeout ?? metadata.testTimeout,
     hookTimeout: metadata.runtimeConfig?.hookTimeout ?? metadata.hookTimeout,
     maxConcurrency: metadata.runtimeConfig?.maxConcurrency ?? metadata.maxConcurrency,
@@ -35,7 +33,7 @@ async function executeTests() {
   const result = await executeUpstreamTests({
     loaders: api.takeTestFileLoaders(),
     createRuntime: api.getRstestRuntimeFactory(),
-    project: 'meteor-runtime-client',
+    project: "meteor-runtime-client",
     snapshotEnvironment: createMeteorClientSnapshotEnvironment({
       callAsync: Meteor.callAsync.bind(Meteor),
       generation: metadata.generation,
@@ -51,12 +49,13 @@ async function executeTests() {
     coverage: metadata.coverage,
     token: globalThis.__METEOR_RSTEST_TOKEN__,
     result,
-    submitResult: submittedResult => Meteor.callAsync('rstest/submitClientResult', {
-      protocolVersion: 1,
-      generation: metadata.generation,
-      token: globalThis.__METEOR_RSTEST_TOKEN__,
-      result: submittedResult,
-    }),
+    submitResult: (submittedResult) =>
+      Meteor.callAsync("rstest/submitClientResult", {
+        protocolVersion: 1,
+        generation: metadata.generation,
+        token: globalThis.__METEOR_RSTEST_TOKEN__,
+        result: submittedResult,
+      }),
   });
   return result;
 }
@@ -67,8 +66,8 @@ export function start() {
   if (started) return;
   started = true;
   Meteor.startup(() => {
-    runTests().catch(error => {
-      console.error(error && error.stack || error);
+    runTests().catch((error) => {
+      console.error((error && error.stack) || error);
     });
   });
 }

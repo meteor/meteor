@@ -1,7 +1,7 @@
 export interface MeteorRstestFileRuntimeOptions {
   rootPath: string;
   projectRoot: string;
-  project: 'meteor-runtime-server' | 'meteor-runtime-client';
+  project: "meteor-runtime-server" | "meteor-runtime-client";
   testPath: string;
   testNamePattern?: string | RegExp;
   testTimeout: number;
@@ -21,7 +21,7 @@ export interface MeteorRstestFileRuntimeOptions {
   printConsoleTrace?: boolean;
   includeTaskLocation?: boolean;
   generation: number;
-  updateSnapshot?: 'none' | 'new' | 'all';
+  updateSnapshot?: "none" | "new" | "all";
   snapshotFormat?: Record<string, unknown>;
   snapshotEnvironment?: {
     getVersion(): string;
@@ -41,7 +41,7 @@ export interface MeteorRstestFileRuntime {
   dispose(): Promise<void>;
 }
 
-export const SUPPORTED_RSTEST_VERSION: '0.11.6';
+export const SUPPORTED_RSTEST_VERSION: "0.11.6";
 
 export function createMeteorRstestFileRuntime(
   options: MeteorRstestFileRuntimeOptions,

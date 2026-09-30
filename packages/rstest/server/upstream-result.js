@@ -1,1 +1,1 @@
-module.exports = require('../runtime/upstream-result.js');
+module.exports = require("../runtime/upstream-result.js");

@@ -1,4 +1,4 @@
-const path = require('node:path');
+const path = require("node:path");
 const {
   applyRstestCoverageToSwcRule,
   getRstestCacheVersion,
@@ -8,17 +8,14 @@ const {
   readRstestRuntimeInventory,
   readRstestRuntimeSettings,
   resolveRstestCoverageSwcPlugin,
-} = require('./context.js');
+} = require("./context.js");
 const {
   createRstestRuntimeAlias,
   createRstestTestFileRegistration,
   enforceRstestRuntimeAlias,
   enforceRstestRuntimeOptimization,
-} = require('./registration.js');
-const {
-  createMeteorRstestPlugins,
-  enforceMeteorRstestPlugins,
-} = require('./runtime.js');
+} = require("./registration.js");
+const { createMeteorRstestPlugins, enforceMeteorRstestPlugins } = require("./runtime.js");
 
 // Loaded by the Meteor bundler only for a provider-selected build. Rspack is
 // supplied by that build so plugins use the application's compiler instance.
@@ -31,21 +28,23 @@ module.exports = function createRstestRspackAdapter({
   rspack,
 }) {
   const runtime = options.runtime === true;
-  const inventory = runtime && options.runtimeManifest
-    ? readRstestRuntimeInventory({
-      manifest: options.runtimeManifest,
-      projectDir,
-      client: isClient,
-    })
-    : {
-      discoveryRoot: path.resolve(
-        projectDir,
-        `tests/rstest/runtime/${isClient ? 'client' : 'server'}`,
-      ),
-    };
-  const runtimeSettings = runtime && options.runtimeSettingsPath
-    ? readRstestRuntimeSettings(options.runtimeSettingsPath)
-    : null;
+  const inventory =
+    runtime && options.runtimeManifest
+      ? readRstestRuntimeInventory({
+          manifest: options.runtimeManifest,
+          projectDir,
+          client: isClient,
+        })
+      : {
+          discoveryRoot: path.resolve(
+            projectDir,
+            `tests/rstest/runtime/${isClient ? "client" : "server"}`,
+          ),
+        };
+  const runtimeSettings =
+    runtime && options.runtimeSettingsPath
+      ? readRstestRuntimeSettings(options.runtimeSettingsPath)
+      : null;
   const setupFiles = runtimeSettings?.setupFiles || [];
   const runtimeAlias = createRstestRuntimeAlias({
     upstreamRuntime: runtime,
@@ -60,8 +59,8 @@ module.exports = function createRstestRspackAdapter({
   });
   const coveragePlan = options.coveragePlanPath
     ? readRstestCoveragePlan(options.coveragePlanPath, {
-      generation: options.coverageGeneration,
-    })
+        generation: options.coverageGeneration,
+      })
     : null;
   const coveragePlugin = coveragePlan?.enabled
     ? resolveRstestCoverageSwcPlugin({ npmRoot: options.npmRoot })
@@ -75,29 +74,33 @@ module.exports = function createRstestRspackAdapter({
       isRstestTest: runtime,
     }),
     ignoreEntries: [
-      '**/tests/rstest/pure/**',
-      '**/tests/rstest/browser/**',
-      '**/tests/rstest/e2e/**',
-      ...(runtime ? ['**/tests/legacy/**'] : []),
+      "**/tests/rstest/pure/**",
+      "**/tests/rstest/browser/**",
+      "**/tests/rstest/e2e/**",
+      ...(runtime ? ["**/tests/legacy/**"] : []),
     ],
-    entryOptions: runtime ? {
-      discoveryRoot: inventory.discoveryRoot,
-      testFileRoot: inventory.testFileRoot,
-      includeFiles: inventory.files,
-      setupFiles,
-      testFileRegistration: createRstestTestFileRegistration({
-        isRstestTest: true,
-      }),
-    } : {},
+    entryOptions: runtime
+      ? {
+          discoveryRoot: inventory.discoveryRoot,
+          testFileRoot: inventory.testFileRoot,
+          includeFiles: inventory.files,
+          setupFiles,
+          testFileRegistration: createRstestTestFileRegistration({
+            isRstestTest: true,
+          }),
+        }
+      : {},
     cacheVersion: getRstestCacheVersion({
       testRunnerContext: options,
       runtimeSettings,
       inventory,
     }),
-    typescript: runtime && hasTypescriptRstestInputs({
-      files: inventory.files,
-      setupFiles,
-    }),
+    typescript:
+      runtime &&
+      hasTypescriptRstestInputs({
+        files: inventory.files,
+        setupFiles,
+      }),
     configureSwcRule(rule) {
       applyRstestCoverageToSwcRule(rule, {
         plan: coveragePlan,

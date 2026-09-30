@@ -1,4 +1,4 @@
-const { createFileLoaderRegistry } = require('./file-loaders.js');
+const { createFileLoaderRegistry } = require("./file-loaders.js");
 
 const fileLoaders = createFileLoaderRegistry();
 

@@ -1,6 +1,4 @@
-const {
-  normalizeUpstreamFileResults,
-} = require('./upstream-result.js');
+const { normalizeUpstreamFileResults } = require("./upstream-result.js");
 
 function serializeError(error) {
   const normalized = error instanceof Error ? error : new Error(String(error));
@@ -14,20 +12,22 @@ function serializeError(error) {
 function failureFile(testPath, phase, error) {
   return {
     testPath,
-    status: 'fail',
-    results: [{
-      name: `<${phase}>`,
-      parentNames: [testPath],
-      status: 'fail',
-      testPath,
-      errors: [serializeError(error)],
-    }],
+    status: "fail",
+    results: [
+      {
+        name: `<${phase}>`,
+        parentNames: [testPath],
+        status: "fail",
+        testPath,
+        errors: [serializeError(error)],
+      },
+    ],
   };
 }
 
 function createLazyRuntimeFactory(getRuntimeFactory) {
-  if (typeof getRuntimeFactory !== 'function') {
-    throw new TypeError('[Meteor Rstest] Runtime factory getter must be a function.');
+  if (typeof getRuntimeFactory !== "function") {
+    throw new TypeError("[Meteor Rstest] Runtime factory getter must be a function.");
   }
   return (...args) => getRuntimeFactory()(...args);
 }
@@ -40,12 +40,12 @@ function createUpstreamExecution({
   snapshotEnvironment,
   createRuntime,
 }) {
-  if (typeof createRuntime !== 'function') {
-    throw new TypeError('[Meteor Rstest] Upstream runtime factory must be a function.');
+  if (typeof createRuntime !== "function") {
+    throw new TypeError("[Meteor Rstest] Upstream runtime factory must be a function.");
   }
-  if (!Array.isArray(loaders) && typeof getLoaders !== 'function') {
+  if (!Array.isArray(loaders) && typeof getLoaders !== "function") {
     throw new TypeError(
-      '[Meteor Rstest] Upstream loaders must be an array or provided by a getter.',
+      "[Meteor Rstest] Upstream loaders must be an array or provided by a getter.",
     );
   }
   const files = [];
@@ -54,29 +54,27 @@ function createUpstreamExecution({
     if (sortedLoaders) return sortedLoaders;
     const resolved = getLoaders ? getLoaders() : loaders;
     if (!Array.isArray(resolved)) {
-      throw new TypeError('[Meteor Rstest] Upstream loader getter must return an array.');
+      throw new TypeError("[Meteor Rstest] Upstream loader getter must return an array.");
     }
     sortedLoaders = [...resolved].sort((left, right) =>
-      left.testPath.localeCompare(right.testPath)
+      left.testPath.localeCompare(right.testPath),
     );
     return sortedLoaders;
   };
   let index = 0;
   let current = null;
 
-  const dispose = async record => {
+  const dispose = async (record) => {
     if (!record.runtime) return;
     try {
       await record.runtime.dispose();
     } catch (error) {
-      if (!record.fileResult || record.fileResult.status !== 'fail') {
-        record.fileResult = failureFile(record.entry.testPath, 'dispose', error);
+      if (!record.fileResult || record.fileResult.status !== "fail") {
+        record.fileResult = failureFile(record.entry.testPath, "dispose", error);
       } else {
-        record.fileResult.results.push(...failureFile(
-          record.entry.testPath,
-          'dispose',
-          error,
-        ).results);
+        record.fileResult.results.push(
+          ...failureFile(record.entry.testPath, "dispose", error).results,
+        );
       }
     }
   };
@@ -89,13 +87,13 @@ function createUpstreamExecution({
     async collectNext() {
       const loadersForRun = resolveLoaders();
       if (current) {
-        throw new Error('[Meteor Rstest] Current upstream file has not run.');
+        throw new Error("[Meteor Rstest] Current upstream file has not run.");
       }
       if (index >= loadersForRun.length) {
-        throw new Error('[Meteor Rstest] No upstream test file remains.');
+        throw new Error("[Meteor Rstest] No upstream test file remains.");
       }
       const entry = loadersForRun[index];
-      const record = current = { entry, runtime: null, fileResult: null };
+      const record = (current = { entry, runtime: null, fileResult: null });
       try {
         record.runtime = await createRuntime({
           ...metadata,
@@ -109,32 +107,35 @@ function createUpstreamExecution({
           maxConcurrency: metadata.maxConcurrency,
           retry: metadata.retry ?? 0,
           generation: metadata.generation,
-          updateSnapshot: metadata.updateSnapshot || 'none',
+          updateSnapshot: metadata.updateSnapshot || "none",
           ...(snapshotEnvironment ? { snapshotEnvironment } : {}),
         });
-        if (!record.runtime || typeof record.runtime.collect !== 'function' ||
-            typeof record.runtime.run !== 'function' ||
-            typeof record.runtime.dispose !== 'function') {
+        if (
+          !record.runtime ||
+          typeof record.runtime.collect !== "function" ||
+          typeof record.runtime.run !== "function" ||
+          typeof record.runtime.dispose !== "function"
+        ) {
           throw new TypeError(
-            '[Meteor Rstest] Upstream runtime must implement collect(), run(), and dispose().'
+            "[Meteor Rstest] Upstream runtime must implement collect(), run(), and dispose().",
           );
         }
         await record.runtime.collect(entry.load);
       } catch (error) {
-        record.fileResult = failureFile(entry.testPath, 'module', error);
+        record.fileResult = failureFile(entry.testPath, "module", error);
       }
     },
 
     async runNext() {
       if (!current) {
-        throw new Error('[Meteor Rstest] Upstream test file must collect before run.');
+        throw new Error("[Meteor Rstest] Upstream test file must collect before run.");
       }
       const record = current;
       if (!record.fileResult) {
         try {
           record.fileResult = await record.runtime.run();
         } catch (error) {
-          record.fileResult = failureFile(record.entry.testPath, 'run', error);
+          record.fileResult = failureFile(record.entry.testPath, "run", error);
         }
       }
       await dispose(record);
@@ -146,7 +147,7 @@ function createUpstreamExecution({
 
     result() {
       if (current || index < resolveLoaders().length) {
-        throw new Error('[Meteor Rstest] Upstream execution is not complete.');
+        throw new Error("[Meteor Rstest] Upstream execution is not complete.");
       }
       return normalizeUpstreamFileResults(files);
     },

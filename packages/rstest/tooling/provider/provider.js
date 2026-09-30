@@ -1,64 +1,48 @@
-const fs = require('node:fs');
-const path = require('node:path');
-const crypto = require('node:crypto');
-const childProcess = require('node:child_process');
-const { createRequire } = require('node:module');
-const {
-  DEFAULT_RSPACK_VERSION,
-  DEFAULT_RSTEST_VERSION,
-} = require('../lib/constants.js');
+const fs = require("node:fs");
+const path = require("node:path");
+const crypto = require("node:crypto");
+const childProcess = require("node:child_process");
+const { createRequire } = require("node:module");
+const { DEFAULT_RSPACK_VERSION, DEFAULT_RSTEST_VERSION } = require("../lib/constants.js");
 
-const {
-  ensureRstestInstalled,
-} = require('../lib/dependencies.js');
+const { ensureRstestInstalled } = require("../lib/dependencies.js");
 const {
   assertRstestOptionalCapabilities,
   selectRstestOptionalCapabilities,
-} = require('./capabilities.js');
+} = require("./capabilities.js");
 const {
   inspectAppRstestCapability,
   scanRstestCandidates,
   scanNativeRstestRoots,
   selectRstestInventory,
   selectRstestLanes,
-} = require('./inventory.js');
-const {
-  buildRstestArgs,
-  resolveRstestPackageJson,
-  startRstestProcess,
-} = require('./process.js');
-const { RstestBrowser } = require('./browser.js');
-const { RstestExternal } = require('./external.js');
-const { rstestError } = require('./errors.js');
-const { RSTEST_RUNTIME_SHIM } = require('./runtime-api.js');
+} = require("./inventory.js");
+const { buildRstestArgs, resolveRstestPackageJson, startRstestProcess } = require("./process.js");
+const { RstestBrowser } = require("./browser.js");
+const { RstestExternal } = require("./external.js");
+const { rstestError } = require("./errors.js");
+const { RSTEST_RUNTIME_SHIM } = require("./runtime-api.js");
 const {
   aggregateRstestWorkerResults,
   createRstestHostDescriptors,
   validateRstestWorkerPayload,
-} = require('./workers.js');
+} = require("./workers.js");
 
 const CLIENT_PROJECTS = new Set([
-  'meteor-pure-client',
-  'meteor-browser',
-  'meteor-runtime-client',
-  'meteor-e2e',
+  "meteor-pure-client",
+  "meteor-browser",
+  "meteor-runtime-client",
+  "meteor-e2e",
 ]);
-const SERVER_PROJECTS = new Set([
-  'meteor-pure-server',
-  'meteor-runtime-server',
-  'meteor-e2e',
-]);
-const GENERATED_PROJECTS = new Set([
-  ...CLIENT_PROJECTS,
-  ...SERVER_PROJECTS,
-]);
+const SERVER_PROJECTS = new Set(["meteor-pure-server", "meteor-runtime-server", "meteor-e2e"]);
+const GENERATED_PROJECTS = new Set([...CLIENT_PROJECTS, ...SERVER_PROJECTS]);
 const PACKAGE_UNSUPPORTED_OPTIONS = [
-  ['project', '--project'],
-  ['testFile', '--test-file'],
-  ['updateSnapshots', '--update-snapshots'],
-  ['shard', '--shard'],
-  ['changed', '--changed'],
-  ['changedSince', '--changed-since'],
+  ["project", "--project"],
+  ["testFile", "--test-file"],
+  ["updateSnapshots", "--update-snapshots"],
+  ["shard", "--shard"],
+  ["changed", "--changed"],
+  ["changedSince", "--changed-since"],
 ];
 const RSTEST_TEST_FILE = /\.(?:test|spec)s?\.(?:[cm]?[jt]sx?)$/i;
 const MAX_PRIVATE_JSON_BYTES = 64 * 1024 * 1024;
@@ -87,7 +71,7 @@ function removeIfPresent(filename) {
   try {
     fs.unlinkSync(filename);
   } catch (error) {
-    if (error.code !== 'ENOENT') throw error;
+    if (error.code !== "ENOENT") throw error;
   }
 }
 
@@ -102,7 +86,7 @@ function assertNoSymlinkParents(target, allowMissing) {
     try {
       stat = fs.lstatSync(current);
     } catch (error) {
-      if (allowMissing && error.code === 'ENOENT') return;
+      if (allowMissing && error.code === "ENOENT") return;
       throw error;
     }
     if (stat.isSymbolicLink()) {
@@ -111,13 +95,13 @@ function assertNoSymlinkParents(target, allowMissing) {
         continue;
       }
       throw rstestError(
-        'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
+        "METEOR_RSTEST_COVERAGE_PATH_MISMATCH",
         `Coverage manifest path contains a symbolic link: ${current}`,
       );
     }
     if (index < components.length - 1 && !stat.isDirectory()) {
       throw rstestError(
-        'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
+        "METEOR_RSTEST_COVERAGE_PATH_MISMATCH",
         `Coverage manifest parent is not a directory: ${current}`,
       );
     }
@@ -134,7 +118,7 @@ function openPrivateDirectory(directory) {
     const stat = fs.lstatSync(directory, { bigint: true });
     if (!stat.isDirectory() || stat.isSymbolicLink()) {
       throw rstestError(
-        'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
+        "METEOR_RSTEST_COVERAGE_PATH_MISMATCH",
         `Coverage manifest parent identity changed: ${directory}`,
       );
     }
@@ -142,7 +126,7 @@ function openPrivateDirectory(directory) {
     const verification = fs.lstatSync(directory, { bigint: true });
     if (!samePrivateIdentity(stat, verification)) {
       throw rstestError(
-        'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
+        "METEOR_RSTEST_COVERAGE_PATH_MISMATCH",
         `Coverage manifest parent identity changed: ${directory}`,
       );
     }
@@ -156,10 +140,14 @@ function openPrivateDirectory(directory) {
   try {
     const stat = fs.fstatSync(descriptor, { bigint: true });
     const pathStat = fs.lstatSync(directory, { bigint: true });
-    if (!stat.isDirectory() || pathStat.isSymbolicLink() ||
-        !pathStat.isDirectory() || !samePrivateIdentity(stat, pathStat)) {
+    if (
+      !stat.isDirectory() ||
+      pathStat.isSymbolicLink() ||
+      !pathStat.isDirectory() ||
+      !samePrivateIdentity(stat, pathStat)
+    ) {
       throw rstestError(
-        'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
+        "METEOR_RSTEST_COVERAGE_PATH_MISMATCH",
         `Coverage manifest parent identity changed: ${directory}`,
       );
     }
@@ -175,7 +163,7 @@ function verifyPrivateDirectory(directory, expected) {
   try {
     if (!samePrivateIdentity(current.stat, expected)) {
       throw rstestError(
-        'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
+        "METEOR_RSTEST_COVERAGE_PATH_MISMATCH",
         `Coverage manifest parent identity changed: ${directory}`,
       );
     }
@@ -189,18 +177,17 @@ function assertPrivateFileIdentity(filename, expected) {
   try {
     stat = fs.lstatSync(filename, { bigint: true });
   } catch (error) {
-    if (error.code === 'ENOENT') {
+    if (error.code === "ENOENT") {
       throw rstestError(
-        'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
+        "METEOR_RSTEST_COVERAGE_PATH_MISMATCH",
         `Coverage manifest path changed: ${filename}`,
       );
     }
     throw error;
   }
-  if (!stat.isFile() || stat.isSymbolicLink() ||
-      !samePrivateIdentity(stat, expected)) {
+  if (!stat.isFile() || stat.isSymbolicLink() || !samePrivateIdentity(stat, expected)) {
     throw rstestError(
-      'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
+      "METEOR_RSTEST_COVERAGE_PATH_MISMATCH",
       `Coverage manifest path identity changed: ${filename}`,
     );
   }
@@ -253,24 +240,28 @@ const PUBLISH_PRIVATE_JSON_SCRIPT = `
 `;
 
 function publishPrivateJson(directory, temporary, filename, parentStat) {
-  const result = childProcess.spawnSync(process.execPath, [
-    '-e',
-    PUBLISH_PRIVATE_JSON_SCRIPT,
-    parentStat.dev.toString(),
-    parentStat.ino.toString(),
-    path.basename(temporary),
-    path.basename(filename),
-  ], { cwd: directory, encoding: 'utf8' });
+  const result = childProcess.spawnSync(
+    process.execPath,
+    [
+      "-e",
+      PUBLISH_PRIVATE_JSON_SCRIPT,
+      parentStat.dev.toString(),
+      parentStat.ino.toString(),
+      path.basename(temporary),
+      path.basename(filename),
+    ],
+    { cwd: directory, encoding: "utf8" },
+  );
   if (result.status === 74) {
     throw rstestError(
-      'METEOR_RSTEST_COVERAGE_REPLAY',
+      "METEOR_RSTEST_COVERAGE_REPLAY",
       `Coverage manifest path was already used: ${filename}`,
     );
   }
   if (result.error || result.status !== 0) {
     throw rstestError(
-      'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
-      'Coverage manifest parent changed during atomic publication.',
+      "METEOR_RSTEST_COVERAGE_PATH_MISMATCH",
+      "Coverage manifest parent changed during atomic publication.",
     );
   }
 }
@@ -279,8 +270,8 @@ function writePrivateJsonAtomic(filename, value) {
   const serialized = JSON.stringify(value);
   if (Buffer.byteLength(serialized) > MAX_PRIVATE_JSON_BYTES) {
     throw rstestError(
-      'METEOR_RSTEST_COVERAGE_OVERSIZED',
-      'Coverage manifest exceeds the 64 MiB limit.',
+      "METEOR_RSTEST_COVERAGE_OVERSIZED",
+      "Coverage manifest exceeds the 64 MiB limit.",
     );
   }
   const directory = path.dirname(filename);
@@ -296,7 +287,7 @@ function writePrivateJsonAtomic(filename, value) {
   let descriptor;
   let temporaryStat;
   try {
-    descriptor = fs.openSync(temporary, 'wx', 0o600);
+    descriptor = fs.openSync(temporary, "wx", 0o600);
     temporaryStat = fs.fstatSync(descriptor, { bigint: true });
     verifyPrivateDirectory(directory, parent.stat);
     assertPrivateFileIdentity(temporary, temporaryStat);
@@ -318,23 +309,24 @@ function writePrivateJsonAtomic(filename, value) {
         fs.unlinkSync(temporary);
       }
     } catch (error) {
-      if (error.code !== 'ENOENT') throw error;
+      // A private-file cleanup failure must fail publication as well.
+      // eslint-disable-next-line no-unsafe-finally
+      if (error.code !== "ENOENT") throw error;
     }
   }
 }
 
 function selectedCount(inventory) {
-  return inventory.pureFiles.length +
-    inventory.runtimeFiles.length +
-    inventory.externalFiles.length;
+  return (
+    inventory.pureFiles.length + inventory.runtimeFiles.length + inventory.externalFiles.length
+  );
 }
 
 function collectPackageRstestFiles(packageTests = []) {
   const files = [];
-  const visit = directory => {
+  const visit = (directory) => {
     for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-      if (entry.name === 'node_modules' || entry.name === '.npm' ||
-          entry.name === '.git') continue;
+      if (entry.name === "node_modules" || entry.name === ".npm" || entry.name === ".git") continue;
       const file = path.join(directory, entry.name);
       if (entry.isDirectory()) visit(file);
       else if (entry.isFile() && RSTEST_TEST_FILE.test(entry.name)) {
@@ -343,61 +335,62 @@ function collectPackageRstestFiles(packageTests = []) {
     }
   };
   for (const packageTest of packageTests) {
-    if (!packageTest || typeof packageTest.sourceRoot !== 'string' ||
-        !path.isAbsolute(packageTest.sourceRoot) ||
-        !fs.existsSync(packageTest.sourceRoot)) continue;
+    if (
+      !packageTest ||
+      typeof packageTest.sourceRoot !== "string" ||
+      !path.isAbsolute(packageTest.sourceRoot) ||
+      !fs.existsSync(packageTest.sourceRoot)
+    )
+      continue;
     visit(packageTest.sourceRoot);
   }
-  return [...new Set(files.map(file => path.resolve(file)))].sort();
+  return [...new Set(files.map((file) => path.resolve(file)))].sort();
 }
 
 function createPackageRuntimeMirrors({ harnessRoot, files, packageTests }) {
-  const root = path.join(harnessRoot, '.rstest-package-runtime');
+  const root = path.join(harnessRoot, ".rstest-package-runtime");
   fs.mkdirSync(root, { recursive: true });
-  const buildRoot = path.join(harnessRoot, '_build', 'test');
+  const buildRoot = path.join(harnessRoot, "_build", "test");
   fs.mkdirSync(buildRoot, { recursive: true });
-  for (const side of ['client', 'server']) {
+  for (const side of ["client", "server"]) {
     const wrapper = path.join(buildRoot, `${side}-meteor.js`);
-    if (!fs.existsSync(wrapper)) fs.writeFileSync(wrapper, '\n');
+    if (!fs.existsSync(wrapper)) fs.writeFileSync(wrapper, "\n");
   }
   return files.map((source, index) => {
     const owner = packageTests
-      .filter(packageTest => {
-        if (!packageTest || typeof packageTest.sourceRoot !== 'string') return false;
+      .filter((packageTest) => {
+        if (!packageTest || typeof packageTest.sourceRoot !== "string") return false;
         const relative = path.relative(packageTest.sourceRoot, source);
-        return relative !== '' && relative !== '..' &&
-          !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
+        return (
+          relative !== "" &&
+          relative !== ".." &&
+          !relative.startsWith(`..${path.sep}`) &&
+          !path.isAbsolute(relative)
+        );
       })
       .sort((left, right) => right.sourceRoot.length - left.sourceRoot.length)[0];
     const packageName = owner
-      ? owner.name.replace(/^local-test:/, '').replace(/[^A-Za-z0-9_.-]/g, '-')
-      : `package-${String(index).padStart(4, '0')}`;
-    const relative = owner
-      ? path.relative(owner.sourceRoot, source)
-      : path.basename(source);
+      ? owner.name.replace(/^local-test:/, "").replace(/[^A-Za-z0-9_.-]/g, "-")
+      : `package-${String(index).padStart(4, "0")}`;
+    const relative = owner ? path.relative(owner.sourceRoot, source) : path.basename(source);
     const mirror = path.join(root, packageName, relative);
     fs.mkdirSync(path.dirname(mirror), { recursive: true });
-    fs.writeFileSync(
-      mirror,
-      `import ${JSON.stringify(source.split(path.sep).join('/'))};\n`,
-    );
+    fs.writeFileSync(mirror, `import ${JSON.stringify(source.split(path.sep).join("/"))};\n`);
     return mirror;
   });
 }
 
-function getPackageHarnessDevDependencies(
-  env = process.env,
-  { coverage = false } = {},
-) {
+function getPackageHarnessDevDependencies(env = process.env, { coverage = false } = {}) {
   const spec = env.METEOR_RSPACK_NPM_SPEC;
   return {
-    '@rspack/core': DEFAULT_RSPACK_VERSION,
-    '@rspack/cli': DEFAULT_RSPACK_VERSION,
-    ...(typeof spec === 'string' && spec.trim() && {
-      '@meteorjs/rspack': spec,
-    }),
+    "@rspack/core": DEFAULT_RSPACK_VERSION,
+    "@rspack/cli": DEFAULT_RSPACK_VERSION,
+    ...(typeof spec === "string" &&
+      spec.trim() && {
+        "@meteorjs/rspack": spec,
+      }),
     ...(coverage && {
-      '@rstest/coverage-istanbul': DEFAULT_RSTEST_VERSION,
+      "@rstest/coverage-istanbul": DEFAULT_RSTEST_VERSION,
     }),
   };
 }
@@ -406,9 +399,8 @@ function requestsVerboseReporter(args = []) {
   for (let index = 0; index < args.length; index += 1) {
     const argument = String(args[index]);
     const inline = /^--reporters?=(.+)$/.exec(argument);
-    if (inline && inline[1] === 'verbose') return true;
-    if (/^--reporters?$/.test(argument) &&
-        String(args[index + 1]) === 'verbose') {
+    if (inline && inline[1] === "verbose") return true;
+    if (/^--reporters?$/.test(argument) && String(args[index + 1]) === "verbose") {
       return true;
     }
   }
@@ -417,60 +409,59 @@ function requestsVerboseReporter(args = []) {
 
 function resolveRstestRspackAdapter(npmRoot) {
   const coordinatorRequire = createRequire(resolveRstestPackageJson(npmRoot));
-  return coordinatorRequire.resolve('@meteorjs/rstest/rspack');
+  return coordinatorRequire.resolve("@meteorjs/rstest/rspack");
 }
 
 function resolveRstestCoverageInstrumentation(npmRoot) {
-  const appRequire = createRequire(path.join(path.resolve(npmRoot), 'package.json'));
-  const coordinatorEntry = appRequire.resolve('@meteorjs/rstest');
+  const appRequire = createRequire(path.join(path.resolve(npmRoot), "package.json"));
+  const coordinatorEntry = appRequire.resolve("@meteorjs/rstest");
   const coordinatorRequire = createRequire(coordinatorEntry);
-  const coverageProviderEntry = coordinatorRequire.resolve(
-    '@rstest/coverage-istanbul',
-  );
+  const coverageProviderEntry = coordinatorRequire.resolve("@rstest/coverage-istanbul");
   return {
-    swcPlugin: createRequire(coverageProviderEntry).resolve(
-      'swc-plugin-coverage-instrument',
-    ),
-    babelPlugin: coordinatorRequire.resolve('babel-plugin-istanbul'),
+    swcPlugin: createRequire(coverageProviderEntry).resolve("swc-plugin-coverage-instrument"),
+    babelPlugin: coordinatorRequire.resolve("babel-plugin-istanbul"),
   };
 }
 
-function collectLocalPackageTransforms(
-  localPackages,
-  packageTests,
-  { warn = () => {} } = {},
-) {
+function collectLocalPackageTransforms(localPackages, packageTests, { warn = () => {} } = {}) {
   const packageRoots = {};
   const includePackages = [];
-  const selectedNames = new Set([
-    ...localPackages || [],
-    ...packageTests || [],
-  ].filter(entry => entry && (
-    entry.sourceKind === 'test-target' ||
-    (packageTests || []).includes(entry)
-  )).map(entry => entry.name));
-  const supportedProcessors = new Set(['ecmascript', 'typescript', 'meteor']);
+  const selectedNames = new Set(
+    [...(localPackages || []), ...(packageTests || [])]
+      .filter(
+        (entry) =>
+          entry && (entry.sourceKind === "test-target" || (packageTests || []).includes(entry)),
+      )
+      .map((entry) => entry.name),
+  );
+  const supportedProcessors = new Set(["ecmascript", "typescript", "meteor"]);
   const seen = new Set();
-  for (const entry of [...localPackages || [], ...packageTests || []]) {
-    if (!entry || typeof entry.name !== 'string' ||
-        entry.sourceKind === 'checkout' ||
-        !path.isAbsolute(entry.sourceRoot || '') ||
-        seen.has(entry.name)) continue;
+  for (const entry of [...(localPackages || []), ...(packageTests || [])]) {
+    if (
+      !entry ||
+      typeof entry.name !== "string" ||
+      entry.sourceKind === "checkout" ||
+      !path.isAbsolute(entry.sourceRoot || "") ||
+      seen.has(entry.name)
+    )
+      continue;
     seen.add(entry.name);
-    const unsupported = [...new Set(
-      Array.isArray(entry.sourceProcessors)
-        ? entry.sourceProcessors.filter(processor =>
-          typeof processor === 'string' && !supportedProcessors.has(processor)
-        )
-        : [],
-    )].sort();
+    const unsupported = [
+      ...new Set(
+        Array.isArray(entry.sourceProcessors)
+          ? entry.sourceProcessors.filter(
+              (processor) => typeof processor === "string" && !supportedProcessors.has(processor),
+            )
+          : [],
+      ),
+    ].sort();
     if (unsupported.length > 0) {
       if (selectedNames.has(entry.name)) {
         warn(
           `[Meteor Rstest] Coverage skips selected package ${entry.name}: ` +
-          `custom source processor${unsupported.length === 1 ? '' : 's'} ` +
-          `${unsupported.join(', ')} ${unsupported.length === 1 ? 'is' : 'are'} ` +
-          'unsupported; only ecmascript and typescript are instrumented.'
+            `custom source processor${unsupported.length === 1 ? "" : "s"} ` +
+            `${unsupported.join(", ")} ${unsupported.length === 1 ? "is" : "are"} ` +
+            "unsupported; only ecmascript and typescript are instrumented.",
         );
       }
       continue;
@@ -482,18 +473,24 @@ function collectLocalPackageTransforms(
 }
 
 function validateCoveragePolicy(policy) {
-  if (!policy || typeof policy !== 'object' || Array.isArray(policy) ||
-      policy.schemaVersion !== 1 || typeof policy.enabled !== 'boolean' ||
-      (policy.provider !== 'istanbul' && policy.provider !== 'v8') ||
-      !Array.isArray(policy.reporters) ||
-      typeof policy.reportsDirectory !== 'string' ||
-      !Array.isArray(policy.include) || !Array.isArray(policy.exclude) ||
-      typeof policy.reportOnFailure !== 'boolean' ||
-      typeof policy.clean !== 'boolean' ||
-      typeof policy.allowExternal !== 'boolean') {
+  if (
+    !policy ||
+    typeof policy !== "object" ||
+    Array.isArray(policy) ||
+    policy.schemaVersion !== 1 ||
+    typeof policy.enabled !== "boolean" ||
+    (policy.provider !== "istanbul" && policy.provider !== "v8") ||
+    !Array.isArray(policy.reporters) ||
+    typeof policy.reportsDirectory !== "string" ||
+    !Array.isArray(policy.include) ||
+    !Array.isArray(policy.exclude) ||
+    typeof policy.reportOnFailure !== "boolean" ||
+    typeof policy.clean !== "boolean" ||
+    typeof policy.allowExternal !== "boolean"
+  ) {
     throw rstestError(
-      'METEOR_RSTEST_COVERAGE_PREFLIGHT_INVALID',
-      'Coverage preflight returned an invalid policy.',
+      "METEOR_RSTEST_COVERAGE_PREFLIGHT_INVALID",
+      "Coverage preflight returned an invalid policy.",
     );
   }
   return policy;
@@ -521,7 +518,7 @@ class RstestTestRunnerProvider {
       resolveRstestRspackAdapter,
       resolveRstestCoverageInstrumentation,
       env: process.env,
-      warn: message => console.warn(message),
+      warn: (message) => console.warn(message),
       ...services,
     };
     this.resources = [];
@@ -530,9 +527,7 @@ class RstestTestRunnerProvider {
     this.stopped = false;
     this.generation = 1;
     this.verbose = Boolean(context.verbose);
-    this.reportVerbose = this.verbose || requestsVerboseReporter(
-      context.options.passthrough
-    );
+    this.reportVerbose = this.verbose || requestsVerboseReporter(context.options.passthrough);
     this.smartCandidates = [];
     this.routingManifest = null;
     this.classification = null;
@@ -543,47 +538,42 @@ class RstestTestRunnerProvider {
     const { command, appDir, options } = this.context;
     if (options.serverOnly && options.clientOnly) {
       throw rstestError(
-        'METEOR_RSTEST_CONFLICTING_SIDES',
-        '--server-only conflicts with --client-only.'
+        "METEOR_RSTEST_CONFLICTING_SIDES",
+        "--server-only conflicts with --client-only.",
       );
     }
     if (!options.once && (options.shard || options.changed || options.changedSince)) {
-      throw rstestError(
-        'METEOR_RSTEST_ONCE_REQUIRED',
-        '--shard and --changed require --once.'
-      );
+      throw rstestError("METEOR_RSTEST_ONCE_REQUIRED", "--shard and --changed require --once.");
     }
-    const protectedArgument = options.passthrough.find(argument =>
+    const protectedArgument = options.passthrough.find((argument) =>
       /^(?:--config(?:=|$)|-c(?:=|$)|--root(?:=|$)|--project(?:=|$)|--passWithNoTests(?:=|$))/.test(
-        String(argument)
-      )
+        String(argument),
+      ),
     );
     if (protectedArgument) {
       throw rstestError(
-        'METEOR_RSTEST_PROTECTED_ARGUMENT',
-        `${protectedArgument} is Meteor-owned and cannot be passed after --.`
+        "METEOR_RSTEST_PROTECTED_ARGUMENT",
+        `${protectedArgument} is Meteor-owned and cannot be passed after --.`,
       );
     }
 
-    if (command === 'test-packages') {
+    if (command === "test-packages") {
       const unsupported = PACKAGE_UNSUPPORTED_OPTIONS.filter(
-        ([key]) => options[key] && [].concat(options[key]).length > 0
+        ([key]) => options[key] && [].concat(options[key]).length > 0,
       );
       if (unsupported.length > 0) {
         throw rstestError(
-          'METEOR_RSTEST_UNSUPPORTED_PACKAGE_OPTION',
-          `meteor test-packages does not support ${unsupported.map(
-            ([, flag]) => flag
-          ).join(', ')}.`
+          "METEOR_RSTEST_UNSUPPORTED_PACKAGE_OPTION",
+          `meteor test-packages does not support ${unsupported
+            .map(([, flag]) => flag)
+            .join(", ")}.`,
         );
       }
-      const runtimeFiles = collectPackageRstestFiles(
-        this.context.packageTests,
-      );
+      const runtimeFiles = collectPackageRstestFiles(this.context.packageTests);
       if (runtimeFiles.length === 0) {
         throw rstestError(
-          'METEOR_RSTEST_PACKAGE_TESTS_NOT_FOUND',
-          'Selected Rstest packages contain no *.test.*, *.tests.*, *.spec.*, or *.specs.* files.'
+          "METEOR_RSTEST_PACKAGE_TESTS_NOT_FOUND",
+          "Selected Rstest packages contain no *.test.*, *.tests.*, *.spec.*, or *.specs.* files.",
         );
       }
       this.selection = {
@@ -613,21 +603,24 @@ class RstestTestRunnerProvider {
       fullApp: options.fullApp,
     });
     const explicitProjects = options.project;
-    if (options.serverOnly && explicitProjects.some(name => CLIENT_PROJECTS.has(name)) ||
-        options.clientOnly && explicitProjects.some(name => SERVER_PROJECTS.has(name))) {
+    if (
+      (options.serverOnly && explicitProjects.some((name) => CLIENT_PROJECTS.has(name))) ||
+      (options.clientOnly && explicitProjects.some((name) => SERVER_PROJECTS.has(name)))
+    ) {
       throw rstestError(
-        'METEOR_RSTEST_PROJECT_SIDE_CONFLICT',
-        `--project ${explicitProjects.join(', ')} conflicts with ` +
-          `${options.serverOnly ? '--server-only' : '--client-only'}.`
+        "METEOR_RSTEST_PROJECT_SIDE_CONFLICT",
+        `--project ${explicitProjects.join(", ")} conflicts with ` +
+          `${options.serverOnly ? "--server-only" : "--client-only"}.`,
       );
     }
-    const laneProjects = explicitProjects.length > 0
-      ? explicitProjects
-      : options.serverOnly
-        ? ['meteor-pure-server', 'meteor-runtime-server']
-        : options.clientOnly
-          ? ['meteor-pure-client', 'meteor-browser', 'meteor-runtime-client']
-          : [];
+    const laneProjects =
+      explicitProjects.length > 0
+        ? explicitProjects
+        : options.serverOnly
+          ? ["meteor-pure-server", "meteor-runtime-server"]
+          : options.clientOnly
+            ? ["meteor-pure-client", "meteor-browser", "meteor-runtime-client"]
+            : [];
     const inventory = this.services.selectRstestInventory({
       appDir,
       roots,
@@ -635,90 +628,101 @@ class RstestTestRunnerProvider {
       testFile: options.testFile,
     });
     const selectedCompatibility = new Set(inventory.compatibilityFiles);
-    const usesGeneratedProject = explicitProjects.length === 0 ||
-      explicitProjects.some(project => GENERATED_PROJECTS.has(project));
+    const usesGeneratedProject =
+      explicitProjects.length === 0 ||
+      explicitProjects.some((project) => GENERATED_PROJECTS.has(project));
     this.smartCandidates = usesGeneratedProject
-      ? candidateInventory.candidateFiles.filter(file =>
-        selectedCompatibility.has(file)
-      )
+      ? candidateInventory.candidateFiles.filter((file) => selectedCompatibility.has(file))
       : [];
-    const explicitlyRequestsExternal = explicitProjects.includes('meteor-e2e') ||
+    const explicitlyRequestsExternal =
+      explicitProjects.includes("meteor-e2e") ||
       Boolean(options.testFile.length > 0 && inventory.externalFiles.length > 0);
     if (explicitlyRequestsExternal && !options.fullApp) {
-      throw rstestError(
-        'METEOR_RSTEST_FULL_APP_REQUIRED',
-        'meteor-e2e requires --full-app.'
-      );
+      throw rstestError("METEOR_RSTEST_FULL_APP_REQUIRED", "meteor-e2e requires --full-app.");
     }
     if (!options.fullApp) inventory.externalFiles = [];
     const count = selectedCount(inventory);
     const hasUnknownProject = inventory.unknownProjects.length > 0;
-    if (explicitProjects.length > 0 && !hasUnknownProject && count === 0 &&
-        this.smartCandidates.length === 0) {
+    if (
+      explicitProjects.length > 0 &&
+      !hasUnknownProject &&
+      count === 0 &&
+      this.smartCandidates.length === 0
+    ) {
       throw rstestError(
-        'METEOR_RSTEST_EMPTY_PROJECT',
-        `Project ${explicitProjects.join(', ')} has no matching tests.`
+        "METEOR_RSTEST_EMPTY_PROJECT",
+        `Project ${explicitProjects.join(", ")} has no matching tests.`,
       );
     }
-    if (options.testFile.length > 0 && count === 0 &&
-        this.smartCandidates.length === 0 && !hasUnknownProject &&
-        !(inventory.compatibilityFiles.length > 0 && capability.hasRstestConfig)) {
+    if (
+      options.testFile.length > 0 &&
+      count === 0 &&
+      this.smartCandidates.length === 0 &&
+      !hasUnknownProject &&
+      !(inventory.compatibilityFiles.length > 0 && capability.hasRstestConfig)
+    ) {
       throw rstestError(
         inventory.compatibilityFiles.length > 0
-          ? 'METEOR_RSTEST_COMPATIBILITY_OWNED'
-          : 'METEOR_RSTEST_EMPTY_FILE_SELECTION',
+          ? "METEOR_RSTEST_COMPATIBILITY_OWNED"
+          : "METEOR_RSTEST_EMPTY_FILE_SELECTION",
         inventory.compatibilityFiles.length > 0
-          ? `--test-file ${options.testFile.join(', ')} is compatibility-owned.`
-          : `--test-file ${options.testFile.join(', ')} matched no selected test.`
+          ? `--test-file ${options.testFile.join(", ")} is compatibility-owned.`
+          : `--test-file ${options.testFile.join(", ")} matched no selected test.`,
       );
     }
-    if (count === 0 && this.smartCandidates.length === 0 && !hasUnknownProject &&
-        !capability.hasRstestConfig && roots.legacyFiles.length > 0) {
+    if (
+      count === 0 &&
+      this.smartCandidates.length === 0 &&
+      !hasUnknownProject &&
+      !capability.hasRstestConfig &&
+      roots.legacyFiles.length > 0
+    ) {
       throw rstestError(
-        'METEOR_RSTEST_NO_OWNED_TESTS',
+        "METEOR_RSTEST_NO_OWNED_TESTS",
         `Found ${roots.legacyFiles.length} existing Meteor test file(s), ` +
-          'but no tests under tests/rstest.'
+          "but no tests under tests/rstest.",
       );
     }
     const lanes = this.services.selectRstestLanes(laneProjects);
-    const nativeProjects = explicitProjects.filter(name =>
-      !name.startsWith('meteor-runtime-') && name !== 'meteor-e2e'
+    const nativeProjects = explicitProjects.filter(
+      (name) => !name.startsWith("meteor-runtime-") && name !== "meteor-e2e",
     );
     let nativeServer = !options.clientOnly;
     let nativeClient = !options.serverOnly;
     if (!options.serverOnly && !options.clientOnly && nativeProjects.length > 0) {
-      if (nativeProjects.every(name => name === 'meteor-pure-server')) {
+      if (nativeProjects.every((name) => name === "meteor-pure-server")) {
         nativeClient = false;
-      } else if (nativeProjects.every(name =>
-        name === 'meteor-pure-client' || name === 'meteor-browser'
-      )) {
+      } else if (
+        nativeProjects.every((name) => name === "meteor-pure-client" || name === "meteor-browser")
+      ) {
         nativeServer = false;
       }
     }
     let needsRuntime = lanes.runtime && inventory.runtimeFiles.length > 0;
     let needsExternal = lanes.external && inventory.externalFiles.length > 0;
-    let shouldRunNative = lanes.native && (
-      options.testFile.length === 0 ||
-      inventory.pureFiles.length > 0 ||
-      capability.hasRstestConfig && inventory.compatibilityFiles.length > 0 ||
-      hasUnknownProject
-    );
+    let shouldRunNative =
+      lanes.native &&
+      (options.testFile.length === 0 ||
+        inventory.pureFiles.length > 0 ||
+        (capability.hasRstestConfig && inventory.compatibilityFiles.length > 0) ||
+        hasUnknownProject);
     if (this.context.worker) {
       this.workerPayload = this.services.validateRstestWorkerPayload({
         appDir,
         worker: this.context.worker,
       });
-      const selectedRuntimeFiles = new Set([
-        ...inventory.runtimeFiles,
-        ...candidateInventory.candidateFiles,
-      ].map(file => fs.realpathSync(file)));
+      const selectedRuntimeFiles = new Set(
+        [...inventory.runtimeFiles, ...candidateInventory.candidateFiles].map((file) =>
+          fs.realpathSync(file),
+        ),
+      );
       const unselected = this.workerPayload.runtimeFiles.find(
-        file => !selectedRuntimeFiles.has(file)
+        (file) => !selectedRuntimeFiles.has(file),
       );
       if (unselected) {
         throw rstestError(
-          'METEOR_RSTEST_WORKER_FILE_SELECTION',
-          `Worker file is outside parent command selection: ${unselected}`
+          "METEOR_RSTEST_WORKER_FILE_SELECTION",
+          `Worker file is outside parent command selection: ${unselected}`,
         );
       }
       inventory.pureFiles = [];
@@ -730,21 +734,25 @@ class RstestTestRunnerProvider {
     }
     if (needsRuntime && (options.shard || options.changed || options.changedSince)) {
       throw rstestError(
-        'METEOR_RSTEST_RUNTIME_OPTION_UNSUPPORTED',
-        '--shard and --changed are not supported for Meteor-runtime projects.'
+        "METEOR_RSTEST_RUNTIME_OPTION_UNSUPPORTED",
+        "--shard and --changed are not supported for Meteor-runtime projects.",
       );
     }
     if (needsExternal && !options.once) {
       throw rstestError(
-        'METEOR_RSTEST_EXTERNAL_ONCE_REQUIRED',
-        'External E2E projects require --once.'
+        "METEOR_RSTEST_EXTERNAL_ONCE_REQUIRED",
+        "External E2E projects require --once.",
       );
     }
-    if (!this.context.worker && options.runtimeWorkers > 1 && !needsRuntime &&
-        this.smartCandidates.length === 0) {
+    if (
+      !this.context.worker &&
+      options.runtimeWorkers > 1 &&
+      !needsRuntime &&
+      this.smartCandidates.length === 0
+    ) {
       throw rstestError(
-        'METEOR_RSTEST_RUNTIME_WORKERS_EMPTY',
-        '--runtime-workers requires selected tests/rstest/runtime/server files.'
+        "METEOR_RSTEST_RUNTIME_WORKERS_EMPTY",
+        "--runtime-workers requires selected tests/rstest/runtime/server files.",
       );
     }
     this.selection = {
@@ -761,7 +769,7 @@ class RstestTestRunnerProvider {
 
   async _classifySmartCandidates(runtimeDir) {
     const { appDir, localDir, npm, options } = this.context;
-    if (typeof this.services.classifyRstestCandidates === 'function') {
+    if (typeof this.services.classifyRstestCandidates === "function") {
       return this.services.classifyRstestCandidates({
         appRoot: appDir,
         candidates: this.smartCandidates,
@@ -769,8 +777,8 @@ class RstestTestRunnerProvider {
         client: !options.serverOnly,
       });
     }
-    const candidateManifest = path.join(runtimeDir, 'classification-candidates.json');
-    const classificationOutput = path.join(runtimeDir, 'classification.json');
+    const candidateManifest = path.join(runtimeDir, "classification-candidates.json");
+    const classificationOutput = path.join(runtimeDir, "classification.json");
     fs.writeFileSync(candidateManifest, JSON.stringify(this.smartCandidates));
     removeIfPresent(classificationOutput);
     const process = this.services.startRstestProcess({
@@ -780,7 +788,7 @@ class RstestTestRunnerProvider {
         appDir,
         localDir,
         once: true,
-        command: 'test',
+        command: "test",
         server: !options.clientOnly,
         client: !options.serverOnly,
         candidateManifest,
@@ -790,11 +798,11 @@ class RstestTestRunnerProvider {
     const code = await process.completion;
     if (code !== 0) {
       throw rstestError(
-        'METEOR_RSTEST_CLASSIFICATION_FAILED',
+        "METEOR_RSTEST_CLASSIFICATION_FAILED",
         `Rstest dependency classification exited with status ${code}.`,
       );
     }
-    return JSON.parse(fs.readFileSync(classificationOutput, 'utf8'));
+    return JSON.parse(fs.readFileSync(classificationOutput, "utf8"));
   }
 
   _applySmartClassification(classification, runtimeDir) {
@@ -802,52 +810,70 @@ class RstestTestRunnerProvider {
     const selection = this.selection;
     const inventory = selection.inventory;
     const arrays = [
-      'nativeNodeFiles', 'nativeDomFiles', 'browserFiles',
-      'runtimeServerFiles', 'runtimeClientFiles', 'externalFiles', 'legacyFiles',
+      "nativeNodeFiles",
+      "nativeDomFiles",
+      "browserFiles",
+      "runtimeServerFiles",
+      "runtimeClientFiles",
+      "externalFiles",
+      "legacyFiles",
     ];
-    if (!classification || classification.schemaVersion !== 1 ||
-        arrays.some(field => !Array.isArray(classification[field]))) {
+    if (
+      !classification ||
+      classification.schemaVersion !== 1 ||
+      arrays.some((field) => !Array.isArray(classification[field]))
+    ) {
       throw rstestError(
-        'METEOR_RSTEST_INVALID_CLASSIFICATION',
-        'Rstest dependency classification returned an invalid manifest.',
+        "METEOR_RSTEST_INVALID_CLASSIFICATION",
+        "Rstest dependency classification returned an invalid manifest.",
       );
     }
-    const oldNode = inventory.pureFiles.filter(file =>
-      /[\\/]tests[\\/]rstest[\\/]pure[\\/]server[\\/]/.test(file)
+    const oldNode = inventory.pureFiles.filter((file) =>
+      /[\\/]tests[\\/]rstest[\\/]pure[\\/]server[\\/]/.test(file),
     );
-    const oldDom = inventory.pureFiles.filter(file =>
-      /[\\/]tests[\\/]rstest[\\/]pure[\\/]client[\\/]/.test(file)
+    const oldDom = inventory.pureFiles.filter((file) =>
+      /[\\/]tests[\\/]rstest[\\/]pure[\\/]client[\\/]/.test(file),
     );
-    const oldBrowser = inventory.pureFiles.filter(file =>
-      /[\\/]tests[\\/]rstest[\\/]browser[\\/]/.test(file)
+    const oldBrowser = inventory.pureFiles.filter((file) =>
+      /[\\/]tests[\\/]rstest[\\/]browser[\\/]/.test(file),
     );
-    const oldRuntimeServer = inventory.runtimeFiles.filter(file =>
-      /[\\/]tests[\\/]rstest[\\/]runtime[\\/]server[\\/]/.test(file)
+    const oldRuntimeServer = inventory.runtimeFiles.filter((file) =>
+      /[\\/]tests[\\/]rstest[\\/]runtime[\\/]server[\\/]/.test(file),
     );
-    const oldRuntimeClient = inventory.runtimeFiles.filter(file =>
-      /[\\/]tests[\\/]rstest[\\/]runtime[\\/]client[\\/]/.test(file)
+    const oldRuntimeClient = inventory.runtimeFiles.filter((file) =>
+      /[\\/]tests[\\/]rstest[\\/]runtime[\\/]client[\\/]/.test(file),
     );
     const selectedProjects = new Set(options.project);
-    const accepts = project => selectedProjects.size === 0 ||
-      selectedProjects.has(project);
-    const unique = values => [...new Set(values.map(file => path.resolve(file)))].sort();
+    const accepts = (project) => selectedProjects.size === 0 || selectedProjects.has(project);
+    const unique = (values) => [...new Set(values.map((file) => path.resolve(file)))].sort();
     const routing = {
       schemaVersion: 1,
-      nativeNodeFiles: accepts('meteor-pure-server') && !options.clientOnly
-        ? unique([...oldNode, ...classification.nativeNodeFiles]) : [],
-      nativeDomFiles: accepts('meteor-pure-client') && !options.serverOnly
-        ? unique([...oldDom, ...classification.nativeDomFiles]) : [],
-      browserFiles: accepts('meteor-browser') && !options.serverOnly
-        ? unique([...oldBrowser, ...classification.browserFiles]) : [],
-      runtimeServerFiles: accepts('meteor-runtime-server') && !options.clientOnly
-        ? unique([...oldRuntimeServer, ...classification.runtimeServerFiles]) : [],
-      runtimeClientFiles: accepts('meteor-runtime-client') && !options.serverOnly
-        ? unique([...oldRuntimeClient, ...classification.runtimeClientFiles]) : [],
-      externalFiles: accepts('meteor-e2e')
-        ? unique([...inventory.externalFiles, ...classification.externalFiles]) : [],
+      nativeNodeFiles:
+        accepts("meteor-pure-server") && !options.clientOnly
+          ? unique([...oldNode, ...classification.nativeNodeFiles])
+          : [],
+      nativeDomFiles:
+        accepts("meteor-pure-client") && !options.serverOnly
+          ? unique([...oldDom, ...classification.nativeDomFiles])
+          : [],
+      browserFiles:
+        accepts("meteor-browser") && !options.serverOnly
+          ? unique([...oldBrowser, ...classification.browserFiles])
+          : [],
+      runtimeServerFiles:
+        accepts("meteor-runtime-server") && !options.clientOnly
+          ? unique([...oldRuntimeServer, ...classification.runtimeServerFiles])
+          : [],
+      runtimeClientFiles:
+        accepts("meteor-runtime-client") && !options.serverOnly
+          ? unique([...oldRuntimeClient, ...classification.runtimeClientFiles])
+          : [],
+      externalFiles: accepts("meteor-e2e")
+        ? unique([...inventory.externalFiles, ...classification.externalFiles])
+        : [],
       legacyFiles: unique(classification.legacyFiles),
     };
-    this.routingManifest = path.join(runtimeDir, 'routing-manifest.json');
+    this.routingManifest = path.join(runtimeDir, "routing-manifest.json");
     fs.writeFileSync(this.routingManifest, JSON.stringify(routing));
     this.classification = routing;
 
@@ -856,60 +882,59 @@ class RstestTestRunnerProvider {
       ...routing.nativeDomFiles,
       ...routing.browserFiles,
     ]);
-    inventory.runtimeFiles = unique([
-      ...routing.runtimeServerFiles,
-      ...routing.runtimeClientFiles,
-    ]);
+    inventory.runtimeFiles = unique([...routing.runtimeServerFiles, ...routing.runtimeClientFiles]);
     inventory.externalFiles = [...routing.externalFiles];
     selection.needsRuntime = inventory.runtimeFiles.length > 0;
     selection.needsExternal = options.fullApp && inventory.externalFiles.length > 0;
-    const delegatesToUserConfig = options.project.length === 0 &&
+    const delegatesToUserConfig =
+      options.project.length === 0 &&
       selection.capability.hasRstestConfig &&
       routing.legacyFiles.length > 0;
-    selection.shouldRunNative = inventory.pureFiles.length > 0 ||
-      inventory.unknownProjects.length > 0 || delegatesToUserConfig;
+    selection.shouldRunNative =
+      inventory.pureFiles.length > 0 ||
+      inventory.unknownProjects.length > 0 ||
+      delegatesToUserConfig;
     selection.nativeServer = !options.clientOnly && routing.nativeNodeFiles.length > 0;
-    selection.nativeClient = !options.serverOnly && (
-      routing.nativeDomFiles.length > 0 || routing.browserFiles.length > 0
-    );
+    selection.nativeClient =
+      !options.serverOnly && (routing.nativeDomFiles.length > 0 || routing.browserFiles.length > 0);
     if (options.project.length === 0) {
       selection.nativeProjects = [
-        ...(routing.nativeNodeFiles.length > 0 ? ['meteor-pure-server'] : []),
-        ...(routing.nativeDomFiles.length > 0 ? ['meteor-pure-client'] : []),
-        ...(routing.browserFiles.length > 0 ? ['meteor-browser'] : []),
+        ...(routing.nativeNodeFiles.length > 0 ? ["meteor-pure-server"] : []),
+        ...(routing.nativeDomFiles.length > 0 ? ["meteor-pure-client"] : []),
+        ...(routing.browserFiles.length > 0 ? ["meteor-browser"] : []),
       ];
     }
     if (inventory.externalFiles.length > 0 && !options.fullApp) {
-      throw rstestError(
-        'METEOR_RSTEST_FULL_APP_REQUIRED',
-        'Rstest E2E tests require --full-app.',
-      );
+      throw rstestError("METEOR_RSTEST_FULL_APP_REQUIRED", "Rstest E2E tests require --full-app.");
     }
-    if (inventory.pureFiles.length === 0 && inventory.runtimeFiles.length === 0 &&
-        inventory.externalFiles.length === 0 &&
-        inventory.unknownProjects.length === 0 && !delegatesToUserConfig) {
+    if (
+      inventory.pureFiles.length === 0 &&
+      inventory.runtimeFiles.length === 0 &&
+      inventory.externalFiles.length === 0 &&
+      inventory.unknownProjects.length === 0 &&
+      !delegatesToUserConfig
+    ) {
       throw rstestError(
-        'METEOR_RSTEST_NO_OWNED_TESTS',
+        "METEOR_RSTEST_NO_OWNED_TESTS",
         `Found ${routing.legacyFiles.length} existing test file(s), but none are Rstest-owned.`,
       );
     }
-    if (selection.needsRuntime &&
-        (options.shard || options.changed || options.changedSince)) {
+    if (selection.needsRuntime && (options.shard || options.changed || options.changedSince)) {
       throw rstestError(
-        'METEOR_RSTEST_RUNTIME_OPTION_UNSUPPORTED',
-        '--shard and --changed are not supported for Meteor-runtime projects.',
+        "METEOR_RSTEST_RUNTIME_OPTION_UNSUPPORTED",
+        "--shard and --changed are not supported for Meteor-runtime projects.",
       );
     }
     if (options.runtimeWorkers > 1 && !selection.needsRuntime) {
       throw rstestError(
-        'METEOR_RSTEST_RUNTIME_WORKERS_EMPTY',
-        '--runtime-workers requires selected Meteor-runtime tests.',
+        "METEOR_RSTEST_RUNTIME_WORKERS_EMPTY",
+        "--runtime-workers requires selected Meteor-runtime tests.",
       );
     }
     if (selection.needsExternal && !options.once) {
       throw rstestError(
-        'METEOR_RSTEST_EXTERNAL_ONCE_REQUIRED',
-        'External E2E projects require --once.',
+        "METEOR_RSTEST_EXTERNAL_ONCE_REQUIRED",
+        "External E2E projects require --once.",
       );
     }
   }
@@ -918,28 +943,19 @@ class RstestTestRunnerProvider {
     if (this.plan) return this.plan;
     if (!this.selection) await this.validate();
 
-    const {
-      command,
-      appDir,
-      harnessRoot,
-      localDir,
-      architectures,
-      options,
-      npm,
-      worker,
-    } = this.context;
+    const { command, appDir, harnessRoot, localDir, architectures, options, npm, worker } =
+      this.context;
     const verbose = this.verbose;
     const reportVerbose = this.reportVerbose;
-    if (command === 'test-packages') {
+    if (command === "test-packages") {
       await npm.ensureHarnessManifest({
-        additionalDevDependencies: getPackageHarnessDevDependencies(
-          this.services.env,
-          { coverage: options.coverage },
-        ),
+        additionalDevDependencies: getPackageHarnessDevDependencies(this.services.env, {
+          coverage: options.coverage,
+        }),
         persistMeteorConfig: {
           mainModule: {
-            client: '_build/test/client-meteor.js',
-            server: '_build/test/server-meteor.js',
+            client: "_build/test/client-meteor.js",
+            server: "_build/test/server-meteor.js",
           },
         },
       });
@@ -950,25 +966,24 @@ class RstestTestRunnerProvider {
       });
     }
 
-    const runtimeDir = path.join(localDir, 'rstest');
+    const runtimeDir = path.join(localDir, "rstest");
     fs.mkdirSync(runtimeDir, { recursive: true });
     const selection = this.selection;
     if (!worker && this.smartCandidates.length > 0) {
-      this._applySmartClassification(
-        await this._classifySmartCandidates(runtimeDir),
-        runtimeDir,
-      );
+      this._applySmartClassification(await this._classifySmartCandidates(runtimeDir), runtimeDir);
     }
     this.coveragePolicy = null;
     this.coveragePolicyPath = null;
-    const hasCoveragePassthrough = options.passthrough.some(argument =>
-      /^--(?:no-)?coverage(?:\.|=|$)/.test(String(argument))
+    const hasCoveragePassthrough = options.passthrough.some((argument) =>
+      /^--(?:no-)?coverage(?:\.|=|$)/.test(String(argument)),
     );
-    const needsCoveragePreflight = !worker && options.coverage !== true &&
+    const needsCoveragePreflight =
+      !worker &&
+      options.coverage !== true &&
       (selection.needsRuntime || selection.needsExternal) &&
       (selection.capability.hasRstestConfig || hasCoveragePassthrough);
     if (needsCoveragePreflight) {
-      this.coveragePolicyPath = path.join(runtimeDir, 'coverage-policy.json');
+      this.coveragePolicyPath = path.join(runtimeDir, "coverage-policy.json");
       removeIfPresent(this.coveragePolicyPath);
       const preflight = this.services.startRstestProcess({
         appDir,
@@ -976,7 +991,7 @@ class RstestTestRunnerProvider {
         args: buildRstestArgs({
           appDir,
           localDir,
-          harnessRoot: command === 'test-packages' ? harnessRoot : undefined,
+          harnessRoot: command === "test-packages" ? harnessRoot : undefined,
           once: options.once,
           verbose,
           fullApp: options.fullApp,
@@ -994,24 +1009,23 @@ class RstestTestRunnerProvider {
       const preflightCode = await preflight.completion;
       if (preflightCode !== 0) {
         throw rstestError(
-          'METEOR_RSTEST_COVERAGE_PREFLIGHT_FAILED',
+          "METEOR_RSTEST_COVERAGE_PREFLIGHT_FAILED",
           `Coverage preflight exited with status ${preflightCode}.`,
         );
       }
       try {
-        this.coveragePolicy = validateCoveragePolicy(JSON.parse(
-          fs.readFileSync(this.coveragePolicyPath, 'utf8'),
-        ));
+        this.coveragePolicy = validateCoveragePolicy(
+          JSON.parse(fs.readFileSync(this.coveragePolicyPath, "utf8")),
+        );
       } catch (error) {
-        if (error.code === 'METEOR_RSTEST_COVERAGE_PREFLIGHT_INVALID') throw error;
+        if (error.code === "METEOR_RSTEST_COVERAGE_PREFLIGHT_INVALID") throw error;
         throw rstestError(
-          'METEOR_RSTEST_COVERAGE_PREFLIGHT_INVALID',
-          'Coverage preflight output is missing or malformed.',
+          "METEOR_RSTEST_COVERAGE_PREFLIGHT_INVALID",
+          "Coverage preflight output is missing or malformed.",
         );
       }
     }
-    const effectiveCoverage = options.coverage === true ||
-      this.coveragePolicy?.enabled === true;
+    const effectiveCoverage = options.coverage === true || this.coveragePolicy?.enabled === true;
     if (!worker) {
       const capabilities = this.services.selectRstestOptionalCapabilities({
         command,
@@ -1024,81 +1038,83 @@ class RstestTestRunnerProvider {
         capabilities,
       });
     }
-    const mixedCoverage = !worker && effectiveCoverage && (
-      selection.needsRuntime || selection.needsExternal
-    );
+    const mixedCoverage =
+      !worker && effectiveCoverage && (selection.needsRuntime || selection.needsExternal);
     this.coverageGeneration = worker
       ? this.workerPayload.coverageGeneration || null
       : mixedCoverage
-        ? crypto.randomBytes(16).toString('hex')
+        ? crypto.randomBytes(16).toString("hex")
         : null;
     this.coverageRoot = this.coverageGeneration
       ? worker
         ? path.dirname(this.workerPayload.coveragePath)
-        : path.join(runtimeDir, 'coverage', this.coverageGeneration)
+        : path.join(runtimeDir, "coverage", this.coverageGeneration)
       : null;
-    this.coveragePlanPath = this.coverageRoot
-      ? path.join(this.coverageRoot, 'plan.json')
-      : null;
-    this.coverageManifestPath = this.coverageRoot && !worker
-      ? path.join(this.coverageRoot, 'manifest.json')
-      : null;
-    this.coverageNativeArtifactPath = !worker && this.coverageRoot &&
-      command !== 'test-packages' && selection.shouldRunNative
-      ? path.join(this.coverageRoot, 'native.json')
-      : null;
+    this.coveragePlanPath = this.coverageRoot ? path.join(this.coverageRoot, "plan.json") : null;
+    this.coverageManifestPath =
+      this.coverageRoot && !worker ? path.join(this.coverageRoot, "manifest.json") : null;
+    this.coverageNativeArtifactPath =
+      !worker && this.coverageRoot && command !== "test-packages" && selection.shouldRunNative
+        ? path.join(this.coverageRoot, "native.json")
+        : null;
     if (this.coverageRoot) {
       fs.mkdirSync(this.coverageRoot, { recursive: true, mode: 0o700 });
       fs.chmodSync(this.coverageRoot, 0o700);
     }
-    const token = crypto.randomBytes(24).toString('base64url');
+    const token = crypto.randomBytes(24).toString("base64url");
     this.runtimeSettingsPath = worker
       ? this.workerPayload.runtimeSettingsPath
       : selection.needsRuntime || selection.needsExternal
-        ? path.join(runtimeDir, command === 'test-packages'
-          ? 'package-runtime-plan.json'
-          : 'app-runtime-settings.json')
+        ? path.join(
+            runtimeDir,
+            command === "test-packages" ? "package-runtime-plan.json" : "app-runtime-settings.json",
+          )
         : null;
     this.runtimeSettingsGeneration = worker
       ? this.workerPayload.generation
       : selection.needsRuntime || selection.needsExternal
-        ? crypto.randomBytes(16).toString('hex')
+        ? crypto.randomBytes(16).toString("hex")
         : null;
     if (!worker && this.runtimeSettingsPath) {
       removeIfPresent(this.runtimeSettingsPath);
     }
 
     this.runtimeManifest = worker ? this.workerPayload.runtimeManifest : null;
-    if (!worker && command === 'test-packages') {
+    if (!worker && command === "test-packages") {
       const packageRuntimeFiles = createPackageRuntimeMirrors({
         harnessRoot,
         files: selection.inventory.runtimeFiles,
         packageTests: this.context.packageTests,
       });
-      this.runtimeManifest = path.join(runtimeDir, 'package-runtime-files.json');
-      fs.writeFileSync(this.runtimeManifest, JSON.stringify({
-        schemaVersion: 2,
-        discoveryRoot: path.join(harnessRoot, '.rstest-package-runtime'),
-        testFileRoot: '',
-        serverFiles: packageRuntimeFiles,
-        clientFiles: packageRuntimeFiles,
-      }));
-    }
-    if (!worker && command === 'test' &&
-        selection.inventory.runtimeFiles.length > 0) {
-      this.runtimeManifest = path.join(runtimeDir, 'runtime-files.json');
+      this.runtimeManifest = path.join(runtimeDir, "package-runtime-files.json");
       fs.writeFileSync(
         this.runtimeManifest,
-        JSON.stringify(this.classification ? {
+        JSON.stringify({
           schemaVersion: 2,
-          serverFiles: this.classification.runtimeServerFiles,
-          clientFiles: this.classification.runtimeClientFiles,
-        } : selection.inventory.runtimeFiles)
+          discoveryRoot: path.join(harnessRoot, ".rstest-package-runtime"),
+          testFileRoot: "",
+          serverFiles: packageRuntimeFiles,
+          clientFiles: packageRuntimeFiles,
+        }),
       );
     }
-    this.externalResultPath = !worker && selection.needsExternal
-      ? path.join(runtimeDir, 'external-result.json')
-      : null;
+    if (!worker && command === "test" && selection.inventory.runtimeFiles.length > 0) {
+      this.runtimeManifest = path.join(runtimeDir, "runtime-files.json");
+      fs.writeFileSync(
+        this.runtimeManifest,
+        JSON.stringify(
+          this.classification
+            ? {
+                schemaVersion: 2,
+                serverFiles: this.classification.runtimeServerFiles,
+                clientFiles: this.classification.runtimeClientFiles,
+              }
+            : selection.inventory.runtimeFiles,
+        ),
+      );
+    }
+    this.externalResultPath =
+      !worker && selection.needsExternal ? path.join(runtimeDir, "external-result.json") : null;
     if (this.externalResultPath) removeIfPresent(this.externalResultPath);
 
     const commonArgs = {
@@ -1118,21 +1134,19 @@ class RstestTestRunnerProvider {
       shard: options.shard,
       changed: options.changed,
       changedSince: options.changedSince,
-      phase: 'native',
+      phase: "native",
       routingManifest: this.routingManifest,
       coveragePlanOutput: this.coveragePlanPath,
       coverageGeneration: this.coverageGeneration,
       coveragePolicy: this.coveragePolicyPath,
       passthrough: options.passthrough,
     };
-    const serverArchitecture = architectures.find(architecture =>
-      architecture === 'os' || architecture.startsWith('os.')
+    const serverArchitecture = architectures.find(
+      (architecture) => architecture === "os" || architecture.startsWith("os."),
     );
-    const browserArchitecture = this.context.webArchs.find(
-      architecture => architecture === 'web.browser'
-    ) || this.context.webArchs.find(architecture =>
-      architecture === 'web.browser.legacy'
-    );
+    const browserArchitecture =
+      this.context.webArchs.find((architecture) => architecture === "web.browser") ||
+      this.context.webArchs.find((architecture) => architecture === "web.browser.legacy");
     const selectedArchitectures = ({ server: includeServer, client: includeClient }) => [
       ...(includeServer && serverArchitecture ? [serverArchitecture] : []),
       ...(includeClient && browserArchitecture ? [browserArchitecture] : []),
@@ -1140,114 +1154,116 @@ class RstestTestRunnerProvider {
     this.nativeArgs = buildRstestArgs({
       ...commonArgs,
       coverageArtifact: this.coverageNativeArtifactPath,
-      harnessRoot: command === 'test-packages' ? harnessRoot : undefined,
-      project: command === 'test' ? selection.nativeProjects : [],
-      testFile: command === 'test' && !this.routingManifest
-        ? options.testFile
-        : [],
-      passWithNoTests: command === 'test' &&
-        options.project.length === 0 && options.testFile.length === 0 &&
+      harnessRoot: command === "test-packages" ? harnessRoot : undefined,
+      project: command === "test" ? selection.nativeProjects : [],
+      testFile: command === "test" && !this.routingManifest ? options.testFile : [],
+      passWithNoTests:
+        command === "test" &&
+        options.project.length === 0 &&
+        options.testFile.length === 0 &&
         (selection.needsRuntime || selection.needsExternal),
-      runtimePlanOutput: command === 'test-packages'
-        ? this.runtimeSettingsPath
-        : undefined,
-      runtimeSettingsOutput: command === 'test'
-        ? this.runtimeSettingsPath
-        : undefined,
-      runtimeSettingsGeneration: command === 'test'
-        ? this.runtimeSettingsGeneration
-        : undefined,
+      runtimePlanOutput: command === "test-packages" ? this.runtimeSettingsPath : undefined,
+      runtimeSettingsOutput: command === "test" ? this.runtimeSettingsPath : undefined,
+      runtimeSettingsGeneration: command === "test" ? this.runtimeSettingsGeneration : undefined,
       architectures: selectedArchitectures({
         server: selection.nativeServer,
         client: selection.nativeClient,
       }),
     });
-    this.runtimePlanArgs = command === 'test' &&
+    this.runtimePlanArgs =
+      command === "test" &&
       (selection.needsRuntime || selection.needsExternal) &&
       !selection.shouldRunNative
-      ? buildRstestArgs({
-        appDir,
-        localDir,
-        once: true,
-        fullApp: options.fullApp,
-        server: !options.clientOnly,
-        client: !options.serverOnly,
-        command,
-        config: options.config,
-        runtimePlanOutput: this.runtimeSettingsPath,
-        runtimeSettingsGeneration: this.runtimeSettingsGeneration,
-        architectures: selectedArchitectures({
-          server: !options.clientOnly,
-          client: !options.serverOnly,
-        }),
-        phase: 'native',
-        routingManifest: this.routingManifest,
-        coverage: options.coverage,
-        coveragePlanOutput: this.coveragePlanPath,
-        coverageGeneration: this.coverageGeneration,
-        coveragePolicy: this.coveragePolicyPath,
-        passthrough: options.passthrough,
-      })
-      : null;
+        ? buildRstestArgs({
+            appDir,
+            localDir,
+            once: true,
+            fullApp: options.fullApp,
+            server: !options.clientOnly,
+            client: !options.serverOnly,
+            command,
+            config: options.config,
+            runtimePlanOutput: this.runtimeSettingsPath,
+            runtimeSettingsGeneration: this.runtimeSettingsGeneration,
+            architectures: selectedArchitectures({
+              server: !options.clientOnly,
+              client: !options.serverOnly,
+            }),
+            phase: "native",
+            routingManifest: this.routingManifest,
+            coverage: options.coverage,
+            coveragePlanOutput: this.coveragePlanPath,
+            coverageGeneration: this.coverageGeneration,
+            coveragePolicy: this.coveragePolicyPath,
+            passthrough: options.passthrough,
+          })
+        : null;
     this.externalArgs = selection.needsExternal
       ? buildRstestArgs({
-        ...commonArgs,
-        once: true,
-        project: 'meteor-e2e',
-        testFile: this.routingManifest ? [] : options.testFile,
-        resultOutput: this.externalResultPath,
-        phase: 'external',
-        routingManifest: this.routingManifest,
-        architectures: selectedArchitectures({
-          server: !options.clientOnly,
-          client: !options.serverOnly,
-        }),
-      })
+          ...commonArgs,
+          once: true,
+          project: "meteor-e2e",
+          testFile: this.routingManifest ? [] : options.testFile,
+          resultOutput: this.externalResultPath,
+          phase: "external",
+          routingManifest: this.routingManifest,
+          architectures: selectedArchitectures({
+            server: !options.clientOnly,
+            client: !options.serverOnly,
+          }),
+        })
       : null;
 
-    const hasDesktopBrowser = this.context.webArchs.some(arch =>
-      arch === 'web.browser' || arch === 'web.browser.legacy'
+    const hasDesktopBrowser = this.context.webArchs.some(
+      (arch) => arch === "web.browser" || arch === "web.browser.legacy",
     );
-    const dedicatedRuntimeHosts = !worker && selection.needsRuntime && (
-      options.runtimeWorkers > 1 ||
-      options.runtimeWorkers === 1 && selection.needsExternal
-    );
+    const dedicatedRuntimeHosts =
+      !worker &&
+      selection.needsRuntime &&
+      (options.runtimeWorkers > 1 || (options.runtimeWorkers === 1 && selection.needsExternal));
     const runtimeClient = worker
       ? this.workerPayload.clientFiles.length > 0
       : dedicatedRuntimeHosts
         ? false
-      : command === 'test-packages'
-        ? !options.serverOnly
-      : this.classification
-        ? this.classification.runtimeClientFiles.length > 0
-        : selection.inventory.runtimeFiles.some(file =>
-          /[\\/]runtime[\\/]client[\\/]/.test(file)
-        );
+        : command === "test-packages"
+          ? !options.serverOnly
+          : this.classification
+            ? this.classification.runtimeClientFiles.length > 0
+            : selection.inventory.runtimeFiles.some((file) =>
+                /[\\/]runtime[\\/]client[\\/]/.test(file),
+              );
     const runtimeServer = worker
       ? this.workerPayload.serverFiles.length > 0
       : dedicatedRuntimeHosts
         ? false
-      : command === 'test-packages'
-        ? !options.clientOnly
-      : this.classification
-        ? this.classification.runtimeServerFiles.length > 0
-        : selection.inventory.runtimeFiles.some(file =>
-          /[\\/]runtime[\\/]server[\\/]/.test(file)
-        );
-    const client = !options.serverOnly && hasDesktopBrowser && (
-      command === 'test-packages' || selection.needsRuntime && runtimeClient ||
-      selection.needsExternal
-    );
-    const server = !options.clientOnly && (
-      command === 'test-packages' || selection.needsRuntime && runtimeServer ||
-      selection.needsExternal
-    );
-    if (!hasDesktopBrowser && !options.serverOnly &&
-        (command === 'test-packages' || selection.needsRuntime && runtimeClient ||
-          selection.needsExternal)) {
+        : command === "test-packages"
+          ? !options.clientOnly
+          : this.classification
+            ? this.classification.runtimeServerFiles.length > 0
+            : selection.inventory.runtimeFiles.some((file) =>
+                /[\\/]runtime[\\/]server[\\/]/.test(file),
+              );
+    const client =
+      !options.serverOnly &&
+      hasDesktopBrowser &&
+      (command === "test-packages" ||
+        (selection.needsRuntime && runtimeClient) ||
+        selection.needsExternal);
+    const server =
+      !options.clientOnly &&
+      (command === "test-packages" ||
+        (selection.needsRuntime && runtimeServer) ||
+        selection.needsExternal);
+    if (
+      !hasDesktopBrowser &&
+      !options.serverOnly &&
+      (command === "test-packages" ||
+        (selection.needsRuntime && runtimeClient) ||
+        selection.needsExternal)
+    ) {
       throw rstestError(
-        'METEOR_RSTEST_DESKTOP_BROWSER_REQUIRED',
-        'Selected client tests require web.browser or web.browser.legacy.'
+        "METEOR_RSTEST_DESKTOP_BROWSER_REQUIRED",
+        "Selected client tests require web.browser or web.browser.legacy.",
       );
     }
 
@@ -1259,7 +1275,7 @@ class RstestTestRunnerProvider {
       verbose,
       reportVerbose,
       testNamePattern: options.testNamePattern || null,
-      updateSnapshot: options.updateSnapshots ? 'all' : 'none',
+      updateSnapshot: options.updateSnapshots ? "all" : "none",
       testTimeout: RUNTIME_SETTING_DEFAULTS.testTimeout,
       hookTimeout: RUNTIME_SETTING_DEFAULTS.hookTimeout,
       maxConcurrency: RUNTIME_SETTING_DEFAULTS.maxConcurrency,
@@ -1276,17 +1292,19 @@ class RstestTestRunnerProvider {
       external: selection.needsExternal,
       workerGate: Boolean(dedicatedRuntimeHosts && selection.needsExternal),
       runtimeManifest: this.runtimeManifest,
-      worker: worker ? {
-        id: worker.id,
-        index: worker.index,
-        total: worker.total,
-        generation: this.workerPayload.generation,
-        resultPath: this.workerPayload.resultPath,
-        ...(this.workerPayload.coveragePath && {
-          coveragePath: this.workerPayload.coveragePath,
-          coverageGeneration: this.workerPayload.coverageGeneration,
-        }),
-      } : null,
+      worker: worker
+        ? {
+            id: worker.id,
+            index: worker.index,
+            total: worker.total,
+            generation: this.workerPayload.generation,
+            resultPath: this.workerPayload.resultPath,
+            ...(this.workerPayload.coveragePath && {
+              coveragePath: this.workerPayload.coveragePath,
+              coverageGeneration: this.workerPayload.coverageGeneration,
+            }),
+          }
+        : null,
     };
     this.workerHostPlan = null;
     if (dedicatedRuntimeHosts) {
@@ -1296,9 +1314,9 @@ class RstestTestRunnerProvider {
         files: selection.inventory.runtimeFiles,
         clientFiles: this.classification
           ? this.classification.runtimeClientFiles
-          : selection.inventory.runtimeFiles.filter(file =>
-            /[\\/]runtime[\\/]client[\\/]/.test(file)
-          ),
+          : selection.inventory.runtimeFiles.filter((file) =>
+              /[\\/]runtime[\\/]client[\\/]/.test(file),
+            ),
         requestedWorkers: options.runtimeWorkers,
         generation: this.runtimeSettingsGeneration,
         runtimeSettingsPath: this.runtimeSettingsPath,
@@ -1307,7 +1325,7 @@ class RstestTestRunnerProvider {
       if (this.workerHostPlan.actualWorkers < options.runtimeWorkers) {
         this.services.warn(
           `[Meteor Rstest] --runtime-workers capped from ${options.runtimeWorkers} ` +
-          `to ${this.workerHostPlan.actualWorkers} selected runtime file(s).`
+            `to ${this.workerHostPlan.actualWorkers} selected runtime file(s).`,
         );
       }
     }
@@ -1319,7 +1337,7 @@ class RstestTestRunnerProvider {
     if (this.coverageRoot) {
       if (this.coverageNativeArtifactPath) {
         this.coverageArtifacts.push({
-          producer: 'native',
+          producer: "native",
           path: this.coverageNativeArtifactPath,
         });
       }
@@ -1332,15 +1350,15 @@ class RstestTestRunnerProvider {
         }
         if (this.workerPayload.clientFiles.length > 0) {
           this.coverageArtifacts.push({
-            producer: 'client',
-            path: path.join(this.coverageRoot, 'client.json'),
+            producer: "client",
+            path: path.join(this.coverageRoot, "client.json"),
           });
         }
       } else if (this.workerHostPlan) {
         if (selection.needsExternal && server) {
           this.coverageArtifacts.push({
-            producer: 'server',
-            path: path.join(this.coverageRoot, 'server.json'),
+            producer: "server",
+            path: path.join(this.coverageRoot, "server.json"),
           });
         }
         for (const descriptor of this.workerHostPlan.descriptors) {
@@ -1350,55 +1368,58 @@ class RstestTestRunnerProvider {
             path: descriptor.payload.coveragePath,
           });
         }
-        if (this.workerHostPlan.descriptors.some(descriptor => {
-          const manifest = JSON.parse(fs.readFileSync(
-            descriptor.payload.runtimeManifest,
-            'utf8',
-          ));
-          return Array.isArray(manifest.clientFiles) && manifest.clientFiles.length > 0;
-        })) {
+        if (
+          this.workerHostPlan.descriptors.some((descriptor) => {
+            const manifest = JSON.parse(
+              fs.readFileSync(descriptor.payload.runtimeManifest, "utf8"),
+            );
+            return Array.isArray(manifest.clientFiles) && manifest.clientFiles.length > 0;
+          })
+        ) {
           this.coverageArtifacts.push({
-            producer: 'client',
-            path: path.join(this.coverageRoot, 'client.json'),
+            producer: "client",
+            path: path.join(this.coverageRoot, "client.json"),
           });
         }
       } else {
         if (server) {
           this.coverageArtifacts.push({
-            producer: 'server',
-            path: path.join(this.coverageRoot, 'server.json'),
+            producer: "server",
+            path: path.join(this.coverageRoot, "server.json"),
           });
         }
         if (client) {
           this.coverageArtifacts.push({
-            producer: 'client',
-            path: path.join(this.coverageRoot, 'client.json'),
+            producer: "client",
+            path: path.join(this.coverageRoot, "client.json"),
           });
         }
       }
       if (selection.needsExternal) {
         this.coverageArtifacts.push({
-          producer: 'e2e',
-          path: path.join(this.coverageRoot, 'e2e.json'),
+          producer: "e2e",
+          path: path.join(this.coverageRoot, "e2e.json"),
         });
       }
     }
     const dependencyOnly =
-      !selection.needsRuntime && !selection.needsExternal ||
-      dedicatedRuntimeHosts && !selection.needsExternal;
-    const buildClient = client || selection.needsExternal && !options.serverOnly;
-    const buildServer = server || selection.needsExternal && !options.clientOnly;
+      (!selection.needsRuntime && !selection.needsExternal) ||
+      (dedicatedRuntimeHosts && !selection.needsExternal);
+    const buildClient = client || (selection.needsExternal && !options.serverOnly);
+    const buildServer = server || (selection.needsExternal && !options.clientOnly);
     const mode = this.workerHostPlan
-        ? selection.needsExternal ? 'meteor-host' : 'native-only'
-        : selection.needsRuntime || selection.needsExternal
-        ? 'meteor-host'
-        : 'native-only';
+      ? selection.needsExternal
+        ? "meteor-host"
+        : "native-only"
+      : selection.needsRuntime || selection.needsExternal
+        ? "meteor-host"
+        : "native-only";
     const buildPluginDependencies = {};
     const buildPluginOptions = {
       rspack: {
         autoInstall: npm.autoInstall,
-        lifecycle: dependencyOnly ? 'dependencies-only' : 'runtime',
-        ...(command === 'test-packages' && { projectRoot: harnessRoot }),
+        lifecycle: dependencyOnly ? "dependencies-only" : "runtime",
+        ...(command === "test-packages" && { projectRoot: harnessRoot }),
         ...(!dependencyOnly && {
           targets: { client: buildClient, server: buildServer },
         }),
@@ -1428,14 +1449,20 @@ class RstestTestRunnerProvider {
         { warn: this.services.warn },
       );
       if (transforms.includePackages.length > 0) {
-        const { swcPlugin, babelPlugin } =
-          this.services.resolveRstestCoverageInstrumentation(npm.root);
-        const cacheKey = crypto.createHash('sha256').update(JSON.stringify({
-          schemaVersion: 1,
-          generation: this.coverageGeneration,
-          planPath: this.coveragePlanPath,
-        })).digest('hex');
-        buildPluginOptions['babel-compiler'] = {
+        const { swcPlugin, babelPlugin } = this.services.resolveRstestCoverageInstrumentation(
+          npm.root,
+        );
+        const cacheKey = crypto
+          .createHash("sha256")
+          .update(
+            JSON.stringify({
+              schemaVersion: 1,
+              generation: this.coverageGeneration,
+              planPath: this.coveragePlanPath,
+            }),
+          )
+          .digest("hex");
+        buildPluginOptions["babel-compiler"] = {
           sourceTransforms: {
             ...transforms,
             swcPlugins: [[swcPlugin, {}]],
@@ -1444,34 +1471,42 @@ class RstestTestRunnerProvider {
           },
         };
         for (const packageName of transforms.includePackages) {
-          buildPluginDependencies[packageName] = ['babel-compiler'];
+          buildPluginDependencies[packageName] = ["babel-compiler"];
         }
       }
     }
     this.plan = {
       mode,
-      ...(mode === 'meteor-host' && command === 'test' && {
-        hostTestMode: worker ? 'test'
-          : selection.needsExternal
-          ? this.workerHostPlan ? 'app-test'
-            : selection.needsRuntime ? 'mixed' : 'app-test'
-          : 'test',
-      }),
-      ...(mode === 'meteor-host' && { driverPackage: 'rstest' }),
-      ...(command === 'test-packages' && {
-        harnessPackages: ['ecmascript'],
+      ...(mode === "meteor-host" &&
+        command === "test" && {
+          hostTestMode: worker
+            ? "test"
+            : selection.needsExternal
+              ? this.workerHostPlan
+                ? "app-test"
+                : selection.needsRuntime
+                  ? "mixed"
+                  : "app-test"
+              : "test",
+        }),
+      ...(mode === "meteor-host" && { driverPackage: "rstest" }),
+      ...(command === "test-packages" && {
+        harnessPackages: ["ecmascript"],
         refreshProjectMetadata: true,
       }),
       metadata: this.metadata,
-      ...(mode === 'meteor-host' && selection.needsRuntime && {
-        isobuildOptions: {
-          lazyTestPackages: true,
-          moduleReplacements: [{
-            module: '@rstest/core/dist/index.js',
-            source: RSTEST_RUNTIME_SHIM,
-          }],
-        },
-      }),
+      ...(mode === "meteor-host" &&
+        selection.needsRuntime && {
+          isobuildOptions: {
+            lazyTestPackages: true,
+            moduleReplacements: [
+              {
+                module: "@rstest/core/dist/index.js",
+                source: RSTEST_RUNTIME_SHIM,
+              },
+            ],
+          },
+        }),
       buildPluginDependencies,
       buildPluginOptions,
     };
@@ -1479,20 +1514,18 @@ class RstestTestRunnerProvider {
   }
 
   _readRuntimeSettings(updateMetadata) {
-    const settings = JSON.parse(fs.readFileSync(this.runtimeSettingsPath, 'utf8'));
-    if (this.context.command === 'test' &&
-        (settings.schemaVersion !== 1 ||
-          settings.generation !== this.runtimeSettingsGeneration)) {
-      throw rstestError(
-        'METEOR_RSTEST_STALE_SETTINGS',
-        'Ignored stale runtime settings payload.'
-      );
+    const settings = JSON.parse(fs.readFileSync(this.runtimeSettingsPath, "utf8"));
+    if (
+      this.context.command === "test" &&
+      (settings.schemaVersion !== 1 || settings.generation !== this.runtimeSettingsGeneration)
+    ) {
+      throw rstestError("METEOR_RSTEST_STALE_SETTINGS", "Ignored stale runtime settings payload.");
     }
     this.metadata.runtimeConfig = Object.fromEntries(
       Object.entries(RUNTIME_SETTING_DEFAULTS).map(([field, fallback]) => [
         field,
         settings[field] === undefined ? fallback : settings[field],
-      ])
+      ]),
     );
     this.metadata.testTimeout = this.metadata.runtimeConfig.testTimeout;
     this.metadata.hookTimeout = this.metadata.runtimeConfig.hookTimeout;
@@ -1510,26 +1543,29 @@ class RstestTestRunnerProvider {
     } catch {
       coveragePolicy = null;
     }
-    if (!coverage || coverage.schemaVersion !== 1 || coverage.enabled !== true ||
-        coverage.provider !== 'istanbul' ||
-        coverage.generation !== this.coverageGeneration ||
-        path.resolve(coverage.artifactRoot || '') !== this.coverageRoot ||
-        coveragePolicy?.enabled !== true ||
-        coveragePolicy.provider !== 'istanbul') {
+    if (
+      !coverage ||
+      coverage.schemaVersion !== 1 ||
+      coverage.enabled !== true ||
+      coverage.provider !== "istanbul" ||
+      coverage.generation !== this.coverageGeneration ||
+      path.resolve(coverage.artifactRoot || "") !== this.coverageRoot ||
+      coveragePolicy?.enabled !== true ||
+      coveragePolicy.provider !== "istanbul"
+    ) {
       throw rstestError(
-        'METEOR_RSTEST_STALE_COVERAGE_PLAN',
-        'Ignored an invalid or stale coverage plan.',
+        "METEOR_RSTEST_STALE_COVERAGE_PLAN",
+        "Ignored an invalid or stale coverage plan.",
       );
     }
     this.coveragePlan = coverage;
     this.metadata.coverage = {
       ...coverage,
       token: this.metadata.token,
-      endpoint: '/__meteor__/rstest/coverage',
-      artifacts: Object.fromEntries(this.coverageArtifacts.map(artifact => [
-        artifact.producer,
-        artifact.path,
-      ])),
+      endpoint: "/__meteor__/rstest/coverage",
+      artifacts: Object.fromEntries(
+        this.coverageArtifacts.map((artifact) => [artifact.producer, artifact.path]),
+      ),
     };
   }
 
@@ -1541,20 +1577,23 @@ class RstestTestRunnerProvider {
         return;
       } catch {}
       const state = await Promise.race([
-        new Promise(resolve => setTimeout(() => resolve(null), 50)),
-        processHandle.completion.then(code => ({ code }), error => ({ error })),
+        new Promise((resolve) => setTimeout(() => resolve(null), 50)),
+        processHandle.completion.then(
+          (code) => ({ code }),
+          (error) => ({ error }),
+        ),
       ]);
       if (state && state.error) throw state.error;
       if (state && state.code !== 0) {
         throw rstestError(
-          'METEOR_RSTEST_NATIVE_EARLY_EXIT',
-          `Native watcher exited with status ${state.code} before loading config.`
+          "METEOR_RSTEST_NATIVE_EARLY_EXIT",
+          `Native watcher exited with status ${state.code} before loading config.`,
         );
       }
     }
     throw rstestError(
-      'METEOR_RSTEST_SETTINGS_TIMEOUT',
-      'Timed out waiting for runtime settings from rstest.config.'
+      "METEOR_RSTEST_SETTINGS_TIMEOUT",
+      "Timed out waiting for runtime settings from rstest.config.",
     );
   }
 
@@ -1565,7 +1604,7 @@ class RstestTestRunnerProvider {
       this._readRuntimeSettings(updateMetadata);
       return { exitCode: 0 };
     }
-    if (command === 'test-packages') {
+    if (command === "test-packages") {
       const handle = this.services.startRstestProcess({
         appDir,
         packageRoot: harnessRoot,
@@ -1577,9 +1616,7 @@ class RstestTestRunnerProvider {
     }
 
     if (this.workerHostPlan) {
-      const args = selection.shouldRunNative
-        ? this.nativeArgs
-        : this.runtimePlanArgs;
+      const args = selection.shouldRunNative ? this.nativeArgs : this.runtimePlanArgs;
       const native = this.services.startRstestProcess({ appDir, args });
       const code = await native.completion;
       if (code !== 0) return { exitCode: code };
@@ -1592,7 +1629,7 @@ class RstestTestRunnerProvider {
         );
         this.resources.push(workers);
         return {
-          completion: workers.completion.then(outcome => {
+          completion: workers.completion.then((outcome) => {
             const aggregate = this.services.aggregateRstestWorkerResults({
               descriptors: this.workerHostPlan.descriptors,
               outcome,
@@ -1601,7 +1638,7 @@ class RstestTestRunnerProvider {
             this.workerAggregate = aggregate;
             return aggregate.exitCode;
           }),
-          stop: signal => workers.stop(signal),
+          stop: (signal) => workers.stop(signal),
         };
       };
       if (selection.needsExternal) {
@@ -1661,7 +1698,7 @@ class RstestTestRunnerProvider {
       const browser = new this.services.Browser({
         appDir: this.context.appDir,
         url,
-        browser: this.context.options.browser || 'chromium',
+        browser: this.context.options.browser || "chromium",
         token: this.metadata.token,
         log,
       });
@@ -1670,7 +1707,7 @@ class RstestTestRunnerProvider {
     }
     if (this.metadata.external) {
       const externalCoverageArtifact = this.coverageArtifacts.find(
-        artifact => artifact.producer === 'e2e',
+        (artifact) => artifact.producer === "e2e",
       );
       const external = new this.services.External({
         appDir: this.context.appDir,
@@ -1680,11 +1717,13 @@ class RstestTestRunnerProvider {
         resultPath: this.externalResultPath,
         token: this.metadata.token,
         generation: this.generation,
-        ...(this.metadata.coverage && externalCoverageArtifact ? {
-          coverageGeneration: this.metadata.coverage.generation,
-          coverageArtifactPath: externalCoverageArtifact.path,
-          coverageShardDirectory: path.join(this.coverageRoot, 'e2e-shards'),
-        } : {}),
+        ...(this.metadata.coverage && externalCoverageArtifact
+          ? {
+              coverageGeneration: this.metadata.coverage.generation,
+              coverageArtifactPath: externalCoverageArtifact.path,
+              coverageShardDirectory: path.join(this.coverageRoot, "e2e-shards"),
+            }
+          : {}),
       });
       this.resources.push(external);
       await external.start();
@@ -1692,17 +1731,17 @@ class RstestTestRunnerProvider {
     if (this.startDeferredWorkers) {
       const worker = this.startDeferredWorkers();
       await worker.completion;
-      const endpoint = new URL('__meteor__/rstest/worker-complete', `${url.replace(/\/$/, '')}/`);
+      const endpoint = new URL("__meteor__/rstest/worker-complete", `${url.replace(/\/$/, "")}/`);
       const response = await fetch(endpoint, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'x-meteor-rstest-token': this.metadata.token,
-          'x-meteor-rstest-generation': String(this.metadata.generation),
+          "x-meteor-rstest-token": this.metadata.token,
+          "x-meteor-rstest-generation": String(this.metadata.generation),
         },
       });
       if (!response.ok) {
         throw rstestError(
-          'METEOR_RSTEST_WORKER_GATE',
+          "METEOR_RSTEST_WORKER_GATE",
           `Runtime worker completion endpoint returned HTTP ${response.status}.`,
         );
       }
@@ -1713,17 +1752,17 @@ class RstestTestRunnerProvider {
     if (this.coveragePlan) return this.coveragePlan;
     if (!this.coveragePlanPath || !fs.existsSync(this.coveragePlanPath)) {
       throw rstestError(
-        'METEOR_RSTEST_STALE_COVERAGE_PLAN',
-        'Coverage plan is missing, malformed, or stale.',
+        "METEOR_RSTEST_STALE_COVERAGE_PLAN",
+        "Coverage plan is missing, malformed, or stale.",
       );
     }
     let coverage;
     try {
-      coverage = JSON.parse(fs.readFileSync(this.coveragePlanPath, 'utf8'));
+      coverage = JSON.parse(fs.readFileSync(this.coveragePlanPath, "utf8"));
     } catch {
       throw rstestError(
-        'METEOR_RSTEST_STALE_COVERAGE_PLAN',
-        'Coverage plan is missing, malformed, or stale.',
+        "METEOR_RSTEST_STALE_COVERAGE_PLAN",
+        "Coverage plan is missing, malformed, or stale.",
       );
     }
     this._setCoveragePlan(coverage);
@@ -1748,11 +1787,16 @@ class RstestTestRunnerProvider {
       const localPackages = [];
       const names = new Set();
       for (const entry of [
-        ...this.context.localPackages || [],
-        ...this.context.packageTests || [],
+        ...(this.context.localPackages || []),
+        ...(this.context.packageTests || []),
       ]) {
-        if (!entry || typeof entry.name !== 'string' || names.has(entry.name) ||
-            typeof entry.sourceRoot !== 'string') continue;
+        if (
+          !entry ||
+          typeof entry.name !== "string" ||
+          names.has(entry.name) ||
+          typeof entry.sourceRoot !== "string"
+        )
+          continue;
         names.add(entry.name);
         localPackages.push({
           name: entry.name,
@@ -1787,13 +1831,9 @@ class RstestTestRunnerProvider {
           : undefined;
       }
     } catch (error) {
-      this.services.warn(
-        `[Meteor Rstest] Coverage finalization failed: ${error.message}`
-      );
+      this.services.warn(`[Meteor Rstest] Coverage finalization failed: ${error.message}`);
     }
-    return outerExitCode === 0
-      ? { exitCode: effectiveExitCode || 1 }
-      : undefined;
+    return outerExitCode === 0 ? { exitCode: effectiveExitCode || 1 } : undefined;
   }
 
   completeRun(context) {

@@ -1,4 +1,4 @@
-import type { RstestConfig } from '@rstest/core';
+import type { RstestConfig } from "@rstest/core";
 
 export interface MeteorRstestContext {
   readonly schemaVersion: 1;
@@ -6,12 +6,12 @@ export interface MeteorRstestContext {
   readonly configRoot: string;
   readonly harnessRoot: string;
   readonly localDir: string;
-  readonly command: 'test' | 'test-packages';
+  readonly command: "test" | "test-packages";
   readonly once: boolean;
   readonly verbose: boolean;
   readonly fullApp: boolean;
   readonly packageTests: boolean;
-  readonly phase: 'native' | 'external';
+  readonly phase: "native" | "external";
   readonly client: boolean;
   readonly server: boolean;
   readonly routingManifest: string | null;
@@ -19,7 +19,7 @@ export interface MeteorRstestContext {
 }
 
 export type MeteorRstestConfigFactory = (
-  context: MeteorRstestContext
+  context: MeteorRstestContext,
 ) => RstestConfig | Promise<RstestConfig>;
 
 export function defineConfig(config: RstestConfig): RstestConfig;

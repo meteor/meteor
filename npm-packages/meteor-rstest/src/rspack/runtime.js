@@ -1,10 +1,7 @@
-const fs = require('node:fs');
-const path = require('node:path');
+const fs = require("node:fs");
+const path = require("node:path");
 
-const INTERNAL_PLUGIN_NAMES = new Set([
-  'RstestPlugin',
-  'MeteorRstestMockRuntimePlugin',
-]);
+const INTERNAL_PLUGIN_NAMES = new Set(["RstestPlugin", "MeteorRstestMockRuntimePlugin"]);
 
 function appendMeteorModuleMockGuard(runtimeCode) {
   return `${runtimeCode}\n{
@@ -53,42 +50,30 @@ class MeteorRstestMockRuntimePlugin {
 
     class MeteorRstestRuntimeModule extends RuntimeModule {
       constructor() {
-        super('meteor rstest runtime');
+        super("meteor rstest runtime");
       }
 
       generate() {
-        return appendMeteorModuleMockGuard(
-          fs.readFileSync(runtimeCodePath, 'utf8'),
-        );
+        return appendMeteorModuleMockGuard(fs.readFileSync(runtimeCodePath, "utf8"));
       }
     }
 
-    compiler.hooks.thisCompilation.tap(
-      'MeteorRstestMockRuntimePlugin',
-      compilation => {
-        compilation.hooks.additionalTreeRuntimeRequirements.tap(
-          'MeteorRstestMockRuntimePlugin',
-          chunk => {
-            compilation.addRuntimeModule(
-              chunk,
-              new MeteorRstestRuntimeModule(),
-            );
-          },
-        );
-      },
-    );
+    compiler.hooks.thisCompilation.tap("MeteorRstestMockRuntimePlugin", (compilation) => {
+      compilation.hooks.additionalTreeRuntimeRequirements.tap(
+        "MeteorRstestMockRuntimePlugin",
+        (chunk) => {
+          compilation.addRuntimeModule(chunk, new MeteorRstestRuntimeModule());
+        },
+      );
+    });
   }
 }
 
-function resolveMockRuntimeCode({
-  npmRoot,
-  projectDir,
-  resolveModule = require.resolve,
-}) {
-  const packageJson = resolveModule('@rstest/core/package.json', {
+function resolveMockRuntimeCode({ npmRoot, projectDir, resolveModule = require.resolve }) {
+  const packageJson = resolveModule("@rstest/core/package.json", {
     paths: [npmRoot, projectDir].filter(Boolean),
   });
-  return path.join(path.dirname(packageJson), 'dist', 'mockRuntimeCode.js');
+  return path.join(path.dirname(packageJson), "dist", "mockRuntimeCode.js");
 }
 
 function createMeteorRstestPlugins({
@@ -101,23 +86,23 @@ function createMeteorRstestPlugins({
 }) {
   if (!upstreamRuntime) return [];
   const RstestPlugin = rspack?.experiments?.RstestPlugin;
-  if (typeof RstestPlugin !== 'function') {
-    throw new Error(
-      '[Meteor Rstest] @rspack/core does not expose experiments.RstestPlugin.',
-    );
+  if (typeof RstestPlugin !== "function") {
+    throw new Error("[Meteor Rstest] @rspack/core does not expose experiments.RstestPlugin.");
   }
-  const resolvedRuntimeCode = runtimeCodePath || resolveMockRuntimeCode({
-    npmRoot,
-    projectDir,
-    resolveModule,
-  });
+  const resolvedRuntimeCode =
+    runtimeCodePath ||
+    resolveMockRuntimeCode({
+      npmRoot,
+      projectDir,
+      resolveModule,
+    });
 
   return [
     new RstestPlugin({
       injectModulePathName: true,
       importMetaPathName: true,
       hoistMockModule: true,
-      manualMockRoot: path.resolve(projectDir, '__mocks__'),
+      manualMockRoot: path.resolve(projectDir, "__mocks__"),
     }),
     new MeteorRstestMockRuntimePlugin(resolvedRuntimeCode),
   ];
@@ -125,12 +110,12 @@ function createMeteorRstestPlugins({
 
 function enforceMeteorRstestPlugins(config, plugins) {
   if (!plugins.length) return config;
-  config.plugins = (config.plugins || []).filter(plugin =>
-    !INTERNAL_PLUGIN_NAMES.has(plugin?.constructor?.name)
+  config.plugins = (config.plugins || []).filter(
+    (plugin) => !INTERNAL_PLUGIN_NAMES.has(plugin?.constructor?.name),
   );
   config.plugins.push(...plugins);
   config.experiments ||= {};
-  config.experiments.runtimeMode = 'webpack';
+  config.experiments.runtimeMode = "webpack";
   return config;
 }
 

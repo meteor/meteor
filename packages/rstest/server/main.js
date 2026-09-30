@@ -1,231 +1,244 @@
-import { Meteor } from 'meteor/meteor';
-import { WebApp } from 'meteor/webapp';
+import { Meteor } from "meteor/meteor";
+import { WebApp } from "meteor/webapp";
 
-const api = require('../runtime/singleton.js');
+const api = require("../runtime/singleton.js");
 const {
   createResultGate,
   failureResult,
   mergeArchitectureResults,
   settleResultAndInfrastructure,
   validateResult,
-} = require('../runtime/coordinator.js');
+} = require("../runtime/coordinator.js");
 const {
   formatResultFrame,
   formatRuntimeReport,
   shouldEmitResultFrames,
-} = require('../runtime/reporter.js');
-const { writeWorkerResult } = require('./worker-result.js');
-const {
-  cloneCoverageMap,
-  createServerCoverageLifecycle,
-} = require('./coverage.js');
+} = require("../runtime/reporter.js");
+const { writeWorkerResult } = require("./worker-result.js");
+const { cloneCoverageMap, createServerCoverageLifecycle } = require("./coverage.js");
 const {
   createUpstreamServerExecution,
   executeUpstreamServerTests,
-} = require('./upstream-runtime.js');
-const {
-  createLazyRuntimeFactory,
-} = require('../runtime/upstream-runtime.js');
-const {
-  createMeteorSnapshotEnvironment,
-} = require('./snapshot-environment.js');
+} = require("./upstream-runtime.js");
+const { createLazyRuntimeFactory } = require("../runtime/upstream-runtime.js");
+const { createMeteorSnapshotEnvironment } = require("./snapshot-environment.js");
 
 const clientResultGate = createResultGate({ timeoutMs: 600000 });
 const externalResultGate = createResultGate({ timeoutMs: 600000 });
 const workerCompletionGate = createResultGate({ timeoutMs: 600000 });
 const activeMetadata = testMetadata();
-const isRstestActive = activeMetadata.testRunner === 'rstest' &&
-  (!activeMetadata.driverPackage || activeMetadata.driverPackage === 'rstest');
-const runtimeSnapshotEnvironment = isRstestActive && activeMetadata.rstestAppRoot
-  ? createMeteorSnapshotEnvironment({ appRoot: activeMetadata.rstestAppRoot })
-  : null;
+const isRstestActive =
+  activeMetadata.testRunner === "rstest" &&
+  (!activeMetadata.driverPackage || activeMetadata.driverPackage === "rstest");
+const runtimeSnapshotEnvironment =
+  isRstestActive && activeMetadata.rstestAppRoot
+    ? createMeteorSnapshotEnvironment({ appRoot: activeMetadata.rstestAppRoot })
+    : null;
 const coverageLifecycle = isRstestActive
   ? createServerCoverageLifecycle({
-    coverage: activeMetadata.rstestCoverage,
-    expectsClient: activeMetadata.rstestCoverageClient,
-    expectsExternal: activeMetadata.rstestExternal,
-    worker: activeMetadata.rstestWorker,
-  })
+      coverage: activeMetadata.rstestCoverage,
+      expectsClient: activeMetadata.rstestCoverageClient,
+      expectsExternal: activeMetadata.rstestExternal,
+      worker: activeMetadata.rstestWorker,
+    })
   : null;
 
-if (isRstestActive) Meteor.methods({
-  'rstest/getMetadata'() {
-    const metadata = testMetadata();
-    return {
-      protocolVersion: 1,
-      appRoot: metadata.rstestAppRoot || '/',
-      generation: Number(metadata.rstestGeneration || 1),
-      upstreamRuntime: Boolean(metadata.rstestUpstreamRuntime),
-      testNamePattern: metadata.rstestTestNamePattern || null,
-      updateSnapshot: metadata.rstestUpdateSnapshot || 'none',
-      testTimeout: Number(metadata.rstestTestTimeout || 30000),
-      hookTimeout: Number(metadata.rstestHookTimeout || 10000),
-      maxConcurrency: Number(metadata.rstestMaxConcurrency || 5),
-      runtimeConfig: metadata.rstestRuntimeConfig || {},
-      coverage: metadata.rstestCoverage,
-      workerGate: Boolean(metadata.rstestWorkerGate),
-    };
-  },
-  'rstest/submitClientResult'(payload) {
-    const metadata = testMetadata();
-    if (!payload || payload.protocolVersion !== 1 ||
-        payload.generation !== Number(metadata.rstestGeneration || 1) ||
-        payload.token !== metadata.rstestToken || !validateResult(payload.result)) {
-      throw new Meteor.Error(
-        'RSTEST_PROTOCOL_MISMATCH',
-        '[Meteor Rstest] Invalid client result protocol payload.',
-      );
-    }
-    if (!clientResultGate.submit(payload.result)) {
-      throw new Meteor.Error('RSTEST_RESULT_REPLAY', '[Meteor Rstest] Client result already submitted.');
-    }
-    return { accepted: true, protocolVersion: 1 };
-  },
-  async 'rstest/snapshot'(payload) {
-    const metadata = testMetadata();
-    if (!runtimeSnapshotEnvironment || !payload ||
+if (isRstestActive)
+  Meteor.methods({
+    "rstest/getMetadata"() {
+      const metadata = testMetadata();
+      return {
+        protocolVersion: 1,
+        appRoot: metadata.rstestAppRoot || "/",
+        generation: Number(metadata.rstestGeneration || 1),
+        upstreamRuntime: Boolean(metadata.rstestUpstreamRuntime),
+        testNamePattern: metadata.rstestTestNamePattern || null,
+        updateSnapshot: metadata.rstestUpdateSnapshot || "none",
+        testTimeout: Number(metadata.rstestTestTimeout || 30000),
+        hookTimeout: Number(metadata.rstestHookTimeout || 10000),
+        maxConcurrency: Number(metadata.rstestMaxConcurrency || 5),
+        runtimeConfig: metadata.rstestRuntimeConfig || {},
+        coverage: metadata.rstestCoverage,
+        workerGate: Boolean(metadata.rstestWorkerGate),
+      };
+    },
+    "rstest/submitClientResult"(payload) {
+      const metadata = testMetadata();
+      if (
+        !payload ||
         payload.protocolVersion !== 1 ||
         payload.generation !== Number(metadata.rstestGeneration || 1) ||
-        payload.token !== metadata.rstestToken) {
-      throw new Meteor.Error(
-        'RSTEST_PROTOCOL_MISMATCH',
-        '[Meteor Rstest] Invalid snapshot protocol payload.',
-      );
-    }
-    const operation = payload.operation;
-    const assertString = (value, name, maxLength = 16 * 1024) => {
-      if (typeof value !== 'string' || value.length === 0 ||
-          value.length > maxLength) {
+        payload.token !== metadata.rstestToken ||
+        !validateResult(payload.result)
+      ) {
         throw new Meteor.Error(
-          'RSTEST_SNAPSHOT_PAYLOAD',
-          `[Meteor Rstest] Invalid snapshot ${name}.`,
+          "RSTEST_PROTOCOL_MISMATCH",
+          "[Meteor Rstest] Invalid client result protocol payload.",
         );
       }
-      return value;
-    };
-    try {
-      if (operation === 'resolvePath') {
-        return await runtimeSnapshotEnvironment.resolvePath(
-          assertString(payload.filepath, 'filepath'),
+      if (!clientResultGate.submit(payload.result)) {
+        throw new Meteor.Error(
+          "RSTEST_RESULT_REPLAY",
+          "[Meteor Rstest] Client result already submitted.",
         );
       }
-      if (operation === 'resolveRawPath') {
-        return await runtimeSnapshotEnvironment.resolveRawPath(
-          assertString(payload.testPath, 'testPath'),
-          assertString(payload.rawPath, 'rawPath'),
+      return { accepted: true, protocolVersion: 1 };
+    },
+    async "rstest/snapshot"(payload) {
+      const metadata = testMetadata();
+      if (
+        !runtimeSnapshotEnvironment ||
+        !payload ||
+        payload.protocolVersion !== 1 ||
+        payload.generation !== Number(metadata.rstestGeneration || 1) ||
+        payload.token !== metadata.rstestToken
+      ) {
+        throw new Meteor.Error(
+          "RSTEST_PROTOCOL_MISMATCH",
+          "[Meteor Rstest] Invalid snapshot protocol payload.",
         );
       }
-      if (operation === 'read') {
-        const content = await runtimeSnapshotEnvironment.readSnapshotFile(
-          assertString(payload.filepath, 'filepath'),
-        );
-        if (content && content.length > 4 * 1024 * 1024) {
+      const operation = payload.operation;
+      const assertString = (value, name, maxLength = 16 * 1024) => {
+        if (typeof value !== "string" || value.length === 0 || value.length > maxLength) {
           throw new Meteor.Error(
-            'RSTEST_SNAPSHOT_PAYLOAD',
-            '[Meteor Rstest] Snapshot file exceeds 4 MiB.',
+            "RSTEST_SNAPSHOT_PAYLOAD",
+            `[Meteor Rstest] Invalid snapshot ${name}.`,
           );
         }
-        return content;
+        return value;
+      };
+      try {
+        if (operation === "resolvePath") {
+          return await runtimeSnapshotEnvironment.resolvePath(
+            assertString(payload.filepath, "filepath"),
+          );
+        }
+        if (operation === "resolveRawPath") {
+          return await runtimeSnapshotEnvironment.resolveRawPath(
+            assertString(payload.testPath, "testPath"),
+            assertString(payload.rawPath, "rawPath"),
+          );
+        }
+        if (operation === "read") {
+          const content = await runtimeSnapshotEnvironment.readSnapshotFile(
+            assertString(payload.filepath, "filepath"),
+          );
+          if (content && content.length > 4 * 1024 * 1024) {
+            throw new Meteor.Error(
+              "RSTEST_SNAPSHOT_PAYLOAD",
+              "[Meteor Rstest] Snapshot file exceeds 4 MiB.",
+            );
+          }
+          return content;
+        }
+        if (operation === "save" || operation === "remove") {
+          if (metadata.rstestUpdateSnapshot === "none") {
+            throw new Meteor.Error(
+              "RSTEST_SNAPSHOT_UPDATE_DISABLED",
+              "[Meteor Rstest] Snapshot updates require --update-snapshots.",
+            );
+          }
+          const filepath = assertString(payload.filepath, "filepath");
+          if (operation === "save") {
+            await runtimeSnapshotEnvironment.saveSnapshotFile(
+              filepath,
+              assertString(payload.snapshot, "contents", 4 * 1024 * 1024),
+            );
+          } else {
+            await runtimeSnapshotEnvironment.removeSnapshotFile(filepath);
+          }
+          return null;
+        }
+        throw new Meteor.Error(
+          "RSTEST_SNAPSHOT_PAYLOAD",
+          "[Meteor Rstest] Unsupported snapshot operation.",
+        );
+      } catch (error) {
+        if (error instanceof Meteor.Error) throw error;
+        throw new Meteor.Error("RSTEST_SNAPSHOT_IO", error.message);
       }
-      if (operation === 'save' || operation === 'remove') {
-        if (metadata.rstestUpdateSnapshot === 'none') {
-          throw new Meteor.Error(
-            'RSTEST_SNAPSHOT_UPDATE_DISABLED',
-            '[Meteor Rstest] Snapshot updates require --update-snapshots.',
-          );
-        }
-        const filepath = assertString(payload.filepath, 'filepath');
-        if (operation === 'save') {
-          await runtimeSnapshotEnvironment.saveSnapshotFile(
-            filepath,
-            assertString(payload.snapshot, 'contents', 4 * 1024 * 1024),
-          );
-        } else {
-          await runtimeSnapshotEnvironment.removeSnapshotFile(filepath);
-        }
-        return null;
-      }
-      throw new Meteor.Error(
-        'RSTEST_SNAPSHOT_PAYLOAD',
-        '[Meteor Rstest] Unsupported snapshot operation.',
-      );
-    } catch (error) {
-      if (error instanceof Meteor.Error) throw error;
-      throw new Meteor.Error('RSTEST_SNAPSHOT_IO', error.message);
-    }
-  },
-});
+    },
+  });
 
 if (isRstestActive && coverageLifecycle && coverageLifecycle.handler) {
-  WebApp.connectHandlers.use(
-    '/__meteor__/rstest/coverage',
-    coverageLifecycle.handler,
-  );
+  WebApp.connectHandlers.use("/__meteor__/rstest/coverage", coverageLifecycle.handler);
 }
 
-if (isRstestActive) WebApp.connectHandlers.use('/__meteor__/rstest/external', (request, response, next) => {
-  if (request.method !== 'POST') return next();
-  let body = '';
-  request.setEncoding('utf8');
-  request.on('data', chunk => {
-    body += chunk;
-    if (body.length > 1024 * 1024) request.destroy();
-  });
-  request.on('end', () => {
-    try {
-      const payload = JSON.parse(body);
-      const metadata = testMetadata();
-      const requestToken = request.headers['x-meteor-rstest-token'];
-      const requestOrigin = request.headers.origin;
-      if (requestOrigin && new URL(requestOrigin).host !== request.headers.host) {
-        throw new Error('Invalid external result origin.');
-      }
-      if (!payload || payload.protocolVersion !== 1 ||
+if (isRstestActive)
+  WebApp.connectHandlers.use("/__meteor__/rstest/external", (request, response, next) => {
+    if (request.method !== "POST") return next();
+    let body = "";
+    request.setEncoding("utf8");
+    request.on("data", (chunk) => {
+      body += chunk;
+      if (body.length > 1024 * 1024) request.destroy();
+    });
+    request.on("end", () => {
+      try {
+        const payload = JSON.parse(body);
+        const metadata = testMetadata();
+        const requestToken = request.headers["x-meteor-rstest-token"];
+        const requestOrigin = request.headers.origin;
+        if (requestOrigin && new URL(requestOrigin).host !== request.headers.host) {
+          throw new Error("Invalid external result origin.");
+        }
+        if (
+          !payload ||
+          payload.protocolVersion !== 1 ||
           payload.generation !== Number(metadata.rstestGeneration || 1) ||
-          requestToken !== metadata.rstestToken || !validateResult(payload.result)) {
-        throw new Error('Invalid external result protocol payload.');
+          requestToken !== metadata.rstestToken ||
+          !validateResult(payload.result)
+        ) {
+          throw new Error("Invalid external result protocol payload.");
+        }
+        if (!externalResultGate.submit(payload.result)) {
+          response.writeHead(409, { "content-type": "application/json" });
+          response.end(JSON.stringify({ error: "External result already submitted." }));
+          return;
+        }
+        response.writeHead(200, { "content-type": "application/json" });
+        response.end(JSON.stringify({ accepted: true, protocolVersion: 1 }));
+      } catch (error) {
+        response.writeHead(400, { "content-type": "application/json" });
+        response.end(JSON.stringify({ error: error.message }));
       }
-      if (!externalResultGate.submit(payload.result)) {
-        response.writeHead(409, { 'content-type': 'application/json' });
-        response.end(JSON.stringify({ error: 'External result already submitted.' }));
-        return;
+    });
+  });
+
+if (isRstestActive)
+  WebApp.connectHandlers.use("/__meteor__/rstest/worker-complete", (request, response, next) => {
+    if (request.method !== "POST") return next();
+    const metadata = testMetadata();
+    try {
+      const requestToken = request.headers["x-meteor-rstest-token"];
+      const generation = Number(request.headers["x-meteor-rstest-generation"]);
+      if (
+        requestToken !== metadata.rstestToken ||
+        generation !== Number(metadata.rstestGeneration || 1) ||
+        !workerCompletionGate.submit({ accepted: true })
+      ) {
+        throw new Error("Invalid or replayed runtime worker completion signal.");
       }
-      response.writeHead(200, { 'content-type': 'application/json' });
+      response.writeHead(200, { "content-type": "application/json" });
       response.end(JSON.stringify({ accepted: true, protocolVersion: 1 }));
     } catch (error) {
-      response.writeHead(400, { 'content-type': 'application/json' });
+      response.writeHead(400, { "content-type": "application/json" });
       response.end(JSON.stringify({ error: error.message }));
     }
   });
-});
-
-if (isRstestActive) WebApp.connectHandlers.use('/__meteor__/rstest/worker-complete', (request, response, next) => {
-  if (request.method !== 'POST') return next();
-  const metadata = testMetadata();
-  try {
-    const requestToken = request.headers['x-meteor-rstest-token'];
-    const generation = Number(request.headers['x-meteor-rstest-generation']);
-    if (requestToken !== metadata.rstestToken ||
-        generation !== Number(metadata.rstestGeneration || 1) ||
-        !workerCompletionGate.submit({ accepted: true })) {
-      throw new Error('Invalid or replayed runtime worker completion signal.');
-    }
-    response.writeHead(200, { 'content-type': 'application/json' });
-    response.end(JSON.stringify({ accepted: true, protocolVersion: 1 }));
-  } catch (error) {
-    response.writeHead(400, { 'content-type': 'application/json' });
-    response.end(JSON.stringify({ error: error.message }));
-  }
-});
 
 export const __registerTestFileLoader = api.registerTestFileLoader;
 export const __setRstestRuntimeFactory = api.setRstestRuntimeFactory;
 
 function testMetadata() {
   try {
-    const metadata = JSON.parse(process.env.TEST_METADATA || '{}');
-    if (metadata.testRunner && typeof metadata.testRunner === 'object' &&
-        metadata.testRunner.id === 'rstest') {
+    const metadata = JSON.parse(process.env.TEST_METADATA || "{}");
+    if (
+      metadata.testRunner &&
+      typeof metadata.testRunner === "object" &&
+      metadata.testRunner.id === "rstest"
+    ) {
       const payload = metadata.testRunner.payload || {};
       return {
         ...metadata,
@@ -278,7 +291,7 @@ function serverRuntimeOptions(metadata, generation) {
       appRoot: metadata.rstestAppRoot,
       generation,
       testNamePattern: metadata.rstestTestNamePattern,
-      updateSnapshot: metadata.rstestUpdateSnapshot || 'none',
+      updateSnapshot: metadata.rstestUpdateSnapshot || "none",
     },
   };
 }
@@ -298,44 +311,49 @@ async function executeTests({ serverResult: preparedServerResult } = {}) {
 
   if (metadata.rstestRuntimeServer) {
     const options = serverRuntimeOptions(metadata, generation);
-    const serverResult = preparedServerResult !== undefined
-      ? preparedServerResult
-      : await executeUpstreamServerTests(options);
-    const entry = { architecture: 'server', result: serverResult };
+    const serverResult =
+      preparedServerResult !== undefined
+        ? preparedServerResult
+        : await executeUpstreamServerTests(options);
+    const entry = { architecture: "server", result: serverResult };
     results.push(entry);
     runtimeResults.push(entry);
     if (coverageLifecycle && coverageLifecycle.enabled && !metadata.rstestWorker) {
       try {
         coverageLifecycle.captureServer();
       } catch (error) {
-        retainCoverageFailure(error, 'Meteor server coverage', 'coverage-server');
+        retainCoverageFailure(error, "Meteor server coverage", "coverage-server");
       }
     }
-  } else if (coverageLifecycle && coverageLifecycle.enabled &&
-      metadata.rstestCoverageServer !== false) {
+  } else if (
+    coverageLifecycle &&
+    coverageLifecycle.enabled &&
+    metadata.rstestCoverageServer !== false
+  ) {
     try {
       coverageLifecycle.captureServer();
     } catch (error) {
-      retainCoverageFailure(error, 'Meteor server coverage', 'coverage-server');
+      retainCoverageFailure(error, "Meteor server coverage", "coverage-server");
     }
   }
 
   if (metadata.rstestRuntimeClient) {
     const settled = await settleResultAndInfrastructure({
       waitForResult: () => clientResultGate.wait(),
-      waitForInfrastructure: coverageLifecycle && metadata.rstestCoverageClient
-        ? () => coverageLifecycle.waitForClient()
-        : null,
-      resultFailureName: 'Meteor client executor result',
-      infrastructureFailureName: 'Meteor client coverage',
+      waitForInfrastructure:
+        coverageLifecycle && metadata.rstestCoverageClient
+          ? () => coverageLifecycle.waitForClient()
+          : null,
+      resultFailureName: "Meteor client executor result",
+      infrastructureFailureName: "Meteor client coverage",
     });
     const clientResult = settled.result;
-    const entry = { architecture: 'web.browser', result: clientResult };
+    const entry = { architecture: "web.browser", result: clientResult };
     results.push(entry);
     runtimeResults.push(entry);
     if (settled.infrastructureFailure) {
       coverageFailures.push({
-        architecture: 'coverage-client',
+        architecture: "coverage-client",
         result: settled.infrastructureFailure,
       });
     }
@@ -343,24 +361,22 @@ async function executeTests({ serverResult: preparedServerResult } = {}) {
     try {
       await coverageLifecycle.waitForClient();
     } catch (error) {
-      retainCoverageFailure(error, 'Meteor client coverage', 'coverage-client');
+      retainCoverageFailure(error, "Meteor client coverage", "coverage-client");
     }
   }
 
   if (metadata.rstestExternal) {
     const settled = await settleResultAndInfrastructure({
       waitForResult: () => externalResultGate.wait(),
-      waitForInfrastructure: coverageLifecycle
-        ? () => coverageLifecycle.waitForExternal()
-        : null,
-      resultFailureName: 'External Rstest project result',
-      infrastructureFailureName: 'External browser coverage',
+      waitForInfrastructure: coverageLifecycle ? () => coverageLifecycle.waitForExternal() : null,
+      resultFailureName: "External Rstest project result",
+      infrastructureFailureName: "External browser coverage",
     });
     const externalResult = settled.result;
-    results.push({ architecture: 'external', result: externalResult });
+    results.push({ architecture: "external", result: externalResult });
     if (settled.infrastructureFailure) {
       coverageFailures.push({
-        architecture: 'coverage-external',
+        architecture: "coverage-external",
         result: settled.infrastructureFailure,
       });
     }
@@ -375,7 +391,7 @@ async function executeTests({ serverResult: preparedServerResult } = {}) {
         workerCoverage = cloneCoverageMap(globalThis.__coverage__);
       } catch (error) {
         workerCoverage = {};
-        retainCoverageFailure(error, 'Meteor worker coverage', 'coverage-worker');
+        retainCoverageFailure(error, "Meteor worker coverage", "coverage-worker");
       }
     }
     const result = mergeArchitectureResults([...results, ...coverageFailures]);
@@ -391,11 +407,13 @@ async function executeTests({ serverResult: preparedServerResult } = {}) {
     const result = mergeArchitectureResults(resultEntries);
     if (shouldEmitResultFrames()) {
       for (const entry of resultEntries) {
-        console.log(formatResultFrame({
-          architecture: entry.architecture,
-          generation,
-          result: entry.result,
-        }));
+        console.log(
+          formatResultFrame({
+            architecture: entry.architecture,
+            generation,
+            result: entry.result,
+          }),
+        );
       }
     }
     const report = formatRuntimeReport({
@@ -421,7 +439,7 @@ async function executeTests({ serverResult: preparedServerResult } = {}) {
 let started = false;
 
 function failRun(error) {
-  console.error(error && error.stack || error);
+  console.error((error && error.stack) || error);
   process.exit(1);
 }
 
@@ -431,9 +449,7 @@ async function startUpstreamServerLifecycle() {
   await api.waitUntilRstestRuntimeReady();
   const metadata = testMetadata();
   const generation = Number(metadata.rstestGeneration || 1);
-  const execution = createUpstreamServerExecution(
-    serverRuntimeOptions(metadata, generation),
-  );
+  const execution = createUpstreamServerExecution(serverRuntimeOptions(metadata, generation));
 
   const collectNext = async () => {
     if (!execution.hasNext()) {

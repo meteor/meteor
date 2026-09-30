@@ -1,18 +1,16 @@
-const { createRequire } = require('node:module');
-const crypto = require('node:crypto');
-const fs = require('node:fs');
-const path = require('node:path');
+const { createRequire } = require("node:module");
+const crypto = require("node:crypto");
+const fs = require("node:fs");
+const path = require("node:path");
 const {
   cleanupCoverageFilesDirectory,
   pinCoverageDirectory,
   readCoverageArtifact,
   writeCoverageArtifact,
-} = require('./artifact.js');
+} = require("./artifact.js");
 
-const coverageProviderRequire = createRequire(
-  require.resolve('@rstest/coverage-istanbul'),
-);
-const { createCoverageMap } = coverageProviderRequire('istanbul-lib-coverage');
+const coverageProviderRequire = createRequire(require.resolve("@rstest/coverage-istanbul"));
+const { createCoverageMap } = coverageProviderRequire("istanbul-lib-coverage");
 
 const COVERAGE_CHUNK_BYTES = 128 * 1024;
 const MAX_COVERAGE_BYTES = 64 * 1024 * 1024;
@@ -23,7 +21,7 @@ const browserTypeInterceptions = new WeakMap();
 
 function coverageError(message) {
   const error = new Error(`[Meteor Rstest] ${message}`);
-  error.code = 'METEOR_RSTEST_PLAYWRIGHT_COVERAGE';
+  error.code = "METEOR_RSTEST_PLAYWRIGHT_COVERAGE";
   return error;
 }
 
@@ -32,27 +30,23 @@ function cloneJson(value) {
 }
 
 function resolveProjectPlaywrightEntry(projectRoot) {
-  const projectRequire = createRequire(path.join(projectRoot, 'package.json'));
-  const packageJsonPath = projectRequire.resolve('@rstest/playwright/package.json');
-  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-  const rootExport = packageJson.exports && packageJson.exports['.'];
-  const importEntry = typeof rootExport === 'string'
-    ? rootExport
-    : rootExport && rootExport.import;
-  if (typeof importEntry !== 'string') {
-    throw coverageError(
-      'Project-owned @rstest/playwright does not expose an ESM import entry.',
-    );
+  const projectRequire = createRequire(path.join(projectRoot, "package.json"));
+  const packageJsonPath = projectRequire.resolve("@rstest/playwright/package.json");
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+  const rootExport = packageJson.exports && packageJson.exports["."];
+  const importEntry = typeof rootExport === "string" ? rootExport : rootExport && rootExport.import;
+  if (typeof importEntry !== "string") {
+    throw coverageError("Project-owned @rstest/playwright does not expose an ESM import entry.");
   }
   return path.resolve(path.dirname(packageJsonPath), importEntry);
 }
 
 function resolveProjectPlaywrightModuleEntry(projectRoot) {
-  const projectRequire = createRequire(path.join(projectRoot, 'package.json'));
+  const projectRequire = createRequire(path.join(projectRoot, "package.json"));
   try {
-    return projectRequire.resolve('playwright');
+    return projectRequire.resolve("playwright");
   } catch {
-    throw coverageError('Project-owned playwright browser module is unavailable.');
+    throw coverageError("Project-owned playwright browser module is unavailable.");
   }
 }
 
@@ -63,11 +57,15 @@ function installFixturelessPlaywrightCoverageLifecycle({
   afterAll,
   directory,
 }) {
-  if (!collector || typeof collector.install !== 'function' ||
-      typeof collector.captureRemaining !== 'function' ||
-      typeof collector.writeShard !== 'function' ||
-      typeof afterEach !== 'function' || typeof afterAll !== 'function') {
-    throw coverageError('Playwright coverage lifecycle is invalid.');
+  if (
+    !collector ||
+    typeof collector.install !== "function" ||
+    typeof collector.captureRemaining !== "function" ||
+    typeof collector.writeShard !== "function" ||
+    typeof afterEach !== "function" ||
+    typeof afterAll !== "function"
+  ) {
+    throw coverageError("Playwright coverage lifecycle is invalid.");
   }
   const restore = interceptPlaywrightBrowserTypes({ playwright, collector });
   afterEach(async () => {
@@ -84,25 +82,28 @@ function installFixturelessPlaywrightCoverageLifecycle({
 }
 
 function interceptPlaywrightBrowserTypes({ playwright, collector }) {
-  if (!playwright || (typeof playwright !== 'object' &&
-      typeof playwright !== 'function')) {
-    throw coverageError('Project-owned playwright browser module is invalid.');
+  if (!playwright || (typeof playwright !== "object" && typeof playwright !== "function")) {
+    throw coverageError("Project-owned playwright browser module is invalid.");
   }
-  const methods = ['launch', 'connect', 'connectOverCDP', 'launchPersistentContext'];
-  const browserTypes = [...new Set(['chromium', 'firefox', 'webkit'].map(name =>
-    playwright[name]
-  ).filter(value => value && (typeof value === 'object' || typeof value === 'function')))];
+  const methods = ["launch", "connect", "connectOverCDP", "launchPersistentContext"];
+  const browserTypes = [
+    ...new Set(
+      ["chromium", "firefox", "webkit"]
+        .map((name) => playwright[name])
+        .filter((value) => value && (typeof value === "object" || typeof value === "function")),
+    ),
+  ];
   const patches = [];
   for (const browserType of browserTypes) {
     const existing = browserTypeInterceptions.get(browserType);
     if (existing) {
       if (existing.collector !== collector) {
-        throw coverageError('Playwright browser coverage interception is already active.');
+        throw coverageError("Playwright browser coverage interception is already active.");
       }
       continue;
     }
     for (const method of methods) {
-      if (typeof browserType[method] === 'function') {
+      if (typeof browserType[method] === "function") {
         patches.push({ browserType, method, original: browserType[method] });
       }
     }
@@ -121,10 +122,9 @@ function interceptPlaywrightBrowserTypes({ playwright, collector }) {
   for (const patch of patches) {
     patch.wrapped = async function meteorRstestCoverageBrowserTypeMethod(...args) {
       const result = await Reflect.apply(patch.original, this, args);
-      if (patch.method === 'launchPersistentContext') {
-        const browser = result && typeof result.browser === 'function'
-          ? result.browser()
-          : undefined;
+      if (patch.method === "launchPersistentContext") {
+        const browser =
+          result && typeof result.browser === "function" ? result.browser() : undefined;
         await collector.install({ browser, context: result });
       } else {
         await collector.install({ browser: result });
@@ -138,11 +138,13 @@ function interceptPlaywrightBrowserTypes({ playwright, collector }) {
 }
 
 function assertShardDirectory({ directory, generation }) {
-  if (!path.isAbsolute(directory || '') ||
-      !GENERATION_PATTERN.test(generation || '') ||
-      path.basename(directory) !== 'e2e-shards' ||
-      path.basename(path.dirname(directory)) !== generation) {
-    throw coverageError('Playwright coverage shard directory is invalid.');
+  if (
+    !path.isAbsolute(directory || "") ||
+    !GENERATION_PATTERN.test(generation || "") ||
+    path.basename(directory) !== "e2e-shards" ||
+    path.basename(path.dirname(directory)) !== generation
+  ) {
+    throw coverageError("Playwright coverage shard directory is invalid.");
   }
 }
 
@@ -150,18 +152,18 @@ async function writeCoverageShard({
   directory,
   generation,
   coverage,
-  shardId = crypto.randomBytes(16).toString('hex'),
+  shardId = crypto.randomBytes(16).toString("hex"),
   fileSystemCapabilities,
 }) {
   assertShardDirectory({ directory, generation });
-  if (!SHARD_ID_PATTERN.test(shardId || '')) {
-    throw coverageError('Playwright coverage shard identity is invalid.');
+  if (!SHARD_ID_PATTERN.test(shardId || "")) {
+    throw coverageError("Playwright coverage shard identity is invalid.");
   }
   const normalized = createCoverageMap(cloneJson(coverage)).toJSON();
   const artifact = {
     schemaVersion: 1,
     generation,
-    producer: 'e2e',
+    producer: "e2e",
     shardId,
     coverage: normalized,
   };
@@ -174,19 +176,15 @@ async function writeCoverageShard({
       fileSystemCapabilities,
     });
   } catch (error) {
-    if (error.code === 'METEOR_RSTEST_COVERAGE_REPLAY') {
-      throw coverageError('Playwright coverage shard identity was replayed.');
+    if (error.code === "METEOR_RSTEST_COVERAGE_REPLAY") {
+      throw coverageError("Playwright coverage shard identity was replayed.");
     }
     throw error;
   }
   return { written: true, path: outputPath, shardId };
 }
 
-function readCoverageShards({
-  directory,
-  generation,
-  fileSystemCapabilities,
-}) {
+function readCoverageShards({ directory, generation, fileSystemCapabilities }) {
   assertShardDirectory({ directory, generation });
   const pinned = pinCoverageDirectory({ directory, fileSystemCapabilities });
   const merged = createCoverageMap({});
@@ -198,7 +196,7 @@ function readCoverageShards({
     for (const filename of filenames) {
       const match = /^([a-f0-9]{32})\.json$/.exec(filename);
       if (!match) {
-        throw coverageError('Playwright coverage shard filename is invalid.');
+        throw coverageError("Playwright coverage shard filename is invalid.");
       }
       const shardId = match[1];
       const filePath = path.join(directory, filename);
@@ -206,13 +204,13 @@ function readCoverageShards({
         filePath,
         expectedPath: filePath,
         generation,
-        producer: 'e2e',
+        producer: "e2e",
         consumed,
         fileSystemCapabilities,
         expectedParentStat: pinned.stat,
       });
       if (artifact.shardId !== shardId) {
-        throw coverageError('Playwright coverage shard schema is invalid or stale.');
+        throw coverageError("Playwright coverage shard schema is invalid or stale.");
       }
       merged.merge(artifact.coverage);
       shards += 1;
@@ -222,16 +220,12 @@ function readCoverageShards({
     pinned.close();
   }
   if (shards === 0) {
-    throw coverageError('External Rstest produced no Playwright coverage shards.');
+    throw coverageError("External Rstest produced no Playwright coverage shards.");
   }
   return { coverage: merged.toJSON(), shards };
 }
 
-function cleanupCoverageShardDirectory({
-  directory,
-  generation,
-  fileSystemCapabilities,
-}) {
+function cleanupCoverageShardDirectory({ directory, generation, fileSystemCapabilities }) {
   assertShardDirectory({ directory, generation });
   return cleanupCoverageFilesDirectory({
     directory,
@@ -280,10 +274,14 @@ function createBrowserCaptureScripts(bindingName) {
 }
 
 function serializeCoverageFrames({ generation, token, producer, coverage }) {
-  if (!GENERATION_PATTERN.test(generation || '') ||
-      !PRODUCER_PATTERN.test(producer || '') ||
-      typeof token !== 'string' || token.length === 0 || token.length > 512) {
-    throw coverageError('Playwright coverage identity is invalid.');
+  if (
+    !GENERATION_PATTERN.test(generation || "") ||
+    !PRODUCER_PATTERN.test(producer || "") ||
+    typeof token !== "string" ||
+    token.length === 0 ||
+    token.length > 512
+  ) {
+    throw coverageError("Playwright coverage identity is invalid.");
   }
   const artifact = {
     schemaVersion: 1,
@@ -293,29 +291,29 @@ function serializeCoverageFrames({ generation, token, producer, coverage }) {
   };
   const bytes = Buffer.from(JSON.stringify(artifact));
   if (bytes.byteLength > MAX_COVERAGE_BYTES) {
-    throw coverageError('Playwright coverage artifact exceeds the 64 MiB limit.');
+    throw coverageError("Playwright coverage artifact exceeds the 64 MiB limit.");
   }
   const chunks = [];
   for (let offset = 0; offset < bytes.byteLength; offset += COVERAGE_CHUNK_BYTES) {
-    chunks.push(bytes.subarray(offset, offset + COVERAGE_CHUNK_BYTES).toString('base64'));
+    chunks.push(bytes.subarray(offset, offset + COVERAGE_CHUNK_BYTES).toString("base64"));
   }
   const common = { protocolVersion: 1, generation, token, producer };
   return [
-    { ...common, type: 'begin', size: bytes.byteLength, chunks: chunks.length },
+    { ...common, type: "begin", size: bytes.byteLength, chunks: chunks.length },
     ...chunks.map((data, sequence) => ({
       ...common,
-      type: 'chunk',
+      type: "chunk",
       sequence,
       data,
     })),
-    { ...common, type: 'commit', size: bytes.byteLength, chunks: chunks.length },
+    { ...common, type: "commit", size: bytes.byteLength, chunks: chunks.length },
   ];
 }
 
 async function responseMessage(response) {
   try {
     const payload = await response.json();
-    if (payload && typeof payload.error === 'string') return payload.error;
+    if (payload && typeof payload.error === "string") return payload.error;
   } catch {}
   return `HTTP ${response && response.status}`;
 }
@@ -325,17 +323,17 @@ function coverageEndpoint(baseUrl) {
   try {
     base = new URL(baseUrl);
   } catch {
-    throw coverageError('Playwright coverage base URL is invalid.');
+    throw coverageError("Playwright coverage base URL is invalid.");
   }
-  base.pathname = `${base.pathname.replace(/\/$/, '')}/`;
-  return new URL('__meteor__/rstest/coverage', base);
+  base.pathname = `${base.pathname.replace(/\/$/, "")}/`;
+  return new URL("__meteor__/rstest/coverage", base);
 }
 
 function createPlaywrightCoverageCollector({
   enabled = false,
   generation,
   token,
-  producer = 'e2e',
+  producer = "e2e",
   baseUrl,
   fetch: fetchImpl = global.fetch,
 } = {}) {
@@ -354,8 +352,7 @@ function createPlaywrightCoverageCollector({
   let submitPromise;
   let shardPromise;
   let releasePromise;
-  const bindingName = `__meteorRstestCoverage_${String(generation || 'collector')}_` +
-    crypto.randomBytes(8).toString('hex');
+  const bindingName = `__meteorRstestCoverage_${String(generation || "collector")}_${crypto.randomBytes(8).toString("hex")}`;
   const browserScripts = createBrowserCaptureScripts(bindingName);
 
   async function disposePlaywrightResources(resources) {
@@ -363,10 +360,12 @@ function createPlaywrightCoverageCollector({
     for (const resource of resources) {
       if (!resource) continue;
       try {
-        if (typeof resource.dispose === 'function') {
+        if (typeof resource.dispose === "function") {
           await resource.dispose();
-        } else if (typeof Symbol.asyncDispose === 'symbol' &&
-                   typeof resource[Symbol.asyncDispose] === 'function') {
+        } else if (
+          typeof Symbol.asyncDispose === "symbol" &&
+          typeof resource[Symbol.asyncDispose] === "function"
+        ) {
           await resource[Symbol.asyncDispose]();
         }
       } catch (error) {
@@ -377,7 +376,7 @@ function createPlaywrightCoverageCollector({
     if (errors.length > 1) {
       throw new AggregateError(
         errors,
-        '[Meteor Rstest] Failed to dispose Playwright coverage resources.',
+        "[Meteor Rstest] Failed to dispose Playwright coverage resources.",
       );
     }
   }
@@ -400,16 +399,13 @@ function createPlaywrightCoverageCollector({
           context.close = restoration.originalClose;
         }
         if (restoration.pageListener) {
-          if (typeof context.off === 'function') {
-            context.off('page', restoration.pageListener);
-          } else if (typeof context.removeListener === 'function') {
-            context.removeListener('page', restoration.pageListener);
+          if (typeof context.off === "function") {
+            context.off("page", restoration.pageListener);
+          } else if (typeof context.removeListener === "function") {
+            context.removeListener("page", restoration.pageListener);
           }
         }
-        disposableResources.push(
-          restoration.initScriptDisposable,
-          restoration.bindingDisposable,
-        );
+        disposableResources.push(restoration.initScriptDisposable, restoration.bindingDisposable);
       }
       contextRestorations.clear();
       for (const [browser, restoration] of browserRestorations) {
@@ -435,18 +431,27 @@ function createPlaywrightCoverageCollector({
   }
 
   function recordSnapshot(page, snapshot) {
-    if (!snapshot || typeof snapshot.documentId !== 'string' ||
-        !snapshot.documentId || !snapshot.coverage ||
-        typeof snapshot.coverage !== 'object' || Array.isArray(snapshot.coverage)) {
-      throw coverageError('Playwright page returned an invalid Istanbul snapshot.');
+    if (
+      !snapshot ||
+      typeof snapshot.documentId !== "string" ||
+      !snapshot.documentId ||
+      !snapshot.coverage ||
+      typeof snapshot.coverage !== "object" ||
+      Array.isArray(snapshot.coverage)
+    ) {
+      throw coverageError("Playwright page returned an invalid Istanbul snapshot.");
     }
     const map = createCoverageMap(cloneJson(snapshot.coverage));
     snapshots.set(`${pageId(page)}:${snapshot.documentId}`, map.toJSON());
   }
 
   async function capturePage(page) {
-    if (!enabled || !page || typeof page.evaluate !== 'function' ||
-        typeof page.isClosed === 'function' && page.isClosed()) {
+    if (
+      !enabled ||
+      !page ||
+      typeof page.evaluate !== "function" ||
+      (typeof page.isClosed === "function" && page.isClosed())
+    ) {
       return { captured: false };
     }
     const snapshot = await page.evaluate(browserScripts.read);
@@ -465,8 +470,7 @@ function createPlaywrightCoverageCollector({
   }
 
   function releasePageAfterClose(page, closeCompleted) {
-    if (closeCompleted ||
-        typeof page.isClosed === 'function' && page.isClosed()) {
+    if (closeCompleted || (typeof page.isClosed === "function" && page.isClosed())) {
       releasePageInstrumentation(page);
     }
   }
@@ -474,31 +478,36 @@ function createPlaywrightCoverageCollector({
   async function trackPage(page) {
     if (!page) return;
     if (!pageTracking.has(page)) {
-      pageTracking.set(page, (async () => {
-        trackedPages.add(page);
-        pageId(page);
-        const originalClose = page.close;
-        let wrappedClose;
-        if (typeof originalClose === 'function') {
-          wrappedClose = async function meteorRstestCoveragePageClose(...args) {
-            let closeCompleted = false;
-            try {
-              await capturePage(page);
-              const result = await Reflect.apply(originalClose, this, args);
-              closeCompleted = true;
-              return result;
-            } finally {
-              releasePageAfterClose(page, closeCompleted);
-            }
-          };
-          page.close = wrappedClose;
-        }
-        pageRestorations.set(page, { originalClose, wrappedClose });
-        if (typeof page.evaluate === 'function' &&
-            !(typeof page.isClosed === 'function' && page.isClosed())) {
-          await page.evaluate(browserScripts.install);
-        }
-      })());
+      pageTracking.set(
+        page,
+        (async () => {
+          trackedPages.add(page);
+          pageId(page);
+          const originalClose = page.close;
+          let wrappedClose;
+          if (typeof originalClose === "function") {
+            wrappedClose = async function meteorRstestCoveragePageClose(...args) {
+              let closeCompleted = false;
+              try {
+                await capturePage(page);
+                const result = await Reflect.apply(originalClose, this, args);
+                closeCompleted = true;
+                return result;
+              } finally {
+                releasePageAfterClose(page, closeCompleted);
+              }
+            };
+            page.close = wrappedClose;
+          }
+          pageRestorations.set(page, { originalClose, wrappedClose });
+          if (
+            typeof page.evaluate === "function" &&
+            !(typeof page.isClosed === "function" && page.isClosed())
+          ) {
+            await page.evaluate(browserScripts.install);
+          }
+        })(),
+      );
     }
     return pageTracking.get(page);
   }
@@ -511,14 +520,14 @@ function createPlaywrightCoverageCollector({
     try {
       bindingDisposable = await context.exposeBinding(bindingName, (source, snapshot) => {
         const page = source && source.page;
-        if (!page) throw coverageError('Playwright coverage binding omitted its page.');
+        if (!page) throw coverageError("Playwright coverage binding omitted its page.");
         recordSnapshot(page, snapshot);
       });
       initScriptDisposable = await context.addInitScript(browserScripts.install);
 
       const originalNewPage = context.newPage;
       let wrappedNewPage;
-      if (typeof originalNewPage === 'function') {
+      if (typeof originalNewPage === "function") {
         wrappedNewPage = async function meteorRstestCoverageNewPage(...args) {
           const page = await Reflect.apply(originalNewPage, this, args);
           await trackPage(page);
@@ -528,7 +537,7 @@ function createPlaywrightCoverageCollector({
       }
       const originalClose = context.close;
       let wrappedClose;
-      if (typeof originalClose === 'function') {
+      if (typeof originalClose === "function") {
         wrappedClose = async function meteorRstestCoverageContextClose(...args) {
           const pages = context.pages();
           let closeCompleted = false;
@@ -546,19 +555,19 @@ function createPlaywrightCoverageCollector({
         context.close = wrappedClose;
       }
       let pageListener;
-      if (typeof context.on === 'function') {
-        pageListener = page => {
+      if (typeof context.on === "function") {
+        pageListener = (page) => {
           const tracking = trackPage(page);
           pendingTracking.add(tracking);
           tracking.then(
             () => pendingTracking.delete(tracking),
-            error => {
+            (error) => {
               pendingTracking.delete(tracking);
               trackingErrors.push(error);
             },
           );
         };
-        context.on('page', pageListener);
+        context.on("page", pageListener);
       }
       contextRestorations.set(context, {
         bindingDisposable,
@@ -576,7 +585,7 @@ function createPlaywrightCoverageCollector({
       } catch (disposeError) {
         throw new AggregateError(
           [error, disposeError],
-          '[Meteor Rstest] Failed to install Playwright coverage capture.',
+          "[Meteor Rstest] Failed to install Playwright coverage capture.",
         );
       }
       throw error;
@@ -588,7 +597,7 @@ function createPlaywrightCoverageCollector({
     trackedBrowsers.add(browser);
     const originalNewContext = browser.newContext;
     let wrappedNewContext;
-    if (typeof originalNewContext === 'function') {
+    if (typeof originalNewContext === "function") {
       wrappedNewContext = async function meteorRstestCoverageNewContext(...args) {
         const context = await Reflect.apply(originalNewContext, this, args);
         await trackContext(context);
@@ -598,9 +607,9 @@ function createPlaywrightCoverageCollector({
     }
     const originalClose = browser.close;
     let wrappedClose;
-    if (typeof originalClose === 'function') {
+    if (typeof originalClose === "function") {
       wrappedClose = async function meteorRstestCoverageBrowserClose(...args) {
-        const pages = browser.contexts().flatMap(context => context.pages());
+        const pages = browser.contexts().flatMap((context) => context.pages());
         let closeCompleted = false;
         try {
           for (const page of pages) await capturePage(page);
@@ -634,11 +643,11 @@ function createPlaywrightCoverageCollector({
 
   async function captureRemaining() {
     if (!enabled) return { captured: false };
-    await Promise.all([...pendingTracking]);
+    await Promise.all(pendingTracking);
     if (trackingErrors.length > 0) {
       throw new AggregateError(
         trackingErrors.splice(0),
-        '[Meteor Rstest] Failed to install Playwright page coverage capture.',
+        "[Meteor Rstest] Failed to install Playwright page coverage capture.",
       );
     }
     for (const page of trackedPages) await capturePage(page);
@@ -653,58 +662,60 @@ function createPlaywrightCoverageCollector({
 
   async function submit() {
     if (!enabled) return { submitted: false };
-    if (!submitPromise) submitPromise = (async () => {
-      try {
-        if (typeof fetchImpl !== 'function') {
-          throw coverageError('Playwright coverage upload requires fetch.');
-        }
-        await captureRemaining();
-        const endpoint = coverageEndpoint(baseUrl);
-        const frames = serializeCoverageFrames({
-          generation,
-          token,
-          producer,
-          coverage: mergedCoverage(),
-        });
-        for (const frame of frames) {
-          const response = await fetchImpl(endpoint.href, {
-            method: 'POST',
-            headers: {
-              'content-type': 'application/json',
-              'origin': endpoint.origin,
-              'x-meteor-rstest-token': token,
-            },
-            body: JSON.stringify(frame),
-          });
-          if (!response || !response.ok) {
-            throw coverageError(
-              `Playwright coverage upload was rejected: ${await responseMessage(response)}.`,
-            );
+    if (!submitPromise)
+      submitPromise = (async () => {
+        try {
+          if (typeof fetchImpl !== "function") {
+            throw coverageError("Playwright coverage upload requires fetch.");
           }
+          await captureRemaining();
+          const endpoint = coverageEndpoint(baseUrl);
+          const frames = serializeCoverageFrames({
+            generation,
+            token,
+            producer,
+            coverage: mergedCoverage(),
+          });
+          for (const frame of frames) {
+            const response = await fetchImpl(endpoint.href, {
+              method: "POST",
+              headers: {
+                "content-type": "application/json",
+                origin: endpoint.origin,
+                "x-meteor-rstest-token": token,
+              },
+              body: JSON.stringify(frame),
+            });
+            if (!response || !response.ok) {
+              throw coverageError(
+                `Playwright coverage upload was rejected: ${await responseMessage(response)}.`,
+              );
+            }
+          }
+          return { submitted: true };
+        } finally {
+          await releaseBrowserInstrumentation();
         }
-        return { submitted: true };
-      } finally {
-        await releaseBrowserInstrumentation();
-      }
-    })();
+      })();
     return submitPromise;
   }
 
   async function writeShard({ directory, shardId } = {}) {
     if (!enabled) return { written: false };
-    if (!shardPromise) shardPromise = (async () => {
-      try {
-        await captureRemaining();
-        return await writeCoverageShard({
-          directory,
-          generation,
-          coverage: mergedCoverage(),
-          ...(shardId ? { shardId } : {}),
-        });
-      } finally {
-        await releaseBrowserInstrumentation();
-      }
-    })();
+    if (!shardPromise)
+      shardPromise = (async () => {
+        try {
+          await captureRemaining();
+          return await writeCoverageShard({
+            directory,
+            generation,
+            coverage: mergedCoverage(),
+            ...(shardId ? { shardId } : {}),
+          });
+        } finally {
+          await releaseBrowserInstrumentation();
+        }
+      })();
     return shardPromise;
   }
 

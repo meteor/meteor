@@ -1,64 +1,73 @@
 const STATUS_FIELDS = {
-  pass: 'passed',
-  fail: 'failed',
-  skip: 'skipped',
-  todo: 'todo',
+  pass: "passed",
+  fail: "failed",
+  skip: "skipped",
+  todo: "todo",
 };
 
 function assertTestPath(testPath) {
-  const segments = typeof testPath === 'string' ? testPath.split('/') : [];
+  const segments = typeof testPath === "string" ? testPath.split("/") : [];
   if (
-    typeof testPath !== 'string' ||
+    typeof testPath !== "string" ||
     testPath.length === 0 ||
-    testPath.startsWith('/') ||
-    testPath.includes('\\') ||
-    testPath.includes('\0') ||
-    segments.some(segment => segment === '' || segment === '.' || segment === '..')
+    testPath.startsWith("/") ||
+    testPath.includes("\\") ||
+    testPath.includes("\0") ||
+    segments.some((segment) => segment === "" || segment === "." || segment === "..")
   ) {
     throw new TypeError(
-      '[Meteor Rstest] Upstream result testPath must be a safe app-relative POSIX path.',
+      "[Meteor Rstest] Upstream result testPath must be a safe app-relative POSIX path.",
     );
   }
 }
 
 function normalizeError(error) {
-  if (!error || typeof error !== 'object' || error.name !== 'AssertionError' ||
-      !Object.prototype.hasOwnProperty.call(error, 'actual') ||
-      !Object.prototype.hasOwnProperty.call(error, 'expected')) {
+  if (
+    !error ||
+    typeof error !== "object" ||
+    error.name !== "AssertionError" ||
+    !Object.prototype.hasOwnProperty.call(error, "actual") ||
+    !Object.prototype.hasOwnProperty.call(error, "expected")
+  ) {
     return error;
   }
   const equalityOperators = new Set([
-    '==',
-    '===',
-    'deepequal',
-    'deepstrictequal',
-    'eql',
-    'equal',
-    'equals',
-    'strictequal',
-    'tobe',
-    'toequal',
-    'tostrictequal',
+    "==",
+    "===",
+    "deepequal",
+    "deepstrictequal",
+    "eql",
+    "equal",
+    "equals",
+    "strictequal",
+    "tobe",
+    "toequal",
+    "tostrictequal",
   ]);
   if (error.operator !== undefined) {
-    if (typeof error.operator !== 'string' ||
-        !equalityOperators.has(error.operator.toLowerCase())) {
+    if (
+      typeof error.operator !== "string" ||
+      !equalityOperators.has(error.operator.toLowerCase())
+    ) {
       return error;
     }
-  } else if (typeof error.message !== 'string' || !(
-    /\bto (?:deeply |strictly )?equal\b/i.test(error.message) ||
-    /\bObject\.is equality\b/i.test(error.message)
-  )) {
+  } else if (
+    typeof error.message !== "string" ||
+    !(
+      /\bto (?:deeply |strictly )?equal\b/i.test(error.message) ||
+      /\bObject\.is equality\b/i.test(error.message)
+    )
+  ) {
     return error;
   }
   try {
-    const serializeValue = value => {
-      if (typeof value !== 'string') return JSON.stringify(value);
+    const serializeValue = (value) => {
+      if (typeof value !== "string") return JSON.stringify(value);
       const serialized = value
         .trim()
-        .replace(/\bObject\s+(?=\{)/g, '')
-        .replace(/\bArray\s+(?=\[)/g, '')
-        .replace(/,\s*([}\]])/g, '$1');
+        .replace(/\bObject\s+(?=\{)/g, "")
+        .replace(/\bArray\s+(?=\[)/g, "")
+        .replace(/,\s*([}\]])/g, "$1");
       try {
         return JSON.stringify(JSON.parse(serialized));
       } catch {
@@ -78,11 +87,11 @@ function normalizeError(error) {
 }
 
 function normalizeCase(upstreamCase, fileTestPath) {
-  if (!upstreamCase || typeof upstreamCase !== 'object') {
-    throw new TypeError('[Meteor Rstest] Upstream case must be an object.');
+  if (!upstreamCase || typeof upstreamCase !== "object") {
+    throw new TypeError("[Meteor Rstest] Upstream case must be an object.");
   }
-  if (typeof upstreamCase.name !== 'string' || upstreamCase.name.length === 0) {
-    throw new TypeError('[Meteor Rstest] Upstream case name must be a non-empty string.');
+  if (typeof upstreamCase.name !== "string" || upstreamCase.name.length === 0) {
+    throw new TypeError("[Meteor Rstest] Upstream case name must be a non-empty string.");
   }
   if (!STATUS_FIELDS[upstreamCase.status]) {
     throw new TypeError(
@@ -92,27 +101,21 @@ function normalizeCase(upstreamCase, fileTestPath) {
   const testPath = upstreamCase.testPath || fileTestPath;
   assertTestPath(testPath);
   const parentNames = upstreamCase.parentNames;
-  if (parentNames !== undefined && (
-    !Array.isArray(parentNames) ||
-    parentNames.some(name => typeof name !== 'string')
-  )) {
-    throw new TypeError('[Meteor Rstest] Upstream parentNames must be strings.');
+  if (
+    parentNames !== undefined &&
+    (!Array.isArray(parentNames) || parentNames.some((name) => typeof name !== "string"))
+  ) {
+    throw new TypeError("[Meteor Rstest] Upstream parentNames must be strings.");
   }
 
   return {
     name: upstreamCase.name,
-    fullName: [...(parentNames || []), upstreamCase.name].join(' > '),
+    fullName: [...(parentNames || []), upstreamCase.name].join(" > "),
     status: upstreamCase.status,
     testPath,
-    ...(upstreamCase.duration === undefined
-      ? {}
-      : { duration: upstreamCase.duration }),
-    ...(upstreamCase.retryCount === undefined
-      ? {}
-      : { retryCount: upstreamCase.retryCount }),
-    ...(upstreamCase.retryErrors === undefined
-      ? {}
-      : { retryErrors: upstreamCase.retryErrors }),
+    ...(upstreamCase.duration === undefined ? {} : { duration: upstreamCase.duration }),
+    ...(upstreamCase.retryCount === undefined ? {} : { retryCount: upstreamCase.retryCount }),
+    ...(upstreamCase.retryErrors === undefined ? {} : { retryErrors: upstreamCase.retryErrors }),
     ...(upstreamCase.meta === undefined ? {} : { meta: upstreamCase.meta }),
     ...(upstreamCase.errors === undefined
       ? {}
@@ -122,17 +125,17 @@ function normalizeCase(upstreamCase, fileTestPath) {
 
 function normalizeUpstreamFileResults(files) {
   if (!Array.isArray(files)) {
-    throw new TypeError('[Meteor Rstest] Upstream file results must be an array.');
+    throw new TypeError("[Meteor Rstest] Upstream file results must be an array.");
   }
   const cases = [];
 
   for (const file of files) {
-    if (!file || typeof file !== 'object') {
-      throw new TypeError('[Meteor Rstest] Upstream file result must be an object.');
+    if (!file || typeof file !== "object") {
+      throw new TypeError("[Meteor Rstest] Upstream file result must be an object.");
     }
     assertTestPath(file.testPath);
     if (!Array.isArray(file.results)) {
-      throw new TypeError('[Meteor Rstest] Upstream file results must be an array.');
+      throw new TypeError("[Meteor Rstest] Upstream file results must be an array.");
     }
     for (const upstreamCase of file.results) {
       cases.push(normalizeCase(upstreamCase, file.testPath));

@@ -13,9 +13,11 @@ function createResultGate({ timeoutMs = 30000 } = {}) {
       resolvePending = resolve;
       rejectPending = reject;
       timer = setTimeout(() => {
-        rejectPending(new Error(
-          `[Meteor Rstest] Did not receive Meteor client Rstest result after ${timeoutMs}ms.`,
-        ));
+        rejectPending(
+          new Error(
+            `[Meteor Rstest] Did not receive Meteor client Rstest result after ${timeoutMs}ms.`,
+          ),
+        );
       }, timeoutMs);
     });
     return pending;
@@ -38,17 +40,19 @@ function mergeArchitectureResults(entries) {
     return {
       ok: false,
       stats: { total: 1, passed: 0, failed: 1, skipped: 0, todo: 0 },
-      cases: [{
-        name: 'Meteor Rstest architecture selection',
-        fullName: 'Meteor Rstest architecture selection',
-        status: 'fail',
-        duration: 0,
-        architecture: 'coordinator',
-        error: {
-          name: 'Error',
-          message: '[Meteor Rstest] No supported test architecture was selected.',
+      cases: [
+        {
+          name: "Meteor Rstest architecture selection",
+          fullName: "Meteor Rstest architecture selection",
+          status: "fail",
+          duration: 0,
+          architecture: "coordinator",
+          error: {
+            name: "Error",
+            message: "[Meteor Rstest] No supported test architecture was selected.",
+          },
         },
-      }],
+      ],
     };
   }
   const stats = { total: 0, passed: 0, failed: 0, skipped: 0, todo: 0 };
@@ -73,17 +77,19 @@ function failureResult(error, name) {
   return {
     ok: false,
     stats: { total: 1, passed: 0, failed: 1, skipped: 0, todo: 0 },
-    cases: [{
-      name,
-      fullName: name,
-      status: 'fail',
-      duration: 0,
-      error: {
-        name: failure.name,
-        message: failure.message,
-        stack: failure.stack,
+    cases: [
+      {
+        name,
+        fullName: name,
+        status: "fail",
+        duration: 0,
+        error: {
+          name: failure.name,
+          message: failure.message,
+          stack: failure.stack,
+        },
       },
-    }],
+    ],
   };
 }
 
@@ -111,27 +117,46 @@ async function settleResultAndInfrastructure({
 }
 
 function validateResult(result) {
-  if (!result || typeof result !== 'object' || typeof result.ok !== 'boolean' ||
-      !result.stats || typeof result.stats !== 'object' || !Array.isArray(result.cases)) {
+  if (
+    !result ||
+    typeof result !== "object" ||
+    typeof result.ok !== "boolean" ||
+    !result.stats ||
+    typeof result.stats !== "object" ||
+    !Array.isArray(result.cases)
+  ) {
     return false;
   }
-  const fields = ['total', 'passed', 'failed', 'skipped', 'todo'];
-  if (fields.some(field => !Number.isSafeInteger(result.stats[field]) || result.stats[field] < 0)) {
+  const fields = ["total", "passed", "failed", "skipped", "todo"];
+  if (
+    fields.some((field) => !Number.isSafeInteger(result.stats[field]) || result.stats[field] < 0)
+  ) {
     return false;
   }
-  const statuses = new Set(['pass', 'fail', 'skip', 'todo']);
-  if (result.cases.some(item => !item || typeof item.name !== 'string' ||
-      !statuses.has(item.status) || item.testPath !== undefined && (
-        typeof item.testPath !== 'string' || item.testPath.length === 0 ||
-        /^(?:[A-Za-z]:)?\//.test(item.testPath) || item.testPath.includes('\\') ||
-        item.testPath.split('/').includes('..')
-      ))) {
+  const statuses = new Set(["pass", "fail", "skip", "todo"]);
+  if (
+    result.cases.some(
+      (item) =>
+        !item ||
+        typeof item.name !== "string" ||
+        !statuses.has(item.status) ||
+        (item.testPath !== undefined &&
+          (typeof item.testPath !== "string" ||
+            item.testPath.length === 0 ||
+            /^(?:[A-Za-z]:)?\//.test(item.testPath) ||
+            item.testPath.includes("\\") ||
+            item.testPath.split("/").includes(".."))),
+    )
+  ) {
     return false;
   }
-  const counted = result.stats.passed + result.stats.failed +
-    result.stats.skipped + result.stats.todo;
-  return result.stats.total === counted && result.cases.length === counted &&
-    result.ok === (result.stats.failed === 0);
+  const counted =
+    result.stats.passed + result.stats.failed + result.stats.skipped + result.stats.todo;
+  return (
+    result.stats.total === counted &&
+    result.cases.length === counted &&
+    result.ok === (result.stats.failed === 0)
+  );
 }
 
 module.exports = {

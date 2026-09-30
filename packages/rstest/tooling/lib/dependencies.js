@@ -7,31 +7,31 @@ const {
   DEFAULT_METEOR_RSTEST_VERSION,
   DEFAULT_RSTEST_VERSION,
   GLOBAL_STATE_KEYS,
-} = require('./constants.js');
+} = require("./constants.js");
 
 function getRstestDependencies(env = process.env) {
   return [
     {
-      name: '@meteorjs/rstest',
+      name: "@meteorjs/rstest",
       version: DEFAULT_METEOR_RSTEST_VERSION,
       spec: env.METEOR_RSTEST_NPM_SPEC || DEFAULT_METEOR_RSTEST_VERSION,
     },
-    { name: '@rstest/core', version: DEFAULT_RSTEST_VERSION },
-    { name: '@rstest/adapter-rspack', version: DEFAULT_RSTEST_VERSION },
-  ].map(dependency => ({
+    { name: "@rstest/core", version: DEFAULT_RSTEST_VERSION },
+    { name: "@rstest/adapter-rspack", version: DEFAULT_RSTEST_VERSION },
+  ].map((dependency) => ({
     ...dependency,
     spec: dependency.spec || dependency.version,
-    semverCondition: 'eq',
+    semverCondition: "eq",
     dev: true,
     exact: true,
   }));
 }
 
 function loadServices() {
-  const globalState = require('meteor/tools-core/lib/global-state');
-  const log = require('meteor/tools-core/lib/log');
-  const meteor = require('meteor/tools-core/lib/meteor');
-  const npm = require('meteor/tools-core/lib/npm');
+  const globalState = require("meteor/tools-core/lib/global-state");
+  const log = require("meteor/tools-core/lib/log");
+  const meteor = require("meteor/tools-core/lib/meteor");
+  const npm = require("meteor/tools-core/lib/npm");
   return {
     ...globalState,
     ...log,
@@ -54,8 +54,7 @@ function dependencyVersionMatches(dependency, appDir, services) {
 }
 
 function isLocalDependencySpec(spec) {
-  return typeof spec === 'string' &&
-    /^(?:file:|link:|workspace:|\.{1,2}[\\/]|[\\/])/.test(spec);
+  return typeof spec === "string" && /^(?:file:|link:|workspace:|\.{1,2}[\\/]|[\\/])/.test(spec);
 }
 
 function getDependencyInstallSpec(dependency, services, appDir) {
@@ -64,11 +63,11 @@ function getDependencyInstallSpec(dependency, services, appDir) {
   try {
     packageJson = services.getMeteorAppPackageJson?.(appDir);
   } catch {}
-  const declaredSpec = packageJson && [
-    'dependencies',
-    'devDependencies',
-    'optionalDependencies',
-  ].map(section => packageJson[section]?.[dependency.name]).find(Boolean);
+  const declaredSpec =
+    packageJson &&
+    ["dependencies", "devDependencies", "optionalDependencies"]
+      .map((section) => packageJson[section]?.[dependency.name])
+      .find(Boolean);
   return isLocalDependencySpec(declaredSpec) ? declaredSpec : dependency.spec;
 }
 
@@ -81,28 +80,30 @@ async function ensureDependenciesInstalled(
 ) {
   if (services.getGlobalState(globalStateKey, false)) return;
 
-  const dependenciesToInstall = dependencies.filter(dependency =>
-    !services.checkNpmDependencyExists(dependency.name, {
-      cwd: appDir,
-      checkNodeModules: true,
-      nodeModulesOnly: true,
-    }) ||
-    !dependencyVersionMatches(dependency, appDir, services)
+  const dependenciesToInstall = dependencies.filter(
+    (dependency) =>
+      !services.checkNpmDependencyExists(dependency.name, {
+        cwd: appDir,
+        checkNodeModules: true,
+        nodeModulesOnly: true,
+      }) || !dependencyVersionMatches(dependency, appDir, services),
   );
 
   if (dependenciesToInstall.length > 0) {
-    const dependencyStrings = dependenciesToInstall.map(dependency =>
-      `${dependency.name}@${getDependencyInstallSpec(dependency, services, appDir)}`
+    const dependencyStrings = dependenciesToInstall.map(
+      (dependency) =>
+        `${dependency.name}@${getDependencyInstallSpec(dependency, services, appDir)}`,
     );
-    const isYarn = process.env.YARN_ENABLED === 'true' ||
+    const isYarn =
+      process.env.YARN_ENABLED === "true" ||
       (process.env.YARN_ENABLED === undefined && services.isYarnProject({ cwd: appDir }));
 
     services.logProgress(`=> 📦 ${packageName} Dependencies`);
-    dependencyStrings.forEach(dependency => services.logInfo(`   • ${dependency}`));
+    dependencyStrings.forEach((dependency) => services.logInfo(`   • ${dependency}`));
     services.logProgress(
       `=> 🔧 Installing ${dependenciesToInstall.length} dev dependenc${
-        dependenciesToInstall.length === 1 ? 'y' : 'ies'
-      }...`
+        dependenciesToInstall.length === 1 ? "y" : "ies"
+      }...`,
     );
 
     const installed = await services.installNpmDependency(dependencyStrings, {
@@ -115,23 +116,23 @@ async function ensureDependenciesInstalled(
 
     if (!installed) {
       const installCommand = isYarn
-        ? `yarn add --dev --exact ${dependencyStrings.join(' ')}`
-        : `meteor npm install -D --save-exact --production=false ${dependencyStrings.join(' ')}`;
+        ? `yarn add --dev --exact ${dependencyStrings.join(" ")}`
+        : `meteor npm install -D --save-exact --production=false ${dependencyStrings.join(" ")}`;
       services.logError(`=> ❌ Failed to install ${packageName}`);
       services.logError(`   For dev dependencies, run: ${installCommand}`);
       throw new Error(
         `Failed to install ${packageName} dev dependencies. ` +
-        'Please install them manually with the command above.'
+          "Please install them manually with the command above.",
       );
     }
 
     services.logSuccess(`=> ✅ Installed ${packageName} dependencies`);
     if (services.isMeteorAppUpdate()) {
       services.logInfo(
-        `=> 🔔 Remember: Run \`${isYarn ? 'yarn install' : 'npm install'}\` ` +
-        'after the Meteor update finishes.'
+        `=> 🔔 Remember: Run \`${isYarn ? "yarn install" : "npm install"}\` ` +
+          "after the Meteor update finishes.",
       );
-      services.logInfo('   This helps keep your dependencies correct and your project stable.');
+      services.logInfo("   This helps keep your dependencies correct and your project stable.");
     }
   }
 
@@ -143,7 +144,7 @@ async function ensureRstestInstalled({ env = process.env, services } = {}) {
   await ensureDependenciesInstalled(
     getRstestDependencies(env),
     GLOBAL_STATE_KEYS.RSTEST_INSTALLATION_CHECKED,
-    'Rstest',
+    "Rstest",
     resolvedServices,
     { appDir: env.METEOR_RSTEST_NPM_ROOT || resolvedServices.getMeteorAppDir() },
   );
@@ -155,9 +156,7 @@ function shouldEnsureRstestDependencies({
   isPackagesTestCommand,
   autoInstallDeps,
 }) {
-  return testRunner === 'rstest' &&
-    (isAppTestCommand || isPackagesTestCommand) &&
-    autoInstallDeps;
+  return testRunner === "rstest" && (isAppTestCommand || isPackagesTestCommand) && autoInstallDeps;
 }
 
 module.exports = {

@@ -3,14 +3,14 @@
  * @description Constants and global state keys for Rstest plugin
  */
 
-const DEFAULT_METEOR_RSTEST_VERSION = '0.1.0-beta.0';
-const DEFAULT_RSTEST_VERSION = '0.11.6';
+const DEFAULT_METEOR_RSTEST_VERSION = "0.1.0-beta.0";
+const DEFAULT_RSTEST_VERSION = "0.11.6";
 // Match @meteorjs/rstest peer dependencies when bootstrapping a fresh host.
 // The compiler and coverage Wasm plugin must use compatible SWC versions.
-const DEFAULT_RSPACK_VERSION = '2.1.8';
+const DEFAULT_RSPACK_VERSION = "2.1.8";
 
 const GLOBAL_STATE_KEYS = {
-  RSTEST_INSTALLATION_CHECKED: 'rstest.rstestInstallationChecked',
+  RSTEST_INSTALLATION_CHECKED: "rstest.rstestInstallationChecked",
 };
 
 module.exports = {

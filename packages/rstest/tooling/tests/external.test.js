@@ -1,20 +1,15 @@
-const assert = require('node:assert/strict');
-const { spawn } = require('node:child_process');
-const fs = require('node:fs');
-const os = require('node:os');
-const path = require('node:path');
-const test = require('node:test');
+const assert = require("node:assert/strict");
+const { spawn } = require("node:child_process");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
+const test = require("node:test");
 
-const {
-  RstestExternal,
-  structuredResultFromReport,
-} = require('../provider/external.js');
-const coverageSupport = require('../../../../npm-packages/meteor-rstest/src/coverage/playwright.js');
-const {
-  createCoverageFrameGate,
-} = require('../../runtime/coverage-protocol.js');
+const { RstestExternal, structuredResultFromReport } = require("../provider/external.js");
+const coverageSupport = require("../../../../npm-packages/meteor-rstest/src/coverage/playwright.js");
+const { createCoverageFrameGate } = require("../../runtime/coverage-protocol.js");
 
-const coverageGeneration = 'abcdef1234567890abcdef1234567890';
+const coverageGeneration = "abcdef1234567890abcdef1234567890";
 const shardWorkerScript = String.raw`
   const fs = require('node:fs');
   const support = require(process.argv[1]);
@@ -68,30 +63,32 @@ const shardWorkerScript = String.raw`
 `;
 
 function startShardWorker({ env, supportPath, shardId, coverage, ready, barrier }) {
-  const child = spawn(process.execPath, ['-e', shardWorkerScript, supportPath], {
+  const child = spawn(process.execPath, ["-e", shardWorkerScript, supportPath], {
     env: {
       ...env,
       METEOR_RSTEST_TEST_BARRIER: barrier,
-      METEOR_RSTEST_TEST_COVERAGE: Buffer.from(JSON.stringify(coverage)).toString('base64'),
+      METEOR_RSTEST_TEST_COVERAGE: Buffer.from(JSON.stringify(coverage)).toString("base64"),
       METEOR_RSTEST_TEST_READY: ready,
       METEOR_RSTEST_TEST_SHARD_ID: shardId,
     },
-    stdio: ['ignore', 'ignore', 'pipe'],
+    stdio: ["ignore", "ignore", "pipe"],
   });
-  let stderr = '';
-  child.stderr.on('data', chunk => { stderr += chunk; });
+  let stderr = "";
+  child.stderr.on("data", (chunk) => {
+    stderr += chunk;
+  });
   const completion = new Promise((resolve, reject) => {
-    child.once('error', reject);
-    child.once('close', code => resolve({ code, stderr }));
+    child.once("error", reject);
+    child.once("close", (code) => resolve({ code, stderr }));
   });
   return { child, completion };
 }
 
 async function waitForPaths(paths, timeoutMs = 5000) {
   const deadline = Date.now() + timeoutMs;
-  while (!paths.every(filename => fs.existsSync(filename))) {
-    if (Date.now() > deadline) throw new Error('Timed out waiting for shard workers.');
-    await new Promise(resolve => setTimeout(resolve, 5));
+  while (!paths.every((filename) => fs.existsSync(filename))) {
+    if (Date.now() > deadline) throw new Error("Timed out waiting for shard workers.");
+    await new Promise((resolve) => setTimeout(resolve, 5));
   }
 }
 
@@ -112,37 +109,44 @@ function fileCoverage(filename, hits) {
   };
 }
 
-function createReport(t, tests = [{
-  name: 'external case',
-  fullName: 'suite > external case',
-  status: 'pass',
-  duration: 12,
-}]) {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-external-'));
+function createReport(
+  t,
+  tests = [
+    {
+      name: "external case",
+      fullName: "suite > external case",
+      status: "pass",
+      duration: 12,
+    },
+  ],
+) {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "meteor-rstest-external-"));
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
-  const resultPath = path.join(directory, 'result.json');
+  const resultPath = path.join(directory, "result.json");
   fs.writeFileSync(resultPath, JSON.stringify({ tests, files: [] }));
   return resultPath;
 }
 
-test('external Rstest run targets ready Meteor app and submits structured result', async t => {
+test("external Rstest run targets ready Meteor app and submits structured result", async (t) => {
   const calls = [];
   const runner = new RstestExternal({
-    appDir: '/app',
-    url: 'http://localhost:3100/',
-    args: ['--once', '--project', 'meteor-e2e'],
-    token: 'test-token',
+    appDir: "/app",
+    url: "http://localhost:3100/",
+    args: ["--once", "--project", "meteor-e2e"],
+    token: "test-token",
     generation: 7,
     resultPath: createReport(t),
     startProcess(options) {
-      calls.push(['start', options]);
+      calls.push(["start", options]);
       return {
         completion: Promise.resolve(0),
-        stop() { calls.push(['stop']); },
+        stop() {
+          calls.push(["stop"]);
+        },
       };
     },
     async fetch(url, options) {
-      calls.push(['fetch', url, options]);
+      calls.push(["fetch", url, options]);
       return { ok: true, status: 200 };
     },
   });
@@ -150,68 +154,63 @@ test('external Rstest run targets ready Meteor app and submits structured result
   await runner.start();
   await runner.stop();
 
-  assert.deepEqual(calls[0], ['start', {
-    appDir: '/app',
-    args: ['--once', '--project', 'meteor-e2e'],
-    env: {
-      ...process.env,
-      METEOR_RSTEST_BASE_URL: 'http://localhost:3100/',
+  assert.deepEqual(calls[0], [
+    "start",
+    {
+      appDir: "/app",
+      args: ["--once", "--project", "meteor-e2e"],
+      env: {
+        ...process.env,
+        METEOR_RSTEST_BASE_URL: "http://localhost:3100/",
+      },
     },
-  }]);
-  assert.equal(calls[1][0], 'fetch');
-  assert.equal(calls[1][1], 'http://localhost:3100/__meteor__/rstest/external');
-  assert.equal(calls[1][2].method, 'POST');
-  assert.equal(calls[1][2].headers['x-meteor-rstest-token'], 'test-token');
+  ]);
+  assert.equal(calls[1][0], "fetch");
+  assert.equal(calls[1][1], "http://localhost:3100/__meteor__/rstest/external");
+  assert.equal(calls[1][2].method, "POST");
+  assert.equal(calls[1][2].headers["x-meteor-rstest-token"], "test-token");
   const payload = JSON.parse(calls[1][2].body);
   assert.equal(payload.generation, 7);
   assert.equal(payload.result.ok, true);
-  assert.equal(payload.result.cases[0].fullName, 'suite > external case');
+  assert.equal(payload.result.cases[0].fullName, "suite > external case");
 });
 
-test('external coverage support resolves from the explicit project package root', t => {
-  const packageRoot = fs.mkdtempSync(path.join(
-    os.tmpdir(),
-    'meteor-rstest-project-support-',
-  ));
-  const appDir = fs.mkdtempSync(path.join(
-    os.tmpdir(),
-    'meteor-rstest-source-app-',
-  ));
+test("external coverage support resolves from the explicit project package root", (t) => {
+  const packageRoot = fs.mkdtempSync(path.join(os.tmpdir(), "meteor-rstest-project-support-"));
+  const appDir = fs.mkdtempSync(path.join(os.tmpdir(), "meteor-rstest-source-app-"));
   t.after(() => fs.rmSync(packageRoot, { recursive: true, force: true }));
   t.after(() => fs.rmSync(appDir, { recursive: true, force: true }));
-  const coordinatorRoot = path.join(
-    packageRoot,
-    'node_modules',
-    '@meteorjs',
-    'rstest',
-  );
-  fs.mkdirSync(path.join(coordinatorRoot, 'src', 'coverage'), {
+  const coordinatorRoot = path.join(packageRoot, "node_modules", "@meteorjs", "rstest");
+  fs.mkdirSync(path.join(coordinatorRoot, "src", "coverage"), {
     recursive: true,
   });
-  fs.writeFileSync(path.join(coordinatorRoot, 'package.json'), JSON.stringify({
-    name: '@meteorjs/rstest',
-    version: '0.0.0-test',
-  }));
   fs.writeFileSync(
-    path.join(coordinatorRoot, 'src', 'coverage', 'playwright.js'),
+    path.join(coordinatorRoot, "package.json"),
+    JSON.stringify({
+      name: "@meteorjs/rstest",
+      version: "0.0.0-test",
+    }),
+  );
+  fs.writeFileSync(
+    path.join(coordinatorRoot, "src", "coverage", "playwright.js"),
     "module.exports = { owner: 'project-package-root' };\n",
   );
 
   const runner = new RstestExternal({
     appDir,
     packageRoot,
-    url: 'http://localhost:3100/',
+    url: "http://localhost:3100/",
     args: [],
-    token: 'token',
-    resultPath: path.join(packageRoot, 'result.json'),
+    token: "token",
+    resultPath: path.join(packageRoot, "result.json"),
   });
 
-  assert.equal(runner._coverageSupport().owner, 'project-package-root');
+  assert.equal(runner._coverageSupport().owner, "project-package-root");
 });
 
-test('parallel external files preserve result then merge shards into one commit', async t => {
+test("parallel external files preserve result then merge shards into one commit", async (t) => {
   const inheritedCoverageToken = process.env.METEOR_RSTEST_COVERAGE_TOKEN;
-  process.env.METEOR_RSTEST_COVERAGE_TOKEN = 'must-not-reach-child';
+  process.env.METEOR_RSTEST_COVERAGE_TOKEN = "must-not-reach-child";
   t.after(() => {
     if (inheritedCoverageToken === undefined) {
       delete process.env.METEOR_RSTEST_COVERAGE_TOKEN;
@@ -219,20 +218,19 @@ test('parallel external files preserve result then merge shards into one commit'
       process.env.METEOR_RSTEST_COVERAGE_TOKEN = inheritedCoverageToken;
     }
   });
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-external-shards-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "meteor-rstest-external-shards-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const coverageRoot = path.join(root, coverageGeneration);
-  const coverageShardDirectory = path.join(coverageRoot, 'e2e-shards');
-  const coverageArtifactPath = path.join(coverageRoot, 'e2e.json');
-  const supportPath = require.resolve(
-    '../../../../npm-packages/meteor-rstest/src/coverage/playwright.js',
-  );
-  const barrier = path.join(root, 'release-workers');
-  const ready = [path.join(root, 'worker-one-ready'), path.join(root, 'worker-two-ready')];
+  const coverageShardDirectory = path.join(coverageRoot, "e2e-shards");
+  const coverageArtifactPath = path.join(coverageRoot, "e2e.json");
+  const supportPath =
+    require.resolve("../../../../npm-packages/meteor-rstest/src/coverage/playwright.js");
+  const barrier = path.join(root, "release-workers");
+  const ready = [path.join(root, "worker-one-ready"), path.join(root, "worker-two-ready")];
   const gate = createCoverageFrameGate({
     generation: coverageGeneration,
-    token: 'coverage-token',
-    producer: 'e2e',
+    token: "coverage-token",
+    producer: "e2e",
   });
   const events = [];
   let childEnv;
@@ -246,10 +244,10 @@ test('parallel external files preserve result then merge shards into one commit'
     }
   });
   const runner = new RstestExternal({
-    appDir: '/app',
-    url: 'http://localhost:3100/',
+    appDir: "/app",
+    url: "http://localhost:3100/",
     args: [],
-    token: 'coverage-token',
+    token: "coverage-token",
     generation: 3,
     resultPath: createReport(t),
     coverageGeneration,
@@ -262,10 +260,10 @@ test('parallel external files preserve result then merge shards into one commit'
         startShardWorker({
           env,
           supportPath,
-          shardId: '11111111111111111111111111111111',
+          shardId: "11111111111111111111111111111111",
           coverage: {
-            '/app/imports/shared.js': fileCoverage('/app/imports/shared.js', 1),
-            '/app/imports/first.js': fileCoverage('/app/imports/first.js', 2),
+            "/app/imports/shared.js": fileCoverage("/app/imports/shared.js", 1),
+            "/app/imports/first.js": fileCoverage("/app/imports/first.js", 2),
           },
           ready: ready[0],
           barrier,
@@ -273,10 +271,10 @@ test('parallel external files preserve result then merge shards into one commit'
         startShardWorker({
           env,
           supportPath,
-          shardId: '22222222222222222222222222222222',
+          shardId: "22222222222222222222222222222222",
           coverage: {
-            '/app/imports/shared.js': fileCoverage('/app/imports/shared.js', 3),
-            '/app/imports/second.js': fileCoverage('/app/imports/second.js', 4),
+            "/app/imports/shared.js": fileCoverage("/app/imports/shared.js", 3),
+            "/app/imports/second.js": fileCoverage("/app/imports/second.js", 4),
           },
           ready: ready[1],
           barrier,
@@ -285,10 +283,13 @@ test('parallel external files preserve result then merge shards into one commit'
       const completion = (async () => {
         await waitForPaths(ready);
         assert.equal(fs.existsSync(coverageShardDirectory), false);
-        fs.writeFileSync(barrier, 'release');
-        const results = await Promise.all(workers.map(worker => worker.completion));
-        assert.deepEqual(results.map(result => result.code), [0, 0],
-          results.map(result => result.stderr).join('\n'));
+        fs.writeFileSync(barrier, "release");
+        const results = await Promise.all(workers.map((worker) => worker.completion));
+        assert.deepEqual(
+          results.map((result) => result.code),
+          [0, 0],
+          results.map((result) => result.stderr).join("\n"),
+        );
         childCompleted = true;
         return 0;
       })();
@@ -300,9 +301,9 @@ test('parallel external files preserve result then merge shards into one commit'
       };
     },
     async fetch(url, options) {
-      if (url.endsWith('/coverage')) {
+      if (url.endsWith("/coverage")) {
         assert.equal(childCompleted, true);
-        assert.equal(options.headers.origin, 'http://localhost:3100');
+        assert.equal(options.headers.origin, "http://localhost:3100");
         const frame = JSON.parse(options.body);
         events.push(`coverage:${frame.type}`);
         const accepted = gate.submit(frame);
@@ -312,7 +313,7 @@ test('parallel external files preserve result then merge shards into one commit'
           fs.writeFileSync(coverageArtifactPath, JSON.stringify(artifact));
         }
       } else {
-        events.push('result');
+        events.push("result");
       }
       return { ok: true, status: 200 };
     },
@@ -322,48 +323,45 @@ test('parallel external files preserve result then merge shards into one commit'
 
   assert.equal(commitCount, 1);
   assert.equal(childCompleted, true);
-  assert.deepEqual(events, [
-    'result',
-    'coverage:begin',
-    'coverage:chunk',
-    'coverage:commit',
-  ]);
-  assert.equal(artifact.coverage['/app/imports/shared.js'].s[0], 4);
-  assert.equal(artifact.coverage['/app/imports/first.js'].s[0], 2);
-  assert.equal(artifact.coverage['/app/imports/second.js'].s[0], 4);
+  assert.deepEqual(events, ["result", "coverage:begin", "coverage:chunk", "coverage:commit"]);
+  assert.equal(artifact.coverage["/app/imports/shared.js"].s[0], 4);
+  assert.equal(artifact.coverage["/app/imports/first.js"].s[0], 2);
+  assert.equal(artifact.coverage["/app/imports/second.js"].s[0], 4);
   assert.equal(fs.existsSync(coverageShardDirectory), false);
   assert.equal(childEnv.METEOR_RSTEST_COVERAGE_SHARD_DIR, coverageShardDirectory);
   assert.equal(childEnv.METEOR_RSTEST_COVERAGE_GENERATION, coverageGeneration);
-  assert.equal(childEnv.METEOR_RSTEST_COVERAGE_PRODUCER, 'e2e');
-  assert.equal('METEOR_RSTEST_COVERAGE_TOKEN' in childEnv, false);
+  assert.equal(childEnv.METEOR_RSTEST_COVERAGE_PRODUCER, "e2e");
+  assert.equal("METEOR_RSTEST_COVERAGE_TOKEN" in childEnv, false);
 });
 
-test('external result and coverage upload both wait for child completion', async t => {
+test("external result and coverage upload both wait for child completion", async (t) => {
   const resultPath = createReport(t);
   const coverageRoot = path.join(path.dirname(resultPath), coverageGeneration);
-  const coverageShardDirectory = path.join(coverageRoot, 'e2e-shards');
-  const coverageArtifactPath = path.join(coverageRoot, 'e2e.json');
+  const coverageShardDirectory = path.join(coverageRoot, "e2e-shards");
+  const coverageArtifactPath = path.join(coverageRoot, "e2e.json");
   await coverageSupport.writeCoverageShard({
     directory: coverageShardDirectory,
     generation: coverageGeneration,
-    shardId: '33333333333333333333333333333333',
+    shardId: "33333333333333333333333333333333",
     coverage: {
-      '/app/imports/only.js': fileCoverage('/app/imports/only.js', 1),
+      "/app/imports/only.js": fileCoverage("/app/imports/only.js", 1),
     },
   });
   const gate = createCoverageFrameGate({
     generation: coverageGeneration,
-    token: 'secret',
-    producer: 'e2e',
+    token: "secret",
+    producer: "e2e",
   });
   let completeChild;
-  const childCompletion = new Promise(resolve => { completeChild = resolve; });
+  const childCompletion = new Promise((resolve) => {
+    completeChild = resolve;
+  });
   const calls = [];
   const runner = new RstestExternal({
-    appDir: '/app',
-    url: 'http://localhost:3100/',
+    appDir: "/app",
+    url: "http://localhost:3100/",
     args: [],
-    token: 'secret',
+    token: "secret",
     generation: 2,
     coverageGeneration,
     coverageArtifactPath,
@@ -375,7 +373,7 @@ test('external result and coverage upload both wait for child completion', async
     },
     async fetch(url, options) {
       calls.push(url);
-      if (url.endsWith('/coverage')) {
+      if (url.endsWith("/coverage")) {
         const accepted = gate.submit(JSON.parse(options.body));
         if (accepted.committed) {
           fs.writeFileSync(coverageArtifactPath, JSON.stringify(gate.commit()));
@@ -386,28 +384,28 @@ test('external result and coverage upload both wait for child completion', async
   });
 
   const running = runner.start();
-  await new Promise(resolve => setImmediate(resolve));
+  await new Promise((resolve) => setImmediate(resolve));
   assert.deepEqual(calls, []);
   completeChild(0);
   await running;
 
   assert.deepEqual(calls, [
-    'http://localhost:3100/__meteor__/rstest/external',
-    'http://localhost:3100/__meteor__/rstest/coverage',
-    'http://localhost:3100/__meteor__/rstest/coverage',
-    'http://localhost:3100/__meteor__/rstest/coverage',
+    "http://localhost:3100/__meteor__/rstest/external",
+    "http://localhost:3100/__meteor__/rstest/coverage",
+    "http://localhost:3100/__meteor__/rstest/coverage",
+    "http://localhost:3100/__meteor__/rstest/coverage",
   ]);
 });
 
-test('external result endpoint preserves ROOT_URL path prefix', async t => {
+test("external result endpoint preserves ROOT_URL path prefix", async (t) => {
   const ownedCoverageEnv = [
-    'METEOR_RSTEST_COVERAGE_TOKEN',
-    'METEOR_RSTEST_COVERAGE_GENERATION',
-    'METEOR_RSTEST_COVERAGE_PRODUCER',
-    'METEOR_RSTEST_COVERAGE_SHARD_DIR',
+    "METEOR_RSTEST_COVERAGE_TOKEN",
+    "METEOR_RSTEST_COVERAGE_GENERATION",
+    "METEOR_RSTEST_COVERAGE_PRODUCER",
+    "METEOR_RSTEST_COVERAGE_SHARD_DIR",
   ];
   const previousCoverageEnv = Object.fromEntries(
-    ownedCoverageEnv.map(name => [name, process.env[name]]),
+    ownedCoverageEnv.map((name) => [name, process.env[name]]),
   );
   for (const name of ownedCoverageEnv) process.env[name] = `stale-${name}`;
   t.after(() => {
@@ -419,10 +417,10 @@ test('external result endpoint preserves ROOT_URL path prefix', async t => {
   let submittedUrl;
   let childEnv;
   const runner = new RstestExternal({
-    appDir: '/app',
-    url: 'http://localhost:3100/nested/app/',
+    appDir: "/app",
+    url: "http://localhost:3100/nested/app/",
     args: [],
-    token: 'token',
+    token: "token",
     resultPath: createReport(t),
     startProcess({ env }) {
       childEnv = env;
@@ -434,30 +432,27 @@ test('external result endpoint preserves ROOT_URL path prefix', async t => {
     },
   });
   await runner.start();
-  assert.equal(
-    submittedUrl,
-    'http://localhost:3100/nested/app/__meteor__/rstest/external',
-  );
-  assert.equal('METEOR_RSTEST_COVERAGE_TOKEN' in childEnv, false);
-  assert.equal('METEOR_RSTEST_COVERAGE_GENERATION' in childEnv, false);
-  assert.equal('METEOR_RSTEST_COVERAGE_PRODUCER' in childEnv, false);
-  assert.equal('METEOR_RSTEST_COVERAGE_SHARD_DIR' in childEnv, false);
+  assert.equal(submittedUrl, "http://localhost:3100/nested/app/__meteor__/rstest/external");
+  assert.equal("METEOR_RSTEST_COVERAGE_TOKEN" in childEnv, false);
+  assert.equal("METEOR_RSTEST_COVERAGE_GENERATION" in childEnv, false);
+  assert.equal("METEOR_RSTEST_COVERAGE_PRODUCER" in childEnv, false);
+  assert.equal("METEOR_RSTEST_COVERAGE_SHARD_DIR" in childEnv, false);
 });
 
-test('external coverage fails deterministically without shards after posting its result', async t => {
+test("external coverage fails deterministically without shards after posting its result", async (t) => {
   let posted = false;
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-empty-shards-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "meteor-rstest-empty-shards-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-  const coverageShardDirectory = path.join(root, coverageGeneration, 'e2e-shards');
+  const coverageShardDirectory = path.join(root, coverageGeneration, "e2e-shards");
   fs.mkdirSync(coverageShardDirectory, { recursive: true, mode: 0o700 });
   const runner = new RstestExternal({
-    appDir: '/app',
-    url: 'http://localhost:3100/',
+    appDir: "/app",
+    url: "http://localhost:3100/",
     args: [],
-    token: 'secret',
+    token: "secret",
     generation: 2,
     coverageGeneration,
-    coverageArtifactPath: path.join(root, coverageGeneration, 'e2e.json'),
+    coverageArtifactPath: path.join(root, coverageGeneration, "e2e.json"),
     coverageShardDirectory,
     coverageSupport,
     resultPath: createReport(t),
@@ -470,38 +465,37 @@ test('external coverage fails deterministically without shards after posting its
     },
   });
 
-  await assert.rejects(
-    runner.start(),
-    /produced no Playwright coverage shards/,
-  );
+  await assert.rejects(runner.start(), /produced no Playwright coverage shards/);
   assert.equal(posted, true);
   assert.equal(fs.existsSync(coverageShardDirectory), false);
 });
 
-test('failed external result is posted before rejected coverage infrastructure surfaces', async t => {
-  const resultPath = createReport(t, [{
-    name: 'external assertion',
-    fullName: 'suite > external assertion',
-    status: 'fail',
-    errors: [{ name: 'AssertionError', message: 'expected true to be false' }],
-  }]);
+test("failed external result is posted before rejected coverage infrastructure surfaces", async (t) => {
+  const resultPath = createReport(t, [
+    {
+      name: "external assertion",
+      fullName: "suite > external assertion",
+      status: "fail",
+      errors: [{ name: "AssertionError", message: "expected true to be false" }],
+    },
+  ]);
   const root = path.dirname(resultPath);
-  const coverageShardDirectory = path.join(root, coverageGeneration, 'e2e-shards');
+  const coverageShardDirectory = path.join(root, coverageGeneration, "e2e-shards");
   await coverageSupport.writeCoverageShard({
     directory: coverageShardDirectory,
     generation: coverageGeneration,
-    shardId: '44444444444444444444444444444444',
-    coverage: { '/app/external.js': fileCoverage('/app/external.js', 1) },
+    shardId: "44444444444444444444444444444444",
+    coverage: { "/app/external.js": fileCoverage("/app/external.js", 1) },
   });
   const events = [];
   const runner = new RstestExternal({
-    appDir: '/app',
-    url: 'http://localhost:3100/',
+    appDir: "/app",
+    url: "http://localhost:3100/",
     args: [],
-    token: 'secret',
+    token: "secret",
     generation: 2,
     coverageGeneration,
-    coverageArtifactPath: path.join(root, coverageGeneration, 'e2e.json'),
+    coverageArtifactPath: path.join(root, coverageGeneration, "e2e.json"),
     coverageShardDirectory,
     coverageSupport,
     resultPath,
@@ -509,36 +503,43 @@ test('failed external result is posted before rejected coverage infrastructure s
       return { completion: Promise.resolve(1), stop() {} };
     },
     async fetch(url, options) {
-      if (url.endsWith('/external')) {
-        events.push('result');
+      if (url.endsWith("/external")) {
+        events.push("result");
         const payload = JSON.parse(options.body);
         assert.equal(payload.result.ok, false);
-        assert.equal(payload.result.cases[0].name, 'external assertion');
+        assert.equal(payload.result.cases[0].name, "external assertion");
         return { ok: true, status: 200 };
       }
-      events.push('coverage');
+      events.push("coverage");
       return {
         ok: false,
         status: 409,
-        async json() { return { error: 'coverage rejected' }; },
+        async json() {
+          return { error: "coverage rejected" };
+        },
       };
     },
   });
 
   await assert.rejects(runner.start(), /coverage rejected/);
-  assert.deepEqual(events, ['result', 'coverage']);
+  assert.deepEqual(events, ["result", "coverage"]);
 });
 
-test('external JSON report preserves failed cases and errors', () => {
-  const result = structuredResultFromReport({
-    tests: [{
-      name: 'fails',
-      fullName: 'suite > fails',
-      status: 'fail',
-      errors: [{ name: 'AssertionError', message: 'expected 1 to be 2' }],
-    }],
-    files: [],
-  }, 1);
+test("external JSON report preserves failed cases and errors", () => {
+  const result = structuredResultFromReport(
+    {
+      tests: [
+        {
+          name: "fails",
+          fullName: "suite > fails",
+          status: "fail",
+          errors: [{ name: "AssertionError", message: "expected 1 to be 2" }],
+        },
+      ],
+      files: [],
+    },
+    1,
+  );
 
   assert.deepEqual(result.stats, {
     total: 1,
@@ -548,5 +549,5 @@ test('external JSON report preserves failed cases and errors', () => {
     todo: 0,
   });
   assert.equal(result.ok, false);
-  assert.equal(result.cases[0].error.name, 'AssertionError');
+  assert.equal(result.cases[0].error.name, "AssertionError");
 });

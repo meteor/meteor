@@ -1,6 +1,6 @@
-const fs = require('node:fs');
-const path = require('node:path');
-const childProcess = require('node:child_process');
+const fs = require("node:fs");
+const path = require("node:path");
+const childProcess = require("node:child_process");
 
 const MAX_COVERAGE_ARTIFACT_BYTES = 64 * 1024 * 1024;
 
@@ -12,12 +12,10 @@ function artifactError(code, message) {
 
 function normalizeFileSystemCapabilities(capabilities = {}) {
   return {
-    noFollow: capabilities.noFollow ?? (
-      Number.isInteger(fs.constants.O_NOFOLLOW) &&
-      fs.constants.O_NOFOLLOW !== 0
-    ),
-    directory: capabilities.directory ??
-      Number.isInteger(fs.constants.O_DIRECTORY),
+    noFollow:
+      capabilities.noFollow ??
+      (Number.isInteger(fs.constants.O_NOFOLLOW) && fs.constants.O_NOFOLLOW !== 0),
+    directory: capabilities.directory ?? Number.isInteger(fs.constants.O_DIRECTORY),
   };
 }
 
@@ -29,12 +27,16 @@ function openFlags(baseFlags, capabilities, directory = false) {
 }
 
 function assertExactPath(filePath, expectedPath) {
-  if (typeof filePath !== 'string' || typeof expectedPath !== 'string' ||
-      !path.isAbsolute(filePath) || !path.isAbsolute(expectedPath) ||
-      path.resolve(filePath) !== path.resolve(expectedPath)) {
+  if (
+    typeof filePath !== "string" ||
+    typeof expectedPath !== "string" ||
+    !path.isAbsolute(filePath) ||
+    !path.isAbsolute(expectedPath) ||
+    path.resolve(filePath) !== path.resolve(expectedPath)
+  ) {
     throw artifactError(
-      'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
-      'Coverage artifact path does not match its explicit expected path.',
+      "METEOR_RSTEST_COVERAGE_PATH_MISMATCH",
+      "Coverage artifact path does not match its explicit expected path.",
     );
   }
 }
@@ -50,7 +52,7 @@ function assertNoSymlinkComponents(filePath, { allowMissing = false } = {}) {
     try {
       stat = fs.lstatSync(current);
     } catch (error) {
-      if (allowMissing && error.code === 'ENOENT') return;
+      if (allowMissing && error.code === "ENOENT") return;
       throw error;
     }
     if (stat.isSymbolicLink()) {
@@ -59,13 +61,13 @@ function assertNoSymlinkComponents(filePath, { allowMissing = false } = {}) {
         continue;
       }
       throw artifactError(
-        'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
+        "METEOR_RSTEST_COVERAGE_PATH_MISMATCH",
         `Coverage path contains a symbolic-link component: ${current}`,
       );
     }
     if (index < components.length - 1 && !stat.isDirectory()) {
       throw artifactError(
-        'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
+        "METEOR_RSTEST_COVERAGE_PATH_MISMATCH",
         `Coverage path parent is not a directory: ${current}`,
       );
     }
@@ -88,19 +90,21 @@ function assertPathIdentity(filename, expected, { directory = false } = {}) {
   try {
     stat = fs.lstatSync(filename, { bigint: true });
   } catch (error) {
-    if (error.code === 'ENOENT') {
+    if (error.code === "ENOENT") {
       throw artifactError(
-        'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
+        "METEOR_RSTEST_COVERAGE_PATH_MISMATCH",
         `Coverage path changed while it was open: ${filename}`,
       );
     }
     throw error;
   }
-  if (stat.isSymbolicLink() ||
-      (directory ? !stat.isDirectory() : !stat.isFile()) ||
-      !sameIdentity(stat, expected)) {
+  if (
+    stat.isSymbolicLink() ||
+    (directory ? !stat.isDirectory() : !stat.isFile()) ||
+    !sameIdentity(stat, expected)
+  ) {
     throw artifactError(
-      'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
+      "METEOR_RSTEST_COVERAGE_PATH_MISMATCH",
       `Coverage path identity changed while it was open: ${filename}`,
     );
   }
@@ -112,7 +116,7 @@ function openPinnedDirectory(directory, capabilities) {
     const stat = fs.lstatSync(directory, { bigint: true });
     if (!stat.isDirectory() || stat.isSymbolicLink()) {
       throw artifactError(
-        'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
+        "METEOR_RSTEST_COVERAGE_PATH_MISMATCH",
         `Coverage parent is not a directory: ${directory}`,
       );
     }
@@ -120,15 +124,12 @@ function openPinnedDirectory(directory, capabilities) {
     assertPathIdentity(directory, stat, { directory: true });
     return { descriptor: undefined, stat };
   }
-  const descriptor = fs.openSync(
-    directory,
-    openFlags(fs.constants.O_RDONLY, capabilities, true),
-  );
+  const descriptor = fs.openSync(directory, openFlags(fs.constants.O_RDONLY, capabilities, true));
   try {
     const stat = fs.fstatSync(descriptor, { bigint: true });
     if (!stat.isDirectory()) {
       throw artifactError(
-        'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
+        "METEOR_RSTEST_COVERAGE_PATH_MISMATCH",
         `Coverage parent is not a directory: ${directory}`,
       );
     }
@@ -147,7 +148,7 @@ function verifyPinnedDirectory(directory, expected, capabilities) {
   try {
     if (!sameIdentity(current.stat, expected)) {
       throw artifactError(
-        'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
+        "METEOR_RSTEST_COVERAGE_PATH_MISMATCH",
         `Coverage parent identity changed: ${directory}`,
       );
     }
@@ -165,8 +166,8 @@ function pinCoverageDirectory({ directory, fileSystemCapabilities }) {
     verify() {
       if (closed) {
         throw artifactError(
-          'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
-          'Coverage directory pin is already closed.',
+          "METEOR_RSTEST_COVERAGE_PATH_MISMATCH",
+          "Coverage directory pin is already closed.",
         );
       }
       verifyPinnedDirectory(directory, pinned.stat, capabilities);
@@ -243,31 +244,35 @@ function publishPinnedFile({
   temporaryStat,
   capabilities,
 }) {
-  const result = childProcess.spawnSync(process.execPath, [
-    '-e',
-    PUBLISH_FILE_SCRIPT,
-    parentStat.dev.toString(),
-    parentStat.ino.toString(),
-    temporaryStat.dev.toString(),
-    temporaryStat.ino.toString(),
-    path.basename(temporaryPath),
-    path.basename(outputPath),
-    capabilities.directory ? '1' : '0',
-    capabilities.noFollow ? '1' : '0',
-  ], {
-    cwd: directory,
-    encoding: 'utf8',
-  });
+  const result = childProcess.spawnSync(
+    process.execPath,
+    [
+      "-e",
+      PUBLISH_FILE_SCRIPT,
+      parentStat.dev.toString(),
+      parentStat.ino.toString(),
+      temporaryStat.dev.toString(),
+      temporaryStat.ino.toString(),
+      path.basename(temporaryPath),
+      path.basename(outputPath),
+      capabilities.directory ? "1" : "0",
+      capabilities.noFollow ? "1" : "0",
+    ],
+    {
+      cwd: directory,
+      encoding: "utf8",
+    },
+  );
   if (result.status === 74) {
     throw artifactError(
-      'METEOR_RSTEST_COVERAGE_REPLAY',
-      'Coverage artifact path has already been used.',
+      "METEOR_RSTEST_COVERAGE_REPLAY",
+      "Coverage artifact path has already been used.",
     );
   }
   if (result.error || result.status !== 0) {
     throw artifactError(
-      'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
-      'Coverage parent changed during atomic publication.',
+      "METEOR_RSTEST_COVERAGE_PATH_MISMATCH",
+      "Coverage parent changed during atomic publication.",
     );
   }
 }
@@ -309,15 +314,11 @@ const CLEAN_FILES_DIRECTORY_SCRIPT = `
   }
 `;
 
-function cleanupCoverageFilesDirectory({
-  directory,
-  entryPattern,
-  fileSystemCapabilities,
-}) {
-  if (!path.isAbsolute(directory || '') || !(entryPattern instanceof RegExp)) {
+function cleanupCoverageFilesDirectory({ directory, entryPattern, fileSystemCapabilities }) {
+  if (!path.isAbsolute(directory || "") || !(entryPattern instanceof RegExp)) {
     throw artifactError(
-      'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
-      'Coverage cleanup directory or entry pattern is invalid.',
+      "METEOR_RSTEST_COVERAGE_PATH_MISMATCH",
+      "Coverage cleanup directory or entry pattern is invalid.",
     );
   }
   const capabilities = normalizeFileSystemCapabilities(fileSystemCapabilities);
@@ -325,35 +326,39 @@ function cleanupCoverageFilesDirectory({
   try {
     pinned = openPinnedDirectory(directory, capabilities);
   } catch (error) {
-    if (error.code === 'ENOENT') return false;
+    if (error.code === "ENOENT") return false;
     throw error;
   }
   try {
     verifyPinnedDirectory(directory, pinned.stat, capabilities);
-    const result = childProcess.spawnSync(process.execPath, [
-      '-e',
-      CLEAN_FILES_DIRECTORY_SCRIPT,
-      pinned.stat.dev.toString(),
-      pinned.stat.ino.toString(),
-      entryPattern.source,
-      entryPattern.flags,
-      capabilities.directory ? '1' : '0',
-      capabilities.noFollow ? '1' : '0',
-    ], {
-      cwd: directory,
-      encoding: 'utf8',
-    });
+    const result = childProcess.spawnSync(
+      process.execPath,
+      [
+        "-e",
+        CLEAN_FILES_DIRECTORY_SCRIPT,
+        pinned.stat.dev.toString(),
+        pinned.stat.ino.toString(),
+        entryPattern.source,
+        entryPattern.flags,
+        capabilities.directory ? "1" : "0",
+        capabilities.noFollow ? "1" : "0",
+      ],
+      {
+        cwd: directory,
+        encoding: "utf8",
+      },
+    );
     if (result.error || result.status !== 0) {
       throw artifactError(
-        'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
-        'Coverage directory changed during safe cleanup.',
+        "METEOR_RSTEST_COVERAGE_PATH_MISMATCH",
+        "Coverage directory changed during safe cleanup.",
       );
     }
     verifyPinnedDirectory(directory, pinned.stat, capabilities);
     if (fs.readdirSync(directory).length !== 0) {
       throw artifactError(
-        'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
-        'Coverage directory changed during safe cleanup.',
+        "METEOR_RSTEST_COVERAGE_PATH_MISMATCH",
+        "Coverage directory changed during safe cleanup.",
       );
     }
   } finally {
@@ -371,32 +376,24 @@ function readBoundedDescriptor(descriptor, label) {
   for (;;) {
     const remaining = MAX_COVERAGE_ARTIFACT_BYTES + 1 - total;
     if (remaining <= 0) {
-      throw artifactError(
-        'METEOR_RSTEST_COVERAGE_OVERSIZED',
-        `${label} exceeds the 64 MiB limit.`,
-      );
+      throw artifactError("METEOR_RSTEST_COVERAGE_OVERSIZED", `${label} exceeds the 64 MiB limit.`);
     }
     const chunk = Buffer.allocUnsafe(Math.min(64 * 1024, remaining));
     const count = fs.readSync(descriptor, chunk, 0, chunk.length, null);
-    if (count === 0) return Buffer.concat(chunks, total).toString('utf8');
+    if (count === 0) return Buffer.concat(chunks, total).toString("utf8");
     chunks.push(chunk.subarray(0, count));
     total += count;
   }
 }
 
-function openBoundedRegularFile(
-  filePath,
-  label,
-  capabilitiesInput,
-  expectedParentStat,
-) {
+function openBoundedRegularFile(filePath, label, capabilitiesInput, expectedParentStat) {
   const capabilities = normalizeFileSystemCapabilities(capabilitiesInput);
   try {
     assertNoSymlinkComponents(filePath);
   } catch (error) {
-    if (error.code === 'ENOENT') {
+    if (error.code === "ENOENT") {
       throw artifactError(
-        'METEOR_RSTEST_COVERAGE_MISSING',
+        "METEOR_RSTEST_COVERAGE_MISSING",
         `Expected ${label.toLowerCase()} is missing: ${filePath}`,
       );
     }
@@ -407,9 +404,9 @@ function openBoundedRegularFile(
   try {
     parent = openPinnedDirectory(directory, capabilities);
   } catch (error) {
-    if (error.code === 'ENOENT') {
+    if (error.code === "ENOENT") {
       throw artifactError(
-        'METEOR_RSTEST_COVERAGE_MISSING',
+        "METEOR_RSTEST_COVERAGE_MISSING",
         `Expected ${label.toLowerCase()} is missing: ${filePath}`,
       );
     }
@@ -419,26 +416,23 @@ function openBoundedRegularFile(
   if (expectedParentStat && !sameIdentity(parent.stat, expectedParentStat)) {
     if (parent.descriptor !== undefined) fs.closeSync(parent.descriptor);
     throw artifactError(
-      'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
+      "METEOR_RSTEST_COVERAGE_PATH_MISMATCH",
       `Coverage parent identity changed: ${directory}`,
     );
   }
   try {
-    descriptor = fs.openSync(
-      filePath,
-      openFlags(fs.constants.O_RDONLY, capabilities),
-    );
+    descriptor = fs.openSync(filePath, openFlags(fs.constants.O_RDONLY, capabilities));
   } catch (error) {
     if (parent.descriptor !== undefined) fs.closeSync(parent.descriptor);
-    if (error.code === 'ENOENT') {
+    if (error.code === "ENOENT") {
       throw artifactError(
-        'METEOR_RSTEST_COVERAGE_MISSING',
+        "METEOR_RSTEST_COVERAGE_MISSING",
         `Expected ${label.toLowerCase()} is missing: ${filePath}`,
       );
     }
-    if (error.code === 'ELOOP') {
+    if (error.code === "ELOOP") {
       throw artifactError(
-        'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
+        "METEOR_RSTEST_COVERAGE_PATH_MISMATCH",
         `Expected ${label.toLowerCase()} is a symbolic link: ${filePath}`,
       );
     }
@@ -448,15 +442,12 @@ function openBoundedRegularFile(
     const stat = fs.fstatSync(descriptor, { bigint: true });
     if (!stat.isFile()) {
       throw artifactError(
-        'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
+        "METEOR_RSTEST_COVERAGE_PATH_MISMATCH",
         `Expected ${label.toLowerCase()} is not a file: ${filePath}`,
       );
     }
     if (stat.size > BigInt(MAX_COVERAGE_ARTIFACT_BYTES)) {
-      throw artifactError(
-        'METEOR_RSTEST_COVERAGE_OVERSIZED',
-        `${label} exceeds the 64 MiB limit.`,
-      );
+      throw artifactError("METEOR_RSTEST_COVERAGE_OVERSIZED", `${label} exceeds the 64 MiB limit.`);
     }
     verifyPinnedDirectory(directory, parent.stat, capabilities);
     assertNoSymlinkComponents(filePath);
@@ -476,19 +467,17 @@ function isCounter(value) {
 }
 
 function assertCounterRecord(value, field, filename, arrays = false) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw artifactError(
-      'METEOR_RSTEST_COVERAGE_MAP_INVALID',
+      "METEOR_RSTEST_COVERAGE_MAP_INVALID",
       `Coverage ${field} for ${filename} must be an object.`,
     );
   }
   for (const counter of Object.values(value)) {
-    const valid = arrays
-      ? Array.isArray(counter) && counter.every(isCounter)
-      : isCounter(counter);
+    const valid = arrays ? Array.isArray(counter) && counter.every(isCounter) : isCounter(counter);
     if (!valid) {
       throw artifactError(
-        'METEOR_RSTEST_COVERAGE_MAP_INVALID',
+        "METEOR_RSTEST_COVERAGE_MAP_INVALID",
         `Coverage ${field} for ${filename} contains an invalid counter.`,
       );
     }
@@ -496,40 +485,58 @@ function assertCounterRecord(value, field, filename, arrays = false) {
 }
 
 function assertPosition(value, field, filename) {
-  if (!value || typeof value !== 'object' || Array.isArray(value) ||
-      !Number.isSafeInteger(value.line) || value.line < 1 ||
-      !Number.isSafeInteger(value.column) || value.column < 0) {
+  if (
+    !value ||
+    typeof value !== "object" ||
+    Array.isArray(value) ||
+    !Number.isSafeInteger(value.line) ||
+    value.line < 1 ||
+    !Number.isSafeInteger(value.column) ||
+    value.column < 0
+  ) {
     throw artifactError(
-      'METEOR_RSTEST_COVERAGE_MAP_INVALID',
+      "METEOR_RSTEST_COVERAGE_MAP_INVALID",
       `Coverage ${field} for ${filename} contains an invalid position.`,
     );
   }
 }
 
 function assertLocation(value, field, filename) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw artifactError(
-      'METEOR_RSTEST_COVERAGE_MAP_INVALID',
+      "METEOR_RSTEST_COVERAGE_MAP_INVALID",
       `Coverage ${field} for ${filename} contains an invalid location.`,
     );
   }
   assertPosition(value.start, field, filename);
   assertPosition(value.end, field, filename);
-  if (value.end.line < value.start.line ||
-      value.end.line === value.start.line && value.end.column < value.start.column) {
+  if (
+    value.end.line < value.start.line ||
+    (value.end.line === value.start.line && value.end.column < value.start.column)
+  ) {
     throw artifactError(
-      'METEOR_RSTEST_COVERAGE_MAP_INVALID',
+      "METEOR_RSTEST_COVERAGE_MAP_INVALID",
       `Coverage ${field} for ${filename} contains a reversed location.`,
     );
   }
 }
 
 function isUnknownFunctionDeclarationLocation(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) &&
-    value.start && typeof value.start === 'object' && !Array.isArray(value.start) &&
-    value.end && typeof value.end === 'object' && !Array.isArray(value.end) &&
-    value.start.line === 0 && value.start.column === 0 &&
-    value.end.line === 0 && value.end.column === 0;
+  return (
+    value &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    value.start &&
+    typeof value.start === "object" &&
+    !Array.isArray(value.start) &&
+    value.end &&
+    typeof value.end === "object" &&
+    !Array.isArray(value.end) &&
+    value.start.line === 0 &&
+    value.start.column === 0 &&
+    value.end.line === 0 &&
+    value.end.column === 0
+  );
 }
 
 function assertFunctionDeclarationLocation(value, field, filename) {
@@ -542,34 +549,39 @@ function assertFunctionDeclarationLocation(value, field, filename) {
 function assertAlignedKeys(map, counters, field, filename) {
   const mapKeys = Object.keys(map).sort();
   const counterKeys = Object.keys(counters).sort();
-  if (mapKeys.some(key => !/^(?:0|[1-9]\d*)$/.test(key) ||
-      !Number.isSafeInteger(Number(key)))) {
+  if (mapKeys.some((key) => !/^(?:0|[1-9]\d*)$/.test(key) || !Number.isSafeInteger(Number(key)))) {
     throw artifactError(
-      'METEOR_RSTEST_COVERAGE_MAP_INVALID',
+      "METEOR_RSTEST_COVERAGE_MAP_INVALID",
       `Coverage ${field} for ${filename} contains an invalid map identifier.`,
     );
   }
-  if (mapKeys.length !== counterKeys.length ||
-      mapKeys.some((key, index) => key !== counterKeys[index])) {
+  if (
+    mapKeys.length !== counterKeys.length ||
+    mapKeys.some((key, index) => key !== counterKeys[index])
+  ) {
     throw artifactError(
-      'METEOR_RSTEST_COVERAGE_MAP_INVALID',
+      "METEOR_RSTEST_COVERAGE_MAP_INVALID",
       `Coverage ${field} for ${filename} does not align with its counters.`,
     );
   }
 }
 
 function assertFileCoverageStructure(fileCoverage, filename) {
-  assertAlignedKeys(fileCoverage.statementMap, fileCoverage.s, 'statements', filename);
-  assertAlignedKeys(fileCoverage.fnMap, fileCoverage.f, 'functions', filename);
-  assertAlignedKeys(fileCoverage.branchMap, fileCoverage.b, 'branches', filename);
+  assertAlignedKeys(fileCoverage.statementMap, fileCoverage.s, "statements", filename);
+  assertAlignedKeys(fileCoverage.fnMap, fileCoverage.f, "functions", filename);
+  assertAlignedKeys(fileCoverage.branchMap, fileCoverage.b, "branches", filename);
   for (const [id, location] of Object.entries(fileCoverage.statementMap)) {
     assertLocation(location, `statement ${id}`, filename);
   }
   for (const [id, entry] of Object.entries(fileCoverage.fnMap)) {
-    if (!entry || typeof entry !== 'object' || Array.isArray(entry) ||
-        typeof entry.name !== 'string') {
+    if (
+      !entry ||
+      typeof entry !== "object" ||
+      Array.isArray(entry) ||
+      typeof entry.name !== "string"
+    ) {
       throw artifactError(
-        'METEOR_RSTEST_COVERAGE_MAP_INVALID',
+        "METEOR_RSTEST_COVERAGE_MAP_INVALID",
         `Coverage function ${id} for ${filename} is invalid.`,
       );
     }
@@ -577,11 +589,17 @@ function assertFileCoverageStructure(fileCoverage, filename) {
     assertLocation(entry.loc, `function ${id}`, filename);
   }
   for (const [id, entry] of Object.entries(fileCoverage.branchMap)) {
-    if (!entry || typeof entry !== 'object' || Array.isArray(entry) ||
-        typeof entry.type !== 'string' || !entry.type ||
-        !Array.isArray(entry.locations) || entry.locations.length === 0) {
+    if (
+      !entry ||
+      typeof entry !== "object" ||
+      Array.isArray(entry) ||
+      typeof entry.type !== "string" ||
+      !entry.type ||
+      !Array.isArray(entry.locations) ||
+      entry.locations.length === 0
+    ) {
       throw artifactError(
-        'METEOR_RSTEST_COVERAGE_MAP_INVALID',
+        "METEOR_RSTEST_COVERAGE_MAP_INVALID",
         `Coverage branch ${id} for ${filename} is invalid.`,
       );
     }
@@ -591,7 +609,7 @@ function assertFileCoverageStructure(fileCoverage, filename) {
     });
     if (fileCoverage.b[id].length !== entry.locations.length) {
       throw artifactError(
-        'METEOR_RSTEST_COVERAGE_MAP_INVALID',
+        "METEOR_RSTEST_COVERAGE_MAP_INVALID",
         `Coverage branch ${id} for ${filename} does not align with its counters.`,
       );
     }
@@ -599,64 +617,71 @@ function assertFileCoverageStructure(fileCoverage, filename) {
 }
 
 function assertCoverageMap(coverage) {
-  if (!coverage || typeof coverage !== 'object' || Array.isArray(coverage)) {
+  if (!coverage || typeof coverage !== "object" || Array.isArray(coverage)) {
     throw artifactError(
-      'METEOR_RSTEST_COVERAGE_MAP_INVALID',
-      'Coverage artifact must contain an Istanbul coverage map.',
+      "METEOR_RSTEST_COVERAGE_MAP_INVALID",
+      "Coverage artifact must contain an Istanbul coverage map.",
     );
   }
   for (const [filename, fileCoverage] of Object.entries(coverage)) {
-    if (!filename || !fileCoverage || typeof fileCoverage !== 'object' ||
-        Array.isArray(fileCoverage) || typeof fileCoverage.path !== 'string' ||
-        !fileCoverage.statementMap || typeof fileCoverage.statementMap !== 'object' ||
-        Array.isArray(fileCoverage.statementMap) ||
-        !fileCoverage.fnMap || typeof fileCoverage.fnMap !== 'object' ||
-        Array.isArray(fileCoverage.fnMap) ||
-        !fileCoverage.branchMap || typeof fileCoverage.branchMap !== 'object' ||
-        Array.isArray(fileCoverage.branchMap)) {
+    if (
+      !filename ||
+      !fileCoverage ||
+      typeof fileCoverage !== "object" ||
+      Array.isArray(fileCoverage) ||
+      typeof fileCoverage.path !== "string" ||
+      !fileCoverage.statementMap ||
+      typeof fileCoverage.statementMap !== "object" ||
+      Array.isArray(fileCoverage.statementMap) ||
+      !fileCoverage.fnMap ||
+      typeof fileCoverage.fnMap !== "object" ||
+      Array.isArray(fileCoverage.fnMap) ||
+      !fileCoverage.branchMap ||
+      typeof fileCoverage.branchMap !== "object" ||
+      Array.isArray(fileCoverage.branchMap)
+    ) {
       throw artifactError(
-        'METEOR_RSTEST_COVERAGE_MAP_INVALID',
+        "METEOR_RSTEST_COVERAGE_MAP_INVALID",
         `Coverage entry ${JSON.stringify(filename)} is not an Istanbul file map.`,
       );
     }
-    assertCounterRecord(fileCoverage.s, 'statement counters', filename);
-    assertCounterRecord(fileCoverage.f, 'function counters', filename);
-    assertCounterRecord(fileCoverage.b, 'branch counters', filename, true);
+    assertCounterRecord(fileCoverage.s, "statement counters", filename);
+    assertCounterRecord(fileCoverage.f, "function counters", filename);
+    assertCounterRecord(fileCoverage.b, "branch counters", filename, true);
     assertFileCoverageStructure(fileCoverage, filename);
   }
   return coverage;
 }
 
 function validateCoverageArtifact(artifact, { generation, producer }) {
-  if (!artifact || typeof artifact !== 'object' || Array.isArray(artifact) ||
-      artifact.schemaVersion !== 1) {
+  if (
+    !artifact ||
+    typeof artifact !== "object" ||
+    Array.isArray(artifact) ||
+    artifact.schemaVersion !== 1
+  ) {
     throw artifactError(
-      'METEOR_RSTEST_COVERAGE_SCHEMA',
-      'Coverage artifact has an unsupported schema version.',
+      "METEOR_RSTEST_COVERAGE_SCHEMA",
+      "Coverage artifact has an unsupported schema version.",
     );
   }
   if (artifact.generation !== generation) {
     throw artifactError(
-      'METEOR_RSTEST_COVERAGE_STALE',
-      'Ignored a stale coverage artifact from another generation.',
+      "METEOR_RSTEST_COVERAGE_STALE",
+      "Ignored a stale coverage artifact from another generation.",
     );
   }
   if (artifact.producer !== producer) {
     throw artifactError(
-      'METEOR_RSTEST_COVERAGE_PRODUCER',
-      'Coverage artifact producer does not match its expected producer.',
+      "METEOR_RSTEST_COVERAGE_PRODUCER",
+      "Coverage artifact producer does not match its expected producer.",
     );
   }
   assertCoverageMap(artifact.coverage);
   return artifact;
 }
 
-function writeCoverageArtifact({
-  outputPath,
-  expectedPath,
-  artifact,
-  fileSystemCapabilities,
-}) {
+function writeCoverageArtifact({ outputPath, expectedPath, artifact, fileSystemCapabilities }) {
   assertExactPath(outputPath, expectedPath);
   validateCoverageArtifact(artifact, {
     generation: artifact && artifact.generation,
@@ -665,8 +690,8 @@ function writeCoverageArtifact({
   const serialized = JSON.stringify(artifact);
   if (Buffer.byteLength(serialized) > MAX_COVERAGE_ARTIFACT_BYTES) {
     throw artifactError(
-      'METEOR_RSTEST_COVERAGE_OVERSIZED',
-      'Coverage artifact exceeds the 64 MiB limit.',
+      "METEOR_RSTEST_COVERAGE_OVERSIZED",
+      "Coverage artifact exceeds the 64 MiB limit.",
     );
   }
   const directory = path.dirname(outputPath);
@@ -681,11 +706,11 @@ function writeCoverageArtifact({
   let descriptor;
   let temporaryStat;
   try {
-    descriptor = fs.openSync(temporaryPath, 'wx', 0o600);
+    descriptor = fs.openSync(temporaryPath, "wx", 0o600);
     temporaryStat = fs.fstatSync(descriptor, { bigint: true });
     verifyPinnedDirectory(directory, parent.stat, capabilities);
     assertPathIdentity(temporaryPath, temporaryStat);
-    fs.writeFileSync(descriptor, serialized, 'utf8');
+    fs.writeFileSync(descriptor, serialized, "utf8");
     fs.fsyncSync(descriptor);
     fs.fchmodSync(descriptor, 0o600);
     assertNoSymlinkComponents(directory);
@@ -710,7 +735,9 @@ function writeCoverageArtifact({
         fs.unlinkSync(temporaryPath);
       }
     } catch (error) {
-      if (error.code !== 'ENOENT') throw error;
+      // Unexpected cleanup failures must still fail artifact publication.
+      // oxlint-disable-next-line no-unsafe-finally
+      if (error.code !== "ENOENT") throw error;
     }
   }
 }
@@ -728,22 +755,24 @@ function readCoverageArtifact({
   const canonicalPath = path.resolve(filePath);
   if (consumed.has(canonicalPath)) {
     throw artifactError(
-      'METEOR_RSTEST_COVERAGE_REPLAY',
-      'Coverage artifact was consumed more than once.',
+      "METEOR_RSTEST_COVERAGE_REPLAY",
+      "Coverage artifact was consumed more than once.",
     );
   }
   let artifact;
   try {
-    artifact = JSON.parse(openBoundedRegularFile(
-      canonicalPath,
-      'Coverage artifact',
-      fileSystemCapabilities,
-      expectedParentStat,
-    ));
+    artifact = JSON.parse(
+      openBoundedRegularFile(
+        canonicalPath,
+        "Coverage artifact",
+        fileSystemCapabilities,
+        expectedParentStat,
+      ),
+    );
   } catch (error) {
-    if (error.code && error.code.startsWith('METEOR_RSTEST_')) throw error;
+    if (error.code && error.code.startsWith("METEOR_RSTEST_")) throw error;
     throw artifactError(
-      'METEOR_RSTEST_COVERAGE_SCHEMA',
+      "METEOR_RSTEST_COVERAGE_SCHEMA",
       `Coverage artifact is not valid JSON: ${error.message}`,
     );
   }
@@ -752,22 +781,16 @@ function readCoverageArtifact({
   return artifact;
 }
 
-function readCoverageManifest({
-  filePath,
-  expectedPath,
-  fileSystemCapabilities,
-}) {
+function readCoverageManifest({ filePath, expectedPath, fileSystemCapabilities }) {
   assertExactPath(filePath, expectedPath);
   try {
-    return JSON.parse(openBoundedRegularFile(
-      filePath,
-      'Coverage manifest',
-      fileSystemCapabilities,
-    ));
+    return JSON.parse(
+      openBoundedRegularFile(filePath, "Coverage manifest", fileSystemCapabilities),
+    );
   } catch (error) {
-    if (error.code && error.code.startsWith('METEOR_RSTEST_')) throw error;
+    if (error.code && error.code.startsWith("METEOR_RSTEST_")) throw error;
     throw artifactError(
-      'METEOR_RSTEST_COVERAGE_SCHEMA',
+      "METEOR_RSTEST_COVERAGE_SCHEMA",
       `Coverage manifest is not valid JSON: ${error.message}`,
     );
   }
