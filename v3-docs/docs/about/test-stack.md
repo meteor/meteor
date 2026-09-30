@@ -62,6 +62,6 @@ This is an additional integration point, not a requirement that all Meteor tests
 
 - [Rstest Integration](./test-stack/rstest.md) — Write, configure, and run app and package tests.
 - [Existing Test Drivers](./test-stack/drivers.md) — Keep current suites and migrate at your own pace.
-- [Test-Runner Providers](./test-stack/providers.md) — Understand the integration boundary and contributor entry points.
+- [Test-Runner Providers](./test-stack/providers.md) — Build or maintain an integration using the provider lifecycle, host services, and compiler adapters.
 - [Modern Build Stack](./modern-build-stack.md) — Prepare an app for Rspack.
 - [Community discussion](https://forums.meteor.com/t/meteor-rstest-a-natural-modern-testing-integration-for-meteor-rspack-apps/64744) — Background and early feedback on the integration.
