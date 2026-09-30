@@ -958,7 +958,6 @@ Meteor.methods(
               error: new Meteor.Error(403, "Verify email link expired")
             };
 
-          // A token without a valid issue date is treated as expired.
           const tokenIssuedAtMs = new Date(tokenRecord.when).getTime();
           if (Number.isNaN(tokenIssuedAtMs) ||
             (Date.now() - tokenIssuedAtMs) > Accounts._getEmailVerificationTokenLifetimeMs())
