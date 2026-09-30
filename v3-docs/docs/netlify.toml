@@ -1,0 +1,3 @@
+[build]
+  publish = ".vitepress/dist"
+  command = "npm run test:links && npm run docs:build"

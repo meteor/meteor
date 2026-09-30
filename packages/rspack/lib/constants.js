@@ -6,25 +6,31 @@
 import path from 'path';
 
 /* Minimum accepted and auto-install version for `@rspack/core` and `@rspack/cli`. */
-export const DEFAULT_RSPACK_VERSION = '1.7.1';
+export const DEFAULT_RSPACK_VERSION = '2.2.7';
 
-/* `@meteorjs/rspack` minimum and auto-install version; sync with its package.json. */
-export const DEFAULT_METEOR_RSPACK_VERSION = '2.2.0-beta.0';
+/* Minimum accepted and auto-install version for `@rspack/dev-server`. */
+export const DEFAULT_RSPACK_DEV_SERVER_VERSION = '2.2.1';
+
+/* Published `@meteorjs/rspack` minimum and auto-install version. */
+export const DEFAULT_METEOR_RSPACK_VERSION = '3.0.0-beta.3';
 
 /* Minimum accepted and auto-install version for `@rspack/plugin-react-refresh`. */
-export const DEFAULT_METEOR_RSPACK_REACT_HMR_VERSION = '1.4.3';
+export const DEFAULT_METEOR_RSPACK_REACT_HMR_VERSION = '2.0.2';
 
 /* Minimum accepted and auto-install version for the `react-refresh` HMR runtime. */
-export const DEFAULT_METEOR_RSPACK_REACT_REFRESH_VERSION = '0.17.0';
+export const DEFAULT_METEOR_RSPACK_REACT_REFRESH_VERSION = '0.19.0';
 
 /* Reserved `swc-loader` version; currently unused by `dependencies.js`. */
-export const DEFAULT_METEOR_RSPACK_SWC_LOADER_VERSION = '0.2.6';
+export const DEFAULT_METEOR_RSPACK_SWC_LOADER_VERSION = '0.2.7';
 
 /* Minimum accepted and auto-install version for the `@swc/helpers` runtime. */
-export const DEFAULT_METEOR_RSPACK_SWC_HELPERS_VERSION = '0.5.17';
+export const DEFAULT_METEOR_RSPACK_SWC_HELPERS_VERSION = '0.5.23';
+
+/* Minimum accepted and auto-install version for `@swc/core`. */
+export const DEFAULT_METEOR_RSPACK_SWC_CORE_VERSION = '1.16.2';
 
 /* Minimum accepted and auto-install version for `@rsdoctor/rspack-plugin`. */
-export const DEFAULT_RSDOCTOR_RSPACK_PLUGIN_VERSION = '1.5.7';
+export const DEFAULT_RSDOCTOR_RSPACK_PLUGIN_VERSION = '1.6.4';
 
 /**
  * Global state keys used for storing and retrieving state across the application
@@ -41,6 +47,7 @@ export const DEFAULT_RSDOCTOR_RSPACK_PLUGIN_VERSION = '1.5.7';
 export const GLOBAL_STATE_KEYS = {
   CLIENT_PROCESS: 'rspack.clientProcess',
   SERVER_PROCESS: 'rspack.serverProcess',
+  BUILD_PROCESSES: 'rspack.buildProcesses',
   RSPACK_INSTALLATION_CHECKED: 'rspack.rspackInstallationChecked',
   RSPACK_REACT_INSTALLATION_CHECKED: 'rspack.rspackReactInstallationChecked',
   RSPACK_DOCTOR_INSTALLATION_CHECKED: 'rspack.rspackDoctorInstallationChecked',
@@ -125,8 +132,8 @@ function getModeSuffix(isTest, isTestFullApp) {
  * @param {boolean} isTestFullApp - Whether in --full-app test mode
  * @returns {string} Context directory name
  */
-export function getRspackChunksContext(isTest = false, isTestFullApp = false) {
-  return `${RSPACK_CHUNKS_CONTEXT}${getModeSuffix(isTest, isTestFullApp)}`;
+export function getRspackChunksContext(isTest = false, isTestFullApp = false, arch) {
+  return `${RSPACK_CHUNKS_CONTEXT}${getModeSuffix(isTest, isTestFullApp)}${arch ? `/${arch}` : ''}`;
 }
 
 /**

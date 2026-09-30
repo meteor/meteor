@@ -5,6 +5,7 @@
 
 import fs from "fs";
 import path from "path";
+import { getClientArchitectureEntries } from './architectures';
 
 const {
   spawnProcess,
@@ -70,12 +71,19 @@ import {
   shouldLogVerbose,
   stripRspackLabel,
 } from "./logging";
-import { isMeteorAppProfile } from "../../tools-core/lib/meteor";
+import {
+  getUserMeteorIgnore,
+  isMeteorAppProfile,
+} from "../../tools-core/lib/meteor";
 
 // Rspack's native code prints this marker when it aborts, e.g. when its
 // persistent cache was corrupted by a previous hard kill mid-write.
 const RSPACK_PANIC_PATTERN = 'Panic occurred at runtime';
-const RSPACK_UNSET_ENV = ['METEOR_IGNORE'];
+const RSPACK_UNSET_ENV = [
+  'METEOR_IGNORE_ROOT',
+  'METEOR_IGNORE_BY_ENTRYPOINT',
+  'METEOR_IGNORE_ROOT_BY_ENTRYPOINT',
+];
 
 // Renders the rebuild's source files for the "Client modified -- refreshing"
 // line. Rspack reports absolute paths; show them app-relative so they read the
@@ -95,18 +103,32 @@ function formatChangedFiles(modifiedFiles) {
 }
 
 /**
- * Builds the environment passed to Rspack child processes. METEOR_IGNORE is
- * consumed by meteor-tool, not Rspack, so it is omitted here and explicitly
- * removed again by spawnProcess after the parent environment is merged.
+ * Builds the environment passed to Rspack child processes.
+ *
+ * METEOR_IGNORE is overwritten rather than inherited. @meteorjs/rspack reads it
+ * to build the same ignore filters it builds from .meteorignore, so the app
+ * author's patterns must reach the child — but the patterns meteor-tool
+ * appends to the variable for its own bundler must not:
+ * Rspack never reads them, and on large projects their dir-times-extension
+ * expansion grows to tens of kilobytes, wasting execve arg+env budget (risking
+ * E2BIG on constrained systems).
+ *
+ * Root-scoped and per-entrypoint rules are internal to meteor-tool and removed
+ * again by spawnProcess after its parent-environment merge.
+ *
+ * Setting METEOR_IGNORE here is enough on its own: spawnProcess merges `options.env` over
+ * `process.env`, so this value wins over the one meteor-tool has been growing.
+ *
  * @param {Object} envs - Rspack-specific environment variables
  * @returns {Object} Environment variables for spawnProcess
  */
 function getRspackSpawnEnv(envs) {
   const parentEnv = { ...process.env };
-  delete parentEnv.METEOR_IGNORE;
+  for (const name of RSPACK_UNSET_ENV) delete parentEnv[name];
 
   return inheritMeteorToolNodeFlags({
     ...parentEnv,
+    METEOR_IGNORE: getUserMeteorIgnore(),
     ...getNodeBinEnv(),
     ...envs,
   });
@@ -379,7 +401,7 @@ export function getRspackCliCommand(args) {
  * @param {boolean} options.isTestLike - Whether test envs should be inherited
  * @returns {Object} Object containing params (command line arguments) and envs (environment variables)
  */
-export function getRspackEnv({ isClient, isServer, isTest: inIsTest, isTestLike: inIsTestLike }) {
+export function getRspackEnv({ isClient, isServer, arch, isTest: inIsTest, isTestLike: inIsTestLike }) {
   const RSPACK_BUILD_CONTEXT = require('./constants').RSPACK_BUILD_CONTEXT;
 
   const initialEntrypoints = getMeteorInitialAppEntrypoints();
@@ -398,7 +420,13 @@ export function getRspackEnv({ isClient, isServer, isTest: inIsTest, isTestLike:
   const env = isMeteorAppDevelopment()
     ? { isDevelopment: true }
     : { isProduction: true };
-  const side = isClient ? { isClient: true } : { isServer: true };
+  const side = isClient ? { isClient: true, arch } : { isServer: true };
+  const architectureEntry = arch && getClientArchitectureEntries({ isTest, isTestFullApp })
+    .find(entry => entry.arch === arch);
+  const outputArch = isClient && (arch || (
+    getClientArchitectureEntries({ isTest, isTestFullApp }).length ? 'client' : undefined
+  ));
+  const chunksContext = getRspackChunksContext(isTest, isTestFullApp, outputArch);
   const commandRole = isMeteorAppRun()
     ? { role: FILE_ROLE.run }
     : isMeteorAppBuild()
@@ -406,7 +434,7 @@ export function getRspackEnv({ isClient, isServer, isTest: inIsTest, isTestLike:
       : { role: FILE_ROLE.run };
 
   const entryKey = `${isTest && isTestModule ? 'test' : 'main'}${isClient ? 'Client' : 'Server'}`;
-  const inputFilePath = initialEntrypoints[entryKey];
+  const inputFilePath = architectureEntry?.entryFile || initialEntrypoints[entryKey];
   const isTypescriptEnabled = process.env.METEOR_TYPESCRIPT_ENABLED === 'true' ||
     inputFilePath?.endsWith('.ts') ||
     inputFilePath?.endsWith('.tsx');
@@ -444,6 +472,7 @@ export function getRspackEnv({ isClient, isServer, isTest: inIsTest, isTestLike:
     ["isNative", isMeteorAppNative()],
     ["isClient", isClient],
     ["isServer", isServer],
+    ...(arch ? [["arch", arch], ["isLegacy", architectureEntry.isLegacy]] : []),
     [
       "entryPath",
       getBuildFilePath({
@@ -482,8 +511,9 @@ export function getRspackEnv({ isClient, isServer, isTest: inIsTest, isTestLike:
     // Mode-scoped so concurrent commands on one app dir (e.g. a dev server
     // plus `meteor test`) write their chunks/assets to separate directories
     // under public/ instead of overwriting each other.
-    ["chunksContext", getRspackChunksContext(isTest, isTestFullApp)],
-    ["assetsContext", getRspackAssetsContext(isTest, isTestFullApp)],
+    ["chunksContext", chunksContext],
+    ["assetsContext", outputArch ? `${chunksContext}/assets` : getRspackAssetsContext(isTest, isTestFullApp)],
+    ...(outputArch ? [["clientOutputContext", chunksContext]] : []),
     ["devServerPort", process.env.RSPACK_DEVSERVER_PORT],
     ["projectConfigPath", projectConfigPath],
     ["configPath", configPath],
@@ -497,7 +527,7 @@ export function getRspackEnv({ isClient, isServer, isTest: inIsTest, isTestLike:
         initialEntrypoints.testModule && [
           ["testEntry", initialEntrypoints.testModule],
         ]) || [
-        ["mainClientEntry", initialEntrypoints.mainClient],
+        ["mainClientEntry", architectureEntry?.mainEntryFile || initialEntrypoints.mainClient],
         ["mainClientHtmlEntry", initialEntrypoints.mainClientHtml],
         ["mainServerEntry", initialEntrypoints.mainServer],
       ]),
@@ -775,15 +805,15 @@ export function startRspackServerWatch(options = {}) {
 // Deliberately not async: callers that fire-and-forget rely on the
 // returned promise being the same one that carries the no-op rejection
 // handler attached below; an async wrapper promise would not.
-export function runRspackBuild({ isClient, isServer, isTest, isTestModule, isTestLike, onCompile, watch, label = 'Build' } = {}) {
+export function runRspackBuild({ isClient, isServer, arch, isTest, isTestModule, isTestLike, onCompile, watch, waitForFirstCompile = false, label = 'Build' } = {}) {
   const appDir = getMeteorAppDir();
   const configFile = getConfigFilePath();
 
-  const endpoint = isClient ? 'Client' : 'Server';
+  const endpoint = arch || (isClient ? 'Client' : 'Server');
   const sawPanic = createPanicDetector();
   // Use a promise to ensure Meteor waits until Rspack finishes
   const buildPromise = new Promise((resolve, reject) => {
-    const { params, envs } = getRspackEnv({ isClient, isServer, isTest, isTestModule, isTestLike });
+    const { params, envs } = getRspackEnv({ isClient, isServer, arch, isTest, isTestModule, isTestLike });
     const rspackArgs = [
       'build',
       '--config',
@@ -792,15 +822,20 @@ export function runRspackBuild({ isClient, isServer, isTest, isTestModule, isTes
       ...params,
     ].filter(Boolean);
     const { command, args } = getRspackCliCommand(rspackArgs);
-    spawnProcess(
+    const buildProcess = spawnProcess(
       command,
       args,
       {
       cwd: appDir,
+      detached: process.platform !== 'win32',
       env: getRspackSpawnEnv(envs),
       unsetEnv: RSPACK_UNSET_ENV,
       onStdout: (data) => {
         const { cleanedData, config } = parseMeteorRspackOutput(data);
+        if (waitForFirstCompile && config?.compilationCount > 0) {
+          if (config.hasErrors) reject(new Error(`Rspack ${endpoint} compilation failed`));
+          else resolve();
+        }
         if (onCompile && config && (config?.compilationCount || 0) > 0) {
           onCompile(cleanedData, config);
         }
@@ -817,6 +852,7 @@ export function runRspackBuild({ isClient, isServer, isTest, isTestModule, isTes
           // exit, so the exit handler alone would not unblock the
           // first compile.
           failFirstCompilation(endpoint.toLowerCase(), 'reported a fatal panic');
+          if (waitForFirstCompile) reject(new Error(`Rspack ${endpoint} reported a fatal panic`));
         }
         const { cleanedData } = parseMeteorRspackOutput(data);
         if (!cleanedData) return;
@@ -854,7 +890,7 @@ export function runRspackBuild({ isClient, isServer, isTest, isTestModule, isTes
           endpoint.toLowerCase(),
           `exited (${signal ? `signal ${signal}` : `code ${code}`})`
         );
-        if (code === 0) {
+        if (code === 0 && !waitForFirstCompile) {
           resolve();
         } else {
           const error = new Error(`Rspack ${label} failed in ${endpoint} with exit code ${code}`);
@@ -879,6 +915,10 @@ export function runRspackBuild({ isClient, isServer, isTest, isTestModule, isTes
         reject(err);
       }
     });
+    setGlobalState(GLOBAL_STATE_KEYS.BUILD_PROCESSES, [
+      ...getGlobalState(GLOBAL_STATE_KEYS.BUILD_PROCESSES, []),
+      buildProcess,
+    ]);
   });
 
   // Some call sites (production run, tests) start this build without
@@ -900,13 +940,16 @@ export function runRspackBuild({ isClient, isServer, isTest, isTestModule, isTes
 export async function cleanup() {
   const clientProcess = getGlobalState(GLOBAL_STATE_KEYS.CLIENT_PROCESS, null);
   const serverProcess = getGlobalState(GLOBAL_STATE_KEYS.SERVER_PROCESS, null);
+  const buildProcesses = getGlobalState(GLOBAL_STATE_KEYS.BUILD_PROCESSES, []);
 
   setGlobalState(GLOBAL_STATE_KEYS.CLIENT_PROCESS, null);
   setGlobalState(GLOBAL_STATE_KEYS.SERVER_PROCESS, null);
+  setGlobalState(GLOBAL_STATE_KEYS.BUILD_PROCESSES, []);
 
   await Promise.all([
     clientProcess ? stopProcess(clientProcess) : Promise.resolve(),
     serverProcess ? stopProcess(serverProcess) : Promise.resolve(),
+    ...buildProcesses.filter(isProcessRunning).map(proc => stopProcess(proc)),
   ]);
 }
 
@@ -918,8 +961,12 @@ export async function cleanup() {
  * @returns {void}
  */
 export function cleanupSync() {
-  for (const key of [GLOBAL_STATE_KEYS.CLIENT_PROCESS, GLOBAL_STATE_KEYS.SERVER_PROCESS]) {
-    const proc = getGlobalState(key, null);
+  const processes = [
+    getGlobalState(GLOBAL_STATE_KEYS.CLIENT_PROCESS, null),
+    getGlobalState(GLOBAL_STATE_KEYS.SERVER_PROCESS, null),
+    ...getGlobalState(GLOBAL_STATE_KEYS.BUILD_PROCESSES, []),
+  ];
+  for (const proc of processes) {
     if (!proc || !proc.pid || !isProcessRunning(proc)) continue;
 
     sendSignal(proc, 'SIGTERM');

@@ -12,6 +12,8 @@ $tests = @(
   # instead of '/imports/node_modules/some-package/index.js', so the test
   # times out. That bug predates this filter and is tracked separately.
   '^client refresh (for (package|application) code|names|stays)'
+  '^self-test catalog scan tolerates cold official catalog$'
+  '^npm - prefetch runs speculative work on Windows$'
 ) -Join '|'
 
 Write-Host "Running: $tests" -ForegroundColor Yellow

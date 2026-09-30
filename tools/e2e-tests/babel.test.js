@@ -1,6 +1,8 @@
 import {
   waitForMeteorOutput,
 } from "./helpers";
+import fs from 'fs';
+import path from 'path';
 import { testMeteorRspackBundler } from './test-helpers';
 
 describe('Babel App Bundling /', () => {
@@ -61,12 +63,20 @@ describe('Babel App Bundling /', () => {
         await waitForMeteorOutput(result.outputLines, /[^ ]*Meteor.isDevelopment[^ ]*: [^ ]*true[^ ]*/);
         await waitForMeteorOutput(result.outputLines, /[^ ]*Meteor.isProduction[^ ]*: [^ ]*false[^ ]*/);
       },
-      afterBuild: async ({ result }) => {
+      afterBuild: async ({ tempDir, result }) => {
         await assertFileExtensionModuleRules(result.outputLines);
         // Force development mode on build
         await waitForMeteorOutput(result.outputLines, /\[i\] Rspack mode: development/);
         await waitForMeteorOutput(result.outputLines, /[^ ]*Meteor.isDevelopment[^ ]*: [^ ]*true[^ ]*/);
         await waitForMeteorOutput(result.outputLines, /[^ ]*Meteor.isProduction[^ ]*: [^ ]*false[^ ]*/);
+
+        // NODE_ENV controls compilation mode, but `meteor build` does not
+        // provide an HMR runtime. Its standalone client entry must not opt in.
+        const clientEntry = fs.readFileSync(
+          path.join(tempDir, '_build/main-dev/client-entry.js'),
+          'utf8'
+        );
+        expect(clientEntry).not.toContain('module.hot.accept()');
       },
     }
   }));
