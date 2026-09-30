@@ -146,6 +146,8 @@ Full Blaze app with an `imports/` structure and regular `meteor test` coverage. 
 | `imports/api/` test path structure | Test |
 | Regular test mode (`meteor test`, without `--full-app`) | Test, Test once |
 | FlowRouter Extra route renders the Blaze home template | Run, Prod |
+| FlowRouter dynamic imports defer compiled HTML download and registration until navigation, with templates ready before the controller executes (#14803); includes a default-bundler control and Rspack eager/lazy watch transitions | Run, Prod |
+| Route-lazy Blaze templates load and render in a built Rspack app | Build (boot) |
 | HMR disabled (incompatible with Blaze) | Run, Prod |
 
 ### typescript

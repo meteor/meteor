@@ -8,6 +8,7 @@ const { cleanOmittedPaths, mergeSplitOverlap } = require("./lib/mergeRulesSplitO
 const { getMeteorAppSwcConfig } = require('./lib/swc.js');
 const HtmlRspackPlugin = require('./plugins/HtmlRspackPlugin.js');
 const { RequireExternalsPlugin } = require('./plugins/RequireExtenalsPlugin.js');
+const { BlazeTemplatesPlugin } = require('./plugins/BlazeTemplatesPlugin.js');
 const { AssetExternalsPlugin } = require('./plugins/AssetExternalsPlugin.js');
 const { MeteorRspackOutputPlugin, extractDelegatedExtensions } = require('./plugins/MeteorRspackOutputPlugin.js');
 const { generateEagerTestFile } = require("./lib/test.js");
@@ -497,14 +498,23 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   const ReactRefreshRspackPlugin =
     reactRefreshModule?.ReactRefreshRspackPlugin || reactRefreshModule;
 
+  const blazeTemplatesPlugin = Meteor.isBlazeEnabled && isClient
+    ? new BlazeTemplatesPlugin({
+        projectDir,
+        filePath: path.join(buildContext, path.dirname(runPath), 'client-blaze.js'),
+      })
+    : null;
   const requireExternalsPlugin = new RequireExternalsPlugin({
     filePath: path.join(buildContext, runPath),
     ...(Meteor.isBlazeEnabled && {
-      externals: /\.html$/,
-      isEagerImport: (module) => module.endsWith(".html"),
-      ...((isProd || arch || (isTest && isClient)) && {
-        lastImports: [`./${outputFilename}`],
+      ...(!blazeTemplatesPlugin && {
+        externals: /\.html$/,
+        isEagerImport: (module) => module.endsWith(".html"),
       }),
+      lastImports: [
+        ...(blazeTemplatesPlugin ? ['./client-blaze.js'] : []),
+        ...(isProd || arch || (isTest && isClient) ? [`./${outputFilename}`] : []),
+      ],
     }),
     enableGlobalPolyfill: isDevEnvironment && !isServer,
   });
@@ -652,11 +662,16 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     module: {
       rules: [
         swcConfigRule,
-        ...(Meteor.isBlazeEnabled
+        ...(blazeTemplatesPlugin
           ? [
               {
                 test: /\.html$/i,
-                loader: "ignore-loader",
+                loader: require.resolve('./loaders/blaze-template.js'),
+                options: {
+                  projectDir,
+                  bridgeModuleId: blazeTemplatesPlugin.moduleId,
+                },
+                sideEffects: true,
               },
             ]
           : []),
@@ -682,6 +697,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         ...(isReactEnabled && ReactRefreshRspackPlugin && isDevEnvironment
           ? [new ReactRefreshRspackPlugin()]
           : []),
+        blazeTemplatesPlugin,
         requireExternalsPlugin,
         assetExternalsPlugin,
       ].filter(Boolean),
@@ -713,7 +729,9 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         static: { directory: clientOutputDir, publicPath: "/__rspack__/" },
         hot: true,
         liveReload: true,
-        ...(Meteor.isBlazeEnabled && { hot: false }),
+        // Meteor must finish recompiling the template bridge before reloading
+        // the page. BlazeTemplatesPlugin invalidates it on JS-only rebuilds too.
+        ...(Meteor.isBlazeEnabled && { hot: false, liveReload: false }),
         port: devServerPort,
         devMiddleware: {
           writeToDisk: createPersistCallback({
