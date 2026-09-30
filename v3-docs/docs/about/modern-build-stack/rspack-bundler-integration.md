@@ -23,6 +23,10 @@ meteor add rspack
 
 On first run, the package installs the required Rspack setup at the project level. It compiles your app code with Rspack to get the full benefit of this integration.
 
+### Testing Rspack apps
+
+The [Rstest integration](../test-stack/rstest.md) reuses the Rspack setup for native tests and connects it to real Meteor hosts when tests need Meteor services. See the [Test Stack](../test-stack.md) for browser testing, E2E, coverage, and existing driver options.
+
 ## Requirements
 
 ### Define the app’s entry points

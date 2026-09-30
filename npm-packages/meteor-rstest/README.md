@@ -2,6 +2,9 @@
 
 Meteor-owned Rstest coordinator and configuration bridge.
 
+See the [Test Stack guide](../../v3-docs/docs/about/test-stack.md) for the
+application walkthrough, configuration, and existing-driver workflows.
+
 This package is paired with the test-only Atmosphere package `rstest`. Meteor
 keeps ownership of CLI selection, Isobuild, Atmosphere packages, MongoDB, DDP,
 the application process, browser launch, restarts, and cleanup. Rstest owns
@@ -69,7 +72,10 @@ Persistent selection uses `package.json`:
 
 Use `"meteor.testRunner": "driver"` as the persistent provider opt-out, then
 select a concrete runtime driver with the existing `--driver-package` option.
-An explicit `--driver-package` always wins.
+An explicit `--driver-package` bypasses automatic provider activation. It
+conflicts with a non-`driver` selection in `--test-runner`,
+`METEOR_TEST_RUNNER`, or `meteor.testRunner`; remove that selection or set the
+persistent policy to `"driver"` before using a legacy driver.
 
 ## Driver packages versus test-runner providers
 
@@ -81,7 +87,8 @@ An explicit `--driver-package` always wins.
 | Lifecycle | Runtime hooks and reporting | Validation, process/browser supervision, watch generations, exit propagation, cleanup |
 | Examples | `test-in-browser`, `meteortesting:mocha` | Provider owned by test-only `rstest` |
 
-`--driver-package <name>` always selects the runtime-driver route.
+`--driver-package <name>` selects the runtime-driver route when no conflicting
+provider policy is set.
 `--test-runner <provider-id>` is an advanced provider override; normal Rstest
 usage needs neither because adding `rstest` activates its provider. One command
 has one outer provider or explicit driver owner. Provider-owned Meteor hosts
@@ -101,13 +108,14 @@ provider id accepted by `--test-runner`.
 | `tests/rstest/runtime/server` | Meteor/Rspack/Isobuild server, including Atmosphere packages and MongoDB |
 | `tests/rstest/runtime/client` | Meteor/Rspack/Isobuild in the real Meteor browser runtime |
 | `tests/rstest/e2e` | `@rstest/playwright` against a Meteor-owned full application |
-| Existing Meteor `.test`/`.app-test`, `meteor.testModule`, and optional `tests/legacy` outside native roots | Existing real driver route; never source-translated into Rstest |
+| Existing Mocha/Tinytest files, `meteor.testModule`, and optional `tests/legacy` | Existing real driver route; never source-translated into Rstest |
 
-Pure projects intentionally do not emulate `meteor/*` resolution. Move tests
+Pure projects intentionally do not emulate `meteor/*` resolution. Tests
 requiring Meteor globals, Atmosphere exports, DDP, WebApp, package test-only
-unibuilds, or MongoDB into a runtime root. Keep importing test APIs from
-`@rstest/core`; importing real `meteor/*` dependencies selects the embedded
-Meteor runtime.
+unibuilds, or MongoDB run in a real Meteor host. Keep importing test APIs from
+`@rstest/core`; importing real `meteor/*` dependencies selects that runtime
+without requiring a particular directory. Runtime roots remain available as
+explicit routing hints.
 
 ## Dynamic configuration
 
@@ -233,7 +241,8 @@ External E2E is collected only with `--full-app`; explicitly selecting
 
 `--runtime-workers N` is separate from native Rstest workers and `--shard`.
 For `N > 1`, current support is limited to `meteor test --once --server-only`
-and selected `tests/rstest/runtime/server/**` files. Parent Rstest config/native
+and selected Meteor server-runtime files, including import-inferred colocated
+tests. Parent Rstest config/native
 planning and Meteor local-package preparation run once. Files are sorted and
 partitioned deterministically; each non-empty partition gets an isolated
 Meteor harness, Rspack build context, proxy/Mongo port pair, local database,
@@ -302,8 +311,8 @@ For `meteor test-packages`, dynamic config evaluates once with
 `context.command === "test-packages"`, `packageTests === true`, and distinct
 application/harness roots. `testTimeout`, `hookTimeout`, and `maxConcurrency`
 configure bounded Meteor runtime cases. Name filtering, browser choice, and side selection work.
-Worker-only project/file, coverage, snapshot-update, shard, and changed-file
-options fail before build instead of being ignored. Mixed Rstest and legacy
+Coverage is supported. Project/file filters, snapshot-update, shard, and
+changed-file options fail before build instead of being ignored. Mixed Rstest and legacy
 package ownership also fails with exact split commands until real compatibility
 executors can share one harness.
 
@@ -355,7 +364,7 @@ report:
 ```sh
 meteor npm install --save-dev @rstest/coverage-istanbul
 meteor test --once --coverage
-meteor test --once --coverage --runtime-workers 2
+meteor test --once --server-only --coverage --runtime-workers 2
 meteor test-packages --once --coverage my-package
 meteor test --once --full-app --coverage --project meteor-e2e
 ```

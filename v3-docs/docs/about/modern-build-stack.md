@@ -55,6 +55,8 @@ On first run, the package installs the required Rspack setup at the project leve
 
 ## Learn more
 
+📄 [Test Stack](./test-stack.md) — Explore the Rstest integration for Rspack apps, real Meteor runtime tests, and existing test drivers.
+
 📄 [Build System guide](/about/build-tool) — In-depth guide covering Meteor's build tool, JavaScript transpilation, CSS processing, HMR, and build plugins.
 
 📹 [Modern Build Stack in Meteor 3: Empower Your Meteor Apps with Faster, Feature-Rich Bundling](https://www.youtube.com/watch?v=LqU1eDbnG4I)

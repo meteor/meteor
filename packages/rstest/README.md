@@ -2,6 +2,9 @@
 
 Test-only capability and Meteor-runtime executor for `@meteorjs/rstest`.
 
+See the [Test Stack guide](../../v3-docs/docs/about/test-stack.md) for the
+application walkthrough, configuration, and existing-driver workflows.
+
 Adding `rstest` selects Rstest for `meteor test` and for selected
 `meteor test-packages` whose `Package.onTest` metadata has a strong `rstest`
 dependency. Explicit `--driver-package` or persistent
@@ -57,10 +60,12 @@ For a provider-owned Meteor host, execution plan may reuse existing driver
 contract internally. Rstest does this with Atmosphere `rstest`: provider owns
 tool orchestration, while package's `start`/`runTests` exports run inside real
 host through `meteor/test_environment`. This is not mixed CLI selection;
-explicit `--driver-package` still bypasses provider.
+explicit `--driver-package` bypasses automatic activation, but conflicts with a non-`driver` selection
+in `--test-runner`, `METEOR_TEST_RUNNER`, or `meteor.testRunner`.
 
-Every test imports declarations, assertions, hooks, fixtures, and `rs` from
-`@rstest/core`. Pure, DOM, Browser Mode, coverage, and Playwright projects run
+Tests use declarations, assertions, hooks, fixtures, and `rs` from
+`@rstest/core`; external E2E uses `@rstest/playwright` for its browser fixtures.
+Pure, DOM, Browser Mode, coverage, and Playwright projects run
 under native Rstest. Tests whose graph reaches `meteor/*` run the same upstream
 Rstest API inside a real Meteor server or browser host. `meteor/rstest` is now
 an internal generated-entry bridge, not a second user-facing test API.
@@ -240,7 +245,7 @@ desired execution lanes:
 
 ```sh
 meteor test --once --coverage
-meteor test --once --coverage --runtime-workers 2
+meteor test --once --server-only --coverage --runtime-workers 2
 meteor test-packages --once --coverage my-package
 meteor test --once --full-app --coverage --project meteor-e2e
 ```

@@ -1537,6 +1537,64 @@ This system allows forks of the meteor tool to be published as packages, letting
 :::
 
 
+## meteor test {#meteortest}
+
+Run application tests using a test-runner provider or a driver package.
+
+```bash
+meteor test [options]
+```
+
+Run the command inside an application. Without `--once`, the command watches for changes. `--full-app` loads the full application alongside its tests; ordinary test mode loads the test program and its dependencies.
+
+Existing driver-based applications continue to select their driver explicitly:
+
+```bash
+meteor test --once --driver-package meteortesting:mocha
+```
+
+With Atmosphere `rstest` installed, `meteor test` selects its provider automatically. Explicit `--driver-package` bypasses automatic activation, but conflicts with an explicitly selected non-driver provider policy. See [Test Stack](/about/test-stack.md) for setup and [selection rules](/about/test-stack/drivers.md#select-a-provider-or-a-driver).
+
+### Options
+
+| Option | Description |
+| --- | --- |
+| `--once` | Run once and exit with the test result. |
+| `--full-app` | Load the full application. Required for Rstest E2E. |
+| `--driver-package <package>` | Select an existing runtime driver. |
+| `--test-runner <id>` | Explicit provider override, normally unnecessary. `driver` is not a provider ID. |
+| `--port`, `-p <port>` | Set the Meteor host port. |
+| `--settings`, `-s <file>` | Load Meteor settings for the test host. |
+| `--verbose` | Show detailed Meteor diagnostics and test output. |
+
+Rstest supports these additional options; other providers must validate their own capabilities:
+
+| Option | Description |
+| --- | --- |
+| `--config <file>` | Select a Rstest configuration file. |
+| `--project <name>` | Select a project; repeat to select several. |
+| `--test-file <file>` | Select a test file; repeat to select several. |
+| `--test-name-pattern <pattern>` | Filter test names. |
+| `--server-only`, `--client-only` | Narrow the selected execution side. |
+| `--browser <name>` | Choose a browser supported by the selected mode and install its binary first. Meteor client hosts support `chromium`, `firefox`, and `webkit`; the pinned E2E fixture supports Chromium only. |
+| `--coverage` | Enable coverage for the selected tests. Hosted or mixed coverage requires Istanbul. |
+| `--update-snapshots`, `-u` | Allow snapshot updates. |
+| `--runtime-workers <count>` | Number of isolated Meteor hosts; default `1`. Values above `1` require one-shot server-only app tests. |
+| `--shard <index/count>` | Shard native-only tests; requires `--once`. |
+| `--changed`, `--changed-since <ref>` | Select changed native-only tests; requires `--once`. |
+
+Arguments after `--` pass to native Rstest. Configuration, root, project selection, and empty-selection handling remain coordinated by Meteor and cannot be overridden through passthrough arguments.
+
+```bash
+meteor test --once --project meteor-pure-server
+meteor test --once --server-only --project meteor-runtime-server
+meteor test --once --full-app --project meteor-e2e
+meteor test --once --coverage
+meteor test --once -- --reporters=verbose
+```
+
+See the [Rstest guide](/about/test-stack/rstest.md) for optional dependencies, supported combinations, configuration, reporting, and coverage limitations.
+
 ## meteor test-packages {#meteortestpackages}
 
 Run tests for Meteor packages.
@@ -1547,7 +1605,9 @@ meteor test-packages [options] [package...]
 
 ### Description
 
-Runs unit tests for one or more packages. Test results appear in a browser dashboard that updates whenever relevant source files are modified.
+Runs tests for one or more packages. With the traditional default driver, test results appear in a browser dashboard that updates whenever relevant source files are modified. Custom drivers and test-runner providers control their own reporting.
+
+Packages with a strong, ordered `rstest` test dependency can use the Rstest provider. All selected packages must use the same test engine for the active architectures. See [Rstest package tests](/about/test-stack/rstest.md#test-atmosphere-packages) and [existing drivers](/about/test-stack/drivers.md).
 
 ::: tip Package Specification
 Packages can be specified by:
@@ -1572,6 +1632,8 @@ If no packages are specified, all available packages will be tested.
 | `--no-lint`                   | Skip running linters on every test app rebuild                  |
 | `--extra-packages <packages>` | Run with additional packages (comma separated)                  |
 | `--test-app-path <path>`      | Set directory for temporary test app (default: system temp dir) |
+
+For the Rstest provider, `--once`, `--config`, `--test-name-pattern`, `--server-only`, `--client-only`, `--browser`, and `--coverage` are also supported. Project/file filtering, snapshot updates, sharding, changed-file selection, and multiple runtime workers are not supported for package tests. Run Rstest and legacy package groups in separate commands.
 
 #### Mobile Testing Options
 
