@@ -3,13 +3,10 @@ import runLog from './run-log.js';
 import crypto from 'crypto';
 import Anser from "anser";
 
-// Client messages are small, so there is no need to buffer the ws default of
-// 100 MiB.
+// Limit messages below ws's 100 MiB default.
 const MAX_MESSAGE_SIZE = 64 * 1024;
 
-// The websocket accepts connections from anything that can reach the proxy,
-// so messages are validated before they are used. Returns null when the
-// message was not sent by the hot-module-replacement client.
+// Anyone who can reach the proxy can send messages here.
 function parseHMRMessage(data) {
   let message;
   try {
@@ -131,10 +128,8 @@ export class HMRServer {
             }));
           }
 
-          // Every client, Cordova included, must send the secret. Only pages
-          // served during this run have it, while clients other than browsers
-          // can send any Origin header. A different app is also sent
-          // wrong-secret, which stops its client from reconnecting.
+          // Origin is forgeable by non-browser clients; require the secret
+          // even for Cordova. A wrong secret stops client reconnection.
           if (!isThisApp || !this._secretMatches(secret)) {
             conn.send(JSON.stringify({
               type: 'register-failed',
