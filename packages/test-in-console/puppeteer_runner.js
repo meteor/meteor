@@ -1,3 +1,5 @@
+const { loadTestPage } = require("./puppeteer-bootstrap.js");
+
 let puppeteer;
 try {
   // PUPPETEER_CACHE_DIR is initialized by run.sh before this process starts.
@@ -90,10 +92,7 @@ async function runNextUrl(browser) {
   // Use domcontentloaded: Meteor apps connect via DDP after DOM parse and never
   // fire the default 'load' event in the traditional sense. Increase timeout to
   // 90 s to handle slow first-run builds on CI / underpowered machines.
-  await page.goto(process.env.URL, {
-    timeout: 90000,
-    waitUntil: "domcontentloaded",
-  });
+  await loadTestPage(page, process.env.URL);
 
   async function poll() {
     if (await isDone(page)) {
