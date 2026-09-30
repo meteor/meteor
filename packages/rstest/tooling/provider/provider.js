@@ -3,6 +3,10 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const childProcess = require('node:child_process');
 const { createRequire } = require('node:module');
+const {
+  DEFAULT_RSPACK_VERSION,
+  DEFAULT_RSTEST_VERSION,
+} = require('../lib/constants.js');
 
 const {
   ensureRstestInstalled,
@@ -385,11 +389,13 @@ function getPackageHarnessDevDependencies(
 ) {
   const spec = env.METEOR_RSPACK_NPM_SPEC;
   return {
+    '@rspack/core': DEFAULT_RSPACK_VERSION,
+    '@rspack/cli': DEFAULT_RSPACK_VERSION,
     ...(typeof spec === 'string' && spec.trim() && {
       '@meteorjs/rspack': spec,
     }),
     ...(coverage && {
-      '@rstest/coverage-istanbul': '0.11.6',
+      '@rstest/coverage-istanbul': DEFAULT_RSTEST_VERSION,
     }),
   };
 }

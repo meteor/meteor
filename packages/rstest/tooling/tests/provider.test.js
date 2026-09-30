@@ -14,15 +14,22 @@ const {
 } = require('../provider/provider.js');
 
 test('package harness pins configured local Rspack npm package', () => {
+  const { peerDependencies } = require('../../../../npm-packages/meteor-rstest/package.json');
+  const compilerDependencies = {
+    '@rspack/core': peerDependencies['@rspack/core'],
+    '@rspack/cli': peerDependencies['@rspack/cli'],
+  };
   assert.deepEqual(getPackageHarnessDevDependencies({
     METEOR_RSPACK_NPM_SPEC: '/repo/npm-packages/meteor-rspack',
   }), {
+    ...compilerDependencies,
     '@meteorjs/rspack': '/repo/npm-packages/meteor-rspack',
   });
   assert.deepEqual(getPackageHarnessDevDependencies({}, { coverage: true }), {
+    ...compilerDependencies,
     '@rstest/coverage-istanbul': '0.11.6',
   });
-  assert.deepEqual(getPackageHarnessDevDependencies({}), {});
+  assert.deepEqual(getPackageHarnessDevDependencies({}), compilerDependencies);
 });
 
 test('coverage instrumentation resolves from the coordinator dependency context', () => {
@@ -903,6 +910,8 @@ test('runtime tests prepare Meteor-host plan and package harness first', async t
   assert.equal(plan.refreshProjectMetadata, true);
   assert.deepEqual(manifestOptions, {
     additionalDevDependencies: {
+      '@rspack/core': '2.1.8',
+      '@rspack/cli': '2.1.8',
       '@meteorjs/rspack': '/repo/npm-packages/meteor-rspack',
     },
     persistMeteorConfig: {

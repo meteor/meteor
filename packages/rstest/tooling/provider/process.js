@@ -1,5 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
+const { createRequire } = require('node:module');
 const { spawn } = require('node:child_process');
 
 function buildRstestArgs({
@@ -100,7 +101,7 @@ function buildRstestArgs({
   return args;
 }
 
-function resolveRstestBin(appDir) {
+function resolveRstestPackageJson(appDir) {
   const directPackageJson = path.join(
     appDir,
     'node_modules',
@@ -112,7 +113,8 @@ function resolveRstestBin(appDir) {
     ? directPackageJson
     : null;
   if (!packageJson) try {
-    packageJson = require.resolve('@meteorjs/rstest/package.json', { paths: [appDir] });
+    const appRequire = createRequire(path.join(path.resolve(appDir), 'package.json'));
+    packageJson = appRequire.resolve('@meteorjs/rstest/package.json');
   } catch {
     packageJson = null;
   }
@@ -124,7 +126,11 @@ function resolveRstestBin(appDir) {
     error.code = 'METEOR_RSTEST_NPM_MISSING';
     throw error;
   }
-  return path.join(path.dirname(packageJson), 'bin', 'meteor-rstest.js');
+  return packageJson;
+}
+
+function resolveRstestBin(appDir) {
+  return path.join(path.dirname(resolveRstestPackageJson(appDir)), 'bin', 'meteor-rstest.js');
 }
 
 function startRstestProcess({
@@ -219,6 +225,7 @@ function runRstestProcess(options) {
 module.exports = {
   buildRstestArgs,
   resolveRstestBin,
+  resolveRstestPackageJson,
   runRstestProcess,
   startRstestProcess,
 };
