@@ -107,11 +107,6 @@ function serializeTestWorkerOptions(options) {
   for (const key of TEST_WORKER_OPTION_KEYS) {
     if (options[key] !== undefined) serialized[key] = options[key];
   }
-  if (Array.isArray(serialized.project) && serialized.project.length > 0) {
-    serialized.project = serialized.project.filter(project =>
-      String(project).startsWith('meteor-runtime-')
-    );
-  }
   return cloneJsonSafe(serialized, 'worker.commandOptions');
 }
 
@@ -131,9 +126,18 @@ function validateHostRequest(input) {
       throw new Error('Meteor host ids must be unique.');
     }
     ids.add(host.id);
+    if (host.commandOptions !== undefined &&
+        (!host.commandOptions || typeof host.commandOptions !== 'object' ||
+          Array.isArray(host.commandOptions) ||
+          Object.keys(host.commandOptions).some(key => !TEST_WORKER_OPTION_KEYS.includes(key)))) {
+      throw new Error(`hosts[${index}].commandOptions must contain supported worker command options.`);
+    }
     return Object.freeze({
       id: host.id,
       payload: cloneJsonSafe(host.payload || {}, `hosts[${index}].payload`),
+      ...(host.commandOptions === undefined ? {} : {
+        commandOptions: serializeTestWorkerOptions(host.commandOptions),
+      }),
     });
   }));
 }
@@ -566,7 +570,10 @@ function createMeteorTestHostService({
               root: contextRoot,
               providerId,
               worker,
-              commandOptions,
+              commandOptions: serializeTestWorkerOptions({
+                ...commandOptions,
+                ...host.commandOptions,
+              }),
               port: pair.proxyPort,
               testAppPath,
             });

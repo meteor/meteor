@@ -182,6 +182,9 @@ test('host descriptors write private manifests and stable result paths', t => {
   assert.equal(plan.requestedWorkers, 4);
   assert.equal(plan.actualWorkers, 2);
   assert.deepEqual(plan.descriptors.map(host => host.id), ['server-1', 'server-2']);
+  for (const host of plan.descriptors) {
+    assert.deepEqual(host.commandOptions, { project: ['meteor-runtime-server'] });
+  }
   assert.deepEqual(
     JSON.parse(fs.readFileSync(plan.descriptors[0].payload.runtimeManifest)),
     {
@@ -287,6 +290,25 @@ test('coverage-enabled host descriptors bind each worker to one artifact', t => 
       },
     },
   }), /coverage path/);
+});
+
+test('worker manifests preserve deterministic mixed-case and Unicode filenames', t => {
+  const appDir = createApp(t);
+  const names = ['apple.test.js', 'Zebra.test.js', '_helper.test.js', 'étude.test.js'];
+  const files = names.map(name => writeFile(appDir, name));
+  const localDir = path.join(appDir, '.meteor', 'local');
+  const { descriptors } = createRstestHostDescriptors({
+    appDir,
+    localDir,
+    files,
+    requestedWorkers: 1,
+    generation: '1234567890abcdef1234567890abcdef',
+    runtimeSettingsPath: path.join(localDir, 'rstest', 'app-runtime-settings.json'),
+  });
+  const payload = validateRstestWorkerPayload({ appDir, worker: descriptors[0] });
+  assert.deepEqual(payload.runtimeFiles.map(file => path.basename(file)),
+    ['Zebra.test.js', '_helper.test.js', 'apple.test.js', 'étude.test.js']);
+  assert.deepEqual(payload.runtimeFiles, descriptors[0].payload.runtimeFiles);
 });
 
 test('worker payload validates generation, identity paths, and manifest contents', t => {

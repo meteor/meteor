@@ -92,10 +92,9 @@ test('worker option serializer preserves allowlisted command behavior only', () 
     once: true,
     'server-only': true,
     project: [
-      'meteor-pure-server',
-      'meteor-runtime-server',
-      'meteor-runtime-client',
-      'meteor-e2e',
+      'example-unit',
+      'example-runtime',
+      'example-e2e',
     ],
     'test-file': ['a.test.js'],
     settings: '/app/settings.json',
@@ -109,7 +108,7 @@ test('worker option serializer preserves allowlisted command behavior only', () 
   assert.deepEqual(result, {
     once: true,
     'server-only': true,
-    project: ['meteor-runtime-server', 'meteor-runtime-client'],
+    project: ['example-unit', 'example-runtime', 'example-e2e'],
     'test-file': ['a.test.js'],
     settings: '/app/settings.json',
     args: ['--reporter=dot'],
@@ -170,13 +169,19 @@ test('host request requires unique stable ids and JSON-safe payloads', () => {
   assert.throws(() => validateHostRequest([
     { id: 'one', payload: { fn() {} } },
   ]), /JSON-safe/);
+  assert.throws(() => validateHostRequest([
+    { id: 'one', commandOptions: { appDir: '/different-app' } },
+  ]), /supported worker command options/);
+  assert.throws(() => validateHostRequest([
+    { id: 'one', commandOptions: [] },
+  ]), /supported worker command options/);
 });
 
 test('worker context round-trips opaque payload with private permissions', t => {
   const root = tempRoot(t);
   const filename = writeWorkerContext({
     root,
-    providerId: 'rstest',
+    providerId: 'example',
     worker: {
       id: 'server-1',
       index: 0,
@@ -191,7 +196,7 @@ test('worker context round-trips opaque payload with private permissions', t => 
   assert.equal(fs.statSync(filename).mode & 0o777, 0o600);
   assert.deepEqual(readWorkerContext(filename), {
     schemaVersion: 1,
-    providerId: 'rstest',
+    providerId: 'example',
     worker: {
       id: 'server-1',
       index: 0,
@@ -232,7 +237,12 @@ test('Meteor host service preserves stable results and lets test failures finish
     harnessRoot: path.join(root, 'coordinator'),
     basePort: 4300,
     providerId: 'fake',
-    commandOptions: { once: true, 'server-only': true, args: [] },
+    commandOptions: {
+      once: true,
+      'server-only': true,
+      project: ['example-unit', 'example-runtime'],
+      args: [],
+    },
     async prepare() {
       prepared.push('parent');
     },
@@ -245,10 +255,14 @@ test('Meteor host service preserves stable results and lets test failures finish
   });
 
   const handle = service.start([
-    { id: 'one', payload: { value: 1 } },
+    { id: 'one', payload: { value: 1 }, commandOptions: { project: ['example-runtime'] } },
     { id: 'two', payload: { value: 2 } },
   ]);
   while (completions.size < 2) await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(readWorkerContext(completions.get('one').options.contextFile).commandOptions.project,
+    ['example-runtime']);
+  assert.deepEqual(readWorkerContext(completions.get('two').options.contextFile).commandOptions.project,
+    ['example-unit', 'example-runtime']);
   assert.deepEqual(prepared, [
     'parent',
     `one:${path.join(root, 'coordinator', 'workers', 'one', '.meteor', 'local-one')}`,

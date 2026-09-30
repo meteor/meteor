@@ -72,7 +72,7 @@ function canonicalRuntimeFiles({ appDir, files, allowEmpty = false }) {
   normalized.sort((left, right) => {
     const leftRelative = path.relative(realAppDir, left).split(path.sep).join('/');
     const rightRelative = path.relative(realAppDir, right).split(path.sep).join('/');
-    return leftRelative.localeCompare(rightRelative);
+    return leftRelative < rightRelative ? -1 : leftRelative > rightRelative ? 1 : 0;
   });
   return normalized;
 }
@@ -189,6 +189,14 @@ function createRstestHostDescriptors({
     removeIfPresent(resultPath);
     return Object.freeze({
       id,
+      commandOptions: Object.freeze({
+        project: Object.freeze([
+          ...(runtimeFiles.some(file => !normalizedClientFiles.has(file))
+            ? ['meteor-runtime-server'] : []),
+          ...(runtimeFiles.some(file => normalizedClientFiles.has(file))
+            ? ['meteor-runtime-client'] : []),
+        ]),
+      }),
       payload: Object.freeze({
         schemaVersion: WORKER_PAYLOAD_SCHEMA_VERSION,
         generation,
@@ -354,7 +362,7 @@ function validateRstestWorkerPayload({ appDir, worker }) {
         'Runtime worker manifest assigns one file to multiple architectures.'
       );
     }
-    manifestFiles = [...unique].sort();
+    manifestFiles = canonicalRuntimeFiles({ appDir, files: [...unique] });
   } catch (error) {
     throw workerError(
       'METEOR_RSTEST_WORKER_MANIFEST',
