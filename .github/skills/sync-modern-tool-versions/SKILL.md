@@ -80,8 +80,11 @@ version that remains.
 
 ## Rspack Invariants
 
-- Keep `npm-packages/meteor-rspack/package.json`, its lockfile root, and
-  `DEFAULT_METEOR_RSPACK_VERSION` on the same exact version.
+- Keep `npm-packages/meteor-rspack/package.json` and its lockfile root on the
+  same exact version.
+- Keep `DEFAULT_METEOR_RSPACK_VERSION` on the latest published version that
+  Meteor can install. It may trail the local package identity while the next
+  version is staged, but it must never be newer.
 - Normally use `^<DEFAULT_METEOR_RSPACK_VERSION>` in skeletons and E2E fixtures
   that are not compatibility tests.
 - Keep `DEFAULT_RSPACK_VERSION` as the recommended floor for both

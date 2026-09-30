@@ -61,6 +61,17 @@ export function createUwsTransport() {
             // uWS manages its own timeouts internally
           };
 
+          // uWS names its two shutdowns the other way round from the socket
+          // contract in ./index.js: close() is documented as "Forcefully
+          // closes this WebSocket [...] No WebSocket close message is sent"
+          // and drops what send() queued, while end() closes gracefully and
+          // delivers it. livedata_server ends DDP version negotiation by
+          // sending 'failed' and closing in the same tick, so close() must
+          // map onto end() or that frame never reaches the client.
+          socket.close = function () {
+            socket.end();
+          };
+
           socket.protocol = 'websocket-raw';
           socket.headers = socket.headers || {};
 

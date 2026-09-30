@@ -10,7 +10,7 @@ var packageJson = {
   dependencies: {
     // Explicit dependency because we are replacing it with a bundled version
     // and we want to make sure there are no dependencies on a higher version
-    npm: "11.12.1",
+    npm: "11.19.0",
     "node-gyp": "10.2.0",
     // Required by argon2's install script when Meteor rebuilds native
     // dependencies in its isolated npm environment.
