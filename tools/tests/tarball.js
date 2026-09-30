@@ -29,7 +29,6 @@ selftest.define("create and extract tarball with long paths", async function () 
   expectEqual(files.readFile(extractedStampedFile, "utf-8"), STAMP);
 });
 
-// Helper: gzip a tar-stream pack into a single Buffer.
 function packToTarGz(buildEntries) {
   var tarStream = require('tar-stream');
   var zlib = require('zlib');
@@ -63,14 +62,9 @@ function packToTarGz(buildEntries) {
   });
 }
 
-// MET-004: a crafted archive can chain a symlink to a hard link so that
-// tar-fs (before 2.1.2) dereferences it and overwrites a file outside the
-// extraction root. extractTarGz must refuse such archives and leave files
-// outside the root untouched.
 selftest.define("extractTarGz rejects archives that escape the root", async function () {
   var scratch = files.mkdtemp("tarfs-escape");
 
-  // Sentinel file that lives OUTSIDE the extraction root.
   var outsideDir = files.pathJoin(scratch, "outside");
   files.mkdir_p(outsideDir);
   var sentinel = files.pathJoin(outsideDir, "sentinel.txt");
@@ -80,21 +74,19 @@ selftest.define("extractTarGz rejects archives that escape the root", async func
   var buffer = await packToTarGz(async function (addEntry) {
     var steps = 15;
     await addEntry({ name: 'package', type: 'directory', mode: 0o755 });
-    // `package/root` lexically stays inside the root, but its real target
-    // escapes once the `noop -> .` symlinks are followed.
+    // `package/root` appears in bounds until the `noop -> .` hops are followed.
     await addEntry({
       name: 'package/root',
       type: 'symlink',
       linkname: 'noop/'.repeat(steps) + '../'.repeat(steps),
     });
     await addEntry({ name: 'package/noop', type: 'symlink', linkname: '.' });
-    // The hard link dereferences `package/root` to reach the sentinel.
+    // The hard link source reaches the sentinel through `package/root`.
     await addEntry({
       name: 'package/hard-sentinel',
       type: 'link',
       linkname: 'package/root' + files.convertToOSPath(sentinel),
     });
-    // Writing to the hard link would overwrite the sentinel on tar-fs 2.1.1.
     await addEntry({
       name: 'package/hard-sentinel',
       type: 'file',
@@ -111,13 +103,10 @@ selftest.define("extractTarGz rejects archives that escape the root", async func
     threw = true;
   }
 
-  // Extraction must fail, and the file outside the root must be untouched.
   selftest.expectTrue(threw);
   expectEqual(files.readFile(sentinel, "utf-8"), "ORIGINAL");
 });
 
-// The escape guard must not disturb legitimate archives, including the
-// relative symlinks that appear inside isopack node_modules/.bin directories.
 selftest.define("extractTarGz preserves in-tree symlinks", async function () {
   var scratch = files.mkdtemp("tarfs-legit");
 
@@ -133,7 +122,6 @@ selftest.define("extractTarGz preserves in-tree symlinks", async function () {
       mode: 0o755,
     }, body);
     await addEntry({ name: 'package/node_modules/.bin', type: 'directory', mode: 0o755 });
-    // A relative symlink that resolves within the extraction root.
     await addEntry({
       name: 'package/node_modules/.bin/foo',
       type: 'symlink',
@@ -145,20 +133,10 @@ selftest.define("extractTarGz preserves in-tree symlinks", async function () {
   await files.extractTarGz(buffer, destPath);
 
   var linkPath = files.pathJoin(destPath, "node_modules", ".bin", "foo");
-  // The symlink is preserved as a symlink pointing at the in-tree target...
   expectEqual(files.readlink(linkPath), "../foo/cli.js");
-  // ...and following it reads the real file's contents.
   expectEqual(files.readFile(linkPath, "utf-8"), "REAL");
 });
 
-// MET-004 (leaf variant): a symlink whose lexical target stays in-root but
-// whose real target escapes (its real depth differs from its lexical depth,
-// via the `x -> .` hop), followed by a FILE entry with the same name. tar-fs
-// 2.1.1 writes the file straight through the symlink, overwriting the outside
-// target. extractTarGz creates a temp dir `<parent>/.tmpXXXX` and the archive's
-// single top-level dir sits one level below it, so `x/../..` climbs to
-// `<parent>` (dirname of destPath); the sentinel lives at
-// `<parent>/outside/sentinel.txt`.
 selftest.define("extractTarGz rejects a file planted through a symlink", async function () {
   var scratch = files.mkdtemp("tarfs-leaf");
   var destPath = files.pathJoin(scratch, "extracted");
@@ -172,7 +150,7 @@ selftest.define("extractTarGz rejects a file planted through a symlink", async f
   var buffer = await packToTarGz(async function (addEntry) {
     await addEntry({ name: 'package', type: 'directory', mode: 0o755 });
     await addEntry({ name: 'package/x', type: 'symlink', linkname: '.' });
-    // Lexically resolves inside the temp root; really resolves to the sentinel.
+    // `x -> .` makes this path reach the sentinel outside the temp root.
     await addEntry({
       name: 'package/pwn',
       type: 'symlink',
@@ -197,15 +175,11 @@ selftest.define("extractTarGz rejects a file planted through a symlink", async f
   expectEqual(files.readFile(sentinel, "utf-8"), "ORIGINAL");
 });
 
-// MET-004 (ancestor variant): a file entry written beneath a planted symlink
-// directory. tar-fs's own path validation already blocks this on 2.1.1; the
-// guard rejects it too, as defense in depth.
 selftest.define("extractTarGz rejects entries beneath a planted symlink", async function () {
   var scratch = files.mkdtemp("tarfs-ancestor");
   var destPath = files.pathJoin(scratch, "extracted");
 
-  // `package/A -> x/../..` resolves to <parent> (dirname of destPath) at run
-  // time, so the escaping file entry would land at <parent>/sentinel.txt.
+  // `package/A -> x/../..` reaches scratch, where the sentinel lives.
   var sentinel = files.pathJoin(scratch, "sentinel.txt");
   files.writeFile(sentinel, "ORIGINAL");
 
@@ -233,9 +207,6 @@ selftest.define("extractTarGz rejects entries beneath a planted symlink", async 
   expectEqual(files.readFile(sentinel, "utf-8"), "ORIGINAL");
 });
 
-// MET-004 (direct variant): a symlink that points straight at an absolute path
-// outside the root, followed by a file written through it. The lexical
-// symlink-target check blocks the symlink.
 selftest.define("extractTarGz rejects a symlink to an absolute outside path", async function () {
   var scratch = files.mkdtemp("tarfs-direct");
   var destPath = files.pathJoin(scratch, "extracted");
@@ -272,8 +243,7 @@ selftest.define("extractTarGz rejects a symlink to an absolute outside path", as
   expectEqual(files.readFile(sentinel, "utf-8"), "ORIGINAL");
 });
 
-// Archives made with `tar -C dir .` start with a "./" entry for the root
-// itself. The guard must keep accepting it.
+// `tar -C dir .` archives start with a "./" root entry.
 selftest.define("extractTarGz accepts a ./ root entry", async function () {
   var scratch = files.mkdtemp("tarfs-dot-root");
 
@@ -297,9 +267,6 @@ selftest.define("extractTarGz accepts a ./ root entry", async function () {
     "DOT ROOT");
 });
 
-// MET-004 (directory variant): a directory entry whose name, with its trailing
-// slash, is a symlink planted earlier. tar-fs 2.1.1 would chmod (and utimes)
-// the symlink's real target outside the root.
 selftest.define("extractTarGz rejects a directory entry over a planted symlink", async function () {
   var scratch = files.mkdtemp("tarfs-dir-leaf");
   var destPath = files.pathJoin(scratch, "extracted");
@@ -311,7 +278,7 @@ selftest.define("extractTarGz rejects a directory entry over a planted symlink",
   var buffer = await packToTarGz(async function (addEntry) {
     await addEntry({ name: 'package/', type: 'directory', mode: 0o755 });
     await addEntry({ name: 'package/x', type: 'symlink', linkname: '.' });
-    // Lexically resolves inside the temp root; really resolves to outsideDir.
+    // `x -> .` makes this path reach outsideDir despite its lexical depth.
     await addEntry({
       name: 'package/pwn',
       type: 'symlink',
