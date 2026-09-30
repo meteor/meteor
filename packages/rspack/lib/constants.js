@@ -12,7 +12,7 @@ export const DEFAULT_RSPACK_VERSION = '2.2.7';
 export const DEFAULT_RSPACK_DEV_SERVER_VERSION = '2.2.1';
 
 /* Published `@meteorjs/rspack` minimum and auto-install version. */
-export const DEFAULT_METEOR_RSPACK_VERSION = '3.0.0-beta.2';
+export const DEFAULT_METEOR_RSPACK_VERSION = '3.0.0-beta.3';
 
 /* Minimum accepted and auto-install version for `@rspack/plugin-react-refresh`. */
 export const DEFAULT_METEOR_RSPACK_REACT_HMR_VERSION = '2.0.2';
@@ -47,6 +47,7 @@ export const DEFAULT_RSDOCTOR_RSPACK_PLUGIN_VERSION = '1.6.4';
 export const GLOBAL_STATE_KEYS = {
   CLIENT_PROCESS: 'rspack.clientProcess',
   SERVER_PROCESS: 'rspack.serverProcess',
+  BUILD_PROCESSES: 'rspack.buildProcesses',
   RSPACK_INSTALLATION_CHECKED: 'rspack.rspackInstallationChecked',
   RSPACK_REACT_INSTALLATION_CHECKED: 'rspack.rspackReactInstallationChecked',
   RSPACK_DOCTOR_INSTALLATION_CHECKED: 'rspack.rspackDoctorInstallationChecked',
@@ -131,8 +132,8 @@ function getModeSuffix(isTest, isTestFullApp) {
  * @param {boolean} isTestFullApp - Whether in --full-app test mode
  * @returns {string} Context directory name
  */
-export function getRspackChunksContext(isTest = false, isTestFullApp = false) {
-  return `${RSPACK_CHUNKS_CONTEXT}${getModeSuffix(isTest, isTestFullApp)}`;
+export function getRspackChunksContext(isTest = false, isTestFullApp = false, arch) {
+  return `${RSPACK_CHUNKS_CONTEXT}${getModeSuffix(isTest, isTestFullApp)}${arch ? `/${arch}` : ''}`;
 }
 
 /**

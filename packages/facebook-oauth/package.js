@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Facebook OAuth flow",
-  version: '1.11.7-beta360.1',
+  version: '1.11.7-beta360.3',
 });
 
 Package.onUse(api => {
