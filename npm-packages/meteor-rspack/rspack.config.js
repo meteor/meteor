@@ -2,7 +2,7 @@ const { DefinePlugin, BannerPlugin, NormalModuleReplacementPlugin } = require('@
 const fs = require('fs');
 const { inspect } = require('node:util');
 const path = require('path');
-const { merge } = require('webpack-merge');
+const { merge } = require('rspack-merge');
 
 const { cleanOmittedPaths, mergeSplitOverlap } = require("./lib/mergeRulesSplitOverlap.js");
 const { getMeteorAppSwcConfig } = require('./lib/swc.js');
@@ -95,26 +95,22 @@ function createCacheStrategy(
   ].filter(Boolean);
 
   return {
-    cache: true,
-    experiments: {
-      cache: {
-        version: `cache-${mode}${(side && `-${side}`) || ""}`,
-        type: "persistent",
-        storage: {
-          type: "filesystem",
-          // Include the mode in the directory (not just the version):
-          // rspack invalidates a persistent cache on version mismatch, so
-          // sharing one directory between development and production would
-          // wipe the cache on every `meteor run` <-> `meteor build` switch
-          // instead of keeping both warm. See meteor/meteor#14568.
-          directory: `node_modules/.cache/rspack/${
-            [buildContext, side, mode].filter(Boolean).join('-') || 'default'
-          }`,
-        },
-        ...(buildDependencies.length > 0 && {
-          buildDependencies: buildDependencies,
-        })
+    cache: {
+      version: `cache-${mode}${(side && `-${side}`) || ""}`,
+      type: "persistent",
+      storage: {
+        type: "filesystem",
+        // Rspack invalidates a persistent cache on version mismatch. Keep
+        // development and production in separate directories so switching
+        // between `meteor run` and `meteor build` leaves both caches warm.
+        // See meteor/meteor#14568.
+        directory: `node_modules/.cache/rspack/${
+          [buildContext, side, mode].filter(Boolean).join('-') || 'default'
+        }`,
       },
+      ...(buildDependencies.length > 0 && {
+        buildDependencies: buildDependencies,
+      })
     },
   };
 }
@@ -128,6 +124,7 @@ function createSwcConfig({
   externalHelpers,
   isDevEnvironment,
   isClient,
+  isLegacy,
   isAngularEnabled,
 }) {
   const defaultConfig = {
@@ -138,7 +135,7 @@ function createSwcConfig({
         ...(isJsxEnabled && { jsx: true }),
         ...(isAngularEnabled && { decorators: true }),
       },
-      target: isClient ? 'es2015' : 'es2022',
+      target: isLegacy ? 'es5' : isClient ? 'es2015' : 'es2022',
       ...(isReactEnabled && {
         transform: {
           react: {
@@ -262,6 +259,10 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     Meteor.chunksContext ||
     process.env.RSPACK_CHUNKS_CONTEXT ||
     `build-chunks${(meteorLocalDirName && `-${meteorLocalDirName}`) || ""}`;
+  const clientOutputContext = Meteor.clientOutputContext || '';
+  const clientOutputDir = path.resolve(projectDir, 'public', clientOutputContext);
+  const clientChunkPrefix = clientOutputContext ? '' : `${chunksContext}/`;
+  const clientAssetContext = path.posix.relative(clientOutputContext, assetsContext);
 
   // Compute build paths before loading user config (needed by Meteor helpers below)
   const outputPath = Meteor.outputPath;
@@ -272,6 +273,9 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   const isTest = !!Meteor.isTest;
   const isClient = !!Meteor.isClient;
   const isServer = !!Meteor.isServer;
+  const isLegacy = !!Meteor.isLegacy;
+  Meteor.isLegacy = isLegacy;
+  const arch = Meteor.arch;
   const isRun = !!Meteor.isRun;
   const isBuild = !!Meteor.isBuild;
   const isReactEnabled = !!Meteor.isReactEnabled;
@@ -317,7 +321,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   // reassigned after load once mode is fully resolved.
   let cacheStrategy = createCacheStrategy(
     initialMode,
-    (Meteor.isClient && "client") || "server",
+    arch || (Meteor.isClient && "client") || "server",
     { projectConfigPath, configPath, buildContext }
   );
   let swcConfigRule = createSwcConfig({
@@ -326,8 +330,9 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     isJsxEnabled,
     isTsxEnabled,
     externalHelpers: enableSwcExternalHelpers,
-    isDevEnvironment: isRun && initialIsDev && !isTest && !isNative,
+    isDevEnvironment: isRun && initialIsDev && !isTest && !isNative && !arch,
     isClient,
+    isLegacy,
     isAngularEnabled,
   });
   Meteor.swcConfigOptions = swcConfigRule.options;
@@ -360,7 +365,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     return new HtmlRspackPlugin({
       inject: false,
       cache: true,
-      filename: `../${buildContext}/${outputDir}/index.html`,
+      filename: path.relative(clientOutputDir,
+        path.resolve(projectDir, buildContext, outputDir, 'index.html')).replaceAll(path.sep, '/'),
       templateContent: `
           <head>
             <% for tag in htmlRspackPlugin.tags.headTags { %>
@@ -406,7 +412,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
 
   cacheStrategy = createCacheStrategy(
     mode,
-    (Meteor.isClient && "client") || "server",
+    arch || (Meteor.isClient && "client") || "server",
     // buildContext must be passed here too: this reassignment is the
     // effective cache strategy, and omitting it made the cache directory
     // collide across build contexts (e.g. custom METEOR_LOCAL_DIR setups).
@@ -423,7 +429,6 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   );
 
   // Determine output directories
-  const clientOutputDir = path.resolve(projectDir, "public");
   const serverOutputDir = path.resolve(projectDir, "private");
 
 
@@ -446,12 +451,12 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     ],
   };
 
-  if (Meteor.isDebug || Meteor.isVerbose) {
+  if (Meteor.isVerbose) {
     console.log("[i] Rspack mode:", mode);
     console.log("[i] Meteor flags:", Meteor);
   }
 
-  const isDevEnvironment = isRun && isDev && !isTest && !isNative;
+  const isDevEnvironment = isRun && isDev && !isTest && !isNative && !arch;
   swcConfigRule = createSwcConfig({
     isTypescriptEnabled,
     isReactEnabled,
@@ -460,6 +465,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     externalHelpers: enableSwcExternalHelpers,
     isDevEnvironment,
     isClient,
+    isLegacy,
     isAngularEnabled,
   });
   Meteor.swcConfigOptions = swcConfigRule.options;
@@ -469,9 +475,6 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     ...(isReactEnabled ? [/^react$/, /^react-dom$/] : []),
     ...(isServer ? [/^bcrypt$/] : []),
   ];
-  const alias = {
-    "/": path.resolve(process.cwd()),
-  };
   const fallback = {
     ...(isClient && makeWebNodeBuiltinsAlias()),
   };
@@ -492,13 +495,15 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   const reactRefreshModule = isReactEnabled
     ? safeRequire("@rspack/plugin-react-refresh")
     : null;
+  const ReactRefreshRspackPlugin =
+    reactRefreshModule?.ReactRefreshRspackPlugin || reactRefreshModule;
 
   const requireExternalsPlugin = new RequireExternalsPlugin({
     filePath: path.join(buildContext, runPath),
     ...(Meteor.isBlazeEnabled && {
       externals: /\.html$/,
       isEagerImport: (module) => module.endsWith(".html"),
-      ...((isProd || (isTest && isClient)) && {
+      ...((isProd || arch || (isTest && isClient)) && {
         lastImports: [`./${outputFilename}`],
       }),
     }),
@@ -511,7 +516,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     const filename = _fileInfo.filename;
     const isPublic = filename.startsWith("/") || filename.startsWith("public");
     if (isPublic) return `[name][ext][query]`;
-    return `${assetsContext}/[hash][ext][query]`;
+    return `${isClient ? clientAssetContext : assetsContext}/[hash][ext][query]`;
   };
 
   const rsdoctorModule = isBundleVisualizerEnabled
@@ -545,6 +550,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     : { stats: "errors-warnings", infrastructureLogging: { level: "warn" } };
 
   const clientEntry =
+    arch && !(isTest && isTestEager) ? path.resolve(projectDir, buildContext, entryPath) :
     isClient && isTest && isTestEager && isTestFullApp
       ? generateEagerTestFile({
           isAppTest: true,
@@ -552,7 +558,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
           buildContext,
           ignoreEntries: ["**/server/**"],
           meteorIgnoreEntries,
-          prefix: "client",
+          prefix: arch || "client",
           extraEntry: path.resolve(process.cwd(), Meteor.mainClientEntry),
           globalImportPath: path.resolve(projectDir, buildContext, entryPath),
         })
@@ -564,13 +570,13 @@ module.exports = async function (inMeteor = {}, argv = {}) {
           buildContext,
           ignoreEntries: ["**/server/**"],
           meteorIgnoreEntries,
-          prefix: "client",
+          prefix: arch || "client",
           globalImportPath: path.resolve(projectDir, buildContext, entryPath),
         })
       : isClient && isTest && testEntry
       ? path.resolve(process.cwd(), testEntry)
       : path.resolve(process.cwd(), buildContext, entryPath);
-  const clientNameConfig = `[${(isTest && "test-") || ""}client-rspack]`;
+  const clientNameConfig = `[${(isTest && "test-") || ""}${arch || 'client'}-rspack]`;
   let devServerUrl;
 
   // Default onListening provided by meteor-rspack. Kept as a named
@@ -615,7 +621,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   // Base client config
   const clientConfig = {
     name: clientNameConfig,
-    target: "web",
+    target: isLegacy ? ["web", "es5"] : "web",
     mode,
     entry: clientEntry,
     output: {
@@ -623,27 +629,28 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       filename: (_module) => {
         const chunkName = _module.chunk?.name;
         const isMainChunk = !chunkName || chunkName === "main";
-        const chunkSuffix = `${chunksContext}/[id]${
+        const chunkSuffix = `${clientChunkPrefix}[id]${
           isProd ? ".[chunkhash]" : ""
         }.js`;
         if (isDevEnvironment) {
           if (isMainChunk) return outputFilename;
           return chunkSuffix;
         }
-        if (isMainChunk) return `../${buildContext}/${outputPath}`;
+        if (isMainChunk) return path.relative(clientOutputDir,
+          path.resolve(projectDir, buildContext, outputPath)).replaceAll(path.sep, '/');
         return chunkSuffix;
       },
-      libraryTarget: "commonjs2",
-      publicPath: "/",
-      chunkFilename: `${chunksContext}/[id]${isProd ? ".[chunkhash]" : ""}.js`,
+      library: { type: "commonjs2" },
+      publicPath: clientOutputContext ? `/${clientOutputContext}/` : "/",
+      chunkFilename: `${clientChunkPrefix}[id]${isProd ? ".[chunkhash]" : ""}.js`,
       assetModuleFilename,
-      cssFilename: `${chunksContext}/[name]${
+      cssFilename: `${clientChunkPrefix}[name]${
         isProd ? ".[contenthash]" : ""
       }.css`,
-      cssChunkFilename: `${chunksContext}/[id]${
+      cssChunkFilename: `${clientChunkPrefix}[id]${
         isProd ? ".[contenthash]" : ""
       }.css`,
-      ...(isProd && { clean: { keep: keepOutsideBuild() } }),
+      ...(isProd && { clean: clientOutputContext ? true : { keep: keepOutsideBuild() } }),
     },
     optimization: {
       usedExports: true,
@@ -660,15 +667,27 @@ module.exports = async function (inMeteor = {}, argv = {}) {
               },
             ]
           : []),
+        { test: /\.css$/, type: "css/auto" },
         ...extraRules,
       ],
+      parser: {
+        javascript: {
+          // Relax Rspack 2.0 strict ESM linking; SWC-stripped TS type re-exports otherwise fail the build.
+          exportsPresence: "warn",
+        },
+      },
     },
-    resolve: { extensions, alias, fallback, roots: [path.resolve(projectDir)] },
+    resolve: {
+      extensions,
+      fallback,
+      roots: [path.resolve(projectDir)],
+    },
     externals,
+    externalsType: "commonjs2",
     plugins: [
       ...[
-        ...(isReactEnabled && reactRefreshModule && isDevEnvironment
-          ? [new reactRefreshModule()]
+        ...(isReactEnabled && ReactRefreshRspackPlugin && isDevEnvironment
+          ? [new ReactRefreshRspackPlugin()]
           : []),
         requireExternalsPlugin,
         assetExternalsPlugin,
@@ -704,12 +723,15 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         ...(Meteor.isBlazeEnabled && { hot: false }),
         port: devServerPort,
         devMiddleware: {
-          writeToDisk: createPersistCallback({ once: ['sw.js'], always: ['.html'] }),
+          writeToDisk: createPersistCallback({
+            once: ["sw.js"],
+            always: [".html"],
+          }),
         },
         onListening: meteorDefaultOnListening,
       },
     }),
-    ...merge(cacheStrategy, { experiments: { css: true } }),
+    ...cacheStrategy,
     ...lazyCompilationConfig,
     ...loggingConfig,
   };
@@ -748,7 +770,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     output: {
       path: serverOutputDir,
       filename: () => `../${buildContext}/${outputPath}`,
-      libraryTarget: "commonjs2",
+      library: { type: "commonjs2" },
       chunkFilename: `${chunksContext}/[id]${isProd ? ".[chunkhash]" : ""}.js`,
       assetModuleFilename,
       ...(isProd && { clean: { keep: keepOutsideBuild() } }),
@@ -779,17 +801,19 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         javascript: {
           // Dynamic imports on the server are treated as bundled in the same chunk
           dynamicImportMode: "eager",
+          // Relax Rspack 2.0 strict ESM linking; SWC-stripped TS type re-exports otherwise fail the build.
+          exportsPresence: "warn",
         },
       },
     },
     resolve: {
       extensions,
-      alias,
       modules: ["node_modules", path.resolve(projectDir)],
       conditionNames: ["import", "require", "node", "default"],
       roots: [path.resolve(projectDir)],
     },
     externals,
+    externalsType: "commonjs2",
     externalsPresets: { node: true },
     plugins: [
       new DefinePlugin(
@@ -839,7 +863,18 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         devServer: { port: devServerPort },
         stats: { preset: "normal" },
         infrastructureLogging: { level: "info" },
-        ...(isProd && isClient && { output: { module: false } }),
+        ...(isProd &&
+          isClient && {
+            output: {
+              // Nx Angular config emits ESM chunks in production by default.
+              // Meteor serves and minifies classic browser bundles here.
+              module: false,
+              scriptType: false,
+              chunkFormat: "array-push",
+              chunkLoading: "jsonp",
+              workerChunkLoading: "import-scripts",
+            },
+          }),
       }
     : {};
 
@@ -916,8 +951,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
 
   delete config["meteor.enablePortableBuild"];
 
-  if (Meteor.isDebug || Meteor.isVerbose) {
-  console.log("Config:", inspect(config, { depth: null, colors: true }));
+  if (Meteor.isVerbose) {
+    console.log("Config:", inspect(config, { depth: null, colors: true }));
   }
 
   // Check if lazyCompilation is enabled and warn the user
@@ -942,25 +977,48 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   // Add MeteorRspackOutputPlugin as the last plugin to output compilation info
   const meteorRspackOutputPlugin = new MeteorRspackOutputPlugin({
     waitFor: () => activeRsdoctorPlugin?._bootstrapTask,
-    getData: (stats, { isRebuild, compilationCount, compiler }) => ({
-      name: config.name,
-      mode: config.mode,
-      hasErrors: stats.hasErrors(),
-      hasWarnings: stats.hasWarnings(),
-      timestamp: Date.now(),
-      statsOverrided,
-      compilationCount,
-      isRebuild,
-      ...(!isRebuild &&
-        activeRsdoctorPlugin && {
-          [isClient ? "rsdoctorClientPort" : "rsdoctorServerPort"]:
-            activeRsdoctorPlugin.sdk.server.port,
+    getData: (stats, { isRebuild, compilationCount, compiler }) => {
+      const generatedAppPaths = [
+        path.join('.meteor', 'local'),
+        path.join('.meteor', 'types'),
+        buildContext,
+      ];
+      const changedFiles = [
+        ...(compiler?.modifiedFiles || []),
+        ...(compiler?.removedFiles || []),
+      ];
+      const hasAppSourceChanges =
+        changedFiles.length === 0 ||
+        changedFiles.some(file => {
+          const relativePath = path.relative(projectDir, file);
+          return !generatedAppPaths.some(generatedPath =>
+            relativePath === generatedPath ||
+            relativePath.startsWith(`${generatedPath}${path.sep}`)
+          );
+        });
+
+      return {
+        name: config.name,
+        mode: config.mode,
+        hasErrors: stats.hasErrors(),
+        hasWarnings: stats.hasWarnings(),
+        hasAppSourceChanges,
+        hash: stats.hash,
+        timestamp: Date.now(),
+        statsOverrided,
+        compilationCount,
+        isRebuild,
+        ...(!isRebuild &&
+          activeRsdoctorPlugin && {
+            [isClient ? "rsdoctorClientPort" : "rsdoctorServerPort"]:
+              activeRsdoctorPlugin.sdk.server.port,
+          }),
+        ...(devServerUrl && { devServerUrl }),
+        ...(!isRebuild && compiler && {
+          delegatedExtensions: extractDelegatedExtensions(stats, compiler),
         }),
-      ...(devServerUrl && { devServerUrl }),
-      ...(!isRebuild && compiler && {
-        delegatedExtensions: extractDelegatedExtensions(stats, compiler),
-      }),
-    }),
+      };
+    },
   });
   config.plugins = [meteorRspackOutputPlugin, ...(config.plugins || [])];
 

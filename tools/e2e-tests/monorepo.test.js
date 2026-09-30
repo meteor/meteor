@@ -11,8 +11,10 @@ import {
   assertServiceWorkerCaching,
   assertServiceWorkerPrecaching,
   assertFileInTree,
-  captureFileMtime
+  assertRspackWorkspaceInstall,
+  captureFileMtime,
 } from "./assertions";
+import fs from 'fs-extra';
 import { testMeteorRspackBundler } from './test-helpers';
 import path from 'path';
 
@@ -43,6 +45,19 @@ describe('Monorepo App Bundling /', () => {
     ],
     configFile: 'rspack.config.cjs',
     customAssertions: {
+      afterCreate: async ({ tempDir }) => {
+        const packageJson = await fs.readJson(
+          path.join(tempDir, 'app', 'package.json')
+        );
+        expect(packageJson.devDependencies['@rspack/core']).toBeUndefined();
+      },
+      afterInit: async ({ tempDir }) => {
+        await assertRspackWorkspaceInstall({
+          workspaceRoot: tempDir,
+          appDir: path.join(tempDir, 'app'),
+          packageManager: 'npm',
+        });
+      },
       afterRun: async ({ result, port, tempDir }) => {
         // Check custom plugin gets loaded from rspack.config.override.cjs file
         await waitForMeteorOutput(result.outputLines, /.*CustomConsoleLogPlugin.*/);
