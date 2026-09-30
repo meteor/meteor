@@ -33,6 +33,10 @@ One command has one outer provider or explicit driver owner. The Rstest provider
 
 This keeps engine-specific behavior with the integration. Coverage collection uses generic compiler options where a core boundary is needed; Meteor core does not choose Rstest's reporters or coverage policy.
 
+Hosted plans pass compiler behavior explicitly through `isobuildOptions`: lazy package-test evaluation and module source replacements. The provider supplies the replacement source; Isobuild does not import an engine's runtime. `buildPluginOptions` remains opaque, package-scoped JSON. A plan's `buildPluginDependencies` declares which package caches depend on another build plugin's options, so core does not inspect a compiler's private transform configuration.
+
+The Rspack package consumes its own options and loads the provider's adapter from an explicit module path. `@meteorjs/rstest/rspack` owns runtime aliases, test registration, mocking, and coverage instrumentation. Shared Rspack configuration supplies generic entry and configuration hooks. Rspack passes the package-host root explicitly to its tools-core helper instance, without changing process-wide application-root variables.
+
 ## Registration and lifecycle
 
 A test-only Atmosphere package declares its tool plugin through `Package.registerTestRunnerPlugin`, with the `isobuild:test-runner-plugin@1.0.0` capability. Inside that plugin, `Plugin.registerTestRunner` registers the provider. This narrow API does not enable arbitrary build plugins in test-only packages.
@@ -46,6 +50,8 @@ The lifecycle has three main stages:
 The contract includes `validate`, `prepare`, and lifecycle hooks such as `startBeforeHost`, `beforeAppRun`, `startHost`, `completeRun`, and `stop`. The name `startHost` identifies a callback after the host has started; it is not an override for spawning a different runtime executable.
 
 A generic host service supports isolated runtime workers. Rstest's current multi-host policy restricts this to one-shot, server-only app tests, with one local database and build context per worker. See [parallelism](./rstest.md#parallelism-and-feedback) for the supported combinations.
+
+Worker descriptors may override the permitted command options for their host. The provider chooses project names; core validates and forwards them without interpreting an engine's naming conventions. Cleanup clears the active compiler context even if provider shutdown fails.
 
 ## Other test engines
 
