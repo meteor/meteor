@@ -8,6 +8,7 @@ import {
   killMeteorProcess,
   killProcessByPort,
   killStrayAppProcesses,
+  resetPlaywrightPage,
   runMeteorApp,
   runMeteorTests,
   waitForMeteorOutput,
@@ -112,6 +113,7 @@ describe('Regressions / Rspack concurrent modes /', () => {
   });
 
   afterEach(async () => {
+    await resetPlaywrightPage();
     await killMeteorProcess(testProcess);
     await killMeteorProcess(appProcess);
     await killStrayAppProcesses();
@@ -227,7 +229,14 @@ describe('Regressions / Rspack concurrent modes /', () => {
 
     expect(await readBundle(appDir, normalBundlePath)).toBe(normalBundle);
     expect(fullAppBundle).toContain('__CLIENT_BOOTED__');
+    // The full-app client must execute with its own template bridge, even
+    // after normal tests have populated Rspack's persistent module cache.
+    await assertMeteorApp(TEST_PORT, {
+      title: 'blaze-router',
+      h1: 'Welcome to Meteor!',
+    });
 
+    await resetPlaywrightPage();
     await killMeteorProcess(testProcess);
     await killMeteorProcess(appProcess);
     testProcess = null;
@@ -257,6 +266,10 @@ describe('Regressions / Rspack concurrent modes /', () => {
 
     expect(await readBundle(appDir, fullAppBundlePath))
       .toBe(restartedFullAppBundle);
+    await assertMeteorApp(APP_PORT, {
+      title: 'blaze-router',
+      h1: 'Welcome to Meteor!',
+    });
   });
 
   test.each([

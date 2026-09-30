@@ -51,7 +51,7 @@ function safeRequire(moduleName) {
 function createCacheStrategy(
   mode,
   side,
-  { projectConfigPath, configPath, buildContext } = {},
+  { projectConfigPath, configPath, buildContext, outputDir } = {},
 ) {
   // Check for configuration files
   const tsconfigPath = path.join(process.cwd(), 'tsconfig.json');
@@ -96,16 +96,18 @@ function createCacheStrategy(
 
   return {
     cache: {
-      version: `cache-${mode}${(side && `-${side}`) || ""}`,
+      version: `cache-${[mode, side, outputDir].filter(Boolean).join('-')}`,
       type: "persistent",
       storage: {
         type: "filesystem",
         // Rspack invalidates a persistent cache on version mismatch. Keep
         // development and production in separate directories so switching
         // between `meteor run` and `meteor build` leaves both caches warm.
+        // Output directories also distinguish normal tests from full-app
+        // tests: cached loaders can embed their Meteor module paths (#14805).
         // See meteor/meteor#14568.
         directory: `node_modules/.cache/rspack/${
-          [buildContext, side, mode].filter(Boolean).join('-') || 'default'
+          [buildContext, outputDir, side, mode].filter(Boolean).join('-') || 'default'
         }`,
       },
       ...(buildDependencies.length > 0 && {
@@ -322,7 +324,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   let cacheStrategy = createCacheStrategy(
     initialMode,
     arch || (Meteor.isClient && "client") || "server",
-    { projectConfigPath, configPath, buildContext }
+    { projectConfigPath, configPath, buildContext, outputDir }
   );
   let swcConfigRule = createSwcConfig({
     isTypescriptEnabled,
@@ -417,7 +419,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     // effective cache strategy, and omitting it made the cache directory
     // collide across build contexts (e.g. custom METEOR_LOCAL_DIR setups).
     // See meteor/meteor#14568.
-    { projectConfigPath, configPath, buildContext }
+    { projectConfigPath, configPath, buildContext, outputDir }
   );
 
   // Determine run point

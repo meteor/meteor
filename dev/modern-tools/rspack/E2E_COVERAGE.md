@@ -133,7 +133,7 @@ Focused Blaze and Galvanized Iron Router fixture that exercises the standard E2E
 | Client-side app test executes instead of reporting a false zero-test success | Test once |
 | Rspack client boot marker is packaged in the deployable browser program | Build |
 | Concurrent development and full-app test commands preserve the development `.cjs` bundle | Run, Test |
-| Normal and full-app tests use isolated `_build/test` and `_build/app-test` module directories in both startup orders | Test |
+| Normal and full-app tests use isolated `_build/test` and `_build/app-test` module directories and persistent caches in both startup orders; the full-app Blaze client renders after switching modes with warm caches | Test |
 | Full-app tests build and execute the app client with no `testModule` or a server-only `testModule` | Test |
 
 ### full-blaze
