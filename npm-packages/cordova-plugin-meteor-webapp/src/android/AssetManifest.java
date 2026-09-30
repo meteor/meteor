@@ -89,11 +89,7 @@ final class AssetManifest {
         }
     }
 
-    /** Whether a file path from the manifest stays inside the asset bundle
-     * directory: it must not be empty or absolute, and must not contain ".."
-     * segments, also after percent-decoding (asset files are resolved from a
-     * Uri that treats the path as already encoded)
-     */
+    /** Rejects empty, absolute, or traversal paths, including encoded segments. */
     static boolean isValidFilePath(String filePath) {
         for (String path : new String[] { filePath, Uri.decode(filePath) }) {
             if (path.isEmpty() || path.startsWith("/")) return false;
@@ -104,10 +100,7 @@ final class AssetManifest {
         return true;
     }
 
-    /** Whether a version can be used as the name of the directory a downloaded
-     * asset bundle is stored in: a single path segment other than "." or "..",
-     * also after percent-decoding
-     */
+    /** Requires one safe directory name, including after percent-decoding. */
     static boolean isValidVersion(String version) {
         for (String name : new String[] { version, Uri.decode(version) }) {
             if (name.isEmpty() || name.equals(".") || name.equals("..") || name.contains("/")) return false;
