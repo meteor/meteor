@@ -1174,16 +1174,10 @@ export class AccountsServer extends AccountsCommon {
     await expirePasswordToken(this, oldestValidDate, tokenFilter, userId);
   }
 
-  // Deletes expired email verification tokens from the database.
-  //
-  // Exported for tests. Also, the arguments are only used by
-  // tests. oldestValidDate is simulate expiring tokens without waiting
-  // for them to actually expire. userId is used by tests to only expire
-  // tokens for the test user.
+  // Optional arguments scope expiry to a test user and cutoff.
   async _expireEmailVerificationTokens(oldestValidDate, userId) {
     const tokenLifetimeMs = this._getEmailVerificationTokenLifetimeMs();
 
-    // when calling from a test with extra arguments, you must specify both!
     if ((oldestValidDate && !userId) || (!oldestValidDate && userId)) {
       throw new Error("Bad test. Must specify both oldestValidDate and userId.");
     }
@@ -1951,7 +1945,6 @@ const setupUsersCollection = async users => {
   // For expiring password tokens
   await users.createIndexAsync('services.password.reset.when', { sparse: true });
   await users.createIndexAsync('services.password.enroll.when', { sparse: true });
-  // For expiring email verification tokens
   await users.createIndexAsync('services.email.verificationTokens.when', { sparse: true });
 };
 

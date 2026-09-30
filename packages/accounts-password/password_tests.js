@@ -1891,7 +1891,6 @@ if (Meteor.isServer) (() => {
           );
           test.equal(await loginTokenCount(), loginTokensBefore);
 
-          // A link issued after the password change still works.
           const { token: newToken } = await Accounts.generateVerificationToken(userId, email);
           const result = await clientConn.callAsync('verifyEmail', newToken);
           test.equal(result.id, userId);
