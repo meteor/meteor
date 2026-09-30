@@ -1,0 +1,8 @@
+{
+  "name": "portable-command",
+  "version": "1.0.0",
+  "bin": {
+    "portable-command": "bin/run.js"
+  },
+  "files": ["bin/run.js", "value.json"]
+}
