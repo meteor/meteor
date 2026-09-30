@@ -790,7 +790,6 @@ the Cordova platform version or plugin versions have changed and are potentially
           done();
         });
 
-        // Wait 500ms for the test to fail
         waitForTestToFail(500, done);
 
         WebAppLocalServer.checkForUpdates();
@@ -821,7 +820,6 @@ the Cordova platform version or plugin versions have changed and are potentially
           done();
         });
 
-        // Wait 500ms for the test to fail
         waitForTestToFail(500, done);
 
         WebAppLocalServer.checkForUpdates();
@@ -860,7 +858,6 @@ the Cordova platform version or plugin versions have changed and are potentially
           done();
         });
 
-        // Wait 500ms for the test to fail
         waitForTestToFail(500, done);
 
         WebAppLocalServer.checkForUpdates();
