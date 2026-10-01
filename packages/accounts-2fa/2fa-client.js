@@ -64,6 +64,80 @@ Accounts.enableUser2fa = (code, callback) => {
   Accounts.connection.call('enableUser2fa', code, callback);
 };
 
+let contextProvider = null;
+
+/**
+ * @summary Provide data sent with every login so the server policy can read it.
+ * The DDP connection does not forward cookies, so a trusted-browser token has to travel here.
+ * Values must be strings. The server drops anything larger than a small string map.
+ * @locus Client
+ * @param {Function} fn Returns an object such as `{ trustedDeviceToken }`.
+ */
+Accounts.set2faContextProvider = fn => {
+  contextProvider = fn;
+};
+
+Accounts._get2faClientContext = () => {
+  if (typeof contextProvider !== 'function') {
+    return undefined;
+  }
+  try {
+    const value = contextProvider();
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return undefined;
+    }
+    return value;
+  } catch (error) {
+    return undefined;
+  }
+};
+
+const selectorForLogin = selector => {
+  if (typeof selector !== 'string') {
+    return selector;
+  }
+  return selector.includes('@') ? { email: selector } : { username: selector };
+};
+
+/**
+ * @summary Ask the server to email a second-factor code, after the password has been checked.
+ * The callback receives the `no-2fa-code` error when the message was sent or is still on cooldown.
+ * Requires `accounts-password`.
+ * @locus Client
+ * @param {Object|String} selector
+ * @param {String} password
+ * @param {Function} [callback]
+ */
+Accounts.request2faEmailCode = (selector, password, callback) => {
+  if (typeof Accounts._hashPassword !== 'function') {
+    return reportError(
+      new Meteor.Error(400, 'accounts-password is required to request a 2FA email code'),
+      callback
+    );
+  }
+  const loginOptions = {
+    user: selectorForLogin(selector),
+    password: Accounts._hashPassword(password),
+    twoFactorMethod: 'email',
+  };
+  const clientContext = Accounts._get2faClientContext();
+  if (clientContext && Object.keys(clientContext).length) {
+    loginOptions.twoFactorContext = clientContext;
+  }
+  Accounts.callLoginMethod({
+    methodArguments: [loginOptions],
+    userCallback: error => {
+      if (error && error.error !== 'no-2fa-code') {
+        reportError(error, callback);
+        return;
+      }
+      if (callback) {
+        callback(error);
+      }
+    },
+  });
+};
+
 /**
  * @summary Disable user 2FA
  * @locus Client

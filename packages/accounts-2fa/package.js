@@ -17,9 +17,10 @@ Package.onUse(function (api) {
 
   api.use("ecmascript");
   api.use("check", "server");
+  api.use("email", "server");
 
   api.addFiles(["2fa-client.js"], "client");
-  api.addFiles(["2fa-server.js"], "server");
+  api.addFiles(["2fa-email.js", "2fa-methods.js", "2fa-server.js"], "server");
 
   api.types("accounts-2fa.d.ts");
 });

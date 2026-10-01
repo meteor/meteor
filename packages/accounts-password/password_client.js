@@ -7,17 +7,31 @@ const reportError = (error, callback) => {
    }
 };
 
-const internalLoginWithPassword = ({ selector, password, code, callback }) => {
+const withTwoFactorFields = (loginOptions, method) => {
+  if (method) {
+    loginOptions.twoFactorMethod = method;
+  }
+  const clientContext = Accounts._get2faClientContext?.();
+  if (clientContext && Object.keys(clientContext).length) {
+    loginOptions.twoFactorContext = clientContext;
+  }
+  return loginOptions;
+};
+
+const internalLoginWithPassword = ({ selector, password, code, method, callback }) => {
   if (typeof selector === 'string')
     if (!selector.includes('@')) selector = { username: selector };
     else selector = { email: selector };
+  const loginOptions = withTwoFactorFields({
+    user: selector,
+    password: Accounts._hashPassword(password),
+  }, method);
+  if (code) {
+    loginOptions.code = code;
+  }
   Accounts.callLoginMethod({
     methodArguments: [
-      {
-        user: selector,
-        password: Accounts._hashPassword(password),
-        code,
-      },
+      loginOptions,
     ],
     userCallback: (error, result) => {
       if (error) {
@@ -84,21 +98,28 @@ Accounts._hashPassword = password => ({
  *   single key: `email`, `username` or `id`. Username or email match in a case
  *   insensitive manner.
  * @param {String} password The user's password.
- * @param {String} token Token provide by the user's authenticator app.
+ * @param {String} token Token from the authenticator app, or the code received by email.
+ * @param {String|Function} [methodOrCallback] `otp` or `email`. When omitted, the server tries TOTP, then a pending email code. Pass the callback here to keep the previous signature.
  * @param {Function} [callback] Optional callback.
  *   Called with no arguments on success, or with a single `Error` argument
  *   on failure.
  * @importFromPackage meteor
  */
 
-Meteor.loginWithPasswordAnd2faCode = (selector, password, code, callback) => {
+Meteor.loginWithPasswordAnd2faCode = (selector, password, code, methodOrCallback, callback) => {
   if (code == null || typeof code !== 'string' || !code) {
     throw new Meteor.Error(
       400,
       'token is required to use loginWithPasswordAnd2faCode and must be a string'
     );
   }
-  return internalLoginWithPassword({ selector, password, code, callback });
+  let method;
+  if (typeof methodOrCallback === 'function') {
+    callback = methodOrCallback;
+  } else if (typeof methodOrCallback === 'string') {
+    method = methodOrCallback;
+  }
+  return internalLoginWithPassword({ selector, password, code, method, callback });
 };
 
 
