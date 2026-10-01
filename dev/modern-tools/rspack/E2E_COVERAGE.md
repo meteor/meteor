@@ -52,6 +52,7 @@ Core React integration with custom Meteor local directory.
 | Custom rspack config (`rspack.config.cjs`) | All |
 | HMR works in dev, disabled in prod | Run, Prod |
 | Rspack devserver port is released after `SIGTERM` (`regressions/port-cleanup.test.js`) | Run |
+| A failed lazy chunk reloads the page once, and a second failure within the cooldown does not (`regressions/chunk-load-recovery.test.js`) | Prod |
 | Client test Node compatibility (`Buffer`, `buffer`, `crypto`, `timers/promises`) | Test |
 | Cordova bundle stays modern when `meteor.modern` is unset (`regressions/cordova-modern-default.test.js`) | Build |
 
@@ -359,6 +360,7 @@ Where each feature is tested across apps and skeletons.
 | CoffeeScript compilation | coffeescript | coffeescript |
 | Server-only (no client) | server-only | |
 | Rspack process cleanup | react | |
+| Reload once on a chunk load error | react | |
 | Server bundle excluded from Meteor linker payload | server-only regression | |
 | `Assets`/`Npm` server globals in the dev bundle | server-only regression | |
 | Delayed server Meteor package import | server-only regression | |
