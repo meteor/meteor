@@ -98,6 +98,78 @@ To call this function the user must be already logged in.
 
 `Accounts.validate2faChange(fn)` receives `{ type, user, connection }` with `type` equal to `activation` or `deactivation`. Throw from `fn` to refuse the change. The registration returns `{ stop() }`.
 
+## Several second factors {#methods}
+
+The package keeps a list of factors. Today those are `otp` (authenticator app) and `email` (a one-time code). An app that already uses this package does not change behavior until it opts in:
+
+```js
+Accounts.configure2fa({
+  email: { enabled: true },
+});
+```
+
+After that, a second factor is required for every user (see the policy below).
+
+- If the user has not set up an authenticator, the code is emailed as soon as the password is accepted.
+- If the user has set up an authenticator, nothing is emailed until they ask for it. The client receives `error.error === 'no-2fa-code'` and `error.details.methods`, for example `['otp', 'email']`.
+
+```js
+Accounts.request2faEmailCode(email, password, error => {
+  // error.error === 'no-2fa-code' when the message was sent or is still on cooldown
+});
+
+Meteor.loginWithPasswordAnd2faCode(email, password, code, 'email', callback);
+// The method argument is optional. Without it, the server tries the authenticator code,
+// then a pending email code. Existing clients keep working.
+```
+
+The email code is 6 digits, expires after 10 minutes, accepts 5 attempts, and can be resent after 60 seconds. It is stored as a hash and deleted once it is used. Only a verified email address is used, unless `email.requireVerified` is set to `false`.
+
+Customize the message with `Accounts.emailTemplates.twoFactorCode` (`subject` and `text` or `html`). The code is `extra.code`. In development the code is also printed on the server.
+
+`Meteor.passwordlessLoginWithToken` cannot be completed with an email code. An email login plus an email code is still one factor, so only an authenticator code is accepted there.
+
+Email codes are not an AAL2 authenticator in NIST SP 800-63B. Use the authenticator factor when you need that level.
+
+## Who has to pass a second factor {#policy}
+
+`Accounts.config({ require2fa })` is server-only:
+
+- omitted: every user, once `email.enabled` is set; otherwise only users who turned on the authenticator (the historical behavior);
+- `true`: every user;
+- `false`: only users who turned on the authenticator;
+- `(userId, context) => boolean`: the app decides. If the function throws, a second factor is required.
+
+`context` is `{ loginMethod, connection, clientContext, availableMethods }`. `loginMethod` is `password`, `passwordless`, `resetPassword`, `enrollAccount`, or `verifyEmail`.
+
+The DDP connection does not carry cookies. A trusted browser has to send its token from the client:
+
+```js
+Accounts.set2faContextProvider(() => ({
+  trustedDeviceToken: localStorage.getItem('trustedDevice') || '',
+}));
+```
+
+```js
+Accounts.config({
+  async require2fa(userId, context) {
+    if (await isTrustedDevice(userId, context.clientContext?.trustedDeviceToken)) {
+      return false; // explicit: this also skips users who enabled an authenticator
+    }
+    const user = await Meteor.users.findOneAsync(userId, { fields: { roles: 1 } });
+    return user?.roles?.includes('admin');
+  },
+});
+```
+
+`false` from the function is the only way to skip a user who enabled an authenticator. `Accounts.config({ require2fa: false })` does not.
+
+After a code is accepted, `Accounts.on2faVerified(({ user, connection, method }) => {})` runs. Issue the trusted-browser token from the app (random, stored as a hash, with an expiry) and hand it to the client from your own method. This package does not store it.
+
+When a second factor is required and the user has none (no authenticator, and no usable email), the login fails with `2fa-method-unavailable`.
+
+`Accounts.resetPassword` and `Accounts.verifyEmail` still change the account, but they do not open a session when the policy requires a second factor (`2fa-enabled`). The user signs in afterwards.
+
 ## Log in with 2FA {#log-in-with-2fa}
 
 Now that you have a way to allow your users to enable 2FA on their accounts, you can create a login flow based on that.

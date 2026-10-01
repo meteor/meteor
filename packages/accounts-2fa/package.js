@@ -1,5 +1,5 @@
 Package.describe({
-  version: "3.1.0",
+  version: "3.2.0",
   summary:
     "Package used to enable two factor authentication through OTP protocol",
 });
@@ -17,9 +17,10 @@ Package.onUse(function (api) {
 
   api.use("ecmascript");
   api.use("check", "server");
+  api.use("email", "server");
 
   api.addFiles(["2fa-client.js"], "client");
-  api.addFiles(["2fa-server.js"], "server");
+  api.addFiles(["2fa-email.js", "2fa-methods.js", "2fa-server.js"], "server");
 });
 
 Package.onTest(function (api) {

@@ -28,12 +28,21 @@ const findUserWithOptions = async ({ selector }) => {
   );
 };
 // Handler to login with an ott.
-Accounts.registerLoginHandler('passwordless', async options => {
+const twoFactorClientContext = Match.Optional(Match.Where(value => {
+  if (typeof Accounts._isValid2faClientContext === 'function') {
+    return Accounts._isValid2faClientContext(value);
+  }
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}));
+
+Accounts.registerLoginHandler('passwordless', async function (options) {
   if (!options.token) return undefined; // don't handle
 
   check(options, {
     token: tokenValidator(),
     code: Match.Optional(Match.NonEmptyString),
+    twoFactorMethod: Match.Optional(Match.OneOf('otp', 'email')),
+    twoFactorContext: twoFactorClientContext,
     selector: Accounts._userQueryValidator,
   });
 
@@ -58,8 +67,22 @@ Accounts.registerLoginHandler('passwordless', async options => {
   const { verifiedEmail, error } = result;
 
   if (!error && verifiedEmail) {
-    // This method is added by the package accounts-2fa
-    if (Accounts._check2faEnabled?.(user)) {
+    // Email alone cannot be the second factor of an email login.
+    if (Accounts._enforce2faOnLogin) {
+      const twoFactorError = await Accounts._enforce2faOnLogin({
+        user,
+        code: options.code,
+        method: options.twoFactorMethod,
+        context: {
+          loginMethod: 'passwordless',
+          connection: this.connection,
+          clientContext: options.twoFactorContext || null,
+        },
+      });
+      if (twoFactorError) {
+        return { userId: user._id, error: twoFactorError };
+      }
+    } else if (Accounts._check2faEnabled?.(user)) {
       if (!options.code) {
         Accounts._handleError('2FA code must be informed', true, 'no-2fa-code');
         return;

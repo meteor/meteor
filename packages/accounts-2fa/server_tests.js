@@ -3,6 +3,7 @@ import { DDP } from 'meteor/ddp-client';
 import { DDPCommon } from 'meteor/ddp-common';
 import * as OTPAuth from 'otpauth';
 import { Random } from 'meteor/random';
+import './methods_tests.js';
 
 const findUserById =
   async id => await Meteor.users.findOneAsync(id);

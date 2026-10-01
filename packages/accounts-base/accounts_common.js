@@ -23,6 +23,7 @@ const VALID_CONFIG_KEYS = [
   'collection',
   'loginTokenExpirationHours',
   'tokenSequenceLength',
+  'require2fa',
   'clientStorage',
   'useHttpOnlyCookies',
   'ddpUrl',
@@ -226,6 +227,7 @@ export class AccountsCommon {
    * @param {String|Mongo.Collection} options.collection A collection name or a Mongo.Collection object to hold the users.
    * @param {Number} options.loginTokenExpirationHours When using the package `accounts-2fa`, use this to set the amount of time a token sent is valid. As it's just a number, you can use, for example, 0.5 to make the token valid for just half hour. The default is 1 hour.
    * @param {Number} options.tokenSequenceLength When using the package `accounts-2fa`, use this to the size of the token sequence generated. The default is 6.
+   * @param {Boolean|Function} options.require2fa Server only. When `accounts-2fa` is installed, decides whether a login must present a second factor. `undefined` (default): required for every user when the email factor is enabled, otherwise only for users who turned on TOTP. `true`: required for every user. `false`: required only for users who turned on TOTP. A function `(userId, context) => boolean | Promise<boolean>` lets the app decide (roles, trusted browser). If the function throws, a second factor is required. `context` is `{ loginMethod, connection, clientContext, availableMethods }`.
    * @param {'session' | 'local'} options.clientStorage By default login credentials are stored in local storage, setting this to true will switch to using session storage.
    * 
    * @example
@@ -290,9 +292,10 @@ export class AccountsCommon {
     for (const key of VALID_CONFIG_KEYS) {
       if (key in options) {
         if (key in this._options) {
-          if (key !== 'collection' && (Meteor.isTest && key !== 'clientStorage')) {
-            throw new Meteor.Error(`Can't set \`${key}\` more than once`);
-          }
+        // require2fa is a policy the app (and the tests) may replace.
+        if (key !== 'collection' && Meteor.isTest && key !== 'clientStorage' && key !== 'require2fa') {
+          throw new Meteor.Error(`Can't set \`${key}\` more than once`);
+        }
         }
         this._options[key] = options[key];
       }
