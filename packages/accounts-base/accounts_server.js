@@ -6,6 +6,13 @@ import {
   EXPIRE_TOKENS_INTERVAL_MS,
 } from './accounts_common.js';
 import { URL } from 'meteor/url';
+import {
+  createApiTokenAsync,
+  listApiTokensAsync,
+  revokeApiTokenAsync,
+  revokeAllApiTokensAsync,
+  findApiToken,
+} from './server_api_tokens.js';
 export const _CurrentEndpointInvocation = new Meteor.EnvironmentVariable();
 
 
@@ -708,6 +715,48 @@ export class AccountsServer extends AccountsCommon {
       }
     });
   };
+
+  /**
+   * @summary Create an API token for a user. The raw token is returned only once.
+   * @locus Server
+   * @param {String} userId The token owner's user ID.
+   * @param {Object} options Token name, explicit expiration date or null, and optional scopes.
+   */
+  createApiTokenAsync(userId, options) {
+    return createApiTokenAsync(this, userId, options);
+  }
+
+  /**
+   * @summary List a user's API token metadata without credentials or hashes.
+   * @locus Server
+   * @param {String} userId The token owner's user ID.
+   */
+  listApiTokensAsync(userId) {
+    return listApiTokensAsync(this, userId);
+  }
+
+  /**
+   * @summary Revoke an API token by its ID, returning whether it was removed.
+   * @locus Server
+   * @param {String} userId The token owner's user ID.
+   * @param {String} tokenId The ID returned when creating or listing the token.
+   */
+  revokeApiTokenAsync(userId, tokenId) {
+    return revokeApiTokenAsync(this, userId, tokenId);
+  }
+
+  /**
+   * @summary Revoke all of a user's API tokens without changing their login sessions.
+   * @locus Server
+   * @param {String} userId The token owner's user ID.
+   */
+  revokeAllApiTokensAsync(userId) {
+    return revokeAllApiTokensAsync(this, userId);
+  }
+
+  _findApiToken(token) {
+    return findApiToken(this, token);
+  }
 
   _initServerMethods() {
     // The methods created in this function need to be created here so that
@@ -1904,6 +1953,8 @@ const setupUsersCollection = async users => {
   await users.createIndexAsync('services.resume.loginTokens.hashedToken',
     { unique: true, sparse: true });
   await users.createIndexAsync('services.resume.loginTokens.token',
+    { unique: true, sparse: true });
+  await users.createIndexAsync('services.apiTokens.hashedToken',
     { unique: true, sparse: true });
   // For taking care of logoutOtherClients calls that crashed before the
   // tokens were deleted.
