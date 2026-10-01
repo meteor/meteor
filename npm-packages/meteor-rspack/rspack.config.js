@@ -567,6 +567,9 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       : isClient && isTest && testEntry
       ? path.resolve(process.cwd(), testEntry)
       : path.resolve(process.cwd(), buildContext, entryPath);
+  // Runs before the app so a chunk from a replaced build reloads the page
+  const chunkLoadRecoveryEntry = path.join(__dirname, "lib", "chunkLoadRecovery.js");
+  const clientEntries = isTest ? clientEntry : [chunkLoadRecoveryEntry, clientEntry];
   const clientNameConfig = `[${(isTest && "test-") || ""}client-rspack]`;
 
   // Default onListening provided by meteor-rspack. Kept as a named
@@ -610,7 +613,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     name: clientNameConfig,
     target: "web",
     mode,
-    entry: clientEntry,
+    entry: clientEntries,
     output: {
       path: clientOutputDir,
       filename: (_module) => {

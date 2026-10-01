@@ -11,6 +11,7 @@ When Meteor runs with the Rspack bundler enabled, this package is what generates
 - **React Fast Refresh** in development when React is enabled
 - **Blaze template handling** via ignore-loader when Blaze is enabled
 - **Persistent filesystem caching** for fast rebuilds
+- **Recovery from stale chunks** in the client: when a lazily loaded chunk fails to load, usually because a newer deploy replaced the build the page started with, the page reloads once to start the current build. A second failure within five minutes is left to the app
 - **Asset externals and HTML generation** through custom Rspack plugins
 - **A `defineConfig` helper** that accepts a factory function receiving Meteor environment flags and build utilities
 - **Customizable config** via `rspack.config.js` in your project root, with safe merging that warns if you try to override reserved settings
