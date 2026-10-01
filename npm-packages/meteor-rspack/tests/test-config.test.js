@@ -5,8 +5,48 @@ const os = require('node:os');
 const test = require('node:test');
 const { execFileSync } = require('node:child_process');
 
-const { createTestRspackConfig } = require('../config.js');
+const { rspack } = require('@rspack/core');
+const { createMeteorSwcRule, createTestRspackConfig } = require('../config.js');
 const { generateEagerTestFile } = require('../lib/test.js');
+
+test('SWC preserves Rspack root imports and symlink-relative resolution', {
+  skip: process.platform === 'win32', // File symlinks require developer mode or elevation.
+}, async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rspack-symlink-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  fs.mkdirSync(path.join(root, 'app'));
+  fs.mkdirSync(path.join(root, 'shared'));
+  fs.writeFileSync(path.join(root, 'shared/file.ts'), 'export { value } from "./peer";');
+  fs.writeFileSync(path.join(root, 'app/peer.ts'), 'export const value: number = 42;');
+  fs.symlinkSync('../shared/file.ts', path.join(root, 'app/file.ts'));
+  fs.writeFileSync(path.join(root, 'app/main.ts'), `
+    export { value as rooted } from '/app/file';
+    export { value as relative } from './file';
+  `);
+
+  const compiler = rspack({
+    mode: 'development',
+    context: root,
+    target: 'node',
+    entry: './app/main.ts',
+    output: { path: path.join(root, 'out'), library: { type: 'commonjs2' } },
+    resolve: { extensions: ['.ts', '.js'], roots: [root], symlinks: false },
+    module: { rules: [createMeteorSwcRule({ root, isTypescriptEnabled: true })] },
+  });
+  try {
+    const stats = await new Promise((resolve, reject) => {
+      compiler.run((error, result) => error ? reject(error) : resolve(result));
+    });
+    assert.equal(stats.hasErrors(), false, stats.toString({ all: false, errors: true }));
+    const result = require(path.join(root, 'out/main.js'));
+    assert.equal(result.rooted, 42);
+    assert.equal(result.relative, 42);
+  } finally {
+    await new Promise((resolve, reject) => {
+      compiler.close(error => error ? reject(error) : resolve());
+    });
+  }
+});
 
 test('server test projection uses same Rspack SWC and resolver language', () => {
   const root = path.resolve('/tmp/meteor-rspack-projection');

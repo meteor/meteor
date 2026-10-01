@@ -37,6 +37,9 @@ env:
   # when caches are cold, and this workflow does not consume their automatic
   # audit reports. Avoid making E2E reliability depend on npm's audit endpoint.
   npm_config_audit: "false"
+  # Actions mounts HOME from the host runner. SWC's native addon loader rejects
+  # cache ancestors owned by a different writable user; use the container's home.
+  SWC_NATIVE_BINDING_CACHE: /root/.cache/swc-native
   # Per-test Jest retry count. Consumed by tools/e2e-tests/jest.setup.js.
   METEOR_E2E_TEST_RETRIES: 1
 
@@ -135,7 +138,9 @@ jobs:
             e2e-${{ runner.os }}-
 
       - name: Install deps
-        run: npm install
+        run: |
+          install -d -m 700 "$SWC_NATIVE_BINDING_CACHE"
+          npm install
 
       - name: Install test deps
         # This installs the browsers and system dependencies using the exact
@@ -143,6 +148,7 @@ jobs:
         run: npm run install:e2e
 
       - name: Set NPM_LINK_RSPACK=false for release branches
+        shell: bash
         run: |
           echo "Current branch: ${{ github.head_ref || github.ref_name }}"
           if [[ "${{ github.head_ref || github.ref_name }}" == release-* ]]; then
@@ -152,6 +158,10 @@ jobs:
 
       - name: Prepare Meteor
         if: steps.deps-cache.outputs.cache-hit != 'true'
+        # This one-shot prewarm replaces package npm directories while compiling
+        # all local packages. It does not need live native watcher subscriptions.
+        env:
+          METEOR_WATCH_FORCE_POLLING: "true"
         run: ./meteor --get-ready --allow-superuser
 
       - name: Run tests for ${{ matrix.category }}

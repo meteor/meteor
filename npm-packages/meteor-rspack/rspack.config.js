@@ -640,7 +640,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     },
     resolve: {
       extensions,
-      roots: [path.resolve(process.cwd())],
+      roots: [path.resolve(projectDir)],
       fallback,
     },
     externals,
@@ -775,7 +775,6 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     },
     resolve: {
       extensions,
-      roots: [path.resolve(process.cwd())],
       modules: ["node_modules", path.resolve(projectDir)],
       conditionNames: ["import", "require", "node", "default"],
       roots: [path.resolve(projectDir)],

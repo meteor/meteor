@@ -22,8 +22,6 @@ function createMeteorSwcRule({
 }) {
   const defaultConfig = {
     jsc: {
-      baseUrl: root,
-      paths: { '/*': ['*', '/*'] },
       parser: {
         syntax: isTypescriptEnabled ? 'typescript' : 'ecmascript',
         ...(isTsxEnabled && { tsx: true }),

@@ -76,7 +76,8 @@ export function getMeteorCommandPath(
 }
 
 /**
- * Returns the Meteor dev_bundle bin directory path if available, otherwise null.
+ * Returns the plugin's Node bin directory, or the running Node installation
+ * when it also contains npm. Shared helpers may not have access to Plugin.
  *
  * @returns {string|null} The path to the dev_bundle bin directory, or null if not available
  */
@@ -98,6 +99,14 @@ function resolveNodeBinDir() {
   const meteorInstallationBinDir = getMeteorInstallationBinDir();
   if (meteorInstallationBinDir) {
     return meteorInstallationBinDir;
+  }
+
+  // Shared helper modules do not inherit a consuming plugin's lexical Plugin
+  // API. In the tool process, Node and npm still live together in dev_bundle.
+  const currentNodeBinDir = path.dirname(process.execPath);
+  if (getNodeBinaryCandidates('npm').some(candidate =>
+    fs.existsSync(path.join(currentNodeBinDir, candidate)))) {
+    return currentNodeBinDir;
   }
 
   return null;
@@ -374,7 +383,7 @@ function executeCommand(command, args, options) {
  */
 export function installNpmDependency(dependencies, options = {}) {
   const cwd = options.cwd || process.cwd();
-  const installEnv = getPackageInstallEnvironment(options);
+  const installEnv = { ...getNodeBinEnv(), ...getPackageInstallEnvironment(options) };
 
   // If yarn option is true, use yarn
   if (options.yarn) {
@@ -383,18 +392,8 @@ export function installNpmDependency(dependencies, options = {}) {
     return executeCommand(command, [...baseArgs, ...args], { cwd, env: installEnv });
   }
 
-  // Try to get the npm binary path
-  const npmBinaryPath = getNodeBinaryPath('npm');
-
-  // If we have a direct path to npm, use it
-  if (npmBinaryPath && fs.existsSync(npmBinaryPath)) {
-    const args = buildNpmInstallArgs(dependencies, options);
-    return executeCommand(npmBinaryPath, args, { cwd, env: installEnv });
-  }
-
-  // Fall back to the current method using 'meteor npm install'
-  const args = buildNpmInstallArgs(dependencies, { ...options, isMeteorCommand: true });
-  return executeCommand('meteor', args, { cwd, env: installEnv });
+  const { command, args } = getNpmCommand(buildNpmInstallArgs(dependencies, options));
+  return executeCommand(command, args, { cwd, env: installEnv });
 }
 
 
