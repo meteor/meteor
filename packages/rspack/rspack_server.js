@@ -1,6 +1,7 @@
 import { Meteor } from 'meteor/meteor';
 import { WebApp, WebAppInternals } from 'meteor/webapp';
 import path from 'path';
+import fs from 'fs/promises';
 import {
   getRspackChunksContext,
   getRspackAssetsContext,
@@ -23,7 +24,7 @@ const rspackAssetsContext = getRspackAssetsContext(isTestMode, isTestFullApp);
  * @constant {RegExp}
  */
 const RSPACK_CHUNKS_REGEX = new RegExp(
-  `^\/${rspackChunksContext}\/(.+)$`,
+  `^/${rspackChunksContext}/(.+)$`,
 );
 
 /**
@@ -31,7 +32,7 @@ const RSPACK_CHUNKS_REGEX = new RegExp(
  * @constant {RegExp}
  */
 const RSPACK_ASSETS_REGEX = new RegExp(
-  `^\/${rspackAssetsContext}\/(.+)$`,
+  `^/${rspackAssetsContext}/(.+)$`,
 );
 
 const shouldEnableDevHMRProxy =
@@ -180,9 +181,8 @@ if (shouldEnableDevHMRProxy) {
   function enableClientReloadOnServerStart() {
     Meteor.startup(() => {
       const originalCalc = WebApp.calculateClientHashReplaceable;
-      let hasShuffled = false;
-      let cachedHash = {};
-      let prevRealHash = {};
+      const cachedHash = {};
+      const prevRealHash = {};
       WebApp.calculateClientHashReplaceable = function (...args) {
         const arch = args[0];
         const realHash = originalCalc.apply(this, args);
@@ -193,7 +193,6 @@ if (shouldEnableDevHMRProxy) {
         prevRealHash[arch] = realHash;
         if (cachedHash[arch] == null) {
           cachedHash[arch] = shuffleString(realHash);
-          hasShuffled = true;
         }
         return cachedHash[arch];
       };
@@ -205,28 +204,12 @@ if (shouldEnableDevHMRProxy) {
 }
 
 /**
- * Register a single rspack static asset with WebAppInternals.staticFilesByArch
- * @param {string} arch - The architecture to register the asset for
+ * Create request-local metadata for Meteor's static file middleware.
  * @param {string} pathname - The pathname of the asset
  * @param {string} filePath - The absolute path to the asset on disk
  * @returns {Object} The static file info object
  */
-function registerRspackStaticAsset(arch, pathname, filePath) {
-  // Ensure the architecture exists in staticFilesByArch
-  if (!WebAppInternals.staticFilesByArch[arch]) {
-    WebAppInternals.staticFilesByArch[arch] = Object.create(null);
-  }
-
-  // Get the static files object for this architecture
-  const staticFiles = WebAppInternals.staticFilesByArch[arch];
-
-  // Skip if already registered
-  if (staticFiles[pathname]) {
-    // Ensure the entry is marked as cacheable
-    staticFiles[pathname].cacheable = true;
-    return staticFiles[pathname];
-  }
-
+function rspackStaticAssetInfo(pathname, filePath) {
   // Determine file type based on extension
   const type = pathname.endsWith(".js") ? "js" :
     pathname.endsWith(".css") ? "css" :
@@ -236,15 +219,17 @@ function registerRspackStaticAsset(arch, pathname, filePath) {
   const filename = pathname.split("/").pop();
   const hash = filename.split(".")[1];
 
-  // Register the asset
-  staticFiles[pathname] = {
+  return {
     absolutePath: filePath,
     cacheable: true, // Most rspack assets are cacheable
     hash,
     type
   };
+}
 
-  return staticFiles[pathname];
+function rspackAssetNotFound(res) {
+  res.writeHead(404, { 'Cache-Control': 'no-store' });
+  res.end();
 }
 
 // Store the original staticFilesMiddleware
@@ -252,31 +237,82 @@ const originalStaticFilesMiddleware = WebAppInternals.staticFilesMiddleware;
 
 // Handle rspack assets on-demand to add Meteor's static files headers
 WebAppInternals.staticFilesMiddleware = async function(staticFilesByArch, req, res, next) {
-  const pathname = new URL(req.url, 'http://localhost').pathname;
-
   try {
+    const request = WebApp.categorizeRequest(req);
+    let pathname;
+    try {
+      // Use the same path as WebApp, including architecture-prefix handling.
+      pathname = decodeURIComponent(request.path);
+    } catch {
+      if (RSPACK_CHUNKS_REGEX.test(request.path) || RSPACK_ASSETS_REGEX.test(request.path)) {
+        return rspackAssetNotFound(res);
+      }
+      return await originalStaticFilesMiddleware(staticFilesByArch, req, res, next);
+    }
+
     // Check if this is a rspack asset request
     const chunksMatch = pathname.match(RSPACK_CHUNKS_REGEX);
     const assetsMatch = pathname.match(RSPACK_ASSETS_REGEX);
 
     if (chunksMatch || assetsMatch) {
-      const cwd = process.cwd();
-      const architectures = ["web.browser", "web.browser.legacy", "web.cordova"];
-      WebApp.categorizeRequest(req);
-
-      // Try to find the file on disk
       const context = chunksMatch ? rspackChunksContext : rspackAssetsContext;
       const filename = (chunksMatch ? chunksMatch[1] : assetsMatch[1]);
-      const filePath = path.join(cwd, context, filename);
+      const root = path.resolve(process.cwd(), context);
+      let filePath = path.join(root, filename);
+      const relativePath = path.relative(root, filePath);
 
-      architectures.forEach(archName => {
-        registerRspackStaticAsset(archName, pathname, filePath);
-      });
+      // Decode before resolving, and keep URL paths inside the selected output
+      // directory on every platform. Backslashes are not URL separators.
+      if (filename.includes('\\') || filename.includes('\0') ||
+          relativePath === '..' || relativePath.startsWith(`..${path.sep}`) ||
+          path.isAbsolute(relativePath)) {
+        return rspackAssetNotFound(res);
+      }
+
+      // Built bundles already have manifest entries pointing into the client
+      // program, while development output may live directly under cwd.
+      const canonicalPath = path.posix.normalize(pathname);
+      const architectures = [request.arch, ...Object.keys(staticFilesByArch)
+        .filter(arch => arch !== request.arch)];
+      let info;
+      for (const arch of architectures) {
+        info = staticFilesByArch[arch]?.[canonicalPath];
+        if (info) break;
+      }
+      if (typeof info === 'function') info = info();
+      if (info?.absolutePath) filePath = info.absolutePath;
+
+      let stat;
+      try {
+        stat = await fs.stat(filePath);
+      } catch (error) {
+        if (error.code === 'ENOENT' || error.code === 'ENOTDIR') {
+          return rspackAssetNotFound(res);
+        }
+        throw error;
+      }
+      if (!stat.isFile()) {
+        return rspackAssetNotFound(res);
+      }
+
+      // Never put request-derived keys in the shared manifests: even aliases
+      // of an existing file could otherwise grow them indefinitely. WebApp's
+      // middleware only needs this file to serve this request with its usual
+      // cache, content type, conditional request, and range handling.
+      const requestStaticFiles = {
+        [request.arch]: {
+          [request.path]: {
+            ...rspackStaticAssetInfo(canonicalPath, filePath),
+            ...info,
+            cacheable: true,
+          },
+        },
+      };
+      return await originalStaticFilesMiddleware(requestStaticFiles, req, res, next);
     }
-  } catch (e) {
-    console.error(`Error handling rspack asset: ${e.message}`);
-  }
 
-  // Call the original middleware
-  return originalStaticFilesMiddleware(staticFilesByArch, req, res, next);
+    return await originalStaticFilesMiddleware(staticFilesByArch, req, res, next);
+  } catch (error) {
+    return next(error);
+  }
 };
