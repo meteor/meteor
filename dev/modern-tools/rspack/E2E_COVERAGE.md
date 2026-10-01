@@ -107,6 +107,8 @@ Minimal app with a local package testing asset resolution and bundling. `regress
 | Existing files and alternate URL spellings do not accumulate manifest entries | Build |
 | Emitted assets and lazy chunks preserve GET/HEAD, ETag, range, and cache behavior | Build |
 | Removed files, directories, and malformed/traversing paths; restored files become available again | Build |
+| Client rebuild pauses and existing inline static content are preserved | Build |
+| Files removed between stat and open return uncached 404s without stale response headers | Build |
 
 ### blaze
 
