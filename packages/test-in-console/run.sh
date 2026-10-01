@@ -10,6 +10,12 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 export METEOR_HOME="$(pwd)"
 
+# Make sure the dev_bundle matches the checked-out BUNDLE_VERSION before
+# probing it for puppeteer: a cached dev_bundle from another branch passes the
+# probe and is then replaced mid-run by the first real meteor invocation,
+# taking its puppeteer install with it.
+./meteor --version >/dev/null 2>&1 || true
+
 # npm 11 can skip dependency install scripts, so package presence does not
 # guarantee that a browser is available. Pin a Node 26-compatible version and
 # run its awaited browser installer explicitly.

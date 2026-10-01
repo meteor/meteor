@@ -74,4 +74,13 @@ import './client-rspack.js';
     compile([], true);
     expect(read()).toBe(source);
   });
+
+  test('restores ordered startup imports after the build directory is removed', () => {
+    compile();
+    fs.rmSync(directory, { recursive: true });
+
+    compile();
+
+    expect(read()).toContain(trailingImports);
+  });
 });
