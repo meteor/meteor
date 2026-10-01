@@ -172,6 +172,10 @@ jobs:
           # orphan processes (EADDRINUSE) and temp dirs. The retry recreates
           # each app fresh, so only container leftovers need clearing.
           echo "Cleaning up after the failed attempt..."
+          # Stop the old test runner before sweeping apps. Otherwise its hooks
+          # can keep running after the step timeout and kill the retry's apps.
+          pkill -9 -f '[/]jest/bin/jest.js' || true
+          pkill -9 -f 'scripts/run-test-group[.]js' || true
           pkill -9 -f 'meteortest-' || true
           # Detached bundler/db children may not carry the temp path in argv.
           pkill -9 -f mongod || true

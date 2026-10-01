@@ -41,6 +41,14 @@ describe('CLI / E2E test group fallback /', () => {
       .toEqual(['regressions_build']);
     expect(matchingGroups('Regressions / PortCleanup / releases rspack port after SIGTERM'))
       .toEqual(['regressions']);
+    expect(matchingGroups('React App Bundling / Meteor+Rspack Bundler / builds the app'))
+      .toEqual(['react_vue']);
+    expect(matchingGroups('Vue App Bundling / Meteor+Rspack Bundler / runs the app'))
+      .toEqual(['react_vue']);
+    for (const skeleton of ['Apollo', 'ChakraUI', 'React', 'Vue']) {
+      expect(matchingGroups(`Meteor Skeletons / ${skeleton} Skeleton / creates the app`))
+        .toEqual(['react_vue_skeletons']);
+    }
     expect(matchingGroups('Meteor Skeletons / PWA Skeleton / registers its worker'))
       .toEqual(['full_pwa_skeleton']);
     expect(matchingGroups('Meteor Skeletons / Angular Skeleton / creates the app'))

@@ -36,8 +36,12 @@ const EXPLICIT_TEST_GROUPS = Object.freeze({
     pattern: '^(?:Other /|Meteor Skeletons / Other / Bare Skeleton /)',
   },
   react_vue: {
-    label: 'React & Vue',
-    pattern: '^(?:React App Bundling /|Meteor Skeletons / (?:Apollo|ChakraUI|React) Skeleton /|Vue App Bundling /|Meteor Skeletons / Vue Skeleton /)',
+    label: 'React & Vue apps',
+    pattern: '^(?:React App Bundling /|Vue App Bundling /)',
+  },
+  react_vue_skeletons: {
+    label: 'React & Vue skeletons',
+    pattern: '^Meteor Skeletons / (?:Apollo|ChakraUI|React|Vue) Skeleton /',
   },
   react_router: {
     label: 'R.Router',
