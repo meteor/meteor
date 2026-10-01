@@ -68,6 +68,13 @@ DDPRateLimiter.addRule(premiumTierRule, 2, 60000);
 
 > **Performance Note**: While async matchers unlock powerful database checks, keep in mind they are awaited sequentially on the incoming message queue for that connection. Extremely slow database queries in rate limiters can delay message processing. If a matcher `Promise` rejects, the rate limit check will safely fail the invocation as it errors out.
 
+::: tip
+Synchronous matchers still cannot read the database — a synchronous `findOne`
+throws on the Meteor 3 server. If a rule needs a database lookup, use an async
+matcher (see above). Otherwise, match only on values already on the invocation:
+`type`, `name`, `userId`, `connectionId`, `clientAddress`.
+:::
+
 <ApiBox name="DDPRateLimiter.removeRule" />
 <ApiBox name="DDPRateLimiter.setErrorMessage" />
 <ApiBox name="DDPRateLimiter.setErrorMessageOnRule" />
@@ -80,10 +87,12 @@ default English error message.
 
 Here is an example with a custom error message:
 ```js
+// Rate-limit a sensitive method called by authenticated users, scoped per user.
 const setupGoogleAuthenticatorRule = {
+  // Apply only to logged-in users; `userId` also scopes the bucket per user.
+  // This matcher is synchronous, so it only checks `userId` — no database read.
   userId(userId) {
-    const user = Meteor.users.findOne(userId);
-    return user;
+    return userId != null;
   },
   type: 'method',
   name: 'Users.setupGoogleAuthenticator',

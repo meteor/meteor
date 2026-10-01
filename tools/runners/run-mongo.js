@@ -11,11 +11,9 @@ var Console = require('../console/console.js').Console;
 // Given a Mongo URL, open an interactive Mongo shell on this terminal
 // on that database.
 var runMongoShell = function (url, err) {
-  // XXX mongo URLs are not real URLs (notably, the comma-separation for
-  // multiple hosts). We've had a little better luck using the mongodb-uri npm
-  // package.
-  var mongoUrl = require('url').parse(url);
-  const ls = child_process.spawn('mongosh', [mongoUrl.href], {
+  // Mongo URLs are not real URLs (notably, the comma-separation for multiple
+  // hosts), so don't parse them; pass the raw URL through to mongosh.
+  const ls = child_process.spawn('mongosh', [url], {
     stdio: 'inherit',
   });
   ls.on('error', err);
@@ -997,7 +995,7 @@ Object.assign(MRp, {
       message +=
         '\n\n' +
         'Check how to troubleshoot here ' +
-        'https://docs.meteor.com/windows.html#cant-start-mongo-server';
+        'https://v2-docs.meteor.com/windows.html#cant-start-mongo-server';
     }
 
     if (explanation && explanation.symbol === 'EXIT_NET_ERROR') {

@@ -37,7 +37,7 @@ By default, Meteor uses Local Storage to store, among other things, login tokens
 
 ### Accounts with HttpOnly Cookies {#accounts-httponly-cookies}
 
-Meteor 3.3 introduces a native flow to keep the persistent resume token in an HttpOnly cookie instead of in Web Storage. This protects the token from malicious scripts and pairs nicely with in-memory client storage. Enable the feature with two small changes:
+Meteor 3.5 introduces a native flow to keep the persistent resume token in an HttpOnly cookie instead of in Web Storage. This keeps the durable copy out of script-readable storage and pairs with in-memory client storage. The client still requests the resume token into memory when it authenticates DDP, so this does not protect the token from a malicious script that is actively running in the application origin. Enable the feature with two small changes:
 
 1. On the server, call `Accounts.config` during startup and set both options:
 
@@ -69,6 +69,30 @@ Meteor 3.3 introduces a native flow to keep the persistent resume token in an Ht
    ```
 
 After restarting the app and logging in, `Meteor.loginToken*` keys should no longer appear in `localStorage`. Instead, the browser receives an HttpOnly `meteor_login_token` cookie and the client keeps credentials in memory only for the active tab. If you later disable the feature, remember to revert both the server configuration and the public settings so that Accounts resumes using Web Storage.
+
+The server-side `useHttpOnlyCookies` option is what enables the `/_accounts/cookie/set`, `/_accounts/cookie/refresh` and `/_accounts/cookie/clear` endpoints. When it is not set, the endpoints are not served and requests to them return `404`. Applications that never opted in expose nothing.
+
+#### Cookie endpoint protections {#accounts-httponly-cookies-protections}
+
+Because the cookie is an ambient credential, the endpoints that write it only accept requests from your own application:
+
+- `POST /_accounts/cookie/set` and `POST /_accounts/cookie/clear` require a trusted origin. The server accepts the request when the browser sends `Sec-Fetch-Site: same-origin`, or when the `Origin` header matches the origin of `ROOT_URL`, the origin of the request `Host`, or one of the origins listed in `httpOnlyCookieAllowedOrigins`. Configured origins receive credentialed CORS responses (including preflight support); anything else is rejected with `403`.
+- `POST /_accounts/cookie/set` requires `Content-Type: application/json`, a body of at most 4 KB, and a `token` that belongs to a user and has not expired. Unknown or expired tokens are rejected with `401` and no cookie is written.
+- The cookie is issued with `HttpOnly`, `SameSite=Strict`, `Path=/` and, over HTTPS, `Secure`.
+- All three endpoints are rate limited per client address (30 requests per 10 seconds by default). Behind a reverse proxy, set the `HTTP_FORWARDED_COUNT` environment variable so the real client address is used, exactly as for DDP connections.
+
+If custom browser code calls the cookie set or clear endpoint from another trusted origin, list that origin explicitly. The built-in Accounts client uses relative, same-origin endpoint URLs; this allowlist does not make it target a remote server automatically.
+
+```ts
+Accounts.config({
+  useHttpOnlyCookies: true,
+  httpOnlyCookieAllowedOrigins: ["https://app.example.com", "https://www.example.com"],
+  // Optional: tune or disable the per-address rate limit
+  httpOnlyCookieRateLimit: { max: 60, windowMs: 10_000 },
+});
+```
+
+The allowlist does not bypass browser cookie policy. Because the login cookie remains `SameSite=Strict`, an allowed page must also be same-site with the cookie endpoint for the browser to persist and send the cookie; different ports or trusted sibling subdomains are supported, while an unrelated cross-site domain is not.
 
 <ApiBox name="Meteor.user" hasCustomExample/>
 
@@ -160,7 +184,7 @@ treats the following fields specially:
 Like all [Mongo.Collection](./collections.md)s, you can access all
 documents on the server, but only those specifically published by the server are
 available on the client. You can also use all Collection methods, for instance
-`Meteor.users.remove` on the server to delete a user.
+`Meteor.users.removeAsync` on the server to delete a user.
 
 By default, the current user's `username`, `emails` and `profile` are
 published to the client. You can publish additional fields for the
@@ -381,11 +405,11 @@ First, add the service configuration package:
 meteor add service-configuration
 ```
 
-Then, inside the server of your app (this example is for the Weebo service), import `ServiceConfiguration`:
+Then, inside the server of your app (this example is for the Weibo service), import `ServiceConfiguration`:
 
 ```js
 import { ServiceConfiguration } from "meteor/service-configuration";
-ServiceConfiguration.configurations.upsertAsync(
+await ServiceConfiguration.configurations.upsertAsync(
   { service: "weibo" },
   {
     $set: {
@@ -693,7 +717,7 @@ created but the connection will not be logged in as that user.
 <ApiBox name="AccountsServer#onCreateUser" instanceName="accountsServer" hasCustomExample/>
 
 Use this when you need to do more than simply accept or reject new user
-creation. With this function you can programatically control the
+creation. With this function you can programmatically control the
 contents of new user documents.
 
 The function you pass will be called with two arguments: `options` and
@@ -877,7 +901,7 @@ accountsServer.setAdditionalFindUserOnExternalLogin(
     // serviceData: Object
     //   The data returned by the service oauth request.
     // options: Object
-    //   An optional arugment passed down from the oauth service that may contain
+    //   An optional argument passed down from the oauth service that may contain
     //   additional user profile information. As the data in `options` comes from an
     //   external source, make sure you validate any values you read from it.
   }
@@ -897,14 +921,13 @@ Example:
 // allow them to sign in with the Meteor.loginWithGoogle method later, without
 // creating a new user.
 Accounts.setAdditionalFindUserOnExternalLogin(
-  ({ serviceName, serviceData }) => {
-    if (serviceName === "google") {
-      // Note: Consider security implications. If someone other than the owner
-      // gains access to the account on the third-party service they could use
-      // the e-mail set there to access the account on your app.
-      // Most often this is not an issue, but as a developer you should be aware
-      // of how bad actors could play.
-      return Accounts.findUserByEmail(serviceData.email);
+  async ({ serviceName, serviceData }) => {
+    // Only link accounts when the provider returns an email.
+    if (serviceName === "google" && serviceData.email) {
+      // Security: linking by email lets anyone who controls that email at the
+      // external provider sign in as this Meteor user. Only do this for
+      // providers that verify email ownership.
+      return await Accounts.findUserByEmail(serviceData.email);
     }
   }
 );
@@ -923,10 +946,10 @@ The login handler should return `undefined` if it's not going to handle the logi
 <h2 id="accounts_rate_limit">Rate Limiting</h2>
 
 By default, there are rules added to the [`DDPRateLimiter`](./DDPRateLimiter.md)
-that rate limit logins, new user registration and password reset calls to a
-limit of 5 requests per 10 seconds per session. These are a basic solution
-to dictionary attacks where a malicious user attempts to guess the passwords
-of legitimate users by attempting all possible passwords.
+that rate limit logins, new user registration, passwordless login token requests
+and password reset calls to a limit of 5 requests per 10 seconds per DDP connection.
+These provide basic abuse protection by slowing repeated credential-guessing
+attempts and repeated passwordless login token requests.
 
 These rate limiting rules can be removed by calling
 `Accounts.removeDefaultRateLimit()`. Please see the
@@ -945,7 +968,7 @@ address verification and password recovery emails.
 
 ### Password encryption and security
 
-Starting from `accounts-passwords:4.0.0`, you can choose which algorithm is used by the Meteor server to store passwords : either [bcrypt](http://en.wikipedia.org/wiki/Bcrypt) or
+Starting from `accounts-password:4.0.0`, you can choose which algorithm is used by the Meteor server to store passwords : either [bcrypt](http://en.wikipedia.org/wiki/Bcrypt) or
 [Argon2](http://en.wikipedia.org/wiki/Argon2) algorithm. Both are robust and contribute to
 protect against embarrassing password leaks if the server's database is
 compromised.
@@ -985,7 +1008,7 @@ Accounts.config({
 
 **Configuring `argon2` parameters**
 
-One enabled, the `accounts-password` package allows customization of Argon2's parameters. The configurable options include:
+Once enabled, the `accounts-password` package allows customization of Argon2's parameters. The configurable options include:
 
 - `type`: `argon2id` (provides a blend of resistance against GPU and side-channel attacks)
 - `timeCost` (default: 2) – This controls the computational cost of the hashing process, affecting both the security level and performance.
@@ -1031,7 +1054,7 @@ On the client, this function logs in as the newly created user on
 successful completion. On the server, it returns the newly created user
 id.
 
-On the client, you must pass `password` and at least one of `username` or `email` &mdash; enough information for the user to be able to log in again later. If there are existing users with a username or email only differing in case, `createUser` will fail. The callback's `error.reason` will be `'Username already exists.'` or `'Email already exists.'` In the latter case, the user can then either [login](accounts.html#Meteor-loginWithPassword) or [reset their password](#Accounts-resetPassword).
+On the client, you must pass `password` and at least one of `username` or `email` &mdash; enough information for the user to be able to log in again later. If there are existing users with a username or email only differing in case, `createUser` will fail. The callback's `error.reason` will be `'Username already exists.'` or `'Email already exists.'` In the latter case, the user can then either [login](#Meteor-loginWithPassword) or [reset their password](#Accounts-resetPassword).
 
 On the server, you do not need to specify `password`, but the user will not be able to log in until it has a password (eg, set with [`Accounts.setPasswordAsync`](#Accounts-setPasswordAsync)). To create an account without a password on the server and still let the user pick their own password, call `createUser` with the `email` option and then call [`Accounts.sendEnrollmentEmail`](#Accounts-sendEnrollmentEmail). This will send the user an email with a link to set their initial password.
 

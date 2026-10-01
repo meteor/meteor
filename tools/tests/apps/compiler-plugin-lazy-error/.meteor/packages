@@ -1,0 +1,5 @@
+# Meteor packages used by this project, one per line.
+
+meteor-base             # Packages every Meteor app needs to have
+modules                 # CommonJS module support (require/exports)
+local-plugin            # Local compiler plugin for *.bork files
