@@ -60,6 +60,8 @@ Package.onTest((api) => {
     'check'
   ]);
 
+  api.use("webapp", "server");
+  api.addFiles("test/reconnect_server.js", "server");
   api.addFiles("test/stub_stream.js");
   api.addFiles("test/livedata_connection_tests.js");
   api.addFiles("test/duplicate_added_tests.js");
