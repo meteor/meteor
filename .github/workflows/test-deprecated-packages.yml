@@ -1,9 +1,13 @@
 name: Test Deprecated Packages
 
-# Keep this suite manual until its Puppeteer setup is repaired. A workflow
-# without any trigger is invalid, even when its automatic runs are disabled.
-on:
-  workflow_dispatch:
+# Disabled until we figure out how to fix the error from puppeteer
+# Runs on Travis CI for now
+#
+#on:
+#  push:
+#    branches:
+#      - main
+#  pull_request:
 
 jobs:
   build:
