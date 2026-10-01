@@ -14,6 +14,7 @@
 import {
   DEFAULT_METEOR_RSPACK_REACT_REFRESH_VERSION,
   DEFAULT_METEOR_RSPACK_SWC_HELPERS_VERSION,
+  DEFAULT_METEOR_RSPACK_SWC_CORE_VERSION,
   DEFAULT_RSDOCTOR_RSPACK_PLUGIN_VERSION,
 } from './constants';
 
@@ -33,6 +34,7 @@ const {
 
 const {
   DEFAULT_RSPACK_VERSION,
+  DEFAULT_RSPACK_DEV_SERVER_VERSION,
   DEFAULT_METEOR_RSPACK_VERSION,
   DEFAULT_METEOR_RSPACK_REACT_HMR_VERSION,
   GLOBAL_STATE_KEYS,
@@ -45,11 +47,19 @@ const RSPACK_DOCS_URL =
  * Ensures the core Rspack dependencies meet the minimum supported versions.
  * @returns {Promise<void>}
  */
-export async function ensureRspackInstalled() {
+export async function ensureRspackInstalled(options = {}) {
   const dependencies = [
     { name: '@rspack/cli', version: DEFAULT_RSPACK_VERSION, semverCondition: 'gte', dev: true },
     { name: '@rspack/core', version: DEFAULT_RSPACK_VERSION, semverCondition: 'gte', dev: true },
-    { name: '@meteorjs/rspack', version: DEFAULT_METEOR_RSPACK_VERSION, semverCondition: 'gte', dev: true },
+    { name: '@rspack/dev-server', version: DEFAULT_RSPACK_DEV_SERVER_VERSION, semverCondition: 'gte', dev: true },
+    {
+      name: '@meteorjs/rspack',
+      version: DEFAULT_METEOR_RSPACK_VERSION,
+      spec: process.env.METEOR_RSPACK_NPM_SPEC || DEFAULT_METEOR_RSPACK_VERSION,
+      semverCondition: 'gte',
+      dev: true,
+    },
+    { name: '@swc/core', version: DEFAULT_METEOR_RSPACK_SWC_CORE_VERSION, semverCondition: 'gte', dev: true },
     { name: '@swc/helpers', version: DEFAULT_METEOR_RSPACK_SWC_HELPERS_VERSION, semverCondition: 'gte', dev: false },
     { name: '@rsdoctor/rspack-plugin', version: DEFAULT_RSDOCTOR_RSPACK_PLUGIN_VERSION, semverCondition: 'gte', dev: true },
   ];
@@ -59,6 +69,10 @@ export async function ensureRspackInstalled() {
     packageLabel: 'Rspack',
     dependencies,
     docUrl: RSPACK_DOCS_URL,
+    cwd: process.env.METEOR_RSPACK_NPM_ROOT || getMeteorAppDir(),
+    checkNodeModules: true,
+    includeDevDependencies: true,
+    autoInstall: options.autoInstall,
   });
 }
 
@@ -94,7 +108,7 @@ export function checkReactInstalled() {
  * Ensures the Rspack React HMR dependencies meet the minimum supported versions.
  * @returns {Promise<void>}
  */
-export async function ensureRspackReactInstalled() {
+export async function ensureRspackReactInstalled(options = {}) {
   const dependencies = [
     { name: '@rspack/plugin-react-refresh', version: DEFAULT_METEOR_RSPACK_REACT_HMR_VERSION, semverCondition: 'gte', dev: true },
     { name: 'react-refresh', version: DEFAULT_METEOR_RSPACK_REACT_REFRESH_VERSION, semverCondition: 'gte', dev: true },
@@ -105,6 +119,10 @@ export async function ensureRspackReactInstalled() {
     packageLabel: 'Rspack React',
     dependencies,
     docUrl: RSPACK_DOCS_URL,
+    cwd: process.env.METEOR_RSPACK_NPM_ROOT || getMeteorAppDir(),
+    checkNodeModules: true,
+    includeDevDependencies: true,
+    autoInstall: options.autoInstall,
   });
 }
 
@@ -112,7 +130,7 @@ export async function ensureRspackReactInstalled() {
  * Ensures the Rspack Doctor dependency meets the minimum supported version.
  * @returns {Promise<void>}
  */
-export async function ensureRspackDoctorInstalled() {
+export async function ensureRspackDoctorInstalled(options = {}) {
   const dependencies = [
     { name: '@rsdoctor/rspack-plugin', version: DEFAULT_RSDOCTOR_RSPACK_PLUGIN_VERSION, semverCondition: 'gte', dev: true },
   ];
@@ -122,6 +140,10 @@ export async function ensureRspackDoctorInstalled() {
     packageLabel: 'Rspack Doctor',
     dependencies,
     docUrl: RSPACK_DOCS_URL,
+    cwd: process.env.METEOR_RSPACK_NPM_ROOT || getMeteorAppDir(),
+    checkNodeModules: true,
+    includeDevDependencies: true,
+    autoInstall: options.autoInstall,
   });
 }
 

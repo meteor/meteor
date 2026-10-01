@@ -1,7 +1,49 @@
+import { getMeteorAppDir, inheritMeteorToolNodeFlags, setMeteorAppDir, setMeteorAppIgnore } from "../lib/meteor.js";
 import {
-  inheritMeteorToolNodeFlags,
-  setMeteorAppIgnore,
-} from "../lib/meteor.js";
+  buildNpmInstallArgs,
+  buildYarnInstallArgs,
+  getPackageInstallEnvironment,
+} from "../lib/npm.js";
+
+Tinytest.add('tools-core - test host root is scoped to the active provider plan', test => {
+  try {
+    setMeteorAppDir('/temporary/test-host');
+    test.equal(getMeteorAppDir(), '/temporary/test-host');
+    setMeteorAppDir(undefined);
+    test.equal(getMeteorAppDir(), process.cwd());
+  } finally {
+    setMeteorAppDir(undefined);
+  }
+});
+
+Tinytest.add(
+  "tools-core - package install args include dev dependencies portably",
+  function (test) {
+    const options = {
+      dev: true,
+      exact: true,
+      includeDevDependencies: true,
+    };
+
+    test.equal(buildNpmInstallArgs('example@1.0.0', options), [
+      'install',
+      '--save-dev',
+      '--save-exact',
+      '--production=false',
+      'example@1.0.0',
+    ]);
+    test.equal(buildYarnInstallArgs('example@1.0.0', options), [
+      'add',
+      '--dev',
+      '--exact',
+      'example@1.0.0',
+    ]);
+    test.equal(getPackageInstallEnvironment(options), {
+      NODE_ENV: 'development',
+      YARN_PRODUCTION: 'false',
+    });
+  },
+);
 
 Tinytest.add(
   "tools-core - inheritMeteorToolNodeFlags - no TOOL_NODE_FLAGS",

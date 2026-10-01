@@ -18,7 +18,11 @@ jest.mock('../fs/safe-watcher', () => ({ closeAllWatchers: () => {} }));
 jest.mock('../tool-env/isopackets.js', () => ({ loadIsopackage: () => {} }));
 jest.mock('../utils/eachline', () => ({ eachline: () => {} }));
 
-const { splitQuotedArgs } = require('./run-app.js');
+const {
+  AppRunner,
+  reusableBuildersForBundle,
+  splitQuotedArgs,
+} = require('./run-app.js');
 
 // --- Tests ---
 
@@ -149,5 +153,55 @@ describe('splitQuotedArgs', () => {
         '--test-reporter-destination=./results.xml',
       ]);
     });
+  });
+});
+
+describe('reusableBuildersForBundle', () => {
+  test('keeps complete builders while bundle root exists', () => {
+    const builders = {
+      star: { outputPath: '/app/build' },
+      'web.browser': { outputPath: '/app/build/programs/web.browser' },
+    };
+
+    expect(reusableBuildersForBundle(builders, true)).toBe(builders);
+  });
+
+  test('discards target builders when archive builder is missing', () => {
+    const builders = {
+      'web.browser': { outputPath: '/app/build/programs/web.browser' },
+    };
+
+    expect(reusableBuildersForBundle(builders, true)).toEqual({});
+  });
+
+  test('discards all builders when bundle root disappeared', () => {
+    const builders = {
+      star: { outputPath: '/app/build' },
+      'web.browser': { outputPath: '/app/build/programs/web.browser' },
+    };
+
+    expect(reusableBuildersForBundle(builders, false)).toEqual({});
+  });
+});
+
+describe('AppRunner test runner generations', () => {
+  test('starts a fresh run after a watched generation changes', async () => {
+    const runner = Object.create(AppRunner.prototype);
+    runner.testRunnerSession = {
+      beforeAppRun: jest.fn().mockResolvedValue(undefined),
+    };
+    runner.updateTestRunnerMetadata = jest.fn();
+    runner._runOnce = jest.fn()
+      .mockResolvedValueOnce({ outcome: 'changed' })
+      .mockResolvedValueOnce({ outcome: 'stopped' });
+    runner.onRunEnd = jest.fn()
+      .mockReturnValueOnce(true)
+      .mockReturnValueOnce(false);
+    runner.exitPromise = null;
+
+    await runner._runApp();
+
+    expect(runner.testRunnerSession.beforeAppRun).toHaveBeenCalledTimes(2);
+    expect(runner._runOnce).toHaveBeenCalledTimes(2);
   });
 });

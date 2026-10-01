@@ -215,8 +215,13 @@ export function getCustomConfigFilePath(basePath = getMeteorAppDir()) {
  * @throws {Error} If no valid config file is found
  */
 export function getConfigFilePath() {
-  // Check if the config file exists at the current path with any of the supported extensions
-  const defaultConfigBasePath = path.join(process.cwd(), 'node_modules/@meteorjs/rspack');
+  // Test-runner package hosts can execute from a source directory outside the
+  // generated Meteor harness. Resolve dependencies from Meteor's selected
+  // project root, which defaults to cwd for ordinary app runs.
+  const defaultConfigBasePath = path.join(
+    getMeteorAppDir(),
+    'node_modules/@meteorjs/rspack',
+  );
   const defaultConfigPath = getCustomConfigFilePath(defaultConfigBasePath);
   if (defaultConfigPath) {
     return defaultConfigPath;
@@ -409,6 +414,12 @@ export function getRspackEnv({ isClient, isServer, isTest: inIsTest, isTestLike:
 
   const configPath = getConfigFilePath();
   const projectConfigPath = getCustomConfigFilePath();
+  const testRunnerBuildOptions = Plugin.getTestRunnerBuildOptions() || {};
+  const testRunnerContext = testRunnerBuildOptions.context || {};
+  const testRunnerMetadata = global.testCommandMetadata?.testRunner;
+  const testRunnerId = typeof testRunnerMetadata === 'object'
+    ? testRunnerMetadata.id
+    : testRunnerMetadata;
 
   const pairs = [
     ["isDevelopment", isMeteorAppDevelopment()],
@@ -417,6 +428,15 @@ export function getRspackEnv({ isClient, isServer, isTest: inIsTest, isTestLike:
     ["isVerbose", isMeteorAppConfigModernVerbose()],
     ...((isProfile && [["isProfile", isMeteorAppProfile()]]) || []),
     ["isTest", isTest],
+    ...((global.testCommandMetadata?.testFiles?.length > 0 && [[
+      "testFiles",
+      JSON.stringify(global.testCommandMetadata.testFiles),
+    ]]) || []),
+    ...((isTest && testRunnerId && [["testRunner", testRunnerId]]) || []),
+    ...((isTest && Object.keys(testRunnerContext).length > 0 && [[
+      "testRunnerContext",
+      JSON.stringify(testRunnerContext),
+    ]]) || []),
     ...(isTestLike ? [["isTestLike", isTestLike || isTest]] : []),
     ...((isTestLike && isTestFullApp && [["isTestFullApp", isTestFullApp]]) ||
       []),

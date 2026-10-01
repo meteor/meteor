@@ -5,7 +5,14 @@ on:
     paths:
       - 'tools/**'
       - 'scripts/**'
+      - 'packages/rstest/**'
+      - 'packages/rspack/**'
+      - 'packages/tools-core/**'
+      - 'packages/babel-compiler/**'
+      - 'npm-packages/meteor-rstest/**'
+      - 'npm-packages/meteor-rspack/**'
       - 'package.json'
+      - 'package-lock.json'
       - '.github/workflows/unit-tests.yml'
   push:
     branches:
@@ -34,3 +41,23 @@ jobs:
 
       - name: Run unit tests
         run: npm run test:unit
+
+  rstest:
+    name: Rstest and Rspack unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+      - name: Install repository dependencies
+        run: npm ci
+      - name: Install local integration dependencies
+        run: |
+          npm ci --prefix npm-packages/meteor-rspack
+          npm ci --prefix npm-packages/meteor-rstest --legacy-peer-deps
+          npm install --prefix npm-packages/meteor-rstest --no-save --package-lock=false --install-links=false ./npm-packages/meteor-rspack
+          npm run install:unit
+          npm ci --prefix tools/e2e-tests
+      - name: Run provider, runtime, bundler, and coverage tests
+        run: npm run test:rstest

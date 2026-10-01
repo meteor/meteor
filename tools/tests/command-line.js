@@ -191,6 +191,16 @@ selftest.define("argument parsing", async function () {
   await run.matchErr("can only take one --port (-p) option");
   await run.expectExit(1);
 
+  run = s.run(
+    "dummy",
+    "--ething", "x",
+    "--repeatable", "first",
+    "--repeatable", "second"
+  );
+  await run.read('"x" "3000" none []\n');
+  await run.read('["first","second"]\n');
+  await run.expectExit(0);
+
   run = s.run("dummy", "--ething", "x", "--changed", "--changed");
   await run.matchErr("can only take one --changed option");
   await run.expectExit(1);

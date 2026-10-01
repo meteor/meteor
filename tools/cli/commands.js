@@ -9,6 +9,13 @@ var auth = require('../meteor-services/auth.js');
 var config = require('../meteor-services/config.js');
 var runLog = require('../runners/run-log.js');
 var utils = require('../utils/utils.js');
+const {
+  collectTestRunnerLocalPackages,
+} = require('./test-runners/local-packages.js');
+const {
+  completeNativeOnlyTestRunner,
+} = require('./test-runners/native-completion.js');
+const { cleanupTestRunner } = require('./test-runners/provider-cleanup.js');
 var httpHelpers = require('../utils/http-helpers.js');
 var archinfo = require('../utils/archinfo');
 var catalog = require('../packaging/catalog/catalog.js');
@@ -127,7 +134,7 @@ import { ensureDevBundleDependencies } from '../cordova/index.js';
 import { CordovaRunner } from '../cordova/runner.js';
 import { iOSRunTarget, AndroidRunTarget } from '../cordova/run-targets.js';
 
-import { getExamples, findExample, cloneRepo, cloneSubdirectory, parseGitUrl, validateMeteorApp, EXAMPLES_REPO, EXAMPLES_BRANCH } from './examples.js';
+import { getExamples, findExample, cloneRepo, cloneSubdirectory, isGitSourceLike, parseGitUrl, validateMeteorApp, EXAMPLES_REPO, EXAMPLES_BRANCH } from './examples.js';
 
 // The architecture used by Meteor Software's hosted servers; it's the
 // architecture used by 'meteor deploy'.
@@ -721,7 +728,7 @@ const SKELETON_INFO = {
 
 main.registerCommand({
   name: 'create',
-  maxArgs: 1,
+  maxArgs: 2,
   minArgs: 0,
   options: {
     list: { type: Boolean },
@@ -756,6 +763,12 @@ main.registerCommand({
   // we are doing, do that first. (For example, we don't springboard to the
   // latest release to create a package if we are inside an app)
   if (options.package) {
+    if (options.args.length > 1) {
+      Console.error("Package creation expects only one package name.");
+      Console.error();
+      throw new main.ShowUsage();
+    }
+
     var packageName = options.args[0];
     if (options.prototype) {
       Console.error(
@@ -897,6 +910,12 @@ main.registerCommand({
   }
 
   if (options.list) {
+    if (options.args.length > 1) {
+      Console.error("List expects at most one app path.");
+      Console.error();
+      throw new main.ShowUsage();
+    }
+
     try {
       const examples = await getExamples();
       Console.rawInfo(`\n  ${bold`Meteor Examples`}  ${dim`${examples.length} available`}\n\n`);
@@ -929,6 +948,41 @@ main.registerCommand({
       return 1;
     }
     return 0;
+  }
+
+  const defaultCreatePathFromGitSource = (source) => {
+    const parsed = parseGitUrl(source);
+    const pathSource = options['from-dir'] || parsed.dir || parsed.repoUrl;
+    const pathName = (pathSource || '').split('/').filter(Boolean).pop();
+    return (pathName || 'my-app').replace(/\.git$/, '');
+  };
+
+  if (!options.from && options.args.length > 0) {
+    const sourceIndexes = options.args
+      .map((arg, index) => (
+        isGitSourceLike(arg, { githubShorthand: false }) ? index : -1
+      ))
+      .filter(index => index !== -1);
+
+    if (sourceIndexes.length === 1) {
+      const sourceIndex = sourceIndexes[0];
+      options.from = options.args[sourceIndex];
+      options.args = options.args.length === 1
+        ? [defaultCreatePathFromGitSource(options.from)]
+        : [options.args[sourceIndex === 0 ? 1 : 0]];
+    } else if (options.args.length > 1) {
+      Console.error(
+        'Specify one app path, or one app path and one Git URL to clone from.'
+      );
+      Console.error();
+      throw new main.ShowUsage();
+    }
+  }
+
+  if (options.from && options.args.length > 1) {
+    Console.error('Cannot specify more than one path when using --from.');
+    Console.error();
+    throw new main.ShowUsage();
   }
 
   /**
@@ -2209,6 +2263,22 @@ testCommandOptions = {
     // Undocumented flag to use a different test driver.
     'driver-package': { type: String },
 
+    // Generic test-runner provider selection and provider-owned options.
+    'test-runner': { type: String },
+    config: { type: String },
+    project: { type: [String] },
+    'test-file': { type: [String] },
+    'test-name-pattern': { type: String },
+    browser: { type: String },
+    coverage: { type: Boolean },
+    'update-snapshots': { type: Boolean, short: 'u' },
+    shard: { type: String },
+    changed: { type: Boolean },
+    'changed-since': { type: String },
+    'server-only': { type: Boolean },
+    'client-only': { type: Boolean },
+    'runtime-workers': { type: Number, default: 1 },
+
     // Sets the path of where the temp app should be created
     'test-app-path': { type: String },
 
@@ -2270,7 +2340,108 @@ main.registerCommand(Object.assign(
   return doTestCommand(options);
 });
 
+main.registerCommand({
+  name: 'test-runner-worker',
+  hidden: true,
+  requiresApp: true,
+  minArgs: 1,
+  maxArgs: 1,
+  catalogRefresh: new catalog.Refresh.Never(),
+}, function (options) {
+  const {
+    readWorkerContext,
+  } = require('./test-runners/meteor-hosts.js');
+  const workerContext = readWorkerContext(files.pathResolve(options.args[0]));
+  const workerOptions = {
+    ...workerContext.commandOptions,
+    appDir: options.appDir,
+    args: [...(workerContext.commandOptions.args || [])],
+    port: String(workerContext.port),
+    test: true,
+    'test-packages': false,
+    'test-app-path': workerContext.testAppPath,
+    'test-runner': workerContext.providerId,
+    'runtime-workers': 1,
+    // A delegated runtime host always runs the test driver. The parent may be
+    // a full-app host, but carrying that flag here would start application
+    // entry points in the worker's test-only client bundle.
+    'full-app': false,
+    __testRunnerWorker: workerContext.worker,
+  };
+  return doTestCommand(workerOptions);
+});
+
+function readTestRunnerPackageConfig(appDir) {
+  if (!appDir) return {};
+  try {
+    return JSON.parse(
+      files.readFile(files.pathJoin(appDir, 'package.json'), 'utf8')
+    ).meteor || {};
+  } catch {
+    return {};
+  }
+}
+
+async function collectTestRunnerPackageRecords(projectContext) {
+  const records = [];
+  await projectContext.packageMap.eachPackage(async (name, info) => {
+    const version = await projectContext.projectCatalog.getVersion(
+      name,
+      info.version
+    );
+    if (version) records.push({ name, version });
+  });
+  return records;
+}
+
+function normalizeTestRunnerOptions(options) {
+  return {
+    once: Boolean(options.once),
+    fullApp: Boolean(options['full-app']),
+    serverOnly: Boolean(options['server-only']),
+    clientOnly: Boolean(options['client-only']),
+    config: options.config || null,
+    project: [].concat(options.project || []).filter(Boolean),
+    testFile: [].concat(options['test-file'] || []).filter(Boolean),
+    testNamePattern: options['test-name-pattern'] ||
+      (options.filter && options.filter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) ||
+      null,
+    browser: options.browser || null,
+    coverage: Boolean(options.coverage),
+    updateSnapshots: Boolean(options['update-snapshots']),
+    shard: options.shard || null,
+    changed: Boolean(options.changed),
+    changedSince: options['changed-since'] || null,
+    runtimeWorkers: options['runtime-workers'],
+    passthrough: [...options.args],
+  };
+}
+
+function updateTestRunnerMetadata(selection, payload) {
+  global.testCommandMetadata.testRunner = {
+    id: selection.id,
+    apiVersion: selection.definition.registration.apiVersion,
+    payload: { ...payload },
+  };
+}
+
+const {
+  seedTestAppLocalCache,
+} = require('./test-runners/seed-test-app-cache.js');
+
 async function doTestCommand(options) {
+  // Internal test-runner orchestration can re-enter this implementation through
+  // a hidden command. Keep downstream build integrations on the public command
+  // identity they already understand.
+  global.currentCommand = {
+    name: options['test-packages'] ? 'test-packages' : 'test',
+    options,
+  };
+  // Build plugins can add process-wide environment defaults while Meteor
+  // prepares this command. Child hosts must inherit the caller's environment,
+  // not those later side effects.
+  const testWorkerBaseEnv = { ...process.env };
+
   if (options.filter) {
     process.env.TINYTEST_FILTER = options.filter;
   }
@@ -2280,12 +2451,35 @@ async function doTestCommand(options) {
   //
   // As long as the Meteor CLI runs a single command as part of each
   // process, this should be safe.
-  global.testCommandMetadata = {};
+  global.testCommandMetadata = {
+    testFiles: [].concat(options['test-file'] || []).filter(Boolean),
+  };
 
   Console.setVerbose(!!options.verbose);
   if (options.headless) {
     Console.setHeadless(true);
   }
+
+  const testRunnerCommand = options['test-packages']
+    ? 'test-packages'
+    : 'test';
+  const {
+    normalizeRuntimeWorkers,
+    validateRuntimeWorkerCommand,
+  } = require('./test-runners/meteor-hosts.js');
+  let runtimeWorkers;
+  try {
+    runtimeWorkers = normalizeRuntimeWorkers(options['runtime-workers']);
+    validateRuntimeWorkerCommand({
+      runtimeWorkers,
+      command: testRunnerCommand,
+      options,
+    });
+  } catch (error) {
+    Console.error(error.message);
+    return 1;
+  }
+  options['runtime-workers'] = runtimeWorkers;
 
   const runTargets = parseRunTargets(_.intersection(
     Object.keys(options), ['ios', 'ios-device', 'android', 'android-device']));
@@ -2324,6 +2518,23 @@ async function doTestCommand(options) {
     testRunnerAppDir = files.mkdtemp('meteor-test-run');
   }
 
+  const sourceAppDir = options.appDir || process.cwd();
+  const packageJsonMeteor = readTestRunnerPackageConfig(sourceAppDir);
+  const { createHarnessNpmService } = require('./test-runners/harness-npm.js');
+  const testRunnerNpm = createHarnessNpmService({
+    root: options['test-packages'] ? testRunnerAppDir : sourceAppDir,
+    autoInstall: packageJsonMeteor.autoInstallDeps !== false,
+  });
+  let testRunnerSelection;
+  let testRunnerSession;
+  let testRunnerPlan;
+  let testRunnerProcess;
+  let updateTestRunnerMetadataPayload;
+  let selectedTestPackages = [];
+  let testRunnerConstraintsResolved = false;
+  const defaultPackageTestDriver = 'test-in-browser';
+  let defaultPackageTestDriverAdded = false;
+
   // Download packages for our architecture, and for the deploy server's
   // architecture if we're deploying.
   const archInfoHost = archinfo.host();
@@ -2345,10 +2556,6 @@ async function doTestCommand(options) {
       global.testCommandMetadata.driverPackage =
         options['driver-package'].trim()
     );
-  } else if (options["test-packages"]) {
-    includePackages.push(
-      global.testCommandMetadata.driverPackage = "test-in-browser"
-    );
   }
 
   var projectContextOptions = {
@@ -2362,24 +2569,6 @@ async function doTestCommand(options) {
   if (options["test-packages"]) {
     projectContextOptions.projectDir = testRunnerAppDir;
     projectContextOptions.projectDirForLocalPackages = options.appDir;
-
-    try {
-      const { install } = require("./default-npm-deps.js");
-      await install(testRunnerAppDir);
-    } catch (error) {
-      if (error.code === 'EACCES' && options['test-app-path']) {
-        Console.error(
-          'The specified --test-app-path directory of ' +
-          `"${testRunnerAppDir}" exists, but the current user does not have ` +
-          `read/write permission in it.`
-        );
-      }
-      throw error;
-    }
-
-    if (buildmessage.jobHasMessages()) {
-      return;
-    }
 
     // Find any packages mentioned by a path instead of a package name. We will
     // load them explicitly into the catalog.
@@ -2423,13 +2612,19 @@ async function doTestCommand(options) {
       });
     }
 
-    // Use the driver package if running `meteor test-packages`. For
-    // `meteor test`, the driver package is expected to already
-    // have been added to the app.
-    packagesToAdd.unshift(global.testCommandMetadata.driverPackage);
+    for (const packageName of packagesToAdd) {
+      selectedTestPackages.push({
+        name: packageName,
+        version: await projectContext.localCatalog.getLatestVersion(packageName),
+      });
+    }
 
     // Also, add `autoupdate` so that you don't have to manually refresh the tests
     packagesToAdd.unshift("autoupdate");
+    if (!options['driver-package']) {
+      packagesToAdd.push(defaultPackageTestDriver);
+      defaultPackageTestDriverAdded = true;
+    }
 
     var constraintsToAdd = _.map(packagesToAdd, function (p) {
       return utils.parsePackageConstraint(p);
@@ -2447,44 +2642,21 @@ async function doTestCommand(options) {
     // projectContext.reset.
     await projectContext.projectConstraintsFile.writeIfModified();
   } else if (options["test"]) {
-    if (!options['driver-package']) {
-      throw new Error("You must specify a driver package with --driver-package");
-    }
-
-    global.testCommandMetadata.driverPackage = options['driver-package'];
-
     global.testCommandMetadata.isAppTest = options['full-app'];
     global.testCommandMetadata.isTest = !global.testCommandMetadata.isAppTest;
 
     projectContextOptions.projectDir = options.appDir;
     projectContextOptions.projectLocalDir = files.pathJoin(testRunnerAppDir, '.meteor', 'local');
 
-    // Copy the existing build and isopacks to speed up the initial start
-    async function copyDirIntoTestRunnerApp(allowSymlink, ...parts) {
-      // Depending on whether the user has run `meteor run` or other commands, they
-      // may or may not exist yet
-      const appDirPath = files.pathJoin(options.appDir, ...parts);
-      const testDirPath = files.pathJoin(testRunnerAppDir, ...parts);
-
-      files.mkdir_p(appDirPath);
-      files.mkdir_p(files.pathDirname(testDirPath));
-
-      if (allowSymlink) {
-        // Windows can create junction links without administrator
-        // privileges since both paths refer to directories.
-        files.symlink(appDirPath, testDirPath, "junction");
-      } else {
-        await files.cp_r(appDirPath, testDirPath, {
-          preserveSymlinks: true
-        });
-      }
+    if (options.__testRunnerWorker) {
+      files.mkdir_p(projectContextOptions.projectLocalDir, 0o700);
+    } else {
+      await seedTestAppLocalCache({
+        files,
+        sourceLocalDir: files.pathJoin(options.appDir, '.meteor', 'local'),
+        targetLocalDir: projectContextOptions.projectLocalDir,
+      });
     }
-
-    await copyDirIntoTestRunnerApp(false, '.meteor', 'local', 'build');
-    await copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'bundler-cache');
-    await copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'isopacks');
-    await copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'plugin-cache');
-    await copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'shell');
 
     projectContext = new projectContextModule.ProjectContext(projectContextOptions);
 
@@ -2494,6 +2666,305 @@ async function doTestCommand(options) {
     });
   } else {
     throw new Error("Unexpected: neither test-packages nor test");
+  }
+
+  const {
+    discoverTestRunnerProviders,
+    resolveTestRunnerProvider,
+  } = require('./test-runners/provider-registry.js');
+  try {
+    const requestedTestRunner = options['test-runner'] ??
+      process.env.METEOR_TEST_RUNNER ??
+      packageJsonMeteor.testRunner;
+    if (options['driver-package'] || requestedTestRunner === 'driver') {
+      testRunnerSelection = await resolveTestRunnerProvider({
+        command: testRunnerCommand,
+        driverPackage: options['driver-package'],
+        explicitTestRunner: options['test-runner'],
+        envTestRunner: process.env.METEOR_TEST_RUNNER,
+        packageJsonMeteor,
+        discoverProviders: async () => {
+          throw new Error('driver selection must bypass provider discovery');
+        },
+      });
+    } else {
+      let providerDefinitions = [];
+      let packageRecords = [];
+      await main.captureAndExit(
+        '=> Errors while discovering test runner providers:',
+        async function () {
+          await projectContext.resolveConstraints();
+          testRunnerConstraintsResolved = true;
+          packageRecords = await collectTestRunnerPackageRecords(projectContext);
+          providerDefinitions = await discoverTestRunnerProviders({
+            projectContext,
+            packageRecords,
+            architectures: serverArchitectures,
+          });
+        }
+      );
+      if (buildmessage.jobHasMessages()) return 1;
+      const appPackageNames = packageRecords.map(record => record.name);
+      const packageWebArchs = filterWebArchs(
+        projectContext.platformList.getWebArchs(),
+        options['exclude-archs'],
+        projectContext.appDirectory,
+        options,
+      );
+      const testArchitectures = [
+        ...(!options['client-only'] ? [archinfo.host()] : []),
+        ...(!options['server-only'] ? packageWebArchs : []),
+      ];
+      testRunnerSelection = await resolveTestRunnerProvider({
+        command: testRunnerCommand,
+        explicitTestRunner: options['test-runner'],
+        envTestRunner: process.env.METEOR_TEST_RUNNER,
+        packageJsonMeteor,
+        appPackageNames,
+        testPackages: selectedTestPackages,
+        architectures: testArchitectures,
+        discoverProviders: async () => providerDefinitions,
+      });
+    }
+  } catch (error) {
+    Console.error(error.message);
+    return 1;
+  }
+
+  if (testRunnerSelection.engine === 'driver') {
+    if (runtimeWorkers > 1) {
+      Console.error(
+        '--runtime-workers requires a tool-side test-runner provider; ' +
+        'driver packages keep the existing single Meteor host.'
+      );
+      return 1;
+    }
+    options['driver-package'] = testRunnerSelection.driverPackage;
+    if (options.test && !options['driver-package']) {
+      throw new Error('You must specify a driver package with --driver-package');
+    }
+    global.testCommandMetadata.driverPackage = options['driver-package'];
+
+    if (options['test-packages']) {
+      try {
+        await testRunnerNpm.ensureHarnessManifest({ retain: false });
+        await testRunnerNpm.restoreIfTemporary();
+      } catch (error) {
+        if (error.code === 'EACCES' && options['test-app-path']) {
+          Console.error(
+            'The specified --test-app-path directory of ' +
+            `"${testRunnerAppDir}" exists, but current user lacks read/write permission.`
+          );
+        }
+        throw error;
+      }
+      if (!projectContext.projectConstraintsFile.getConstraint(
+        options['driver-package']
+      )) {
+        projectContext.projectConstraintsFile.addConstraints([
+          utils.parsePackageConstraint(options['driver-package']),
+        ]);
+        await projectContext.projectConstraintsFile.writeIfModified();
+      }
+      if (!testRunnerConstraintsResolved) {
+        projectContext.reset();
+        await main.captureAndExit(
+          '=> Errors while setting up tests:',
+          () => projectContext.initializeCatalog()
+        );
+      }
+    }
+  } else {
+    if (options['test-packages'] && defaultPackageTestDriverAdded) {
+      projectContext.projectConstraintsFile.removePackages([
+        defaultPackageTestDriver,
+      ]);
+      await projectContext.projectConstraintsFile.writeIfModified();
+      projectContext.reset();
+      await main.captureAndExit(
+        '=> Errors while setting up tests:',
+        async () => {
+          await projectContext.initializeCatalog();
+          await projectContext.resolveConstraints();
+        }
+      );
+    }
+    const {
+      applyTestExecutionHostMode,
+      createProviderSession,
+      createTestRunnerContext,
+      normalizeTestRunnerVerbose,
+    } = require('./test-runners/provider-contract.js');
+    const testRunnerWebArchs = filterWebArchs(
+      projectContext.platformList.getWebArchs(),
+      options['exclude-archs'],
+      projectContext.appDirectory,
+      options,
+    );
+    const selectedTestPackageNames = selectedTestPackages.flatMap(entry => [
+      entry.name,
+      entry.name.replace(/^local-test:/, ''),
+    ]);
+    const testRunnerLocalPackages = await collectTestRunnerLocalPackages(
+      projectContext.localCatalog,
+      files,
+      {
+        checkoutPackageRoots: files.inCheckout()
+          ? [files.pathJoin(files.getCurrentToolsDir(), 'packages')]
+          : [],
+        selectedPackageNames: selectedTestPackageNames,
+        packageCatalog: projectContext.projectCatalog,
+      }
+    );
+    const localPackageByName = new Map(testRunnerLocalPackages.map(entry => [
+      entry.name,
+      entry,
+    ]));
+    const providerContextData = createTestRunnerContext({
+      command: testRunnerCommand,
+      appDir: sourceAppDir,
+      harnessRoot: testRunnerAppDir,
+      localPackages: testRunnerLocalPackages,
+      packageTests: selectedTestPackages.map(entry => {
+        const packageSource = projectContext.localCatalog.getPackageSource(
+          entry.name
+        );
+        const inventory = localPackageByName.get(entry.name);
+        return {
+          name: entry.name,
+          sourceRoot: packageSource && packageSource.sourceRoot,
+          sourceKind: 'test-target',
+          sourceProcessors: inventory && inventory.sourceProcessors || [],
+        };
+      }),
+      localDir: projectContext.projectLocalDir,
+      basePort: Number(parsedServerUrl.port),
+      verbose: normalizeTestRunnerVerbose(packageJsonMeteor, options.verbose),
+      architectures: [
+        ...(!options['client-only'] ? [archinfo.host()] : []),
+        ...(!options['server-only'] ? testRunnerWebArchs : []),
+      ],
+      webArchs: testRunnerWebArchs,
+      options: normalizeTestRunnerOptions(options),
+      worker: options.__testRunnerWorker || null,
+    });
+    const {
+      createMeteorTestHostService,
+      serializeTestWorkerOptions,
+    } = require('./test-runners/meteor-hosts.js');
+    const meteorHosts = createMeteorTestHostService({
+      appDir: sourceAppDir,
+      harnessRoot: testRunnerAppDir,
+      basePort: Number(parsedServerUrl.port),
+      providerId: testRunnerSelection.id,
+      commandOptions: serializeTestWorkerOptions(options),
+      env: testWorkerBaseEnv,
+      prepare: () => main.captureAndExit(
+        '=> Errors while preparing Meteor test workers:',
+        () => projectContext.prepareProjectForBuild()
+      ),
+      prepareWorker: ({ projectLocalDir }) => seedTestAppLocalCache({
+        files,
+        sourceLocalDir: projectContext.projectLocalDir,
+        targetLocalDir: projectLocalDir,
+        isolateBuildPluginState: true,
+      }),
+    });
+    const providerContext = Object.freeze({
+      ...providerContextData,
+      npm: testRunnerNpm,
+      meteorHosts,
+    });
+    try {
+      const provider = testRunnerSelection.definition.factory(providerContext);
+      testRunnerSession = createProviderSession({
+        registration: testRunnerSelection.definition.registration,
+        provider,
+        context: providerContext,
+      });
+      testRunnerPlan = await testRunnerSession.prepare();
+    } catch (error) {
+      Console.error(error.message);
+      return 1;
+    }
+    updateTestRunnerMetadata(testRunnerSelection, testRunnerPlan.metadata || {});
+    applyTestExecutionHostMode(
+      global.testCommandMetadata,
+      testRunnerPlan.hostTestMode,
+    );
+    if (testRunnerPlan.driverPackage) {
+      global.testCommandMetadata.driverPackage =
+        testRunnerPlan.driverPackage;
+    }
+    const { setTestRunnerContext } = require('../tool-env/test-runner-context.js');
+    setTestRunnerContext({
+      providerId: testRunnerSelection.id,
+      buildPluginOptions: testRunnerPlan.buildPluginOptions || {},
+      buildPluginDependencies: testRunnerPlan.buildPluginDependencies || {},
+      isobuildOptions: testRunnerPlan.isobuildOptions || {},
+    });
+    let harnessPackagesChanged = false;
+    if (options['test-packages'] && testRunnerPlan.harnessPackages?.length) {
+      const constraints = testRunnerPlan.harnessPackages
+        .filter(packageName =>
+          !projectContext.projectConstraintsFile.getConstraint(packageName)
+        )
+        .map(packageName => utils.parsePackageConstraint(packageName));
+      if (constraints.length > 0) {
+        projectContext.projectConstraintsFile.addConstraints(constraints);
+        await projectContext.projectConstraintsFile.writeIfModified();
+        harnessPackagesChanged = true;
+      }
+    }
+    if (testRunnerPlan.refreshProjectMetadata || harnessPackagesChanged) {
+      projectContext.reset();
+      await main.captureAndExit(
+        '=> Errors while refreshing test host metadata:',
+        async () => {
+          await projectContext.initializeCatalog();
+          await projectContext.resolveConstraints();
+        }
+      );
+    }
+
+    const updateMetadata = updateTestRunnerMetadataPayload = payload =>
+      updateTestRunnerMetadata(testRunnerSelection, payload);
+    let preHost;
+    try {
+      preHost = await testRunnerSession.startBeforeHost({ updateMetadata });
+    } catch (error) {
+      Console.error(error.message);
+      await cleanupTestRunner({
+        session: testRunnerSession,
+        clearContext: () =>
+          require('../tool-env/test-runner-context.js').clearTestRunnerContext(),
+        error,
+      });
+      return 1;
+    }
+    if (preHost && preHost.exitCode && preHost.exitCode !== 0) {
+      await cleanupTestRunner({
+        session: testRunnerSession,
+        clearContext: () =>
+          require('../tool-env/test-runner-context.js').clearTestRunnerContext(),
+      });
+      return preHost.exitCode;
+    }
+    testRunnerProcess = preHost && preHost.process;
+    if (testRunnerPlan.mode === 'native-only') {
+      try {
+        return await completeNativeOnlyTestRunner({
+          session: testRunnerSession,
+          exitCode: preHost && preHost.exitCode || 0,
+          completion: testRunnerProcess && testRunnerProcess.completion,
+          clearContext: () =>
+            require('../tool-env/test-runner-context.js').clearTestRunnerContext(),
+        });
+      } catch (error) {
+        Console.error(error.message);
+        return 1;
+      }
+    }
   }
 
   // The rest of the projectContext preparation process will happen inside the
@@ -2527,16 +2998,32 @@ async function doTestCommand(options) {
   }
 
   options.cordovaRunner = cordovaRunner;
+  options.testRunnerSession = testRunnerSession;
+  options.testRunnerProcess = testRunnerProcess;
+  options.updateTestRunnerMetadata = updateTestRunnerMetadataPayload;
 
-  return await runTestAppForPackages(projectContext, Object.assign(
-    options,
-    {
-      mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
-      cordovaServerPort: parsedCordovaServerPort,
-      proxyPort: parsedServerUrl.port,
-      proxyHost: parsedServerUrl.hostname,
-    }
-  ));
+  let executionError;
+  try {
+    return await runTestAppForPackages(projectContext, Object.assign(
+      options,
+      {
+        mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
+        cordovaServerPort: parsedCordovaServerPort,
+        proxyPort: parsedServerUrl.port,
+        proxyHost: parsedServerUrl.hostname,
+      }
+    ));
+  } catch (error) {
+    executionError = error;
+    throw error;
+  } finally {
+    await cleanupTestRunner({
+      session: testRunnerSession,
+      clearContext: () =>
+        require('../tool-env/test-runner-context.js').clearTestRunnerContext(),
+      error: executionError,
+    });
+  }
 }
 
 // Returns the "local-test:*" package names for the given package names (or for
@@ -2645,6 +3132,9 @@ var runTestAppForPackages = async function (projectContext, options) {
       recordPackageUsage: false,
       selenium: options.selenium,
       seleniumBrowser: options['selenium-browser'],
+      testRunnerSession: options.testRunnerSession,
+      testRunnerProcess: options.testRunnerProcess,
+      updateTestRunnerMetadata: options.updateTestRunnerMetadata,
       cordovaRunner: options.cordovaRunner,
       // On the first run, we shouldn't display the delta between "no packages
       // in the temp app" and "all the packages we're testing". If we make
@@ -3435,7 +3925,8 @@ main.registerCommand({
     port: { type: Number, short: "p", default: DEFAULT_PORT },
     url: { type: Boolean, short: "U" },
     'delete': { type: Boolean, short: "D" },
-    changed: { type: Boolean }
+    changed: { type: Boolean },
+    repeatable: { type: [String] }
   },
   maxArgs: 2,
   hidden: true,
@@ -3456,6 +3947,9 @@ main.registerCommand({
   }
   if (options['delete']) {
     Console.info('delete');
+  }
+  if (options.repeatable) {
+    Console.info(p('repeatable'));
   }
 });
 

@@ -68,6 +68,7 @@ function readCurrentVersion(name, cwd) {
  * @param {Array<{name: string, version: string, semverCondition?: string, dev: boolean, existenceOnly?: boolean}>} dependencies
  * @param {Object} [options]
  * @param {string} [options.cwd] - Defaults to the Meteor app directory.
+ * @param {boolean} [options.checkNodeModules] - Require installed dependencies, not only declarations.
  * @returns {Array<{name: string, status: 'ok'|'missing'|'outdated', requiredVersion: string, currentVersion: ?string, dev: boolean, existenceOnly: boolean}>}
  */
 export function detectMissingOrOutdatedDeps(dependencies, options = {}) {
@@ -82,7 +83,11 @@ export function detectMissingOrOutdatedDeps(dependencies, options = {}) {
 
     const dev = dep.dev;
     const existenceOnly = !!dep.existenceOnly;
-    const exists = checkNpmDependencyExists(dep.name, { cwd });
+    const exists = checkNpmDependencyExists(dep.name, {
+      cwd,
+      checkNodeModules: options.checkNodeModules,
+      nodeModulesOnly: options.checkNodeModules,
+    });
 
     if (!exists) {
       return {
@@ -110,6 +115,7 @@ export function detectMissingOrOutdatedDeps(dependencies, options = {}) {
       cwd,
       versionRequirement: dep.version,
       semverCondition: dep.semverCondition || 'gte',
+      checkNodeModules: options.checkNodeModules,
     });
 
     return {
@@ -139,7 +145,7 @@ export function formatInstallCommands({ changes, yarn = false } = {}) {
   const dev = needed.filter((c) => c.dev);
   const regular = needed.filter((c) => !c.dev);
 
-  const toSpec = (c) => `${c.name}@${c.requiredVersion}`;
+  const toSpec = (c) => `${c.name}@${c.installSpec || c.requiredVersion}`;
   const out = {};
 
   if (dev.length > 0) {
@@ -274,6 +280,9 @@ export function renderManualInstallInstructions({ packageLabel, changes, yarn = 
  * @param {string} [params.docUrl] - Link shown in the discoverability footer / manual block.
  * @param {string} [params.note] - Optional line shown above the dep list.
  * @param {string} [params.cwd] - Defaults to the Meteor app directory.
+ * @param {boolean} [params.checkNodeModules] - Check installed versions in the npm root.
+ * @param {boolean} [params.includeDevDependencies] - Install dev dependencies even in production environments.
+ * @param {boolean} [params.autoInstall] - A provider can disable installation for its host.
  * @returns {Promise<{mode: string, changes: Array, installed: boolean, installCommands: string[]}>}
  */
 export async function ensurePackageDependencies(params = {}) {
@@ -298,7 +307,20 @@ export async function ensurePackageDependencies(params = {}) {
   }
 
   const cwd = cwdParam || getMeteorAppDir();
-  const changes = detectMissingOrOutdatedDeps(dependencies, { cwd });
+  const changes = detectMissingOrOutdatedDeps(dependencies, {
+    cwd,
+    checkNodeModules: params.checkNodeModules,
+  });
+  for (const change of changes) {
+    const dependency = dependencies.find(dep => dep.name === change.name);
+    const declaredSpec = readCurrentVersion(change.name, cwd);
+    // Preserve checkout links when a test harness needs to reinstall a package.
+    // Its published version may not exist yet.
+    const localSpec = /^(?:file:|link:|workspace:|\.{1,2}[\\/]|[\\/])/.test(declaredSpec || '');
+    change.installSpec = dependency.spec && dependency.spec !== dependency.version
+      ? dependency.spec
+      : localSpec ? declaredSpec : dependency.version;
+  }
   const needed = changes.filter((c) => c.status !== 'ok');
 
   if (needed.length === 0) {
@@ -319,7 +341,8 @@ export async function ensurePackageDependencies(params = {}) {
     Package?.meteor?.global?.currentCommand?.name === 'update' &&
     Package?.meteor?.global?.currentCommand?.options?.npm === true;
 
-  const autoInstall = isUpdateNpm || hasMeteorAppConfigAutoInstallDeps({ cwd });
+  const autoInstall = params.autoInstall !== false &&
+    (isUpdateNpm || hasMeteorAppConfigAutoInstallDeps({ cwd }));
 
   if (!autoInstall) {
     renderManualInstallInstructions({
@@ -356,13 +379,15 @@ export async function ensurePackageDependencies(params = {}) {
         devChanges.length === 1 ? 'y' : 'ies'
       }...`
     );
-    const specs = devChanges.map((c) => `${c.name}@${c.requiredVersion}`);
+    const specs = devChanges.map((c) => `${c.name}@${c.installSpec}`);
     installCommands.push(
       yarn
         ? `yarn add --dev ${specs.join(' ')}`
         : `meteor npm install --save-dev ${specs.join(' ')}`
     );
-    devOk = await installNpmDependency(specs, { cwd, dev: true, yarn });
+    devOk = await installNpmDependency(specs, {
+      cwd, dev: true, yarn, includeDevDependencies: params.includeDevDependencies,
+    });
   }
 
   if (regularChanges.length > 0) {
@@ -371,13 +396,15 @@ export async function ensurePackageDependencies(params = {}) {
         regularChanges.length === 1 ? 'y' : 'ies'
       }...`
     );
-    const specs = regularChanges.map((c) => `${c.name}@${c.requiredVersion}`);
+    const specs = regularChanges.map((c) => `${c.name}@${c.installSpec}`);
     installCommands.push(
       yarn
         ? `yarn add ${specs.join(' ')}`
         : `meteor npm install --save ${specs.join(' ')}`
     );
-    regularOk = await installNpmDependency(specs, { cwd, dev: false, yarn });
+    regularOk = await installNpmDependency(specs, {
+      cwd, dev: false, yarn, includeDevDependencies: params.includeDevDependencies,
+    });
   }
 
   const success = devOk && regularOk;

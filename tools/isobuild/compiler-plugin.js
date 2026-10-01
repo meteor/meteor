@@ -4,6 +4,7 @@ var buildPluginModule = require('./build-plugin.js');
 var colonConverter = require('../utils/colon-converter.js');
 var files = require('../fs/files');
 var compiler = require('./compiler.js');
+var testRunnerContext = require('../tool-env/test-runner-context.js');
 var linker = require('./linker.js');
 var _ = require('underscore');
 var Profile = require('../tool-env/profile').Profile;
@@ -621,11 +622,19 @@ class ResourceSlot {
   _isLazy(options, isJavaScript) {
     let lazy = this._getOption("lazy", options);
 
+    const packageName = this.packageSourceBatch.unibuild.pkg.name;
+    if (testRunnerContext.getTestRunnerIsobuildOptions().lazyTestPackages &&
+        /^local-test[:_]/.test(packageName || "")) {
+      // A provider can defer package test evaluation until its runtime has
+      // initialized in the Meteor host.
+      return true;
+    }
+
     if (typeof lazy === "boolean") {
       return lazy;
     }
 
-    const isApp = ! this.packageSourceBatch.unibuild.pkg.name;
+    const isApp = ! packageName;
     if (! isApp) {
       // Meteor package files must be explicitly added by api.addFiles or
       // api.mainModule, and are implicitly eager unless specified
@@ -1433,6 +1442,8 @@ export class PackageSourceBatch {
         nodeModulesPaths,
         watchSet: entry.importScannerWatchSet,
         cacheDir: batch.scannerCacheDir,
+        moduleReplacements:
+          testRunnerContext.getTestRunnerIsobuildOptions().moduleReplacements,
       });
 
       await scanner.addInputFiles(entry.files);

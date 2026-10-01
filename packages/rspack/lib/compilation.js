@@ -69,6 +69,7 @@ export function failFirstCompilation(side, detail) {
  * @returns {Object} Object containing compilation tracking state and callbacks
  */
 export function setupCompilationTracking() {
+  delete process.env.RSPACK_FIRST_COMPILATION_COMPLETE;
   // Initialize global state for first compilation tracking
   const clientFirstCompile = {
     resolved: false,

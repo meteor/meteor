@@ -110,10 +110,12 @@ function getFileExtensionsToIgnore() {
  * Creates necessary module files and writes content to them
  * @returns {void}
  */
-export function configureMeteorForRspack() {
+export function configureMeteorForRspack({ isTestRunnerHost = false } = {}) {
   const meteorAppConfig = getMeteorAppConfig();
   const initialEntrypoints = getInitialEntrypoints();
-  const isTest = isMeteorAppTest();
+  const isTestRunnerPackageHost = isTestRunnerHost && !isMeteorAppTest();
+  // Provider workers and test-packages hosts also use the test build context.
+  const isTest = isMeteorAppTest() || isTestRunnerPackageHost;
   const isTestFullApp = isMeteorAppTestFullApp();
 
   // Ignore node_modules to prevent Meteor from processing them
@@ -245,6 +247,14 @@ export function configureMeteorForRspack() {
         isDevelopment: true,
       }),
     )}/**`;
+  const activeMainIgnorePath = `${RSPACK_BUILD_CONTEXT}/${path.dirname(
+    getBuildFilePath({
+      isMain: true,
+      ...(isMeteorAppDevelopment()
+        ? { isDevelopment: true }
+        : { isProduction: true }),
+    }),
+  )}/**`;
   const foldersToIgnore = [
     // Cross-process isolation: a single app directory can host several Meteor
     // instances at once (a dev server, a `meteor test` daemon, an E2E run),
@@ -258,6 +268,7 @@ export function configureMeteorForRspack() {
     `!/${RSPACK_BUILD_CONTEXT}`,
     `!/${RSPACK_BUILD_CONTEXT}/**`,
     ...testIgnorePaths,
+    ...(isTestRunnerPackageHost ? [activeMainIgnorePath] : []),
     otherMainIgnorePath,
     'node_modules/**',
     ...extraFoldersToIgnore,
@@ -354,7 +365,7 @@ export function configureMeteorForRspack() {
       testServer: `${RSPACK_BUILD_CONTEXT}/${testServerModule}`,
     }),
   };
-  if (isTestFullApp) {
+  if (isTestFullApp || isTestRunnerPackageHost) {
     appEntrypoints = {
       ...appEntrypoints,
       mainClient: `${RSPACK_BUILD_CONTEXT}/${testClientModule}`,

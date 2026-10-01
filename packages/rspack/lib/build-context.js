@@ -44,6 +44,9 @@ const {
   FILE_ROLE,
 } = require('./constants');
 
+const {
+  ensureBuildContextFile,
+} = require('./build-context-files');
 const SERVER_RUNTIME_BUILD_ID_PATTERN =
   /\/\* rspack-server-build-id:[^*]*\*\//;
 const CLIENT_RUNTIME_BUILD_ID_PATTERN =
@@ -200,50 +203,13 @@ export function ensureModuleFilesExist() {
     filename.endsWith('-rspack.js') || filename.endsWith('-rspack.cjs');
 
   Object.entries(moduleFiles).forEach(([filename, defaultContent]) => {
-    // 1. Build full path and ensure directory exists
     const filePath = path.join(appDir, RSPACK_BUILD_CONTEXT, filename);
-    const dir = path.dirname(filePath);
-    if (!fs.existsSync(dir)) {
-      try {
-        fs.mkdirSync(dir, { recursive: true });
-      } catch (err) {
-        logError(`Failed to create directory ${dir}: ${err.message}`);
-        return; // stop here if we can’t make the folder
-      }
-    }
-
-    // 2. If the file exists, check its contents
-    if (fs.existsSync(filePath)) {
-      // Never overwrite an output bundle that already exists — it may hold a
-      // real (or concurrently building) compiled bundle.
-      if (isOutputBundleFile(filename)) {
-        return;
-      }
-
-      let existing;
-      try {
-        existing = fs.readFileSync(filePath, 'utf8');
-      } catch (err) {
-        logError(`Failed to read existing file ${filename}: ${err.message}`);
-        return;
-      }
-
-      // 3. If it doesn't already start with the new defaultContent, overwrite it
-      if (!existing.includes(defaultContent)) {
-        try {
-          fs.writeFileSync(filePath, defaultContent, 'utf8');
-        } catch (err) {
-          logError(`Failed to rewrite module file ${filename}: ${err.message}`);
-        }
-      }
-
-      // 4. If the file doesn't exist at all, write it for the first time
-    } else {
-      try {
-        fs.writeFileSync(filePath, defaultContent, 'utf8');
-      } catch (err) {
-        logError(`Failed to create module file ${filename}: ${err.message}`);
-      }
+    try {
+      // Preserve compiled output from this or a concurrent build.
+      if (isOutputBundleFile(filename) && fs.existsSync(filePath)) return;
+      ensureBuildContextFile(filePath, defaultContent);
+    } catch (err) {
+      logError(`Failed to ensure module file ${filename}: ${err.message}`);
     }
   });
 }

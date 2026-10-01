@@ -23,6 +23,10 @@ meteor add rspack
 
 On first run, the package installs the required Rspack setup at the project level. It compiles your app code with Rspack to get the full benefit of this integration.
 
+### Testing Rspack apps
+
+The [Rstest integration](../test-stack/rstest.md) reuses the Rspack setup for native tests and connects it to real Meteor hosts when tests need Meteor services. See the [Test Stack](../test-stack.md) for browser testing, E2E, coverage, and existing driver options.
+
 ## Requirements
 
 ### Define the app’s entry points
@@ -89,17 +93,17 @@ Use `.meteor/local` or folders that suggest internals or hidden content (e.g., s
 
 ### Required npm dependencies
 
-The `rspack` package declares a minimum supported version for each of the npm packages it relies on at the project level: `@rspack/core`, `@rspack/cli`, `@meteorjs/rspack`, `@swc/helpers`, and `@rsdoctor/rspack-plugin`. Each Meteor release pins these minimums so the build stack stays compatible across upgrades.
+The `rspack` package declares a minimum supported version for each of the npm packages it relies on at the project level: `@rspack/core`, `@rspack/cli`, `@rspack/dev-server`, `@meteorjs/rspack`, `@swc/core`, `@swc/helpers`, and `@rsdoctor/rspack-plugin`. Each Meteor release pins these minimums so the build stack stays compatible across upgrades.
 
 By default, Meteor installs or updates them for you on the first run after adding the `rspack` package, and prints a short summary of what changed:
 
 ```
 => 📦 Rspack: updating npm dependencies
    Dev dependencies:
-   • @rspack/core           1.7.1  (new)
-   • @meteorjs/rspack       2.0.0 -> 2.0.1
+   • @rspack/core           2.1.8  (new)
+   • @meteorjs/rspack       2.2.0 -> 3.0.0-beta.0
    Dependencies:
-   • @swc/helpers           0.5.17 (new)
+   • @swc/helpers           0.5.23 (new)
 => ✅ Rspack dependencies are up to date
 => ℹ️ Set `"meteor": { "autoInstallDeps": false }` in package.json to manage them yourself.
 ```
@@ -123,14 +127,14 @@ With this flag off, Meteor still detects when a required dependency is missing o
 ``` bash
 => ⚠️  Rspack: npm dependencies need attention
    Dev dependencies:
-   • @rspack/core           1.7.1  (not installed)
-   • @meteorjs/rspack       2.0.1  (currently 2.0.0)
+   • @rspack/core           2.1.8  (not installed)
+   • @meteorjs/rspack       3.0.0-beta.0  (currently 2.2.0)
    Dependencies:
-   • @swc/helpers           0.5.17 (not installed)
+   • @swc/helpers           0.5.23 (not installed)
 
    To bring your project in line, run:
-       meteor npm install --save-dev @rspack/core@1.7.1 @meteorjs/rspack@2.0.1
-       meteor npm install --save @swc/helpers@0.5.17
+       meteor npm install --save-dev @rspack/core@2.1.8 @meteorjs/rspack@3.0.0-beta.0
+       meteor npm install --save @swc/helpers@0.5.23
 => ℹ️  Set `"meteor": { "autoInstallDeps": true }` in package.json to manage them automatically.
 ```
 
@@ -420,7 +424,46 @@ No additional configuration is needed — just install the `rspack` package as u
 
 ### React Compiler
 
-Meteor-Rspack supports React Compiler. To enable it, install the required dependencies and add the new configuration to Meteor’s `rspack.config.js` file.
+:::info
+Starting with Meteor 3.6
+:::
+
+Meteor 3.6 ships with Rspack 2.x, including React Compiler support from Rspack 2.1. The compiler runs directly through the built-in SWC loader, avoiding Babel in the React compilation path. For React 19 projects, enable it in your `rspack.config.js` file:
+
+```shell
+meteor npm install react@^19 react-dom@^19
+```
+
+```js
+const { defineConfig } = require('@meteorjs/rspack');
+
+module.exports = defineConfig(Meteor => ({
+  ...Meteor.extendSwcConfig({
+    jsc: {
+      transform: {
+        react: {
+          runtime: 'automatic',
+        },
+        reactCompiler: true,
+      },
+    },
+  }),
+}));
+```
+
+For React 17 or 18, install `react-compiler-runtime` and replace `reactCompiler: true` with the matching target:
+
+```shell
+meteor npm install react-compiler-runtime
+```
+
+```js
+reactCompiler: {
+  target: '18',
+},
+```
+
+The `Meteor.extendSwcConfig` helper preserves Meteor's parser, React Fast Refresh, and other default SWC settings while adding the compiler transform.
 
 Learn more in the [official Rspack and React Compiler integration guide](https://rspack.rs/guide/tech/react#react-compiler).
 
@@ -639,7 +682,7 @@ Meteor-Rspack supports Babel projects as an alternative to default SWC.
 
 > Use `meteor create --babel` to start with a preconfigured Rspack Babel app.
 
-Using Babel will increase build times. Prefer SWC. If you need Babel for specific files, limit Babel to those files, or use a hybrid with SWC and Babel. For example, [enabling React Compiler is available only via Babel using module rules](https://rspack.rs/guide/tech/react#react-compiler).
+Using Babel will increase build times. Prefer SWC. Rspack 2.1 and later supports [React Compiler through the built-in SWC loader](#react-compiler), but the Babel plugin remains available when you need Babel-specific integration or compiler options that the SWC transform does not support.
 
 ### Angular
 

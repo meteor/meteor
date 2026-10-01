@@ -1,0 +1,9 @@
+// Rstest Snapshot v1
+
+exports[`pure Rstest supports committed external snapshots 1`] = `
+{
+  "compiler": "@rspack/core@2.1.8",
+  "integration": "@meteorjs/rstest",
+  "runner": "@rstest/core@0.11.6",
+}
+`;

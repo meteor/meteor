@@ -1,0 +1,8 @@
+// Rstest Snapshot v1
+
+exports[`Meteor client executor resolves Atmosphere runtime in real browser 1`] = `
+{
+  "api": "@rstest/core",
+  "host": "meteor-client",
+}
+`;

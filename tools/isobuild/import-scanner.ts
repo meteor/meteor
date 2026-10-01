@@ -29,6 +29,8 @@ import {
 } from "../fs/files";
 import rspackHelpers from "../tool-env/rspack";
 
+const { getModuleReplacement } = require('./module-replacements.js');
+
 const { SourceNode, SourceMapConsumer } = require("source-map");
 
 const {
@@ -344,6 +346,7 @@ export type ImportScannerOptions = {
   sourceRoot: string;
   nodeModulesPaths: string[];
   cacheDir: string;
+  moduleReplacements?: { module: string; source: string }[];
 }
 
 interface RawFile {
@@ -397,6 +400,7 @@ export default class ImportScanner {
   private bundleArch: string;
   private sourceRoot: string;
   private nodeModulesPaths: string[];
+  private moduleReplacements: { module: string; source: string }[];
   private defaultHandlers: DefaultHandlers;
   private resolver: Resolver;
 
@@ -413,11 +417,13 @@ export default class ImportScanner {
     sourceRoot,
     nodeModulesPaths = [],
     cacheDir,
+    moduleReplacements = [],
   }: ImportScannerOptions) {
     this.name = name;
     this.bundleArch = bundleArch;
     this.sourceRoot = sourceRoot;
     this.nodeModulesPaths = nodeModulesPaths;
+    this.moduleReplacements = moduleReplacements;
 
     this.defaultHandlers = new DefaultHandlers({
       cacheDir,
@@ -1297,6 +1303,13 @@ export default class ImportScanner {
     } catch (e: any) {
       if (e.code !== "ENOENT") throw e;
       return null;
+    }
+
+    const replacement = getModuleReplacement(absPath, this.moduleReplacements);
+    if (replacement !== null) {
+      info.dataString = replacement;
+      info.data = Buffer.from(replacement, "utf8");
+      info.hash = sha1(info.data);
     }
 
     const dataString = info.dataString;
