@@ -1,7 +1,6 @@
 import { Meteor } from 'meteor/meteor';
 import { WebApp, WebAppInternals } from 'meteor/webapp';
 import path from 'path';
-import fs from 'fs/promises';
 import {
   getRspackChunksContext,
   getRspackAssetsContext,
@@ -228,6 +227,13 @@ function rspackStaticAssetInfo(pathname, filePath) {
 }
 
 function rspackAssetNotFound(res) {
+  // send may already have prepared headers before opening the file fails.
+  for (const header of [
+    'ETag', 'Last-Modified', 'Content-Type', 'Content-Length',
+    'Content-Range', 'Accept-Ranges', 'X-SourceMap',
+  ]) {
+    res.removeHeader(header);
+  }
   res.writeHead(404, { 'Cache-Control': 'no-store' });
   res.end();
 }
@@ -238,81 +244,61 @@ const originalStaticFilesMiddleware = WebAppInternals.staticFilesMiddleware;
 // Handle rspack assets on-demand to add Meteor's static files headers
 WebAppInternals.staticFilesMiddleware = async function(staticFilesByArch, req, res, next) {
   try {
-    const request = WebApp.categorizeRequest(req);
-    let pathname;
-    try {
-      // Use the same path as WebApp, including architecture-prefix handling.
-      pathname = decodeURIComponent(request.path);
-    } catch {
-      if (RSPACK_CHUNKS_REGEX.test(request.path) || RSPACK_ASSETS_REGEX.test(request.path)) {
-        return rspackAssetNotFound(res);
-      }
-      return await originalStaticFilesMiddleware(staticFilesByArch, req, res, next);
-    }
-
-    // Check if this is a rspack asset request
-    const chunksMatch = pathname.match(RSPACK_CHUNKS_REGEX);
-    const assetsMatch = pathname.match(RSPACK_ASSETS_REGEX);
-
-    if (chunksMatch || assetsMatch) {
-      const context = chunksMatch ? rspackChunksContext : rspackAssetsContext;
-      const filename = (chunksMatch ? chunksMatch[1] : assetsMatch[1]);
-      const root = path.resolve(process.cwd(), context);
-      let filePath = path.join(root, filename);
-      const relativePath = path.relative(root, filePath);
-
-      // Decode before resolving, and keep URL paths inside the selected output
-      // directory on every platform. Backslashes are not URL separators.
-      if (filename.includes('\\') || filename.includes('\0') ||
-          relativePath === '..' || relativePath.startsWith(`..${path.sep}`) ||
-          path.isAbsolute(relativePath)) {
-        return rspackAssetNotFound(res);
-      }
-
-      // Built bundles already have manifest entries pointing into the client
-      // program, while development output may live directly under cwd.
-      const canonicalPath = path.posix.normalize(pathname);
-      const architectures = [request.arch, ...Object.keys(staticFilesByArch)
-        .filter(arch => arch !== request.arch)];
-      let info;
-      for (const arch of architectures) {
-        info = staticFilesByArch[arch]?.[canonicalPath];
-        if (info) break;
-      }
-      if (typeof info === 'function') info = info();
-      if (info?.absolutePath) filePath = info.absolutePath;
-
-      let stat;
+    // WebApp passes malformed URI encodings to the next handler. Missing
+    // Rspack assets must not fall through to the application's HTML response.
+    if (req.url.includes('%')) {
       try {
-        stat = await fs.stat(filePath);
-      } catch (error) {
-        if (error.code === 'ENOENT' || error.code === 'ENOTDIR') {
+        decodeURIComponent(req.url.split('?')[0]);
+      } catch {
+        const { path: requestPath } = WebApp.categorizeRequest(req);
+        if (RSPACK_CHUNKS_REGEX.test(requestPath) || RSPACK_ASSETS_REGEX.test(requestPath)) {
           return rspackAssetNotFound(res);
         }
-        throw error;
       }
-      if (!stat.isFile()) {
-        return rspackAssetNotFound(res);
-      }
-
-      // Never put request-derived keys in the shared manifests: even aliases
-      // of an existing file could otherwise grow them indefinitely. WebApp's
-      // middleware only needs this file to serve this request with its usual
-      // cache, content type, conditional request, and range handling.
-      const requestStaticFiles = {
-        [request.arch]: {
-          [request.path]: {
-            ...rspackStaticAssetInfo(canonicalPath, filePath),
-            ...info,
-            cacheable: true,
-          },
-        },
-      };
-      return await originalStaticFilesMiddleware(requestStaticFiles, req, res, next);
     }
 
-    return await originalStaticFilesMiddleware(staticFilesByArch, req, res, next);
+    return await originalStaticFilesMiddleware(staticFilesByArch, req, res, next,
+      (files, originalPath, requestPath, arch) => {
+        // WebApp has decoded the URL and waited for any client rebuild before
+        // invoking this resolver. Use its architecture-specific path as well.
+        const pathname = decodeURIComponent(requestPath);
+        const chunksMatch = pathname.match(RSPACK_CHUNKS_REGEX);
+        const assetsMatch = pathname.match(RSPACK_ASSETS_REGEX);
+        if (!chunksMatch && !assetsMatch) {
+          return WebAppInternals.getStaticFileInfo(files, originalPath, requestPath, arch);
+        }
+
+        const context = chunksMatch ? rspackChunksContext : rspackAssetsContext;
+        const filename = (chunksMatch || assetsMatch)[1];
+        const root = path.resolve(process.cwd(), context);
+        const filePath = path.join(root, filename);
+        const relativePath = path.relative(root, filePath);
+
+        // Decode before resolving, and keep URL paths inside the selected
+        // output directory. Backslashes are not URL separators.
+        if (filename.includes('\\') || filename.includes('\0') ||
+            relativePath === '..' || relativePath.startsWith(`..${path.sep}`) ||
+            path.isAbsolute(relativePath)) {
+          rspackAssetNotFound(res);
+          return null;
+        }
+
+        // Built bundles have manifest paths into the client program (or inline
+        // content). Development output may instead live directly under cwd.
+        const info = WebAppInternals.getStaticFileInfo(files,
+          path.posix.normalize(originalPath), path.posix.normalize(pathname), arch);
+
+        // Never put request-derived keys in the shared manifests, even for
+        // existing files: URL aliases could otherwise grow them indefinitely.
+        // Let WebApp's send stream check/open the file once and handle misses,
+        // including removal between stat and open, without caching the result.
+        return {
+          ...(info || rspackStaticAssetInfo(pathname, filePath)),
+          cacheable: true,
+          onNotFound: rspackAssetNotFound,
+        };
+      });
   } catch (error) {
-    return next(error);
+    next(error);
   }
 };
