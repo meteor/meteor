@@ -250,6 +250,16 @@ This technique has a few disadvantages:
 2. Sometimes a single piece of functionality can be spread over multiple mutators.
 3. It can be a challenge to write a hook in a completely general way (that covers every possible selector and modifier), and it may not be necessary for your application (because perhaps you only ever call that mutator in one way).
 
+When async writes arrive from the client through Meteor's collection API, the
+server still executes the accepted mutation through the collection's mutator
+method. That means this subclassing technique also applies to async
+client-originated writes that pass `allow`/`deny` checks or run in `insecure`
+mode.
+
+If you instead call [`rawCollection()`](/api/collections#Mongo-Collection-rawCollection),
+you are using the MongoDB driver directly and bypassing these collection-level
+mutator hooks.
+
 A way to deal with points 1. and 2. is to separate out the set of hooks into their own module, and use the mutator as a point to call out to that module in a sensible way. We'll see an example of that [below](#abstracting-denormalizers).
 
 Point 3. can usually be resolved by placing the hook in the *Method* that calls the mutator, rather than the hook itself. Although this is an imperfect compromise (as we need to be careful if we ever add another Method that calls that mutator in the future), it is better than writing a bunch of code that is never actually called (which is guaranteed to not work!), or giving the impression that your hook is more general that it actually is.

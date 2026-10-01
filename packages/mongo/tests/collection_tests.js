@@ -39,6 +39,31 @@ Tinytest.add('collection - call new Mongo.Collection multiple times with _suppre
   }
 );
 
+Tinytest.addAsync(
+  'collection - same-name collection with _suppressSameNameError keeps hook-aware async client writes on latest instance',
+  async function (test) {
+    const collectionName = '__same_name_async_hooks_regression__';
+    const first = new Mongo.Collection(collectionName);
+    const second = new Mongo.Collection(collectionName, { _suppressSameNameError: true });
+
+    if (Meteor.isServer) {
+      first._insecure = false;
+      second._insecure = true;
+      void first;
+      return;
+    }
+
+    const insertedId = await second.insertAsync(
+      { createdByTest: test.id },
+      { returnServerResultPromise: true }
+    );
+    test.isTrue(!!insertedId, 'expected client-originated insert to use latest same-name collection hooks');
+
+    await second.removeAsync(insertedId, { returnServerResultPromise: true });
+    void first;
+  }
+);
+
 Tinytest.add('collection - call new Mongo.Collection with defineMutationMethods=false',
   function (test) {
     var handlerPropName = Meteor.isClient ? '_methodHandlers' : 'method_handlers';
