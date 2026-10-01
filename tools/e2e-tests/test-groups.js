@@ -47,9 +47,14 @@ const EXPLICIT_TEST_GROUPS = Object.freeze({
     label: 'Server Runtime',
     pattern: '^Regressions / Server Runtime',
   },
+  // Repeated production and test-context builds need a separate CI time budget.
+  regressions_build: {
+    label: 'Regression build contexts',
+    pattern: '^Regressions / (?:Architecture-specific entrypoints|Legacy npm dependencies|Rspack concurrent modes) /',
+  },
   regressions: {
     label: 'Regressions',
-    pattern: '^(?:Regressions / (?!Server Runtime)|Regression /|Rspack bundle probe)',
+    pattern: '^(?:Regressions / (?!Server Runtime|Architecture-specific entrypoints /|Legacy npm dependencies /|Rspack concurrent modes /)|Regression /|Rspack bundle probe)',
   },
   solid_svelte: {
     label: 'Solid & Svelte',
