@@ -756,12 +756,12 @@ globalThis.Npm = Npm;
 globalThis.Assets = Assets;
 try {
   __rspackServerModule.load(__rspackServerBundlePath);
+  /* A bundle with TLA exports a Promise; Meteor's boot waits for this file. */
+  await Promise.resolve(__rspackServerModule.exports);
 } catch (error) {
   delete __rspackServerRequire.cache[__rspackServerBundlePath];
   throw error;
 }
-/* A bundle with TLA exports a Promise; Meteor's boot waits for this file. */
-await Promise.resolve(__rspackServerModule.exports);
 /* rspack-server-build-id:initial */`;
     }
 
