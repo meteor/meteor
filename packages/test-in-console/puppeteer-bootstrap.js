@@ -56,12 +56,18 @@ async function loadTestPage(page, url, log = console.log) {
       clearTimeout(timer);
     }
     if (initialized) {
-      throw new Error(
-        `net::ERR_NETWORK_CHANGED loading ${failedRequest}; test runtime already initialized, refusing to rerun tests`,
+      throw Object.assign(
+        new Error(
+          `net::ERR_NETWORK_CHANGED loading ${failedRequest}; test runtime already initialized, refusing to rerun tests`,
+        ),
+        { code: "ERR_NETWORK_CHANGED" },
       );
     }
     if (attempt > 0) {
-      throw new Error(`net::ERR_NETWORK_CHANGED loading ${failedRequest} after bootstrap recovery`);
+      throw Object.assign(
+        new Error(`net::ERR_NETWORK_CHANGED loading ${failedRequest} after bootstrap recovery`),
+        { code: "ERR_NETWORK_CHANGED" },
+      );
     }
     log(
       `net::ERR_NETWORK_CHANGED loading ${failedRequest} before the test runtime loaded; retrying navigation once`,

@@ -265,5 +265,7 @@ runTests().catch(async (e) => {
       () => {},
     );
   }
-  process.exit(1);
+  // Let CI restart the entire app after a confirmed bootstrap network failure.
+  // Test failures and other runner errors keep their ordinary failing status.
+  process.exit(e.code === "ERR_NETWORK_CHANGED" ? 75 : 1);
 });

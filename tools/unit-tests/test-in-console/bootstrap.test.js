@@ -35,7 +35,10 @@ test("reloads once when a network change prevents the test runtime from loading"
 
 test("persistent network changes fail after the second navigation", async () => {
   const page = makePage([{ failure: networkChanged }, { failure: networkChanged }]);
-  await expect(loadTestPage(page, url, () => {})).rejects.toThrow(networkChanged);
+  await expect(loadTestPage(page, url, () => {})).rejects.toMatchObject({
+    code: "ERR_NETWORK_CHANGED",
+    message: expect.stringContaining(networkChanged),
+  });
   expect(page.goto).toHaveBeenCalledTimes(2);
 });
 
@@ -43,7 +46,10 @@ test.each(["__Tinytest", "TEST_STATUS", "DONE"])(
   "never reloads when %s is already defined",
   async (name) => {
     const page = makePage([{ failure: networkChanged }], { [name]: false });
-    await expect(loadTestPage(page, url, () => {})).rejects.toThrow("test runtime");
+    await expect(loadTestPage(page, url, () => {})).rejects.toMatchObject({
+      code: "ERR_NETWORK_CHANGED",
+      message: expect.stringContaining("test runtime"),
+    });
     expect(page.goto).toHaveBeenCalledTimes(1);
   },
 );
