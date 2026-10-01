@@ -145,7 +145,10 @@ Tinytest.addAsync(
     );
     const { token } = Accounts._generate2faToken(secret);
     const invocation = {
-      connection: { id: Random.id() },
+      connection: {
+        id: Random.id(),
+        close() {},
+      },
       setUserId() {},
     };
     const attempt = () =>
