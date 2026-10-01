@@ -10,11 +10,19 @@ import { createLogoutMiddleware } from "./rest_logout.js";
  * @summary Create Express middleware that authenticates requests using
  * Meteor login tokens. Tokens can be provided via the Authorization
  * Bearer header or the meteor_login_token cookie.
+ * API tokens are accepted only through a Bearer header on opted-in routes.
+ * Sets req.auth and the endpoint invocation's auth metadata to
+ * {type: "session"}, {type: "apiToken", tokenId, scopes}, or null.
  * @locus Server
  * @param {Object} [options]
  * @param {boolean} [options.required=false] - Whether authentication is
  *   required (returns 401 for unauthenticated) or optional (sets userId
  *   to null).
+ * @param {boolean|Object} [options.apiTokens=false] - Set true to accept
+ *   unrestricted API tokens, or {scopes: ["scope"]} to require every listed
+ *   scope from a scoped API token. The list must be nonempty. Session tokens
+ *   retain full user access. Insufficient API scopes return 403, including
+ *   when authentication is optional.
  * @returns {Function} Express middleware function
  */
 function createAuthMiddleware(options = {}) {

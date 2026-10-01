@@ -8,7 +8,19 @@ export interface MeteorFetchOptions extends RequestInit {
 export interface AuthMiddlewareOptions {
   /** Whether authentication is required (401 for unauthenticated) or optional (null userId). Default: false */
   required?: boolean;
+  /**
+   * Accept API tokens from the Bearer header. Default: false.
+   * true accepts unrestricted API tokens only; a nonempty scopes list also
+   * accepts tokens granting every listed scope. Session tokens remain valid.
+   * Valid API tokens with insufficient scopes return 403 even when required is false.
+   */
+  apiTokens?: boolean | { scopes: string[] };
 }
+
+/** Authentication metadata on req.auth and the current endpoint invocation. */
+export type RequestAuth =
+  | { type: "session" }
+  | { type: "apiToken"; tokenId: string; scopes: string[] | null };
 
 export interface RestEndpointMiddlewareOptions {
   /** Path to match (exact, query string ignored). Default: "/login" or "/logout". */
@@ -17,7 +29,9 @@ export interface RestEndpointMiddlewareOptions {
 
 /**
  * Create Express middleware that authenticates requests using Meteor login tokens.
- * Tokens can be provided via Authorization Bearer header or meteor_login_token cookie.
+ * Session tokens can be provided via Authorization Bearer header or
+ * meteor_login_token cookie. API tokens require explicit opt-in and a Bearer header.
+ * Populates req.userId and req.auth (RequestAuth, or null when anonymous).
  */
 export function createAuthMiddleware(
   options?: AuthMiddlewareOptions,
