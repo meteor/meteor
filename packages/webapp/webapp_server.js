@@ -214,9 +214,6 @@ WebApp.categorizeRequest = function(req) {
   return categorized;
 };
 
-// HTML attribute hooks: functions to be called to determine any attributes to
-// be added to the '<html>' tag. Each function is passed a 'request' object (see
-// #BrowserIdentification) and should return null or object.
 var htmlAttributeHooks = [];
 var getHtmlAttributes = function(request) {
   var combinedAttributes = {};
@@ -229,6 +226,17 @@ var getHtmlAttributes = function(request) {
   });
   return combinedAttributes;
 };
+
+/**
+ * @summary Registers a callback that runs whenever Meteor generates app HTML.
+ * Attributes returned by all registered callbacks are merged onto the
+ * `<html>` element. If callbacks return the same attribute, the callback
+ * registered last takes precedence.
+ * @locus Server
+ * @param {Function} hook A callback that receives information about the request
+ * for app HTML and returns an object of HTML attribute names and values, or
+ * `null` to add no attributes for that request.
+ */
 WebApp.addHtmlAttributeHook = function(hook) {
   htmlAttributeHooks.push(hook);
 };

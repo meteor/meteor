@@ -16,8 +16,8 @@ There are many ways to contribute to the Meteor Project. Here’s a list of tech
 - [Contributing to documentation](CONTRIBUTING.md#documentation)
 - [Finding work](CONTRIBUTING.md#finding-work)
 - [Submitting pull requests](CONTRIBUTING.md#making-changes-to-meteor-core)
-- [Reviewing pull requests](CONTRIBUTING.md#reviewer)
-- [Maintaining a community package](CONTRIBUTING.md#community-package-maintainer)
+- [Reviewing pull requests](CONTRIBUTING.md#core-maintainer)
+- [Maintaining a community package](GOVERNANCE.md#community-package-maintainer)
 
 There are also several ways to contribute to the Meteor Project outside of GitHub, like organizing or speaking at [Meetups](https://forums.meteor.com/c/meetups) and events and helping to moderate our [forums](https://forums.meteor.com/).
 
@@ -31,27 +31,19 @@ We curate specific issues that would make great pull requests for community cont
 
 Any issue that does not have the `ready` label still requires discussion on implementation details, but input and positive commentary are welcome! Any pull request opened on an issue that is not `confirmed` is still welcome. However, the pull request is more likely to be sent back for reworking than a `ready` issue.  
 
-If in doubt about the best way to implement something, please create additional conversation on the issue. You can also reach one of the [core committers](https://github.com/meteor/meteor/blob/devel/CONTRIBUTING.md#core-committer), and they will help you to find something interesting to work on.
+If in doubt about the best way to implement something, please create additional conversation on the issue. You can also reach one of the [Core Maintainers](https://github.com/meteor/meteor/blob/devel/CONTRIBUTING.md#core-maintainer), and they will help you to find something interesting to work on.
 
 ### Project roles
 
 Here are descriptions of the existing project roles, along with the current contributors taking on those roles today.
 
-#### Reviewer
+#### Core Maintainer
 
-Reviewers are members of the community who help with Pull Requests reviews.
+Core Maintainers are community members who help maintain Meteor: they review pull requests and triage issues. They hold triage permissions on meteor/meteor — labeling, assigning, and managing issues and PRs within the areas they know best. See [GOVERNANCE.md](GOVERNANCE.md) for the full role description.
 
-Current Reviewers:
-- [meteor](https://github.com/meteor/meteor)
-  - [@fredmaiaarantes](https://github.com/fredmaiaarantes)
-  - [@henriquealbert](https://github.com/henriquealbert)
-  - [@aquinoit](https://github.com/aquinoit)
-  - [@Grubba27](https://github.com/Grubba27)
-  - [@italojs](https://github.com/italojs)
-  - [@nachocodoner](https://github.com/nachocodoner)
-- [@StorytellerCZ](https://github.com/StorytellerCZ)
-- [@zodern](https://github.com/zodern)
-- [@radekmie](https://github.com/radekmie)
+Anyone can open a pull request nominating a person for the Core Maintainer program; existing Core Maintainers and the community give feedback, and the TSC approves the nomination — see [GOVERNANCE.md](GOVERNANCE.md) for the process. Approved nominations are documented at [docs.meteor.com/community/contributors.html](https://docs.meteor.com/community/contributors.html).
+
+The current Core Maintainers are listed on the [contributors page](https://docs.meteor.com/community/contributors.html).
 
 ##### Testing a contributor's branch locally
 
@@ -61,20 +53,11 @@ To quickly check out a PR branch from a fork for local testing, see the [Testing
 npm run checkout:pr -- https://github.com/meteor/meteor/pull/<PR-number>
 ```
 
-#### Core Committer
+#### Technical Steering Committee (TSC)
 
-The contributors with commit access to meteor/meteor are employees of Meteor Software LP or community members who have distinguished themselves in other contribution areas or members of partner companies. If you want to become a core committer, please start writing PRs.
+The TSC is the governing body responsible for major, long-term decisions about Meteor — architectural direction, breaking changes, and project-wide policies. TSC members hold commit access to meteor/meteor, and publishing official Meteor releases is their exclusive domain. The TSC is composed of Meteor Software employees and is **not** open to community nomination. See [GOVERNANCE.md](GOVERNANCE.md) for details.
 
-Current Core Team:
-- [meteor](https://github.com/meteor/meteor)
-  - [@fredmaiaarantes](https://github.com/fredmaiaarantes)
-  - [@henriquealbert](https://github.com/henriquealbert)
-  - [@Grubba27](https://github.com/Grubba27)
-  - [@italojs](https://github.com/italojs)
-  - [@nachocodoner](https://github.com/nachocodoner)
-- [@StorytellerCZ](https://github.com/StorytellerCZ)
-- [@zodern](https://github.com/zodern)
-- [@radekmie](https://github.com/radekmie)
+The current TSC members are listed on the [contributors page](https://docs.meteor.com/community/contributors.html).
 
 ### Tracking project work
 
@@ -215,7 +198,7 @@ For more information about how to work with Meteor core, take a look at the [Dev
 
 You'll have the best chance of getting a change into core if you can build consensus in the community for it or if it is listed in the [roadmap](https://docs.meteor.com/about/roadmap.html). Start by creating a well specified Discussion [here](https://github.com/meteor/meteor/discussions).
 
-Help drive discussion and advocate for your feature on the Github ticket (and perhaps the forums). The higher the demand for the feature and the greater the clarity of it's specification will determine the likelihood of a core contributor prioritizing your feature by flagging it with the `ready` label.
+Help drive discussion and advocate for your feature on the GitHub ticket (and perhaps the forums). The higher the demand for the feature and the clearer its specification, the more likely a Core Maintainer is to prioritize it by applying the `ready` label.
 
 Split features up into smaller, logically separate chunks. It is unlikely that large and complicated PRs will be merged.
 
