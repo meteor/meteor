@@ -466,27 +466,39 @@ export class AccountsServer extends AccountsCommon {
   // indicates that the login token has already been inserted into the
   // database and doesn't need to be inserted again.  (It's used by the
   // "resume" login handler).
+  // A null methodInvocation completes a login in the current HTTP endpoint
+  // context, without attaching the token to a DDP connection.
   async _loginUser(methodInvocation, userId, stampedLoginToken) {
+    const endpointInvocation = !methodInvocation && this._CurrentEndpointInvocation.get();
+    if (!methodInvocation && !endpointInvocation) {
+      throw new Error("Login requires a method or endpoint invocation");
+    }
+
     if (! stampedLoginToken) {
       stampedLoginToken = this._generateStampedLoginToken();
       await this._insertLoginToken(userId, stampedLoginToken);
     }
 
-    // This order (and the avoidance of yields) is important to make
-    // sure that when publish functions are rerun, they see a
-    // consistent view of the world: the userId is set and matches
-    // the login token on the connection (not that there is
-    // currently a public API for reading the login token on a
-    // connection).
-    Meteor._noYieldsAllowed(() =>
-      this._setLoginToken(
-        userId,
-        methodInvocation.connection,
-        this._hashLoginToken(stampedLoginToken.token)
-      )
-    );
+    if (methodInvocation) {
+      // This order (and the avoidance of yields) is important to make
+      // sure that when publish functions are rerun, they see a
+      // consistent view of the world: the userId is set and matches
+      // the login token on the connection (not that there is
+      // currently a public API for reading the login token on a
+      // connection).
+      Meteor._noYieldsAllowed(() =>
+        this._setLoginToken(
+          userId,
+          methodInvocation.connection,
+          this._hashLoginToken(stampedLoginToken.token)
+        )
+      );
 
-    await methodInvocation.setUserId(userId);
+      await methodInvocation.setUserId(userId);
+    } else {
+      endpointInvocation.userId = userId;
+      endpointInvocation.loginToken = stampedLoginToken.token;
+    }
 
     return {
       id: userId,
@@ -517,6 +529,7 @@ export class AccountsServer extends AccountsCommon {
     if (!result.userId && !result.error)
       throw new Error("A login method must specify a userId or an error");
 
+    const connection = methodInvocation ? methodInvocation.connection : null;
     let user;
     if (result.userId)
       user = await this.users.findOneAsync(result.userId, {fields: this._options.defaultFieldSelector});
@@ -537,7 +550,7 @@ export class AccountsServer extends AccountsCommon {
     // _validateLogin may mutate `attempt` by adding an error and changing allowed
     // to false, but that's the only change it can make (and the user's callbacks
     // only get a clone of `attempt`).
-    await this._validateLogin(methodInvocation.connection, attempt);
+    await this._validateLogin(connection, attempt);
 
     if (attempt.allowed) {
       const o = await this._loginUser(
@@ -550,11 +563,11 @@ export class AccountsServer extends AccountsCommon {
         ...result.options
       };
       ret.type = attempt.type;
-      await this._successfulLogin(methodInvocation.connection, attempt);
+      await this._successfulLogin(connection, attempt);
       return ret;
     }
     else {
-      await this._failedLogin(methodInvocation.connection, attempt);
+      await this._failedLogin(connection, attempt);
       throw attempt.error;
     }
   };

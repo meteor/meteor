@@ -308,6 +308,60 @@ Tinytest.addAsync('accounts - get new token', async test => {
   }
 );
 
+Tinytest.addAsync('accounts - custom login handler preserves DDP context and token', async test => {
+  const userId = await Accounts.insertUserDoc({}, { username: Random.id() });
+  const stampedToken = Accounts._generateStampedLoginToken();
+  const handlerName = `test-login-${Random.id()}`;
+  const handlerSecret = Random.secret();
+  const conn = DDP.connect(Meteor.absoluteUrl());
+
+  Accounts.registerLoginHandler(handlerName, async function (options) {
+    if (options.accountsTestLogin !== handlerSecret) return undefined;
+
+    return {
+      userId,
+      stampedLoginToken: stampedToken,
+      options: {
+        connectionId: this.connection.id,
+        previousUserId: this.userId,
+      },
+    };
+  });
+  const registeredHandler = Accounts._loginHandlers.find(handler => handler.name === handlerName);
+
+  try {
+    await Accounts._insertLoginToken(userId, stampedToken);
+    let connectionId;
+
+    for (const previousUserId of [null, userId]) {
+      const result = await conn.callAsync('login', { accountsTestLogin: handlerSecret });
+      test.equal(result.id, userId);
+      test.equal(result.type, handlerName);
+      test.equal(result.token, stampedToken.token);
+      test.equal(result.tokenExpires, Accounts._tokenExpiration(stampedToken.when));
+      test.equal(result.previousUserId, previousUserId);
+      test.equal(typeof result.connectionId, 'string');
+      if (connectionId) test.equal(result.connectionId, connectionId);
+      connectionId = result.connectionId;
+      test.equal(
+        await conn.callAsync('getCurrentLoginToken'),
+        Accounts._hashLoginToken(stampedToken.token)
+      );
+    }
+
+    const user = await Meteor.users.findOneAsync(userId);
+    test.equal(user.services.resume.loginTokens, [{
+      hashedToken: Accounts._hashLoginToken(stampedToken.token),
+      when: stampedToken.when,
+    }]);
+  } finally {
+    conn.disconnect();
+    const handlerIndex = Accounts._loginHandlers.indexOf(registeredHandler);
+    if (handlerIndex !== -1) Accounts._loginHandlers.splice(handlerIndex, 1);
+    await Meteor.users.removeAsync(userId);
+  }
+});
+
 Tinytest.addAsync('accounts - remove other tokens', async (test) => {
     // Test that the `removeOtherTokens` method removes all tokens other
     // than the caller's token, thereby logging out and closing other

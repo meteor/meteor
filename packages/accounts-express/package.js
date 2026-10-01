@@ -24,6 +24,7 @@ Package.onTest((api) => {
     "accounts-express",
     "accounts-base",
     "accounts-password",
+    "accounts-2fa",
     "ecmascript",
     "fetch",
     "tinytest",
