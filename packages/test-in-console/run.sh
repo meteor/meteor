@@ -23,7 +23,9 @@ if ! ./dev_bundle/bin/node -e "process.exit(require('./dev_bundle/lib/node_modul
   ./meteor npm install -g puppeteer@25.9.0
 fi
 
-PUPPETEER_CACHE_ROOT="${TMPDIR:-/tmp}"
+# Each Actions runner has its own temporary directory. Avoid sharing the
+# browser installation and lock with other runners on the same host.
+PUPPETEER_CACHE_ROOT="${RUNNER_TEMP:-${TMPDIR:-/tmp}}"
 export PUPPETEER_CACHE_DIR="${PUPPETEER_CACHE_ROOT%/}/puppeteer-chrome-cache-25.9.0"
 export PUPPETEER_SKIP_CHROME_HEADLESS_SHELL_DOWNLOAD=true
 
