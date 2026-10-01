@@ -1,4 +1,5 @@
 const path = require("path");
+const { formatDevServerHost } = require("./devServerUrl");
 const { prepareMeteorRspackConfig } = require("./meteorRspackConfigFactory");
 const { builtinModules } = require("module");
 
@@ -328,11 +329,6 @@ function outputMeteorRspack(data) {
   const jsonString = JSON.stringify(data);
   const output = `[Meteor-Rspack]${jsonString}[/Meteor-Rspack]`;
   console.log(output);
-}
-
-function formatDevServerHost(host) {
-  const value = host || "localhost";
-  return value.includes(":") && !value.startsWith("[") ? `[${value}]` : value;
 }
 
 module.exports = {

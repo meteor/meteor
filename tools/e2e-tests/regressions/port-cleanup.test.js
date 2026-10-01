@@ -10,7 +10,7 @@ import {
 } from '../helpers';
 import { assertMeteorReactApp } from '../assertions';
 import { setupMeteorRspackApp } from '../test-helpers';
-import { formatDevServerHost } from '../../../npm-packages/meteor-rspack/lib/meteorRspackHelpers';
+import { formatDevServerHost } from '../../../npm-packages/meteor-rspack/lib/devServerUrl';
 
 describe("Rspack dev-server URL /", () => {
   test.each([
