@@ -149,7 +149,15 @@ jobs:
 
       - name: Prepare Meteor
         if: steps.deps-cache.outputs.cache-hit != 'true'
-        run: ./meteor --get-ready --allow-superuser
+        run: |
+          status=0
+          ./meteor --get-ready --allow-superuser || status=$?
+          if [ "$status" -eq 134 ]; then
+            echo "::warning::Meteor preparation aborted in native code; retrying once."
+            ./meteor --get-ready --allow-superuser
+          else
+            exit "$status"
+          fi
 
       - name: Run tests for ${{ matrix.category }}
         id: test-run
