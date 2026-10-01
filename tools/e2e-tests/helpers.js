@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs-extra');
 const os = require('os');
 const rimraf = require('rimraf');
+const { stripVTControlCharacters } = require('node:util');
 
 // Get the absolute path to the meteor executable
 const REPO_ROOT = path.resolve(__dirname, '../..');
@@ -748,9 +749,13 @@ export async function waitForMeteorOutput(outputLines, pattern, options = {}) {
       });
     }
 
-    const lineMatches = (line) =>
-      (typeof pattern === 'string' && line.includes(pattern)) ||
-      (pattern instanceof RegExp && pattern.test(line));
+    const lineMatches = (line) => {
+      // Reporters can insert color resets between a status symbol and its text.
+      // Match visible text while preserving the captured line for diagnostics.
+      const text = stripVTControlCharacters(line);
+      return (typeof pattern === 'string' && text.includes(pattern)) ||
+        (pattern instanceof RegExp && pattern.test(text));
+    };
 
     // Function to check for the pattern in the output lines
     const checkForPattern = () => {
@@ -783,14 +788,10 @@ export async function waitForMeteorOutput(outputLines, pattern, options = {}) {
           }
         }
       } else {
-        // Check each line for the pattern (original behavior)
+        // Check each line for the pattern, returning the original captured text.
         for (const line of relevantOutputLines) {
-          if (typeof pattern === 'string' && line.includes(pattern)) {
-            console.log(`Found output matching string: ${pattern}`);
-            resolve(line);
-            return;
-          } else if (pattern instanceof RegExp && pattern.test(line)) {
-            console.log(`Found output matching regex: ${pattern}`);
+          if (lineMatches(line)) {
+            console.log(`Found output matching: ${pattern}`);
             resolve(line);
             return;
           }
