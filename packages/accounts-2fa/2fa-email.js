@@ -113,16 +113,50 @@ Accounts._issue2faEmailCode = async user => {
   }
 
   const code = randomCode();
-  await Meteor.users.updateAsync(user._id, {
-    $set: {
-      'services.twoFactorAuthentication.emailCode': {
-        hash: hashCode(user._id, code),
-        createdAt: new Date(),
-        attempts: 0,
-        email: address,
-      },
+  const issuedAt = new Date();
+  // The in-memory check above is not a lock: parallel logins each hold their own
+  // user document. Only one update can match, so only one email is sent.
+  const claimed = await Meteor.users.updateAsync(
+    {
+      _id: user._id,
+      $or: [
+        { 'services.twoFactorAuthentication.emailCode.createdAt': { $exists: false } },
+        {
+          'services.twoFactorAuthentication.emailCode.createdAt': {
+            $lte: new Date(issuedAt.getTime() - emailConfig.resendCooldownMs),
+          },
+        },
+        {
+          'services.twoFactorAuthentication.emailCode.hash': { $exists: true },
+          'services.twoFactorAuthentication.emailCode.attempts': { $lt: emailConfig.maxAttempts },
+          'services.twoFactorAuthentication.emailCode.createdAt': {
+            $lte: new Date(issuedAt.getTime() - emailConfig.expirationMs),
+          },
+        },
+      ],
     },
-  });
+    {
+      $set: {
+        'services.twoFactorAuthentication.emailCode': {
+          hash: hashCode(user._id, code),
+          createdAt: issuedAt,
+          attempts: 0,
+          email: address,
+        },
+      },
+    }
+  );
+  if (!claimed) {
+    const fresh = await Meteor.users.findOneAsync(user._id, {
+      fields: { 'services.twoFactorAuthentication.emailCode.createdAt': 1 },
+    });
+    const createdAt = fresh?.services?.twoFactorAuthentication?.emailCode?.createdAt;
+    const age = createdAt instanceof Date ? Date.now() - createdAt.getTime() : 0;
+    return {
+      sent: false,
+      retryAfterMs: Math.max(emailConfig.resendCooldownMs - age, 0),
+    };
+  }
 
   if (Meteor.isPackageTest) {
     Accounts._2faTestState = { ...(Accounts._2faTestState || {}), lastEmailCode: code };
