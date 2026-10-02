@@ -17,6 +17,12 @@ login provider packages: `accounts-password`, `accounts-facebook`,
 
 Read more about customizing user accounts in the [Accounts](/tutorials/accounts/accounts) article in the Meteor Guide.
 
+### Accounts over HTTP {#accounts-http}
+
+The [accounts-express](/packages/accounts-express) package provides authentication for Express routes and authenticated `fetch` helpers. With `accounts-password` installed, you can also enable [password login and session logout](/packages/accounts-express#password-login-and-logout) through settings or mount the middleware in server code.
+
+For integrations and automation, the server-side `Accounts.createApiTokenAsync`, `Accounts.listApiTokensAsync`, `Accounts.revokeApiTokenAsync`, and `Accounts.revokeAllApiTokensAsync` helpers manage credentials with their own expiry and optional scopes. See [API tokens](/packages/accounts-express#api-tokens) for creation, route permissions, and revocation. These credentials are separate from login sessions and remain valid until they expire or are explicitly revoked.
+
 ### Accounts with Session Storage {#accounts-session-storage}
 
 By default, Meteor uses Local Storage to store, among other things, login tokens in your browser session. But, for some applications, it makes sense to use Session Storage instead. Session Storage will not persist across client sessions. You can achieve this by adding this to your settings:

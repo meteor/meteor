@@ -2,7 +2,12 @@ import { expectTypeOf } from "expect-type";
 import { Meteor } from "meteor/meteor";
 import { fetch as meteorFetch } from "meteor/fetch";
 import { createAuthMiddleware, fetch, createAuthFetch, handleFetch } from "./accounts-express";
-import type { MeteorFetchOptions, AuthMiddlewareOptions, RequestAuth } from "./accounts-express";
+import type {
+  MeteorFetchOptions,
+  AuthMiddlewareOptions,
+  RequestAuth,
+  RestApiSettings,
+} from "./accounts-express";
 
 // Own top-level surface.
 expectTypeOf<MeteorFetchOptions>().toBeObject();
@@ -28,6 +33,21 @@ createAuthMiddleware({ apiTokens: { scopes: ["reports:read"] } });
 createAuthMiddleware({ apiTokens: { scopes: "reports:read" } });
 // @ts-expect-error API token opt-in requires a boolean or declared scopes.
 createAuthMiddleware({ apiTokens: {} });
+
+const restSettings: RestApiSettings = {
+  enabled: true,
+  loginPath: "/auth/login",
+  logoutPath: "/auth/logout",
+};
+expectTypeOf(restSettings.enabled).toEqualTypeOf<boolean | undefined>();
+expectTypeOf(restSettings.loginPath).toEqualTypeOf<string | undefined>();
+expectTypeOf(restSettings.logoutPath).toEqualTypeOf<string | undefined>();
+// @ts-expect-error Enabling REST endpoints requires a boolean.
+restSettings.enabled = "true";
+// @ts-expect-error Paths must be strings.
+restSettings.loginPath = false;
+// @ts-expect-error API token permissions belong to individual routes.
+restSettings.apiTokens = true;
 
 declare const auth: RequestAuth;
 if (auth.type === "apiToken") {

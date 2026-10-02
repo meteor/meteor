@@ -19,7 +19,7 @@ function serializeCookie(name, value, options = {}) {
 
 /**
  * Set the meteor_login_token HttpOnly cookie on an Express response.
- * Mirrors the cookie format used by accounts-base/server_http_cookies.js.
+ * Preserve other cookies already queued by application middleware.
  */
 export function setCookieOnResponse(res, req, token, tokenExpires) {
   const secure = isSecureRequest(req);

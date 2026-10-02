@@ -9,7 +9,7 @@ Express middleware and authenticated `fetch` helpers for Meteor accounts. Authen
 - `createAuthMiddleware([options])` — Express middleware that resolves a session token from the `Authorization: Bearer` header or the `meteor_login_token` cookie, or an API token when enabled, and exposes `req.userId` and `req.auth`. Inside `next()`, `Meteor.userId()` / `Meteor.userAsync()` work via the current endpoint invocation context.
 - A wrapped `Meteor.fetch` (and `fetch` from `meteor/fetch`) that understands `auth: true` and, on the server, `token: '...'`. When `auth` is on, the current credential is attached as a Bearer header.
 - `fetch` exported from `meteor/accounts-express` — same as above but auth-on-by-default. Pass `auth: false` to opt out.
-- `createLoginMiddleware` and `createLogoutMiddleware` — password login and session logout using the existing Accounts login flow.
+- `createLoginMiddleware` and `createLogoutMiddleware` — password login and session logout using the existing Accounts login flow. Mount them yourself or enable them through settings.
 - Server-only `Accounts` helpers for creating, listing, and revoking named API tokens with their own expiry and optional scopes.
 
 ## Installation
@@ -57,6 +57,40 @@ Add `accounts-password` to use the password login endpoint:
 meteor add accounts-password
 ```
 
+### Configure endpoints in settings.json
+
+To mount login and logout automatically at server startup, add the following to your `settings.json`:
+
+```json
+{
+  "packages": {
+    "accounts-express": {
+      "rest": {
+        "enabled": true,
+        "loginPath": "/auth/login",
+        "logoutPath": "/auth/logout"
+      }
+    }
+  }
+}
+```
+
+Keep this configuration in the private `packages` settings, outside `public`, and start the app with `meteor --settings settings.json`.
+
+| Setting | Default | Meaning |
+|---------|---------|---------|
+| `enabled` | `false` | Set to `true` to mount both endpoints. Requires `accounts-password`. |
+| `loginPath` | `"/login"` | Exact path for password login. |
+| `logoutPath` | `"/logout"` | Exact path for session logout. |
+
+Paths must be distinct and begin with a single `/`, without whitespace, backslashes, a query string, or a fragment. They are literal paths relative to the application root; omit any path prefix from `ROOT_URL`. Settings are read at server startup. Invalid settings fail at startup, as does enabling the endpoints without `accounts-password`. JSON parsing is scoped to login requests with `Content-Type: application/json` and uses Express's default `100kb` body limit.
+
+These settings configure the endpoints. Use the existing `Accounts.config` options to set session lifetime and enable HttpOnly cookies. API token permissions stay on each protected route. To add rate limiting, origin checks, or control middleware ordering, mount the endpoints from server code instead.
+
+### Mount endpoints from server code
+
+Leave automatic setup disabled when mounting the middleware yourself:
+
 ```js
 import { WebApp } from "meteor/webapp";
 import { createLoginMiddleware, createLogoutMiddleware } from "meteor/accounts-express";
@@ -66,13 +100,21 @@ WebApp.handlers.use(createLoginMiddleware({ path: "/auth/login" }));
 WebApp.handlers.use(createLogoutMiddleware({ path: "/auth/logout" }));
 ```
 
-`POST /auth/login` accepts `{ email, password, code? }` or `{ username, password, code? }` and returns `{ id, token, tokenExpires }`. It shares DDP's password checking, case-insensitive account lookup, and two-factor authentication checks. When `accounts-2fa` is enabled for the user, provide the one-time code in `code`.
+The `path` option defaults to `/login` or `/logout` and is relative to a router's mount point. Both setup methods handle only `POST` requests to the exact configured path, ignoring the query string. Other requests continue to the next middleware.
+
+### Requests and responses
+
+`POST /auth/login` accepts JSON `{ email, password, code? }` or `{ username, password, code? }` and returns `{ id, token, tokenExpires }`. `password` and the optional `code` are strings. Login shares DDP's password checking, password length limit, case-insensitive account lookup, and two-factor authentication checks. When `accounts-2fa` is enabled for the user, provide the one-time code in `code`.
+
+The returned token is a normal Accounts session token with the configured session lifetime. It can authenticate HTTP requests and resume a DDP session.
 
 Login runs `validateLoginAttempt`, followed by `onLogin` or `onLoginFailure`. Hooks receive `connection: null`, `methodName: "rest-login"`, and REST arguments with the password omitted. `Meteor.userId()` and `Meteor.userAsync()` reflect the authenticated user inside `onLogin`; validation and failure hooks run in an anonymous endpoint context. Hook user documents respect `Accounts.config({ defaultFieldSelector })`.
 
-Use `Meteor.Error` for intentional client-visible hook rejections; a `403` rejection produces HTTP 403. Unexpected plain errors are passed to Express's error handling. Invalid credentials produce HTTP 401 without revealing whether the account exists.
+Malformed login fields produce HTTP 400. Invalid credentials produce HTTP 401 without revealing whether the account exists; missing or invalid two-factor codes also produce HTTP 401. These responses contain `{ error }`. Use `Meteor.Error` for intentional client-visible hook rejections; a `403` rejection produces HTTP 403. JSON parser errors and unexpected plain errors are passed to Express's error handling.
 
-`POST /auth/logout` authenticates and revokes the current session token. When HttpOnly cookies are enabled, login sets the session cookie and logout clears it. These endpoints do not create or revoke API tokens.
+`POST /auth/logout` accepts the session token through a Bearer header or the `meteor_login_token` cookie, revokes that token, runs `onLogout`, and returns `{ message: "Logged out" }`. Missing, invalid, or expired tokens produce HTTP 401. Other session tokens remain valid.
+
+When HttpOnly cookies are enabled, login sets the session cookie with `HttpOnly`, `SameSite=Lax`, and `Secure` over HTTPS; logout clears it. Both preserve other cookies set by application middleware. These endpoints do not create or revoke API tokens.
 
 ## API tokens
 
@@ -190,6 +232,8 @@ await authFetch("/public", { auth: false });
 ## TypeScript
 
 Type definitions are shipped with the package and augment `meteor/meteor` and `meteor/fetch` so `auth` / `token` show up on `Meteor.fetch` and `fetch` options.
+
+The package also exports `AuthMiddlewareOptions`, `RequestAuth`, `RestEndpointMiddlewareOptions`, and `RestApiSettings` for middleware, request metadata, and settings objects.
 
 ## See also
 

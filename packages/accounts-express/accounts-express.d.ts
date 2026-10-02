@@ -27,6 +27,16 @@ export interface RestEndpointMiddlewareOptions {
   path?: string;
 }
 
+/** Private Meteor.settings.packages["accounts-express"].rest options, read at startup. */
+export interface RestApiSettings {
+  /** Mount password login and session logout endpoints. Default: false. Requires accounts-password. */
+  enabled?: boolean;
+  /** Exact POST path within the application, without the ROOT_URL prefix. Default: "/login". */
+  loginPath?: string;
+  /** Exact POST path, distinct from loginPath. Default: "/logout". */
+  logoutPath?: string;
+}
+
 /**
  * Create Express middleware that authenticates requests using Meteor login tokens.
  * Session tokens can be provided via Authorization Bearer header or

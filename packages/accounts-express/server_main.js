@@ -1,10 +1,19 @@
 import { Accounts } from "meteor/accounts-base";
 import { Meteor } from "meteor/meteor";
+import { WebApp } from "meteor/webapp";
 import { createWebAppAuthMiddleware } from "./create_auth_middleware.js";
 import { createAuthFetch } from "./fetch_server.js";
 import { fetch } from "./fetch_authed.js";
 import { createLoginMiddleware } from "./rest_login.js";
 import { createLogoutMiddleware } from "./rest_logout.js";
+import { createConfiguredRestMiddleware } from "./rest_settings.js";
+
+Meteor.startup(() => {
+  const middleware = createConfiguredRestMiddleware(
+    Meteor.settings.packages?.["accounts-express"]?.rest,
+  );
+  if (middleware) WebApp.handlers.use(middleware);
+});
 
 /**
  * @summary Create Express middleware that authenticates requests using
