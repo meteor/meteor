@@ -39,3 +39,8 @@ jobs:
 
       - name: Run unit tests
         run: npm run test:unit
+
+      - name: Run Rspack package tests
+        run: |
+          npm install --prefix npm-packages/meteor-rspack --ignore-scripts --omit=peer --package-lock=false
+          npm test --prefix npm-packages/meteor-rspack

@@ -51,6 +51,7 @@ const {
 const {
   configureMeteorForRspack,
   applyDelegatedExtensions,
+  applyDelegatedFiles,
 } = require('./lib/config');
 
 const {
@@ -247,7 +248,9 @@ if (isMeteorAppRun() || isMeteorAppBuild() || isMeteorAppTest()) {
         waitForFirstCompile: isMeteorAppRun() || isMeteorAppTestWatch(),
         onCompile: (_data, config) => {
           if (config.hasErrors) return;
-          if (config.delegatedExtensions?.length) {
+          if (config.delegatedFiles?.length) {
+            applyDelegatedFiles(config.delegatedFiles, { arch: entry.arch });
+          } else if (config.delegatedExtensions?.length) {
             applyDelegatedExtensions(config.delegatedExtensions, { arch: entry.arch });
           }
           if (config.isRebuild) bumpClientRuntimeBuildId(entry.arch);

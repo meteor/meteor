@@ -16,7 +16,10 @@ const {
   setGlobalState
 } = require('meteor/tools-core/lib/global-state');
 
-const { applyDelegatedExtensions } = require('./config');
+const {
+  applyDelegatedExtensions,
+  applyDelegatedFiles,
+} = require('./config');
 const {
   bumpClientRuntimeBuildId,
   bumpServerRuntimeBuildId,
@@ -194,7 +197,9 @@ export function setupCompilationTracking() {
     const clientState = getGlobalState(GLOBAL_STATE_KEYS.CLIENT_FIRST_COMPILE, clientFirstCompile);
     if (!clientState?.resolved && !clientState?.rejected) {
       // Apply delegated extensions before resolving (so they're set before Meteor scans)
-      if (config?.delegatedExtensions?.length > 0) {
+      if (config?.delegatedFiles?.length > 0) {
+        applyDelegatedFiles(config.delegatedFiles);
+      } else if (config?.delegatedExtensions?.length > 0) {
         applyDelegatedExtensions(config.delegatedExtensions);
       }
 

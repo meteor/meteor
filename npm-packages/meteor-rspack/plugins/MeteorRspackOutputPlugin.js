@@ -96,6 +96,63 @@ function extractDelegatedExtensions(stats, compiler) {
   return Array.from(found);
 }
 
+/**
+ * Extracts app-relative entry-folder stylesheets that Rspack actually
+ * compiled. HTML rules use ignore-loader so Blaze and static-html must remain
+ * visible to Meteor's compilers.
+ * @param {import('@rspack/core').Stats} stats
+ * @param {import('@rspack/core').Compiler} compiler
+ * @returns {string[]} Sorted POSIX paths relative to the app root
+ */
+function extractDelegatedFiles(stats, compiler) {
+  const configured = extractConfiguredExtensions(compiler);
+  if (configured.size === 0) return [];
+
+  const path = require('path');
+  const fs = require('fs');
+  const appRoot = compiler.options.context || process.cwd();
+  const entryFolders = new Set();
+
+  try {
+    const pkg = JSON.parse(
+      fs.readFileSync(path.join(appRoot, 'package.json'), 'utf8')
+    );
+    for (const entry of Object.values(pkg?.meteor?.mainModule || {})) {
+      if (typeof entry !== 'string') continue;
+      const relativeEntry = entry.replace(/\\/g, '/').replace(/^\.\//, '');
+      const folder = relativeEntry.split('/')[0];
+      if (folder) entryFolders.add(folder);
+    }
+  } catch (error) {
+    return [];
+  }
+
+  const found = new Set();
+  for (const module of stats.compilation.modules) {
+    const resource = module.resource || module.userRequest;
+    if (!resource) continue;
+
+    const relativePath = path.relative(appRoot, resource);
+    if (
+      !relativePath ||
+      relativePath.startsWith('..') ||
+      path.isAbsolute(relativePath)
+    ) {
+      continue;
+    }
+
+    const posixPath = relativePath.replace(/\\/g, '/');
+    if (!entryFolders.has(posixPath.split('/')[0])) continue;
+
+    const ext = path.extname(resource).toLowerCase();
+    if (configured.has(ext)) {
+      found.add(posixPath);
+    }
+  }
+
+  return Array.from(found).sort();
+}
+
 class MeteorRspackOutputPlugin {
   constructor(options = {}) {
     this.pluginName = 'MeteorRspackOutputPlugin';
@@ -124,4 +181,8 @@ class MeteorRspackOutputPlugin {
   }
 }
 
-module.exports = { MeteorRspackOutputPlugin, extractDelegatedExtensions };
+module.exports = {
+  MeteorRspackOutputPlugin,
+  extractDelegatedExtensions,
+  extractDelegatedFiles,
+};

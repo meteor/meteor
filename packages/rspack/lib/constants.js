@@ -158,4 +158,5 @@ export const FILE_ROLE = {
   entry: 'entry',
   run: 'run',
   output: 'output',
+  publicPath: 'publicPath',
 };

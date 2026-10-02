@@ -17,6 +17,8 @@ module.exports = {
     "<rootDir>/tools/e2e-tests/",
     "<rootDir>/tools/native-tests/",
     "<rootDir>/tools/tests/",
+    // The Rspack package keeps these cases on Node's test runner.
+    "<rootDir>/npm-packages/meteor-rspack/test/",
     "<rootDir>/packages/",
     "<rootDir>/.github/",
     "<rootDir>/scripts/check-type-test-coverage/",

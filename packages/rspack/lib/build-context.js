@@ -7,6 +7,7 @@ import { getClientArchitectureEntries } from './architectures';
 
 const fs = require('fs');
 const path = require('path');
+const createIgnore = require('ignore');
 
 const { getCustomConfigFilePath } = require('./processes');
 
@@ -170,6 +171,8 @@ export function ensureModuleFilesExist() {
 
   const moduleFiles = {
     /* Main module files for client and server */
+    [getBuildFilePath({ isMain: true, isClient: true, ...env, role: FILE_ROLE.publicPath })]:
+      getBuildFileContent({ isMain: true, isClient: true, ...env, role: FILE_ROLE.publicPath, ...mainClientFiles }),
     [getBuildFilePath({ isMain: true, isClient: true, ...env, ...commandRole })]:
       getBuildFileContent({ isMain: true, isClient: true, ...env, ...commandRole, ...mainClientFiles }),
     [getBuildFilePath({ isMain: true, isClient: true, ...env, role: FILE_ROLE.entry })]:
@@ -207,7 +210,9 @@ export function ensureModuleFilesExist() {
       ...entry,
       outputFile: getBuildFilePath({ ...env, ...entry, role: FILE_ROLE.output, onlyFilename: true }),
     };
-    for (const role of [commandRole.role, FILE_ROLE.entry, FILE_ROLE.output]) {
+    const roles = [commandRole.role, FILE_ROLE.entry, FILE_ROLE.output];
+    if (!entry.isTest) roles.push(FILE_ROLE.publicPath);
+    for (const role of roles) {
       moduleFiles[getBuildFilePath({ ...config, role })] =
         getBuildFileContent({ ...config, role });
     }
@@ -398,6 +403,8 @@ export function getBuildFilePath(config) {
     role = 'meteor';
   } else if ([FILE_ROLE.output].includes(role)) {
     role = 'rspack';
+  } else if ([FILE_ROLE.publicPath].includes(role)) {
+    role = 'public-path';
   }
 
   // 5. Use .cjs for the CommonJS development server bundle so Node does not
@@ -430,12 +437,15 @@ export function getBuildFilePath(config) {
  * @param {string} side - The side (client, server, test)
  * @param {string} env - The environment (development, production)
  * @param {string} module - The module (main, test)
- * @param {string} role - The role (build, entry, run, output)
+ * @param {string} role - The role (build, entry, run, output, publicPath)
  * @returns {string} The banner content
  */
 function getBanner(config, side, env, module, role) {
   const envDisplay = capitalizeFirstLetter(env || module);
   const sideDisplay = capitalizeFirstLetter(side);
+  const publicPathStage = config?.isClient
+    ? `[   ${side}-public-path.js ] ──▶ `
+    : '';
   const outputFilename = getBuildFilePath({
     ...config,
     role: FILE_ROLE.output,
@@ -547,6 +557,31 @@ ${AUTO_GENERATED_WARNING}
   }
 
   // For main modules (not test mode), use the new templates
+  // Public path files
+  if (role === FILE_ROLE.publicPath) {
+    return `/**
+* @file ${side}-public-path.js
+* @description Sets the Rspack public path from Meteor's runtime configuration
+* --------------------------------------------------------------------------
+* 🌐 Rspack ${sideDisplay} Public Path (${envDisplay})
+* --------------------------------------------------------------------------
+* • [■ ${side}-public-path.js ] ──▶ [   ${side}-entry.js ] ──▶ [   ${side}-rspack.js ] ──▶ [   ${side}-meteor.js ]
+*
+* Imported first by \`${side}-entry.js\` so that chunk, asset and hot-update
+* URLs constructed by the Rspack runtime honor a path prefix configured through
+* \`ROOT_URL\`, for example \`ROOT_URL=https://example.com/live/\`. Meteor derives
+* the prefix at runtime and exposes it as
+* \`__meteor_runtime_config__.ROOT_URL_PATH_PREFIX\`.
+*
+* When \`ROOT_URL\` has no path prefix, this module leaves the public path
+* unchanged. Keeping the bootstrap in every client bundle allows the same
+* production build to run at the root URL or under a sub-path.
+* See meteor/meteor#14523.
+*
+${AUTO_GENERATED_WARNING}
+*/`;
+  }
+
   // Entry files
   if (role === FILE_ROLE.entry) {
     if (!config?.entryFile) {
@@ -556,7 +591,7 @@ ${AUTO_GENERATED_WARNING}
 * --------------------------------------------------------------------------
 * 🔌 Rspack ${sideDisplay} Entry (${envDisplay})
 * --------------------------------------------------------------------------
-* • [■ ${side}-entry.js ] ──▶ [   ${outputFilename} ] ──▶ [   ${side}-meteor.js ]
+* • ${publicPathStage}[■ ${side}-entry.js ] ──▶ [   ${outputFilename} ] ──▶ [   ${side}-meteor.js ]
 *
 * This file is empty because \`meteor.mainModule.${side}\` is not set in package.json.
 *
@@ -569,7 +604,7 @@ ${AUTO_GENERATED_WARNING}
 * --------------------------------------------------------------------------
 * 🔌 Rspack ${sideDisplay} Entry (${envDisplay})
 * --------------------------------------------------------------------------
-* • [■ ${side}-entry.js ] ──▶ [   ${outputFilename} ] ──▶ [   ${side}-meteor.js ]
+* • ${publicPathStage}[■ ${side}-entry.js ] ──▶ [   ${outputFilename} ] ──▶ [   ${side}-meteor.js ]
 *
 * This file is the entry point that Rspack uses to start the build process.
 * It imports the module defined in \`meteor.mainModule.${side}\` inside package.json.
@@ -589,7 +624,7 @@ ${AUTO_GENERATED_WARNING}
 * --------------------------------------------------------------------------
 * ⚡ Rspack ${sideDisplay} App (${envDisplay})
 * --------------------------------------------------------------------------
-* • [   ${side}-entry.js ] ──▶ [■ ${outputFilename} ] ──▶ [   ${side}-meteor.js ]
+* • ${publicPathStage}[   ${side}-entry.js ] ──▶ [■ ${outputFilename} ] ──▶ [   ${side}-meteor.js ]
 *
 * This file is empty because \`meteor.mainModule.${side}\` is not set in package.json.
 *
@@ -602,7 +637,7 @@ ${AUTO_GENERATED_WARNING}
 * --------------------------------------------------------------------------
 * ⚡ Rspack ${sideDisplay} App (${envDisplay})
 * --------------------------------------------------------------------------
-* • [   ${side}-entry.js ] ──▶ [■ ${outputFilename} ] ──▶ [   ${side}-meteor.js ]
+* • ${publicPathStage}[   ${side}-entry.js ] ──▶ [■ ${outputFilename} ] ──▶ [   ${side}-meteor.js ]
 *
 * This file is the bundled output generated by Rspack.
 * It contains all application code and assets combined into one build.
@@ -622,7 +657,7 @@ ${AUTO_GENERATED_WARNING}
 * --------------------------------------------------------------------------
 * ☄️ Meteor ${sideDisplay} App (${envDisplay})
 * --------------------------------------------------------------------------
-* • [   ${side}-entry.js ] ──▶ [   ${outputFilename} ] ──▶ [■ ${side}-meteor.js ]
+* • ${publicPathStage}[   ${side}-entry.js ] ──▶ [   ${outputFilename} ] ──▶ [■ ${side}-meteor.js ]
 *
 * This file is empty because \`meteor.mainModule.${side}\` is not set in package.json.
 *
@@ -635,7 +670,7 @@ ${AUTO_GENERATED_WARNING}
 * --------------------------------------------------------------------------
 * ☄️ Meteor ${sideDisplay} App (${envDisplay})
 * --------------------------------------------------------------------------
-* • [   ${side}-entry.js ] ──▶ [   ${outputFilename} ] ──▶ [■ ${side}-meteor.js ]
+* • ${publicPathStage}[   ${side}-entry.js ] ──▶ [   ${outputFilename} ] ──▶ [■ ${side}-meteor.js ]
 *
 * This file overrides the corresponding \`meteor.mainModule.${side}\` entry in
 * package.json. Meteor loads it at runtime, and it imports the Rspack
@@ -679,12 +714,192 @@ if (module.hot) {
 }
 
 /**
+ * Finds nested HTML files that Meteor would traditionally load eagerly.
+ * Rspack applications replace meteor.mainModule, which otherwise makes the
+ * JavaScript generated for these HTML files lazy unless they are imported.
+ *
+ * Each .meteorignore file applies relative to its own directory, matching the
+ * hierarchical behavior of Meteor's source scanner.
+ *
+ * @param {string} entryFile App-relative client entry module
+ * @returns {string[]} App-relative POSIX HTML paths
+ */
+export function findNestedMeteorHtmlFiles(entryFile) {
+  if (!entryFile) return [];
+
+  const appDir = getMeteorAppDir();
+  const entryDir = path.dirname(entryFile);
+  const absoluteEntryDir = path.resolve(appDir, entryDir);
+  const relativeEntryDir = path.relative(appDir, absoluteEntryDir);
+
+  if (
+    relativeEntryDir.startsWith('..') ||
+    path.isAbsolute(relativeEntryDir) ||
+    !fs.existsSync(absoluteEntryDir)
+  ) {
+    return [];
+  }
+
+  const matcherCache = new Map();
+  const getMatcher = directory => {
+    if (matcherCache.has(directory)) {
+      return matcherCache.get(directory);
+    }
+
+    const meteorIgnorePath = path.join(directory, '.meteorignore');
+    let matcher = null;
+    if (fs.existsSync(meteorIgnorePath)) {
+      matcher = createIgnore().add(fs.readFileSync(meteorIgnorePath, 'utf8'));
+    }
+    matcherCache.set(directory, matcher);
+    return matcher;
+  };
+
+  const ancestorMatchers = [];
+  let currentDir = appDir;
+  const entryParts = relativeEntryDir
+    .split(path.sep)
+    .filter(part => part && part !== '.');
+  for (const part of entryParts) {
+    ancestorMatchers.push({ directory: currentDir, matcher: getMatcher(currentDir) });
+    currentDir = path.join(currentDir, part);
+  }
+
+  const files = [];
+  const excludedDirectories = new Set([
+    '.git',
+    '.meteor',
+    'imports',
+    'node_modules',
+    'server',
+    'tests',
+  ]);
+
+  const isIgnored = (absolutePath, isDirectory, matchers) => {
+    return matchers.some(({ directory, matcher }) => {
+      if (!matcher) return false;
+      let relativePath = path.relative(directory, absolutePath).replace(/\\/g, '/');
+      if (!relativePath || relativePath.startsWith('../')) return false;
+      if (isDirectory) relativePath += '/';
+      return matcher.ignores(relativePath);
+    });
+  };
+
+  const scan = (directory, inheritedMatchers) => {
+    const matchers = [
+      ...inheritedMatchers,
+      { directory, matcher: getMatcher(directory) },
+    ];
+
+    for (const dirent of fs.readdirSync(directory, { withFileTypes: true })) {
+      const absolutePath = path.join(directory, dirent.name);
+
+      if (dirent.isDirectory()) {
+        const isExcludedTopLevelDirectory =
+          directory === appDir &&
+          ['packages', 'private', 'programs', 'public'].includes(dirent.name);
+        if (
+          dirent.name.startsWith('.') ||
+          excludedDirectories.has(dirent.name) ||
+          isExcludedTopLevelDirectory ||
+          isIgnored(absolutePath, true, matchers)
+        ) {
+          continue;
+        }
+        scan(absolutePath, matchers);
+        continue;
+      }
+
+      if (
+        !dirent.isFile() ||
+        dirent.name.startsWith('.') ||
+        path.extname(dirent.name).toLowerCase() !== '.html' ||
+        isIgnored(absolutePath, false, matchers)
+      ) {
+        continue;
+      }
+
+      const relativeToEntry = path.relative(absoluteEntryDir, absolutePath);
+      if (!relativeToEntry.includes(path.sep)) {
+        continue;
+      }
+
+      files.push(path.relative(appDir, absolutePath).replace(/\\/g, '/'));
+    }
+  };
+
+  scan(absoluteEntryDir, ancestorMatchers);
+  return files.sort();
+}
+
+function getMeteorHtmlImports(config) {
+  // Blaze templates compile to JavaScript modules that must be imported to
+  // preserve eager loading below a custom main-module directory. Files
+  // compiled by static-html are non-JavaScript resources and remain eager
+  // without generated imports. Importing them would reference modules they
+  // do not produce.
+  if (!config?.isClient || config?.isTest || !isMeteorBlazeProject()) {
+    return '';
+  }
+
+  const htmlFiles = findNestedMeteorHtmlFiles(config.entryFile);
+  if (htmlFiles.length === 0) return '';
+
+  return `/* Eager Meteor HTML files below the client entry directory */\n${htmlFiles
+    .map(file => `import '../../${file}';`)
+    .join('\n')}`;
+}
+
+/**
  * Gets the import content based on configuration
  * @returns {string} The import content
  */
 function getImportContent(config, side, role) {
   if (!config?.entryFile && !config?.isTest) {
     return '';
+  }
+
+  if (role === FILE_ROLE.publicPath) {
+    const isDevServer = config?.isDevelopment && !config?.isNative && !config?.arch;
+    if (isDevServer) {
+      const defaultPublicPath = getClientArchitectureEntries().length
+        ? `/${getRspackChunksContext(false, false, 'client')}/`
+        : '/';
+      return `/* When the app is served under a ROOT_URL path prefix, load chunks,
+   assets and hot updates directly through Meteor's dev-server proxy
+   (mounted at /__rspack__) with the prefix applied. Without a prefix the
+   default public path is kept and the integration's compatibility
+   redirects apply, unchanged. */
+var rootUrlPathPrefix =
+  (typeof __meteor_runtime_config__ !== 'undefined' &&
+    __meteor_runtime_config__.ROOT_URL_PATH_PREFIX) ||
+  '';
+if (rootUrlPathPrefix) {
+  var currentPublicPath = __webpack_public_path__;
+  if (currentPublicPath === ${JSON.stringify(defaultPublicPath)}) {
+    __webpack_public_path__ = rootUrlPathPrefix + '/__rspack__' + currentPublicPath;
+  }
+}`;
+    }
+    return `/* When the app is served under a ROOT_URL path prefix, prepend the
+   prefix to the public path so chunk and asset URLs constructed at
+   runtime resolve correctly. Absolute (e.g. CDN) public paths and
+   public paths already carrying the prefix are left untouched. */
+var rootUrlPathPrefix =
+  (typeof __meteor_runtime_config__ !== 'undefined' &&
+    __meteor_runtime_config__.ROOT_URL_PATH_PREFIX) ||
+  '';
+if (rootUrlPathPrefix) {
+  var currentPublicPath = __webpack_public_path__;
+  var isRootRelative =
+    currentPublicPath.charAt(0) === '/' && currentPublicPath.charAt(1) !== '/';
+  var isAlreadyPrefixed =
+    currentPublicPath === rootUrlPathPrefix ||
+    currentPublicPath.indexOf(rootUrlPathPrefix + '/') === 0;
+  if (isRootRelative && !isAlreadyPrefixed) {
+    __webpack_public_path__ = rootUrlPathPrefix + currentPublicPath;
+  }
+}`;
   }
 
   if (role === FILE_ROLE.entry) {
@@ -707,10 +922,24 @@ import '../../${config.entryFile}';`
     }
 
     if (config?.entryFile) {
+      if (config?.isClient) {
+        const publicPathFile = getBuildFilePath({
+          isClient: true,
+          role: FILE_ROLE.publicPath,
+          onlyFilename: true,
+        });
+        return `/* Link to 🌐 Rspack Client Public Path (must be imported first) */
+import './${publicPathFile}';
+
+/* Link to 🔌 Meteor ${capitalizeFirstLetter(side)} Entry */
+import '../../${config?.entryFile}';`;
+      }
       return `/* Link to 🔌 Meteor ${capitalizeFirstLetter(side)} Entry */
 import '../../${config?.entryFile}';`;
     }
   }
+
+  const meteorHtmlImports = getMeteorHtmlImports(config);
 
   if (config?.outputFile &&
     (role === FILE_ROLE.build || config?.isProduction ||
@@ -765,7 +994,7 @@ try {
 /* rspack-server-build-id:initial */`;
     }
 
-    const linkBanner = `/* Link to ⚡ Rspack ${capitalizeFirstLetter(side)} App */`;
+    const linkBanner = `${meteorHtmlImports}${meteorHtmlImports ? '\n\n' : ''}/* Link to ⚡ Rspack ${capitalizeFirstLetter(side)} App */`;
     const clientRuntimeBuildId =
       role === FILE_ROLE.run &&
       config?.isClient &&
@@ -802,7 +1031,7 @@ import './${config?.outputFile || ''}';${clientRuntimeBuildId}`;
   }
 
   if (role === FILE_ROLE.run && config?.isClient && !config?.isTest) {
-    return '/* No link to ⚡ Rspack Client App as served by HMR server */';
+    return `${meteorHtmlImports}${meteorHtmlImports ? '\n\n' : ''}/* No link to ⚡ Rspack Client App as served by HMR server */`;
   }
 
   if (role === FILE_ROLE.output && config?.isClient && !config?.isTest) {

@@ -2,7 +2,7 @@ const { EventEmitter } = require('node:events');
 
 // Load the real runtime with Meteor's server lifecycle and proxy I/O mocked.
 // Fake timers make restart bursts and the trailing summary deterministic.
-function loadRuntime(flags = {}, { native = false, toolsCore = true } = {}) {
+function loadRuntime(flags = {}, { native = false, toolsCore = true, pathPrefix = '' } = {}) {
   const proxies = [];
   const createProxyServer = jest.fn(() => {
     const proxy = new EventEmitter();
@@ -12,9 +12,12 @@ function loadRuntime(flags = {}, { native = false, toolsCore = true } = {}) {
     return proxy;
   });
   const connectHandlers = { use: jest.fn() };
+  const rawConnectHandlers = { use: jest.fn() };
   const httpServer = new EventEmitter();
+  const registerBoilerplateDataCallback = jest.fn();
 
   global.Package = toolsCore ? { 'tools-core': {} } : {};
+  global.__meteor_runtime_config__ = { ROOT_URL_PATH_PREFIX: pathPrefix };
   process.env.RSPACK_DEVSERVER_PORT = '3210';
   if (native) process.env.RSPACK_NATIVE = '1';
   else delete process.env.RSPACK_NATIVE;
@@ -27,9 +30,9 @@ function loadRuntime(flags = {}, { native = false, toolsCore = true } = {}) {
   }), { virtual: true });
   jest.doMock('meteor/webapp', () => ({
     WebApp: {
-      connectHandlers, httpServer, rawConnectHandlers: { use: jest.fn() },
+      connectHandlers, httpServer, rawConnectHandlers,
     },
-    WebAppInternals: { staticFilesMiddleware: jest.fn() },
+    WebAppInternals: { staticFilesMiddleware: jest.fn(), registerBoilerplateDataCallback },
   }), { virtual: true });
   jest.doMock('meteor/tools-core/lib/string', () => ({
     shuffleString: value => value,
@@ -42,7 +45,7 @@ function loadRuntime(flags = {}, { native = false, toolsCore = true } = {}) {
   }));
 
   require('../../../packages/rspack/rspack_server');
-  return { proxies, createProxyServer, connectHandlers, httpServer };
+  return { proxies, createProxyServer, connectHandlers, rawConnectHandlers, httpServer, registerBoilerplateDataCallback };
 }
 
 function fail(proxy, code = 'ECONNREFUSED', url = '/client-rspack.js', response) {
@@ -53,11 +56,13 @@ function fail(proxy, code = 'ECONNREFUSED', url = '/client-rspack.js', response)
 
 describe('Rspack development proxy error diagnostics', () => {
   let originalPackage;
+  let originalRuntimeConfig;
   let originalEnv;
   let errorLog;
 
   beforeEach(() => {
     originalPackage = global.Package;
+    originalRuntimeConfig = global.__meteor_runtime_config__;
     originalEnv = process.env;
     process.env = { ...originalEnv };
     jest.resetModules();
@@ -72,6 +77,66 @@ describe('Rspack development proxy error diagnostics', () => {
     process.env = originalEnv;
     if (originalPackage === undefined) delete global.Package;
     else global.Package = originalPackage;
+    if (originalRuntimeConfig === undefined) delete global.__meteor_runtime_config__;
+    else global.__meteor_runtime_config__ = originalRuntimeConfig;
+  });
+
+  test('routes prefixed HMR upgrades once, preserves queries, and leaves DDP alone', () => {
+    const { proxies: [assets, ws], httpServer } = loadRuntime({}, { pathPrefix: '/live' });
+    const upstreamUrls = [];
+    ws.ws.mockImplementation(req => upstreamUrls.push(req.url));
+    const request = { url: '/live/ws?token=example' };
+
+    httpServer.emit('upgrade', request, {}, Buffer.alloc(0));
+    expect(upstreamUrls).toEqual(['/ws?token=example']);
+    expect(request.url).toBe('/live/ws?token=example');
+    expect(assets.ws).not.toHaveBeenCalled();
+
+    httpServer.emit('upgrade', { url: '/live/sockjs/websocket' }, {}, Buffer.alloc(0));
+    httpServer.emit('upgrade', { url: '/lively/ws' }, {}, Buffer.alloc(0));
+    expect(ws.ws).toHaveBeenCalledTimes(1);
+    expect(assets.ws).not.toHaveBeenCalled();
+  });
+
+  test('prefixes architecture assets without sending their disk output to the dev server', () => {
+    const { registerBoilerplateDataCallback } = loadRuntime({}, { pathPrefix: '/live' });
+    const rewrite = registerBoilerplateDataCallback.mock.calls[0][1];
+    const data = {
+      head: '<link href="/build-chunks/main.css"><link href="/build-chunks/web.browser.legacy/main.css"><script src="/build-assets/web.cordova/runtime.js"></script>',
+    };
+    expect(rewrite({}, data)).toBe(true);
+    expect(data.head).toBe('<link href="/live/__rspack__/build-chunks/main.css"><link href="/live/build-chunks/web.browser.legacy/main.css"><script src="/live/build-assets/web.cordova/runtime.js"></script>');
+    expect(rewrite({}, data)).toBe(false);
+  });
+
+  test('keeps query strings in compatibility redirects and serves explicit architectures from disk', () => {
+    const { rawConnectHandlers } = loadRuntime({}, { pathPrefix: '/live' });
+    const redirect = rawConnectHandlers.use.mock.calls[0][0];
+    const response = { writeHead: jest.fn(), end: jest.fn() };
+    const next = jest.fn();
+    redirect({ url: '/build-chunks/main.css?cache=1' }, response, next);
+    expect(response.writeHead).toHaveBeenCalledWith(307, {
+      Location: '/live/__rspack__/build-chunks/main.css?cache=1',
+    });
+    expect(response.end).toHaveBeenCalledTimes(1);
+    expect(next).not.toHaveBeenCalled();
+
+    redirect({ url: '/build-chunks/web.browser.legacy/main.css?cache=1' }, response, next);
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(response.writeHead).toHaveBeenCalledTimes(1);
+  });
+
+  test.each(['js', 'json'])('does not redirect a prefixed hot-update.%s request back to itself', extension => {
+    const { rawConnectHandlers } = loadRuntime({}, { pathPrefix: '/live' });
+    const redirect = rawConnectHandlers.use.mock.calls[0][0];
+    const response = { writeHead: jest.fn(), end: jest.fn() };
+    const next = jest.fn();
+
+    redirect({ url: `/live/__rspack__/main.hash.hot-update.${extension}?cache=1` }, response, next);
+
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(response.writeHead).not.toHaveBeenCalled();
+    expect(response.end).not.toHaveBeenCalled();
   });
 
   test('logs the first failure immediately and summarizes a burst across asset URLs', () => {

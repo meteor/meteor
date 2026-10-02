@@ -15,9 +15,14 @@ Package.registerBuildPlugin({
     'rspack_plugin.js',
   ],
   use: ['modules@0.8.2', 'ecmascript', 'tools-core'],
+  npmDependencies: {
+    ignore: '7.0.5',
+  },
 });
 
 Npm.devDepends({
+  // build-context is also loaded by the package tests outside the build plugin.
+  ignore: '7.0.5',
   // Maintained, drop-in replacement for the unmaintained http-proxy that
   // http-proxy-middleware relied on, which used the deprecated util._extend and
   // legacy url.parse APIs (meteor/meteor#13491).

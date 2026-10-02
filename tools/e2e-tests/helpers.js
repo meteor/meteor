@@ -83,6 +83,7 @@ export async function clearBuildArtifacts(appDir) {
  * @param {string} appName - Name of the app in the apps directory
  * @param {Object} options - Additional options
  * @param {boolean} options.isMonorepo - Whether the app is a monorepo
+ * @param {string} options.waitOnPath - URL path used by the readiness probe
  * @param {boolean} options.preserveFixtureSymlinks - Whether to preserve symlinks when copying the fixture
  * @param {string} options.packageManager - Package manager to use for setup ("npm", "yarn", or "pnpm")
  * @param {string[]} options.tempDirSegments - Path segments to insert below the system temp directory
@@ -289,7 +290,7 @@ export async function runMeteorApp(tempDir, port, options = {}) {
   if (!options.skipWaitOn) {
     console.log(`Waiting for app to be available on port ${port}...`);
     await waitOn({
-      resources: [`http-get://localhost:${port}`],
+      resources: [`http-get://localhost:${port}${options.waitOnPath || ''}`],
       timeout: process.env.CI ? 300000 : 90000
     });
   }
@@ -1254,11 +1255,12 @@ export async function startMongo(options = {}) {
  * @param {number} options.port - Port for the built app (required)
  * @param {string} options.mongoUrl - MONGO_URL for the built app (required)
  * @param {boolean} options.skipNpmInstall - Skip `npm install` in the server dir
+ * @param {boolean} options.captureOutput - Capture server output for runtime assertions
  * @param {Object} options.env - Extra environment variables
- * @returns {Promise<{appProcess: Object, port: number, stop: Function}>}
+ * @returns {Promise<{appProcess: Object, port: number, stop: Function, outputLines: string[]}>}
  */
 export async function runBuiltApp(buildOutputDir, options = {}) {
-  const { port, mongoUrl, skipNpmInstall = false, env = {} } = options;
+  const { port, mongoUrl, skipNpmInstall = false, captureOutput = false, env = {} } = options;
 
   if (!port) throw new Error('runBuiltApp requires a port');
   if (!mongoUrl) throw new Error('runBuiltApp requires a mongoUrl');
@@ -1272,9 +1274,10 @@ export async function runBuiltApp(buildOutputDir, options = {}) {
   }
 
   console.log(`Starting built app (node main.js) on port ${port}...`);
+  const outputLines = [];
   const appProcess = execa('node', ['main.js'], {
     cwd: bundleDir,
-    stdio: ['ignore', 'inherit', 'inherit'],
+    stdio: captureOutput ? ['ignore', 'pipe', 'pipe'] : ['ignore', 'inherit', 'inherit'],
     env: {
       ...process.env,
       ROOT_URL: `http://localhost:${port}`,
@@ -1283,6 +1286,18 @@ export async function runBuiltApp(buildOutputDir, options = {}) {
       ...env,
     },
   });
+
+  if (captureOutput) {
+    for (const [stream, destination] of [
+      [appProcess.stdout, process.stdout],
+      [appProcess.stderr, process.stderr],
+    ]) {
+      stream.on('data', data => {
+        outputLines.push(data.toString());
+        destination.write(data);
+      });
+    }
+  }
 
   let exited = false;
   appProcess.on('exit', () => { exited = true; });
@@ -1304,5 +1319,5 @@ export async function runBuiltApp(buildOutputDir, options = {}) {
     throw new Error(`Built app failed to become ready on port ${port}: ${err.message}`);
   }
 
-  return { appProcess, port, stop };
+  return { appProcess, port, stop, outputLines };
 }

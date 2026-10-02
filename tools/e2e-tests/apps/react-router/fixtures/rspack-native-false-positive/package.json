@@ -1,0 +1,8 @@
+{
+  "name": "rspack-native-false-positive",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "install": "node -e \"process.exit(0)\""
+  }
+}

@@ -79,6 +79,10 @@ Core React 19 integration with custom Meteor local directory.
 | Unplugin transform + buildDependencies tracking in production | Prod |
 | Custom rspack config (`rspack.config.cjs`) | All |
 | HMR works in dev, disabled in prod | Run, Prod |
+| `ROOT_URL=/live/` prefixes scripts, styles, images, and dynamic chunks | Run, Prod |
+| Prefixed Rspack WebSocket connects and client edits preserve browser state through HMR | Run |
+| Chunk, asset, and queried hot-update compatibility redirects preserve the prefix | Run |
+| Dynamic import chunk loads through the runtime public path | Run, Prod |
 | Rspack devserver port is released after `SIGTERM` (`regressions/port-cleanup.test.js`) | Run |
 | Rapid server edits during slow startup and shutdown preserve the dev server, apply the final edit, allow a later client refresh, and can replace an app that stops answering IPC (`regressions/rapid-server-restarts.test.js`, #14755) | Run |
 | `--port` with a host prefix derives a valid rspack devserver port (`regressions/host-prefixed-port.test.js`) | Run |
@@ -95,7 +99,8 @@ Full-featured React Router app with custom packages, Less, and advanced rspack c
 | `babel-plugin-react-compiler` integration | Init, Prod, Build |
 | Compiler output cached in dev (babel.config.js) | Run |
 | 404 page routing (renders "Page Not Found") | Run, Prod |
-| Less stylesheet support (`white-space: break-spaces`) | Run, Prod |
+| Less stylesheet support through Rspack without the Meteor `less` package (`white-space: break-spaces`) | Run, Prod |
+| Imported nested Less is Rspack-owned and absent from Meteor's merged stylesheet | Run, Prod |
 | `meteor.modules` config styles (`align-content: center`) | Run, Prod |
 | Custom HTML meta tags (`theme-color`) | Run, Prod |
 | Default + custom package loading | Run |
@@ -103,8 +108,10 @@ Full-featured React Router app with custom packages, Less, and advanced rspack c
 | `rspack.config.override.js` custom plugin loading | Run, Test, Build |
 | User-level `devServer.onListening` composed with meteor-rspack default | Run |
 | React + TSX environment detection | Run, Prod, Test, Build |
+| Full-app tests after development exclude stale run-mode HTML and report zero client/server failures | Test once |
 | Full-app test mode (`--full-app`) | Test |
 | Static assets in bundle (png, md) | Build |
+| Native bcrypt executes after installation in the generated deployment bundle | Build |
 | HMR works in dev, disabled in prod | Run, Prod |
 
 ### assets
@@ -129,6 +136,9 @@ Blaze templating engine integration.
 |----------------|-------|
 | Blaze environment detection (`isBlazeEnabled`) | Run, Prod, Test, Build |
 | HMR disabled (incompatible with Blaze) | Run, Prod |
+| Unimported Blaze templates at one and two nested levels compile and render | Run, Prod |
+| Unimported CSS at one and two nested levels is emitted and applied | Run, Prod |
+| `.meteorignore` excludes nested HTML and CSS from eager Meteor processing | Run, Prod |
 
 ### blaze-router
 
@@ -161,6 +171,8 @@ Full Blaze app with an `imports/` structure and regular `meteor test` coverage. 
 |----------------|-------|
 | Blaze environment detection | Run, Prod, Test, Build |
 | `imports/api/` test path structure | Test |
+| Unimported nested Less is emitted by the existing Meteor `less` compiler | Run, Prod |
+| `.meteorignore` excludes nested Less from runtime output and Meteor's merged stylesheet | Run, Prod |
 | Regular test mode (`meteor test`, without `--full-app`) | Test, Test once |
 | FlowRouter Extra route renders the Blaze home template | Run, Prod |
 | HMR disabled (incompatible with Blaze) | Run, Prod |
@@ -178,6 +190,8 @@ TypeScript with SCSS, type checking, `.ts` rspack config, and `.ts` SWC config.
 | Custom asset/chunk context dirs (`assets`, `chunks`) | All |
 | Explicit `meteor types` command generates native package declarations before app startup | Init |
 | SCSS styles support (`white-space: break-spaces`) | Run, Prod |
+| Imported nested SCSS is Rspack-owned while unimported nested SCSS remains Meteor-owned | Run, Prod |
+| `.meteorignore` excludes nested SCSS from both runtime output and Meteor's merged stylesheet | Run, Prod |
 | TypeScript + TSX environment detection | Run, Prod, Test, Build |
 | Portable build (Meteor.isDevelopment/isProduction not defined) | Run, Prod, Build |
 | `Meteor.extendSwcConfig` with path aliases (`@ui/*`, `@api/*`) | All |
@@ -216,15 +230,19 @@ CoffeeScript language support.
 
 ### vue
 
-Vue.js framework with Tailwind CSS, CSS auto-delegation, and `meteor.modules` config.
+Vue.js framework with Tailwind CSS, exact CSS delegation, and `meteor.modules` config.
 
 | What is covered | Phase |
 |----------------|-------|
 | Vue single-file components | All |
 | Tailwind CSS styles (`.p-8` padding) | Run, Prod |
-| CSS auto-delegation (`client/main.css` processed by Rspack, not Meteor) | All |
-| `meteor.modules` config preserves `client/meteor.css` for Meteor processing | All |
-| Rspack CSS + Meteor CSS coexistence in same entry folder | All |
+| Deep custom client entrypoint (`client/browser/entry/main.js`) | All |
+| Nested `static-html` is loaded below the custom entrypoint | Run, Prod |
+| Exact CSS delegation keeps imported nested CSS in Rspack and unimported nested CSS in Meteor | Run, Prod |
+| Generated `merged-stylesheets.css` confirms compiler ownership without duplicate output | Run, Prod |
+| `meteor.modules` preserves an explicit CSS file for Meteor processing | Run, Prod |
+| `.meteorignore` excludes nested HTML and CSS below the custom entrypoint | Run, Prod |
+| Imported CSS updates through HMR without reloading the page | Run |
 | HMR works in dev, disabled in prod | Run, Prod |
 
 ### solid
@@ -417,7 +435,7 @@ These dependencies are installed only in the temporary variant used by `regressi
 |---------|--------|
 | `s3mini` | ESM-only package (no CJS fallback) |
 | `@modelcontextprotocol/sdk/client/streamableHttp.js` | ESM subpath export (deep path into ESM package) |
-| `bcrypt` | Native Node.js bindings (compiled C++ addon) |
+| `bcrypt` | Automatically detected native addon that is externalized and executed at runtime without manual externals |
 | `puppeteer` | Large ESM-compatible package with complex dependency tree (`server/browser-tests/browser.app-test.js`) |
 
 ### monorepo (`apps/monorepo/app/`)
@@ -473,6 +491,10 @@ Where each feature is tested across apps and skeletons.
 | Feature | Apps | Skeletons |
 |---------|------|-----------|
 | HMR (dev) | react, react-router, babel, coffeescript, vue, solid, svelte, monorepo, pnpm-monorepo, typescript | |
+| `ROOT_URL` path-prefix routing | react | |
+| HMR below a `ROOT_URL` prefix without a full-page reload | react | |
+| Dynamic chunk public path | react | |
+| Compatibility redirects with query strings | react | |
 | HMR disabled (prod) | all apps with HMR | |
 | HMR incompatible | blaze, full-blaze | |
 | Custom rspack config | react (.cjs), react-router, babel (.mjs), monorepo (.cjs), typescript (.ts) | |
@@ -484,8 +506,8 @@ Where each feature is tested across apps and skeletons.
 | Custom env vars | react (METEOR_LOCAL_DIR), react-router (METEOR_PACKAGE_DIRS), server-only regression (absolute external METEOR_LOCAL_DIR) | |
 | Path-prefixed `ROOT_URL` (`ROOT_URL_PATH_PREFIX`) | | blaze |
 | Static asset bundling | react-router, monorepo (png, md, icon, manifest) | |
-| Less styles | react-router | |
-| SCSS styles | typescript | |
+| Less styles and exact nested ownership | react-router (Rspack), full-blaze (Meteor) | |
+| SCSS styles and exact nested ownership | typescript | |
 | Tailwind CSS | vue (PostCSS) | tailwind |
 | PWA (manifest, service worker, offline app shell) | | pwa |
 | Image asset loading | react | |
@@ -523,7 +545,11 @@ Where each feature is tested across apps and skeletons.
 | Source-map paths, contents, exact breakpoint/step/exception locations, lazy code, and rebuilds | source-maps | |
 | Modern, legacy, and Cordova web source maps in built output | source-maps | |
 | `Meteor.extendSwcConfig` (path aliases) | typescript | |
-| CSS auto-delegation (entry folder filtering) | vue | |
+| Exact stylesheet delegation | react-router (Less), typescript (SCSS), vue (CSS) | |
+| Deep custom client entrypoint | vue | |
+| Nested eager static HTML | vue | |
+| Nested eager Blaze templates | blaze | |
+| Nested eager stylesheets | blaze (CSS), full-blaze (Less), typescript (SCSS), vue (CSS) | |
 | `meteor.modules` config (preserve files for Meteor) | react-router, vue | |
 | `meteor reset` cleanup | apps using the shared lifecycle tests | all skeletons |
 | Skeleton creation | | all 16 tested skeletons |
@@ -532,6 +558,7 @@ Where each feature is tested across apps and skeletons.
 | ESM-only packages | react-router, monorepo, babel | |
 | ESM subpath exports | react-router, babel | |
 | Native bindings (C++ addon) | react-router | |
+| Native detection false-positive override (`compileWithRspack`) | react-router | |
 | `node:` protocol imports | monorepo, typescript | |
 | Untranspiled npm deps (`compileWithRspack`) | monorepo | |
 | Worker resolution (`compileWithMeteor`) | monorepo | |
@@ -548,3 +575,5 @@ Where each feature is tested across apps and skeletons.
 | `skipTestClient: true` test helper option | assets | |
 | Assets skipped by compiler source discovery (#14566) | assets | |
 | Boot built bundle (`node main.js`) to test assets | assets | |
+
+The React Router fixture includes a JavaScript-only package with a `binding.gyp` native detection marker. It forces that package through `Meteor.compileWithRspack`, executes it in development and production, and verifies that its source marker is present in the generated server bundle. This proves that the helper changes bundling behavior rather than only changing detector output.
