@@ -23,7 +23,7 @@ const rspackAssetsContext = getRspackAssetsContext(isTestMode, isTestFullApp);
  * @constant {RegExp}
  */
 const RSPACK_CHUNKS_REGEX = new RegExp(
-  `^\/${rspackChunksContext}\/(.+)$`,
+  `^/${rspackChunksContext}/(.+)$`,
 );
 
 /**
@@ -31,7 +31,7 @@ const RSPACK_CHUNKS_REGEX = new RegExp(
  * @constant {RegExp}
  */
 const RSPACK_ASSETS_REGEX = new RegExp(
-  `^\/${rspackAssetsContext}\/(.+)$`,
+  `^/${rspackAssetsContext}/(.+)$`,
 );
 
 const shouldEnableDevHMRProxy =
@@ -51,30 +51,67 @@ if (shouldEnableDevHMRProxy) {
   // Target URL for the Rspack dev server
   const target = `http://localhost:${process.env.RSPACK_DEVSERVER_PORT}`;
 
-  const rspackProxy = httpProxy.createProxyServer({});
+  const createRspackProxy = (scope) => {
+    const proxy = httpProxy.createProxyServer({});
+    const recentErrors = new Map();
 
-  // Don't let a transient dev-server hiccup (e.g. during a restart) crash the
-  // app process; respond with a 502 / close the socket instead.
-  rspackProxy.on('error', (err, req, resOrSocket) => {
-    if (resOrSocket && typeof resOrSocket.writeHead === 'function') {
-      if (!resOrSocket.headersSent) {
-        resOrSocket.writeHead(502, { 'Content-Type': 'text/plain' });
+    // Log the first failure immediately, then summarize repeats after 5s.
+    // Group by error code within this proxy's scope/target, not request URL:
+    // a dev-server restart can fail many different assets and HMR reconnects.
+    const logProxyError = (err, req) => {
+      const error = err.code || err.message;
+      const previous = recentErrors.get(error);
+      if (previous) {
+        previous.repeats++;
+        return;
       }
-      resOrSocket.end('Rspack dev server proxy error.');
-    } else if (resOrSocket && typeof resOrSocket.destroy === 'function') {
-      resOrSocket.destroy();
-    }
-  });
+
+      console.error(
+        `[rspack-proxy:${scope}] upstream error ${error} for ${req.method} ${req.url} -> ${target}`
+      );
+
+      const entry = { repeats: 0 };
+      recentErrors.set(error, entry);
+      setTimeout(() => {
+        recentErrors.delete(error);
+        if (entry.repeats > 0) {
+          console.error(
+            `[rspack-proxy:${scope}] upstream error ${error}: suppressed ${entry.repeats} additional ${entry.repeats === 1 ? 'failure' : 'failures'} in the last 5s -> ${target}`
+          );
+        }
+      }, 5000).unref();
+    };
+
+    proxy.on('error', (err, req, resOrSocket) => {
+      logProxyError(err, req);
+
+      // Don't let a transient dev-server hiccup (e.g. during a restart) crash
+      // the app process; respond with a 502 / close the socket instead.
+      if (resOrSocket && typeof resOrSocket.writeHead === 'function') {
+        if (!resOrSocket.headersSent) {
+          resOrSocket.writeHead(502, { 'Content-Type': 'text/plain' });
+        }
+        resOrSocket.end('Rspack dev server proxy error.');
+      } else if (resOrSocket && typeof resOrSocket.destroy === 'function') {
+        resOrSocket.destroy();
+      }
+    });
+
+    return proxy;
+  };
+  const assetsProxy = createRspackProxy('assets');
+  const wsProxy = createRspackProxy('ws');
 
   // Proxy all dev asset requests under the rspack prefix. connect strips the
   // mount prefix from req.url before calling the handler, so this proxies
   // "/__rspack__/foo" -> "<devserver>/foo", matching the previous
-  // http-proxy-middleware behavior.
+  // http-proxy-middleware behavior. This also supports integrations whose
+  // output.publicPath does not include /__rspack__/.
   WebApp.connectHandlers.use('/__rspack__', (req, res) => {
-    rspackProxy.web(req, res, { target, changeOrigin: true });
+    assetsProxy.web(req, res, { target, changeOrigin: true });
   });
   WebApp.connectHandlers.use('/ws', (req, res) => {
-    rspackProxy.web(req, res, { target });
+    wsProxy.web(req, res, { target });
   });
 
   // Proxy HMR WebSocket upgrades. Scope to Rspack's own paths so Meteor's
@@ -82,9 +119,9 @@ if (shouldEnableDevHMRProxy) {
   WebApp.httpServer.on('upgrade', (req, socket, head) => {
     const url = req.url || '';
     if (url.startsWith('/__rspack__')) {
-      rspackProxy.ws(req, socket, head, { target, changeOrigin: true });
+      assetsProxy.ws(req, socket, head, { target, changeOrigin: true });
     } else if (url === '/ws' || url.startsWith('/ws?') || url.startsWith('/ws/')) {
-      rspackProxy.ws(req, socket, head, { target });
+      wsProxy.ws(req, socket, head, { target });
     }
   });
 
@@ -94,7 +131,7 @@ if (shouldEnableDevHMRProxy) {
       return next();
     }
 
-    // 1) match ANY URL whose last segment ends with ".hot-update.js" or ".hot-update.json",
+    // 1) match hot-update scripts, manifests, and the scripts' source maps,
     //    e.g. "/main.ce385971e9f19307.hot-update.js"
     //         "/ui_pages_tasks_tasks-page_jsx.ce385971e9f19307.hot-update.js"
     //         "/foo/bar/baz.1234abcd.hot-update.json"
@@ -108,6 +145,14 @@ if (shouldEnableDevHMRProxy) {
 
     // 2) match "/build-chunks/<anything>"
     const bundlesMatch = req.url.match(RSPACK_CHUNKS_REGEX);
+    const assetsMatch = req.url.match(RSPACK_ASSETS_REGEX);
+    // Explicit architecture builds are written to disk and served by Meteor.
+    // Only the default client's in-memory output belongs to the HMR server.
+    if (/^web\.(?:browser(?:\.legacy)?|cordova)\//.test(
+      (bundlesMatch || assetsMatch)?.[1] || ''
+    )) {
+      return next();
+    }
     if (bundlesMatch) {
       // Redirect "/bundles/foo.js" → "/__rspack__/build-chunks/foo.js"
       const target = `/__rspack__/${rspackChunksContext}/${bundlesMatch[1]}`;
@@ -116,7 +161,6 @@ if (shouldEnableDevHMRProxy) {
     }
 
     // 3) match "/build-assets/<anything>"
-    const assetsMatch = req.url.match(RSPACK_ASSETS_REGEX);
     if (assetsMatch) {
       // Redirect "/build-assets/foo.js" → "/__rspack__/build-assets/foo.js"
       const target = `/__rspack__/${rspackAssetsContext}/${assetsMatch[1]}`;
@@ -136,9 +180,8 @@ if (shouldEnableDevHMRProxy) {
   function enableClientReloadOnServerStart() {
     Meteor.startup(() => {
       const originalCalc = WebApp.calculateClientHashReplaceable;
-      let hasShuffled = false;
-      let cachedHash = {};
-      let prevRealHash = {};
+      const cachedHash = {};
+      const prevRealHash = {};
       WebApp.calculateClientHashReplaceable = function (...args) {
         const arch = args[0];
         const realHash = originalCalc.apply(this, args);
@@ -149,7 +192,6 @@ if (shouldEnableDevHMRProxy) {
         prevRealHash[arch] = realHash;
         if (cachedHash[arch] == null) {
           cachedHash[arch] = shuffleString(realHash);
-          hasShuffled = true;
         }
         return cachedHash[arch];
       };
@@ -161,28 +203,12 @@ if (shouldEnableDevHMRProxy) {
 }
 
 /**
- * Register a single rspack static asset with WebAppInternals.staticFilesByArch
- * @param {string} arch - The architecture to register the asset for
+ * Create request-local metadata for Meteor's static file middleware.
  * @param {string} pathname - The pathname of the asset
  * @param {string} filePath - The absolute path to the asset on disk
  * @returns {Object} The static file info object
  */
-function registerRspackStaticAsset(arch, pathname, filePath) {
-  // Ensure the architecture exists in staticFilesByArch
-  if (!WebAppInternals.staticFilesByArch[arch]) {
-    WebAppInternals.staticFilesByArch[arch] = Object.create(null);
-  }
-
-  // Get the static files object for this architecture
-  const staticFiles = WebAppInternals.staticFilesByArch[arch];
-
-  // Skip if already registered
-  if (staticFiles[pathname]) {
-    // Ensure the entry is marked as cacheable
-    staticFiles[pathname].cacheable = true;
-    return staticFiles[pathname];
-  }
-
+function rspackStaticAssetInfo(pathname, filePath) {
   // Determine file type based on extension
   const type = pathname.endsWith(".js") ? "js" :
     pathname.endsWith(".css") ? "css" :
@@ -192,15 +218,24 @@ function registerRspackStaticAsset(arch, pathname, filePath) {
   const filename = pathname.split("/").pop();
   const hash = filename.split(".")[1];
 
-  // Register the asset
-  staticFiles[pathname] = {
+  return {
     absolutePath: filePath,
     cacheable: true, // Most rspack assets are cacheable
     hash,
     type
   };
+}
 
-  return staticFiles[pathname];
+function rspackAssetNotFound(res) {
+  // send may already have prepared headers before opening the file fails.
+  for (const header of [
+    'ETag', 'Last-Modified', 'Content-Type', 'Content-Length',
+    'Content-Range', 'Accept-Ranges', 'X-SourceMap',
+  ]) {
+    res.removeHeader(header);
+  }
+  res.writeHead(404, { 'Cache-Control': 'no-store' });
+  res.end();
 }
 
 // Store the original staticFilesMiddleware
@@ -208,31 +243,62 @@ const originalStaticFilesMiddleware = WebAppInternals.staticFilesMiddleware;
 
 // Handle rspack assets on-demand to add Meteor's static files headers
 WebAppInternals.staticFilesMiddleware = async function(staticFilesByArch, req, res, next) {
-  const pathname = new URL(req.url, 'http://localhost').pathname;
-
   try {
-    // Check if this is a rspack asset request
-    const chunksMatch = pathname.match(RSPACK_CHUNKS_REGEX);
-    const assetsMatch = pathname.match(RSPACK_ASSETS_REGEX);
-
-    if (chunksMatch || assetsMatch) {
-      const cwd = process.cwd();
-      const architectures = ["web.browser", "web.browser.legacy", "web.cordova"];
-      WebApp.categorizeRequest(req);
-
-      // Try to find the file on disk
-      const context = chunksMatch ? rspackChunksContext : rspackAssetsContext;
-      const filename = (chunksMatch ? chunksMatch[1] : assetsMatch[1]);
-      const filePath = path.join(cwd, context, filename);
-
-      architectures.forEach(archName => {
-        registerRspackStaticAsset(archName, pathname, filePath);
-      });
+    // WebApp passes malformed URI encodings to the next handler. Missing
+    // Rspack assets must not fall through to the application's HTML response.
+    if (req.url.includes('%')) {
+      try {
+        decodeURIComponent(req.url.split('?')[0]);
+      } catch {
+        const { path: requestPath } = WebApp.categorizeRequest(req);
+        if (RSPACK_CHUNKS_REGEX.test(requestPath) || RSPACK_ASSETS_REGEX.test(requestPath)) {
+          return rspackAssetNotFound(res);
+        }
+      }
     }
-  } catch (e) {
-    console.error(`Error handling rspack asset: ${e.message}`);
-  }
 
-  // Call the original middleware
-  return originalStaticFilesMiddleware(staticFilesByArch, req, res, next);
+    return await originalStaticFilesMiddleware(staticFilesByArch, req, res, next,
+      (files, originalPath, requestPath, arch) => {
+        // WebApp has decoded the URL and waited for any client rebuild before
+        // invoking this resolver. Use its architecture-specific path as well.
+        const pathname = decodeURIComponent(requestPath);
+        const chunksMatch = pathname.match(RSPACK_CHUNKS_REGEX);
+        const assetsMatch = pathname.match(RSPACK_ASSETS_REGEX);
+        if (!chunksMatch && !assetsMatch) {
+          return WebAppInternals.getStaticFileInfo(files, originalPath, requestPath, arch);
+        }
+
+        const context = chunksMatch ? rspackChunksContext : rspackAssetsContext;
+        const filename = (chunksMatch || assetsMatch)[1];
+        const root = path.resolve(process.cwd(), context);
+        const filePath = path.join(root, filename);
+        const relativePath = path.relative(root, filePath);
+
+        // Decode before resolving, and keep URL paths inside the selected
+        // output directory. Backslashes are not URL separators.
+        if (filename.includes('\\') || filename.includes('\0') ||
+            relativePath === '..' || relativePath.startsWith(`..${path.sep}`) ||
+            path.isAbsolute(relativePath)) {
+          rspackAssetNotFound(res);
+          return null;
+        }
+
+        // Built bundles have manifest paths into the client program (or inline
+        // content). Development output may instead live directly under cwd.
+        const info = WebAppInternals.getStaticFileInfo(files,
+          path.posix.normalize(originalPath), path.posix.normalize(pathname), arch);
+
+        // Never put request-derived keys in the shared manifests, even for
+        // existing files: URL aliases could otherwise grow them indefinitely.
+        // Let WebApp's send stream check/open the file once and handle misses,
+        // including removal between stat and open, without caching the result.
+        return {
+          ...(info || rspackStaticAssetInfo(pathname, filePath)),
+          cacheable: true,
+          onNotFound: rspackAssetNotFound,
+        };
+      });
+  } catch (error) {
+    next(error);
+  }
 };

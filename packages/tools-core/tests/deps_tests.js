@@ -6,6 +6,7 @@ import {
   detectMissingOrOutdatedDeps,
   ensurePackageDependencies,
   formatInstallCommands,
+  getDependencyInstallContext,
 } from '../lib/deps.js';
 import { hasMeteorAppConfigAutoInstallDeps } from '../lib/meteor.js';
 
@@ -129,6 +130,22 @@ Tinytest.add(
 );
 
 Tinytest.add(
+  'tools-core - formatInstallCommands - supports npm coordinated peer upgrades',
+  function (test) {
+    const cmds = formatInstallCommands({
+      changes: [
+        { name: 'compiler', requiredVersion: '2.0.0', dev: true, status: 'outdated' },
+      ],
+      legacyPeerDeps: true,
+    });
+    test.equal(
+      cmds.devCommand,
+      'meteor npm install --save-dev --legacy-peer-deps compiler@2.0.0',
+    );
+  },
+);
+
+Tinytest.add(
   'tools-core - formatInstallCommands - regular only emits --save command',
   function (test) {
     const cmds = formatInstallCommands({
@@ -182,6 +199,63 @@ Tinytest.add(
     test.equal(cmds.devCommand, 'meteor npm install --save-dev b@2.0.0');
   },
 );
+
+Tinytest.add('tools-core - dependencies - pnpm commands and unsupported managers', (test) => {
+  const changes = [
+    { name: 'compiler', requiredVersion: '2.0.0', dev: true, status: 'outdated' },
+    { name: 'runtime', requiredVersion: '1.0.0', dev: false, status: 'missing' },
+  ];
+  test.equal(formatInstallCommands({ changes, packageManager: 'pnpm', yarn: true }), {
+    devCommand: 'pnpm add --save-dev compiler@2.0.0',
+    regularCommand: 'pnpm add runtime@1.0.0',
+  });
+  test.equal(formatInstallCommands({ changes, packageManager: 'unsupported' }), {});
+});
+
+Tinytest.add('tools-core - dependencies - validates installed local protocols', (test) => {
+  for (const protocol of ['file', 'link', 'portal', 'workspace']) {
+    withTempApp({ dependencies: { foo: `${protocol}:../foo` } }, (cwd) => {
+      const dependency = [{ name: 'foo', version: '2.0.0', dev: false }];
+      const packageDir = path.join(cwd, 'node_modules', 'foo');
+      fs.mkdirSync(packageDir, { recursive: true });
+      for (const [version, status] of [['2.1.0', 'ok'], ['1.0.0', 'outdated']]) {
+        fs.writeFileSync(path.join(packageDir, 'package.json'), JSON.stringify({ version }));
+        test.equal(detectMissingOrOutdatedDeps(dependency, { cwd })[0].status, status);
+      }
+      fs.rmSync(packageDir, { recursive: true });
+      test.equal(detectMissingOrOutdatedDeps(dependency, { cwd })[0].status, 'outdated');
+    });
+  }
+});
+
+Tinytest.addAsync('tools-core - dependencies - manual pnpm and unsupported manager guidance', async (test) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'tools-core-manual-deps-'));
+  const appDir = path.join(root, 'apps', 'app');
+  try {
+    fs.mkdirSync(appDir, { recursive: true });
+    fs.writeFileSync(path.join(root, 'pnpm-workspace.yaml'), 'packages:\n  - apps/*\n');
+    for (const [packageManager, autoInstallDeps] of [['pnpm', false], ['unsupported', true]]) {
+      fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ packageManager: `${packageManager}@1.0.0` }));
+      // The workspace's explicit manager wins over the nested manifest/lockfile.
+      const manifest = JSON.stringify({ packageManager: 'npm@10.0.0', meteor: { autoInstallDeps } });
+      fs.writeFileSync(path.join(appDir, 'package.json'), manifest);
+      test.equal(getDependencyInstallContext(appDir).packageManager, packageManager);
+      const result = await ensurePackageDependencies({
+        packageId: `manual-workspace-${packageManager}`,
+        packageLabel: 'Workspace tool',
+        dependencies: [{ name: 'compiler', version: '2.0.0', dev: true }],
+        cwd: appDir,
+      });
+      test.equal(result.mode, 'manual-warning');
+      test.isFalse(result.installed);
+      test.equal(result.installCommands, packageManager === 'pnpm'
+        ? ['pnpm add --save-dev compiler@2.0.0'] : []);
+      test.equal(fs.readFileSync(path.join(appDir, 'package.json'), 'utf8'), manifest);
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
 
 Tinytest.add(
   'tools-core - detectMissingOrOutdatedDeps - dependency type is required',
@@ -303,3 +377,67 @@ Tinytest.addAsync(
     }
   },
 );
+
+Tinytest.add("tools-core - dependencies - detects pnpm monorepo context", (test) => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "rspack-pnpm-"));
+  const appDir = path.join(workspaceRoot, "apps", "app");
+
+  try {
+    fs.mkdirSync(appDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(workspaceRoot, "package.json"),
+      JSON.stringify({})
+    );
+    fs.writeFileSync(
+      path.join(workspaceRoot, "pnpm-workspace.yaml"),
+      "packages:\n  - apps/*\n"
+    );
+    fs.writeFileSync(
+      path.join(appDir, "package.json"),
+      JSON.stringify({ name: "app" })
+    );
+
+    test.equal(getDependencyInstallContext(appDir), {
+      appDir,
+      isMonorepo: true,
+      packageManager: "pnpm",
+      workspaceRoot,
+    });
+  } finally {
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+Tinytest.add("tools-core - dependencies - detects workspace lockfile managers", (test) => {
+  const cases = [
+    ["yarn.lock", "yarn"],
+    ["package-lock.json", "npm"],
+  ];
+
+  cases.forEach(([lockfile, expectedPackageManager]) => {
+    const workspaceRoot = fs.mkdtempSync(
+      path.join(os.tmpdir(), `rspack-${expectedPackageManager}-`)
+    );
+    const appDir = path.join(workspaceRoot, "apps", "app");
+
+    try {
+      fs.mkdirSync(appDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(workspaceRoot, "package.json"),
+        JSON.stringify({ workspaces: ["apps/*"] })
+      );
+      fs.writeFileSync(path.join(workspaceRoot, lockfile), "");
+      fs.writeFileSync(
+        path.join(appDir, "package.json"),
+        JSON.stringify({ name: "app" })
+      );
+
+      test.equal(
+        getDependencyInstallContext(appDir).packageManager,
+        expectedPackageManager
+      );
+    } finally {
+      fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    }
+  });
+});
