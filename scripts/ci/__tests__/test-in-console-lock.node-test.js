@@ -44,7 +44,7 @@ function fixture(t) {
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   return {
     root,
-    flock: path.join(tmpDir, 'puppeteer-chrome-cache-25.9.0-v2.flock'),
+    flock: path.join(tmpDir, `puppeteer-chrome-cache-25.9.0-v2-${process.getuid()}.flock`),
     legacyLock: path.join(tmpDir, 'puppeteer-chrome-cache-25.9.0.lock'),
     legacyCache: path.join(tmpDir, 'puppeteer-chrome-cache-25.9.0'),
     installStarted,
@@ -71,18 +71,24 @@ function canAcquireLock(lock) {
   ]).status === 0;
 }
 
-test('an old checkout cannot block or lose its cache to a new job', t => {
+test('older checkouts and other runner users keep separate caches', t => {
   const f = fixture(t);
   fs.mkdirSync(f.legacyLock);
   fs.writeFileSync(path.join(f.legacyLock, 'pid'), '999999999\n');
   fs.mkdirSync(f.legacyCache);
   fs.writeFileSync(path.join(f.legacyCache, 'sentinel'), 'old browser');
+  const otherUserCache = path.join(path.dirname(f.flock), `puppeteer-chrome-cache-25.9.0-v2-${process.getuid() + 1}`);
+  fs.mkdirSync(otherUserCache);
+  fs.writeFileSync(path.join(otherUserCache, 'sentinel'), 'other user browser');
+  fs.writeFileSync(`${otherUserCache}.flock`, '');
+  fs.chmodSync(`${otherUserCache}.flock`, 0o400);
   const result = spawnSync('bash', [f.script, 'ddp-server'], {
     cwd: f.root, env: f.env, encoding: 'utf8', timeout: 10000,
   });
   assert.equal(result.status, 0, result.stderr);
   assert.equal(fs.readFileSync(f.installCount, 'utf8'), '1');
   assert.equal(fs.readFileSync(path.join(f.legacyCache, 'sentinel'), 'utf8'), 'old browser');
+  assert.equal(fs.readFileSync(path.join(otherUserCache, 'sentinel'), 'utf8'), 'other user browser');
 });
 
 test('two jobs install Chrome only once', async t => {

@@ -252,7 +252,7 @@ describe('PuppeteerClient Unix browser installation', () => {
       'perl',
       expect.arrayContaining([
         expect.stringContaining('with-browser-lock.pl'),
-        expect.stringContaining('puppeteer-chrome-cache-25.9.0-v2.flock'),
+        expect.stringContaining(`puppeteer-chrome-cache-25.9.0-v2-${process.getuid()}.flock`),
         process.execPath,
         expect.stringContaining('ensure-browser.cjs'),
         '/dev-bundle/lib/node_modules/puppeteer',

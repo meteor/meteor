@@ -24,7 +24,7 @@ if ! ./dev_bundle/bin/node -e "process.exit(require('./dev_bundle/lib/node_modul
 fi
 
 PUPPETEER_CACHE_ROOT="${TMPDIR:-/tmp}"
-export PUPPETEER_CACHE_DIR="${PUPPETEER_CACHE_ROOT%/}/puppeteer-chrome-cache-25.9.0-v2"
+export PUPPETEER_CACHE_DIR="${PUPPETEER_CACHE_ROOT%/}/puppeteer-chrome-cache-25.9.0-v2-$(id -u)"
 export PUPPETEER_SKIP_CHROME_HEADLESS_SHELL_DOWNLOAD=true
 
 # The installer inherits the lock descriptor, so cancelled jobs cannot

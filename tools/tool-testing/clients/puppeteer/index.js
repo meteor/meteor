@@ -10,9 +10,11 @@ import { getDevBundle, pathJoin, statOrNull } from '../../../fs/files';
 const NPM_DEPENDENCIES = {
   puppeteer: '25.9.0'
 };
-// A separate cache keeps jobs from older checkouts, which use a directory
-// lock, from extracting into the same location during the rollout.
-const PUPPETEER_CACHE_DIR = join(tmpdir(), 'puppeteer-chrome-cache-25.9.0-v2');
+// Isolate older directory-lock jobs and users from different runner services.
+const PUPPETEER_CACHE_DIR = join(
+  tmpdir(),
+  `puppeteer-chrome-cache-25.9.0-v2-${process.getuid ? process.getuid() : 'windows'}`
+);
 const PUPPETEER_CACHE_LOCK_DIR = `${PUPPETEER_CACHE_DIR}.lock`;
 const PUPPETEER_CACHE_FLOCK_FILE = `${PUPPETEER_CACHE_DIR}.flock`;
 const BROWSER_CHECK_TIMEOUT_MS = 30000;
