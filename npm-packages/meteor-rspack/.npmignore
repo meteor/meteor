@@ -1,0 +1,2 @@
+# Unit tests are run from the repository; they are not part of the package.
+*.test.js
