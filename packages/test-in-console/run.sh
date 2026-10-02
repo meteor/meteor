@@ -30,6 +30,18 @@ export PUPPETEER_SKIP_CHROME_HEADLESS_SHELL_DOWNLOAD=true
 PUPPETEER_INSTALL_LOCK="${PUPPETEER_CACHE_DIR}.lock"
 PUPPETEER_LOCK_ACQUIRED=false
 PUPPETEER_LOCK_HEARTBEAT_PID=""
+PUPPETEER_LOCK_OWNER_PID=$$
+
+release_puppeteer_lock() {
+  local lock_pid
+  if [ -f "$PUPPETEER_INSTALL_LOCK/pid" ]; then
+    read -r lock_pid < "$PUPPETEER_INSTALL_LOCK/pid" || true
+    if [ "$lock_pid" = "$PUPPETEER_LOCK_OWNER_PID" ]; then
+      rm -f "$PUPPETEER_INSTALL_LOCK/pid"
+      rmdir "$PUPPETEER_INSTALL_LOCK" 2>/dev/null || true
+    fi
+  fi
+}
 
 cleanup_puppeteer_lock() {
   if [ "$PUPPETEER_LOCK_ACQUIRED" = true ]; then
@@ -37,8 +49,7 @@ cleanup_puppeteer_lock() {
       kill "$PUPPETEER_LOCK_HEARTBEAT_PID" 2>/dev/null || true
       wait "$PUPPETEER_LOCK_HEARTBEAT_PID" 2>/dev/null || true
     fi
-    rm -f "$PUPPETEER_INSTALL_LOCK/pid"
-    rmdir "$PUPPETEER_INSTALL_LOCK" 2>/dev/null || true
+    release_puppeteer_lock
   fi
 }
 
@@ -51,8 +62,19 @@ trap 'exit 1' INT TERM
 for ((attempt = 0; attempt < 600; attempt++)); do
   if mkdir "$PUPPETEER_INSTALL_LOCK" 2>/dev/null; then
     PUPPETEER_LOCK_ACQUIRED=true
-    printf '%s\n' "$$" > "$PUPPETEER_INSTALL_LOCK/pid"
+    printf '%s\n' "$PUPPETEER_LOCK_OWNER_PID" > "$PUPPETEER_INSTALL_LOCK/pid"
     break
+  fi
+
+  # A cancelled job can leave its heartbeat running, so a recent mtime alone
+  # does not prove that the installer still owns the lock.
+  if [ -f "$PUPPETEER_INSTALL_LOCK/pid" ]; then
+    read -r lock_pid < "$PUPPETEER_INSTALL_LOCK/pid" || true
+    if [[ "$lock_pid" =~ ^[0-9]+$ ]] && ! kill -0 "$lock_pid" 2>/dev/null; then
+      rm -f "$PUPPETEER_INSTALL_LOCK/pid"
+      rmdir "$PUPPETEER_INSTALL_LOCK" 2>/dev/null || true
+      continue
+    fi
   fi
 
   if ./dev_bundle/bin/node -e '
@@ -75,6 +97,10 @@ fi
 
 (
   while [ -d "$PUPPETEER_INSTALL_LOCK" ]; do
+    if ! kill -0 "$PUPPETEER_LOCK_OWNER_PID" 2>/dev/null; then
+      release_puppeteer_lock
+      break
+    fi
     touch "$PUPPETEER_INSTALL_LOCK"
     sleep 30
   done

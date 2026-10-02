@@ -53,6 +53,9 @@ jobs:
       - name: Install npm dependencies
         run: npm install
 
+      - name: Test Puppeteer installation lock
+        run: node --test scripts/ci/__tests__/test-in-console-lock.node-test.js
+
       - name: Run DDP server tests (${{ matrix.transport }})
         run: bash scripts/ci/run-ddp-transport-tests.sh "ddp-server"
 
