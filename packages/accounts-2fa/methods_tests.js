@@ -1,6 +1,7 @@
 import { Accounts } from 'meteor/accounts-base';
 import * as OTPAuth from 'otpauth';
 import { Random } from 'meteor/random';
+import crypto from 'crypto';
 
 const findUserById = id => Meteor.users.findOneAsync(id);
 
@@ -16,7 +17,13 @@ const createUser = async (extra = {}) =>
 const restorePolicy = () => {
   delete Accounts._options.require2fa;
   Accounts.configure2fa({
-    email: { enabled: false, expirationMs: 10 * 60 * 1000, maxAttempts: 5, resendCooldownMs: 60 * 1000 },
+    email: {
+      enabled: false,
+      expirationMs: 10 * 60 * 1000,
+      maxAttempts: 5,
+      resendCooldownMs: 60 * 1000,
+      hashSecret: null,
+    },
   });
   Accounts._2faTestState = {};
 };
@@ -251,6 +258,32 @@ Tinytest.addAsync('account - 2fa - an old client code matches TOTP, then a pendi
     });
     test.isUndefined(withoutMethod);
     test.equal(emailCode.length, 6);
+  } finally {
+    restorePolicy();
+    await Accounts.users.removeAsync(userId);
+  }
+});
+
+Tinytest.addAsync('account - 2fa - email hashSecret changes the stored hash', async test => {
+  const userId = await createUser();
+  try {
+    Accounts.configure2fa({ email: { enabled: true, hashSecret: 'server-secret' } });
+    await Accounts._enforce2faOnLogin({
+      user: await findUserById(userId),
+      context: { loginMethod: 'password' },
+    });
+    const code = Accounts._2faTestState.lastEmailCode;
+    const stored = (await findUserById(userId)).services.twoFactorAuthentication.emailCode.hash;
+    const plain = crypto.createHash('sha256').update(`${userId}:${code}`).digest('hex');
+    test.notEqual(stored, plain);
+
+    const verified = await Accounts._enforce2faOnLogin({
+      user: await findUserById(userId),
+      code,
+      method: 'email',
+      context: { loginMethod: 'password' },
+    });
+    test.isUndefined(verified);
   } finally {
     restorePolicy();
     await Accounts.users.removeAsync(userId);

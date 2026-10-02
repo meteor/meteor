@@ -14,6 +14,7 @@ const DEFAULT_EMAIL_CONFIG = {
 };
 
 let emailConfig = { ...DEFAULT_EMAIL_CONFIG };
+let warnedMissingHashSecret = false;
 
 const defaultTemplate = {
   subject() {
@@ -31,6 +32,20 @@ const defaultTemplate = {
  */
 Accounts._configure2faEmail = options => {
   emailConfig = { ...emailConfig, ...options };
+  if (!emailConfig.hashSecret) {
+    emailConfig.hashSecret = undefined;
+  }
+  if (
+    emailConfig.enabled === true &&
+    !emailConfig.hashSecret &&
+    !warnedMissingHashSecret &&
+    !Meteor.isPackageTest
+  ) {
+    warnedMissingHashSecret = true;
+    console.warn(
+      'accounts-2fa: email codes are hashed without a server secret. Pass email.hashSecret to Accounts.configure2fa.'
+    );
+  }
 };
 
 Accounts._is2faEmailEnabled = () => emailConfig.enabled === true;
@@ -49,8 +64,13 @@ const usableEmail = user => {
 Accounts._2faEmailAvailable = user =>
   emailConfig.enabled === true && !!usableEmail(user);
 
-const hashCode = (userId, code) =>
-  crypto.createHash('sha256').update(`${userId}:${code}`).digest('hex');
+const hashCode = (userId, code) => {
+  const payload = `${userId}:${code}`;
+  if (emailConfig.hashSecret) {
+    return crypto.createHmac('sha256', emailConfig.hashSecret).update(payload).digest('hex');
+  }
+  return crypto.createHash('sha256').update(payload).digest('hex');
+};
 
 const randomCode = () => {
   const length = emailConfig.codeLength;

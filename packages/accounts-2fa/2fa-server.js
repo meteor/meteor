@@ -71,6 +71,7 @@ const generateActivationData = ({ issuer, label }) => {
  * @param {Number} [options.email.expirationMs=600000]
  * @param {Number} [options.email.maxAttempts=5]
  * @param {Number} [options.email.resendCooldownMs=60000]
+ * @param {String} [options.email.hashSecret] Server secret for the email-code HMAC. Without it, codes are hashed with SHA-256 and a warning is logged.
  */
 Accounts.configure2fa = options => {
   check(options, {
@@ -82,6 +83,7 @@ Accounts.configure2fa = options => {
       resendCooldownMs: Match.Optional(Match.Integer),
       requireVerified: Match.Optional(Boolean),
       offerToOtpUsers: Match.Optional(Boolean),
+      hashSecret: Match.Optional(Match.OneOf(String, null)),
     }),
   });
 

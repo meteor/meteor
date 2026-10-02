@@ -104,7 +104,10 @@ The package keeps a list of factors. Today those are `otp` (authenticator app) a
 
 ```js
 Accounts.configure2fa({
-  email: { enabled: true },
+  email: {
+    enabled: true,
+    hashSecret: Meteor.settings.private?.twoFactor?.hashSecret,
+  },
 });
 ```
 
@@ -123,7 +126,7 @@ Meteor.loginWithPasswordAnd2faCode(email, password, code, 'email', callback);
 // then a pending email code. Existing clients keep working.
 ```
 
-The email code is 6 digits, expires after 10 minutes, accepts 5 attempts, and can be resent after 60 seconds. It is stored as a hash and deleted once it is used. Only a verified email address is used, unless `email.requireVerified` is set to `false`.
+The email code is 6 digits, expires after 10 minutes, accepts 5 attempts, and can be resent after 60 seconds. It is stored as a hash and deleted once it is used. Pass `email.hashSecret` (from the private part of `Meteor.settings`, never `public`) so the hash is an HMAC-SHA256. Without it the package keeps a plain SHA-256 and logs a warning. Only a verified email address is used, unless `email.requireVerified` is set to `false`.
 
 Customize the message with `Accounts.emailTemplates.twoFactorCode` (`subject` and `text` or `html`). The code is `extra.code`. In development the code is also printed on the server.
 
