@@ -3,19 +3,34 @@
  * @description Constants and global state keys for Rspack plugin
  */
 
-export const DEFAULT_RSPACK_VERSION = '1.7.1';
+import path from 'path';
 
-export const DEFAULT_METEOR_RSPACK_VERSION = '1.0.1';
+/* Minimum accepted and auto-install version for `@rspack/core` and `@rspack/cli`. */
+export const DEFAULT_RSPACK_VERSION = '2.2.7';
 
-export const DEFAULT_METEOR_RSPACK_REACT_HMR_VERSION = '1.4.3';
+/* Minimum accepted and auto-install version for `@rspack/dev-server`. */
+export const DEFAULT_RSPACK_DEV_SERVER_VERSION = '2.2.1';
 
-export const DEFAULT_METEOR_RSPACK_REACT_REFRESH_VERSION = '0.17.0';
+/* Published `@meteorjs/rspack` minimum and auto-install version. */
+export const DEFAULT_METEOR_RSPACK_VERSION = '3.0.0-beta.3';
 
-export const DEFAULT_METEOR_RSPACK_SWC_LOADER_VERSION = '0.2.6';
+/* Minimum accepted and auto-install version for `@rspack/plugin-react-refresh`. */
+export const DEFAULT_METEOR_RSPACK_REACT_HMR_VERSION = '2.0.2';
 
-export const DEFAULT_METEOR_RSPACK_SWC_HELPERS_VERSION = '0.5.17';
+/* Minimum accepted and auto-install version for the `react-refresh` HMR runtime. */
+export const DEFAULT_METEOR_RSPACK_REACT_REFRESH_VERSION = '0.19.0';
 
-export const DEFAULT_RSDOCTOR_RSPACK_PLUGIN_VERSION = '1.2.3';
+/* Reserved `swc-loader` version; currently unused by `dependencies.js`. */
+export const DEFAULT_METEOR_RSPACK_SWC_LOADER_VERSION = '0.2.7';
+
+/* Minimum accepted and auto-install version for the `@swc/helpers` runtime. */
+export const DEFAULT_METEOR_RSPACK_SWC_HELPERS_VERSION = '0.5.23';
+
+/* Minimum accepted and auto-install version for `@swc/core`. */
+export const DEFAULT_METEOR_RSPACK_SWC_CORE_VERSION = '1.16.2';
+
+/* Minimum accepted and auto-install version for `@rsdoctor/rspack-plugin`. */
+export const DEFAULT_RSDOCTOR_RSPACK_PLUGIN_VERSION = '1.6.4';
 
 /**
  * Global state keys used for storing and retrieving state across the application
@@ -32,6 +47,7 @@ export const DEFAULT_RSDOCTOR_RSPACK_PLUGIN_VERSION = '1.2.3';
 export const GLOBAL_STATE_KEYS = {
   CLIENT_PROCESS: 'rspack.clientProcess',
   SERVER_PROCESS: 'rspack.serverProcess',
+  BUILD_PROCESSES: 'rspack.buildProcesses',
   RSPACK_INSTALLATION_CHECKED: 'rspack.rspackInstallationChecked',
   RSPACK_REACT_INSTALLATION_CHECKED: 'rspack.rspackReactInstallationChecked',
   RSPACK_DOCTOR_INSTALLATION_CHECKED: 'rspack.rspackDoctorInstallationChecked',
@@ -46,6 +62,10 @@ export const GLOBAL_STATE_KEYS = {
 
 const meteorConfig = typeof Plugin !== 'undefined' ? Plugin?.getMeteorConfig() : null;
 
+const meteorLocalDirName = process.env.METEOR_LOCAL_DIR
+  ? path.basename(process.env.METEOR_LOCAL_DIR.replace(/\\/g, '/'))
+  : '';
+
 /**
  * Directory name for Rspack build context
  * Can be overridden with RSPACK_BUILD_CONTEXT environment variable
@@ -54,7 +74,7 @@ const meteorConfig = typeof Plugin !== 'undefined' ? Plugin?.getMeteorConfig() :
 export const RSPACK_BUILD_CONTEXT =
   meteorConfig?.buildContext ||
   process.env.RSPACK_BUILD_CONTEXT ||
-  '_build';
+  `_build${(meteorLocalDirName && `-${meteorLocalDirName}`) || ''}`;
 
 process.env.RSPACK_BUILD_CONTEXT = RSPACK_BUILD_CONTEXT;
 
@@ -66,7 +86,7 @@ process.env.RSPACK_BUILD_CONTEXT = RSPACK_BUILD_CONTEXT;
 export const RSPACK_ASSETS_CONTEXT =
   meteorConfig?.assetsContext ||
   process.env.RSPACK_ASSETS_CONTEXT ||
-  'build-assets';
+  `build-assets${(meteorLocalDirName && `-${meteorLocalDirName}`) || ''}`;
 
 process.env.RSPACK_ASSETS_CONTEXT = RSPACK_ASSETS_CONTEXT;
 
@@ -78,7 +98,7 @@ process.env.RSPACK_ASSETS_CONTEXT = RSPACK_ASSETS_CONTEXT;
 export const RSPACK_CHUNKS_CONTEXT =
   meteorConfig?.chunksContext ||
   process.env.RSPACK_CHUNKS_CONTEXT ||
-  'build-chunks';
+  `build-chunks${(meteorLocalDirName && `-${meteorLocalDirName}`) || ''}`;
 
 process.env.RSPACK_CHUNKS_CONTEXT = RSPACK_CHUNKS_CONTEXT;
 
@@ -87,6 +107,45 @@ process.env.RSPACK_CHUNKS_CONTEXT = RSPACK_CHUNKS_CONTEXT;
  * @type {string}
  */
 export const RSPACK_DOCTOR_CONTEXT = '.rsdoctor';
+
+/**
+ * Gets the mode suffix used to isolate build artifacts produced by different
+ * Meteor commands running concurrently on the same app directory (e.g. a dev
+ * server in one terminal and `meteor test` in another). This is a different
+ * isolation axis than the METEOR_LOCAL_DIR suffix baked into the base
+ * context names above: that one separates local directories, this one
+ * separates modes within a single local directory. The two compose.
+ * @param {boolean} isTest - Whether in test mode
+ * @param {boolean} isTestFullApp - Whether in --full-app test mode
+ * @returns {string} '' (run/build), '-test' (test) or '-app-test' (full-app)
+ */
+function getModeSuffix(isTest, isTestFullApp) {
+  if (isTest && isTestFullApp) return '-app-test';
+  if (isTest) return '-test';
+  return '';
+}
+
+/**
+ * Gets the mode-aware Rspack chunks context directory name
+ * (e.g. 'build-chunks', 'build-chunks-test', 'build-chunks-app-test')
+ * @param {boolean} isTest - Whether in test mode
+ * @param {boolean} isTestFullApp - Whether in --full-app test mode
+ * @returns {string} Context directory name
+ */
+export function getRspackChunksContext(isTest = false, isTestFullApp = false, arch) {
+  return `${RSPACK_CHUNKS_CONTEXT}${getModeSuffix(isTest, isTestFullApp)}${arch ? `/${arch}` : ''}`;
+}
+
+/**
+ * Gets the mode-aware Rspack assets context directory name
+ * (e.g. 'build-assets', 'build-assets-test', 'build-assets-app-test')
+ * @param {boolean} isTest - Whether in test mode
+ * @param {boolean} isTestFullApp - Whether in --full-app test mode
+ * @returns {string} Context directory name
+ */
+export function getRspackAssetsContext(isTest = false, isTestFullApp = false) {
+  return `${RSPACK_ASSETS_CONTEXT}${getModeSuffix(isTest, isTestFullApp)}`;
+}
 
 /**
  * Regex pattern for hot update files

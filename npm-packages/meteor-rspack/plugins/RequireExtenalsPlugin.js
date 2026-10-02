@@ -10,6 +10,22 @@
 const fs = require('fs');
 const path = require('path');
 
+// Normalize a path to always use forward slashes (POSIX style).
+// Module identifiers in bundled JS must use '/' regardless of OS.
+const toPosix = (p) => p.replace(/\\/g, '/');
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const buildStandaloneRequireRegex = (pkg) =>
+  new RegExp(`^\\s*require\\('${escapeRegExp(pkg)}'\\);?.*(\\r?\\n)?`, 'gm');
+const buildStandaloneImportRegex = (pkg) =>
+  new RegExp(
+    `^[\\t ]*import[\\t ]+'${escapeRegExp(pkg)}';?[^\\r\\n]*(?:\\r?\\n|$)`,
+    'gm'
+  );
+const MANAGED_IMPORT_BLOCK_REGEX =
+  /^\/\/\s*\(function\s+(?:eagerExternalImports\d+|lastImports(?:\d+)?)\s*\(\)\s*\{\s*\r?\n[\s\S]*?^\/\/\s*\}\)\s*(?:\r?\n|$)/gm;
+const STANDALONE_REQUIRE_REGEX = /^\s*require\('([^']+)'\)/gm;
+const STANDALONE_IMPORT_REGEX = /^\s*import\s+'([^']+)'/gm;
+
 class RequireExternalsPlugin {
   constructor({
     filePath,
@@ -46,11 +62,31 @@ class RequireExternalsPlugin {
     // Prepare paths
     this.filePath = path.resolve(process.cwd(), filePath);
     this.backRoot = '../'.repeat(
-      filePath.replace(/^\.?\/+/, '').split('/').length - 1
+      filePath.replace(/^\.?[/\\]+/, '').split(/[/\\]/).length - 1
     );
 
     // Initialize funcCount based on existing helpers in the file
     this._funcCount = this._computeNextFuncCount();
+  }
+
+  // The *-meteor.js entry's parent dir can transiently vanish during an HMR rebuild
+  // (a server-restart reinitialises the build paths) — a bare writeFileSync then throws
+  // ENOENT and stalls the dev build ("Could not resolve meteor.mainModule …"). Ensure the
+  // dir exists before writing, and never let a transient race crash the build; the next
+  // rebuild regenerates the file.
+  _safeWrite(data) {
+    try {
+      fs.mkdirSync(path.dirname(this.filePath), { recursive: true });
+      fs.writeFileSync(this.filePath, data, 'utf-8');
+    } catch (err) {
+      if (err && err.code === 'ENOENT') {
+        // Transient: the build dir was reinitialised mid-rebuild. Don't crash — the next
+        // compile regenerates the file. Warn so the skip is visible when diagnosing HMR.
+        console.warn(`[meteor-rspack] skipped a transient ENOENT writing ${this.filePath}; the next rebuild will regenerate it`);
+        return;
+      }
+      throw err;
+    }
   }
 
   // Helper method to check if a module name matches the externals or default prefix
@@ -96,14 +132,16 @@ class RequireExternalsPlugin {
       pkg &&
       (path.isAbsolute(pkg) ||
         pkg.startsWith('./') ||
+        pkg.startsWith('.\\') ||
         pkg.startsWith('../') ||
+        pkg.startsWith('..\\') ||
         !!depInfo.ext)
     ) {
       const module = this.externalsMeta.get(pkg);
       if (module) {
-        return `${this.backRoot}${module.relativeRequest}`;
+        return `${this.backRoot}${toPosix(module.relativeRequest)}`;
       }
-      return `${this.backRoot}${name}`;
+      return `${this.backRoot}${toPosix(name)}`;
     }
 
     return pkg;
@@ -132,7 +170,7 @@ class RequireExternalsPlugin {
               this.externalsMeta.set(externalRequest, {
                 originalRequest: request,
                 externalRequest,
-                relativeRequest: path.join(relContext, request),
+                relativeRequest: toPosix(path.join(relContext, request)),
               });
 
               // tell Rspack "don't bundle this, import it at runtime"
@@ -146,6 +184,13 @@ class RequireExternalsPlugin {
     }
 
     compiler.hooks.done.tap({ name: this.pluginName, stage: -10 }, (stats) => {
+      // Preserve the last known-good Meteor runtime entry when compilation
+      // fails. Rewriting externals from incomplete stats would make Meteor
+      // restart against a broken Rspack bundle.
+      if (stats.hasErrors()) {
+        return;
+      }
+
       // 1) Ensure globalThis.module / exports block is present if enabled
       if (this._enableGlobalPolyfill) {
         this._ensureGlobalThisModule();
@@ -154,8 +199,24 @@ class RequireExternalsPlugin {
       // 2) Re-load existing requires from disk on every run
       const existing = this._readExistingRequires();
 
-      // 2a) Compute the *current* externals in this build
-      const info = stats.toJson({ modules: true });
+      // 2a) Compute the *current* externals in this build.
+      // Only module names are needed, so start from `all: false` instead of
+      // serializing the whole stats object (chunks, assets, reasons, ...)
+      // on every compilation — a fixed cost per rebuild that grows with app
+      // size. `cachedModules: true` keeps unchanged modules in the list on
+      // incremental rebuilds, so their requires are not wrongly removed.
+      // `orphanModules: true` is required in production: module
+      // concatenation absorbs the externals' importers, marking the
+      // external modules themselves as orphans, and without this flag
+      // they vanish from the list entirely — which stripped every
+      // mirrored require (meteor/*, Blaze .html) from the meteor entry.
+      // See meteor/meteor#14568.
+      const info = stats.toJson({
+        all: false,
+        modules: true,
+        cachedModules: true,
+        orphanModules: true,
+      });
       const current = new Set();
       for (const m of info.modules) {
         const matchInfo = this._isExternalModule(m.name);
@@ -167,15 +228,22 @@ class RequireExternalsPlugin {
         }
       }
 
-      // 2b) Remove any requires that are no longer in `current`
+      // 2b) Remove any dependencies that are no longer in `current`
       const toRemove = [...existing].filter(p => !current.has(p));
       if (toRemove.length) {
         let content = fs.readFileSync(this.filePath, 'utf-8');
 
-        // Strip stale require(...) lines
+        // Strip stale requires and imports generated by this plugin. Other
+        // standalone imports link Meteor entry and Rspack output files and
+        // must remain intact.
         for (const pkg of toRemove) {
-          const re = new RegExp(`^.*require\\('${pkg}'\\);?.*(\\r?\\n)?`, 'gm');
-          content = content.replace(re, '');
+          const requireRe = buildStandaloneRequireRegex(pkg);
+          const importRe = buildStandaloneImportRegex(pkg);
+          content = content.replace(requireRe, '');
+          content = content.replace(
+            MANAGED_IMPORT_BLOCK_REGEX,
+            (block) => block.replace(importRe, '')
+          );
         }
 
         // Strip out any now-empty helper functions:
@@ -195,16 +263,16 @@ class RequireExternalsPlugin {
         content = content.replace(emptyLastFnRe, '');
 
         // Write the cleaned file back
-        fs.writeFileSync(this.filePath, content, 'utf-8');
+        this._safeWrite(content);
 
         // Re-populate `existing` so the add-diff is accurate
         existing.clear();
         // Check for require statements
-        for (const match of content.matchAll(/require\('([^']+)'\)/g)) {
+        for (const match of content.matchAll(STANDALONE_REQUIRE_REGEX)) {
           existing.add(match[1]);
         }
         // Also check for import statements (used in the new format)
-        for (const match of content.matchAll(/import\s+'([^']+)'/g)) {
+        for (const match of content.matchAll(STANDALONE_IMPORT_REGEX)) {
           existing.add(match[1]);
         }
       }
@@ -324,9 +392,9 @@ class RequireExternalsPlugin {
         if (existingLastImports.length > 0) {
           const body = existingLastImports.join('\n');
           const fnCode = `\n// (function lastImports() {\n${body}\n// })\n`;
-          fs.writeFileSync(this.filePath, content + fnCode);
+          this._safeWrite(content + fnCode);
         } else {
-          fs.writeFileSync(this.filePath, content);
+          this._safeWrite(content);
         }
       }
       // If lastImports don't exist, add them if needed
@@ -395,7 +463,7 @@ class RequireExternalsPlugin {
             `// (function lastImports() {\n${newBody}// })`
           );
 
-          fs.writeFileSync(this.filePath, updatedContent);
+          this._safeWrite(updatedContent);
         }
       }
     });
@@ -462,29 +530,32 @@ class RequireExternalsPlugin {
       content = fs.readFileSync(this.filePath, 'utf-8');
       if (!content.includes(`typeof globalThis.module === 'undefined'`)) {
         // Prepend so it lives at the very top
-        fs.writeFileSync(this.filePath, content + '\n' + block, 'utf-8');
+        this._safeWrite(block + '\n' + content);
       }
     } else {
       // File doesn’t exist yet: create with just the block
-      fs.writeFileSync(this.filePath, block, 'utf-8');
+      this._safeWrite(block);
     }
   }
 
   _readExistingRequires() {
     const existing = new Set();
+    // Generated Rspack bridge imports are not managed externals. Relative
+    // imports such as Blaze HTML files still belong to this plugin.
+    const isRspackBridgeImport = (modulePath) =>
+      typeof modulePath === 'string' &&
+      /(?:^|[/\\])[^/\\]*-rspack\.(?:js|cjs)$/.test(modulePath);
     try {
       const content = fs.readFileSync(this.filePath, 'utf-8');
       // Check for require statements
-      const requireRegex = /require\('([^']+)'\)/g;
       let match;
-      while ((match = requireRegex.exec(content)) !== null) {
-        existing.add(match[1]);
+      while ((match = STANDALONE_REQUIRE_REGEX.exec(content)) !== null) {
+        if (!isRspackBridgeImport(match[1])) existing.add(match[1]);
       }
 
       // Also check for import statements (used in the new format)
-      const importRegex = /import\s+'([^']+)'/g;
-      while ((match = importRegex.exec(content)) !== null) {
-        existing.add(match[1]);
+      while ((match = STANDALONE_IMPORT_REGEX.exec(content)) !== null) {
+        if (!isRspackBridgeImport(match[1])) existing.add(match[1]);
       }
     } catch {
       // ignore if file missing or unreadable

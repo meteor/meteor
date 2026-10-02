@@ -130,7 +130,16 @@ export default class Matcher {
   }
 
   matchEmpty() {
-    if (this.buf.length > 0) {
+    if (this.buf.length === 0) return;
+
+    // Strip Node.js runtime warning lines before checking for unexpected output.
+    // These originate from third-party packages (e.g. http-proxy using the
+    // deprecated url.parse() API) and should not cause test failures.
+    // Pattern covers: "(node:NNNN) Warning: ...\n(Use `node --trace-warnings ...`)\n"
+    const nodeWarningRe = /\(node:\d+\) \w+: [^\n]+\n(?:\(Use [^\n]+\)\n)?/g;
+    const stripped = this.buf.replace(nodeWarningRe, '');
+
+    if (stripped.length > 0) {
       Console.info("Extra junk is :", this.buf);
       throw new TestFailure('junk-at-end', { run: this.run });
     }

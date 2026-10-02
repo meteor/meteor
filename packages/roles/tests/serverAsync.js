@@ -1518,6 +1518,22 @@ Tinytest.addAsync("roles -can get all users in role", async function (test) {
   sameMembers(test, actual, expected);
 });
 
+Tinytest.addAsync("roles - can get all userIds in role", async function (test) {
+  await clearData();
+
+  await Roles.createRoleAsync('admin');
+  await Roles.createRoleAsync('user');
+  await Roles.createRoleAsync('editor');
+
+  const ids = ['foo', 'bar', 'baz'];
+  await Roles.addUsersToRolesAsync([ids[0], ids[1]], ['admin', 'user']);
+  await Roles.addUsersToRolesAsync([ids[1], ids[2]], ['editor']);
+
+  const expected = [ids[0], ids[1]];
+  const userIds = await Roles.getUserIdsInRoleAsync('admin');
+  sameMembers(test, userIds, expected);
+});
+
 Tinytest.addAsync(
   "roles -can get all users in role by scope",
   async function (test) {
@@ -1595,6 +1611,38 @@ Tinytest.addAsync(
     test.isFalse(hasProp(results[0], "username"));
   }
 );
+
+
+Tinytest.addAsync(
+  "roles -can get all users in role by scope and passes through mongo query arguments only to the users collection when included in the options",
+  async function (test) {
+    await clearData();
+    await Roles.createRoleAsync("admin");
+    await Roles.createRoleAsync("user");
+
+    await Roles.addUsersToRolesAsync(
+      [users.eve, users.joe],
+      ["admin", "user"],
+      "scope1"
+    );
+    await Roles.addUsersToRolesAsync(
+      [users.bob, users.joe],
+      ["admin"],
+      "scope2"
+    );
+
+    const cursor = await Roles.getUsersInRoleAsync("admin", { scope: "scope1", queryOptions: {
+      fields: { _id: 1, username: 1 },
+      limit: 1,
+    }});
+    const results = await cursor.fetchAsync();
+
+    test.equal(1, results.length);
+    test.isTrue(hasProp(results[0], "_id"));
+    test.isTrue(hasProp(results[0], "username"));
+  }
+);
+
 
 Tinytest.addAsync(
   "roles -can use Roles.GLOBAL_SCOPE to assign blanket roles",

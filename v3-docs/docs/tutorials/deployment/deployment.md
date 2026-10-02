@@ -109,7 +109,7 @@ In order to deploy to Galaxy, you'll need to sign up for an account and separate
 Once you've done that, deployment is straightforward. You need to add some environment variables to your settings file to point it at your MongoDB, and you can deploy with:
 
 ```bash
-DEPLOY_HOSTNAME=us-east-1.galaxy.meteor.com meteor deploy your-app.com --settings production-settings.json
+DEPLOY_HOSTNAME=us-east-1.galaxy-deploy.meteor.com meteor deploy your-app.com --settings production-settings.json
 ```
 
 You can also log into the Galaxy UI to manage your applications, monitor the number of connections and resource usage, view logs, and change settings.
@@ -132,8 +132,11 @@ To orchestrate your own container-based deployment there are existing base image
 Here's a basic Dockerfile example for a Meteor 3 application:
 
 ```dockerfile
+# Use the version reported by `meteor node -v` for the release you build with.
+ARG NODE_VERSION=26.10.0
+
 # Build stage
-FROM node:20-alpine AS builder
+FROM node:${NODE_VERSION}-alpine AS builder
 
 RUN apk add --no-cache python3 make g++ git
 
@@ -148,7 +151,7 @@ RUN meteor npm install --production
 RUN meteor build --directory /build --server-only
 
 # Production stage
-FROM node:20-alpine
+FROM node:${NODE_VERSION}-alpine
 
 WORKDIR /app
 
@@ -183,7 +186,10 @@ meteor build /path/to/build --architecture os.linux.x86_64
 
 This will provide you with a bundled application `.tar.gz` which you can extract and run without the `meteor` tool. The environment you choose will need the correct version of Node.js and connectivity to a MongoDB server.
 
-To find out which version of Node you should use, run `meteor node -v` in the development environment, or check the `.node_version.txt` file within the bundle. For Meteor 3.x, you'll need Node.js 20.x.
+To find out which version of Node you should use, run `meteor node -v` in the
+development environment, or check the `.node_version.txt` file within the
+bundle. The build and production stages must use that version. Meteor 3.6 uses
+Node.js 26.10.0; earlier Meteor 3 releases use different Node.js versions.
 
 ::: warning
 If you use a mis-matched version of Node when deploying your application, you will encounter errors!
@@ -201,6 +207,19 @@ MONGO_URL=mongodb://localhost:27017/myapp ROOT_URL=http://my-app.com PORT=3000 n
 - `PORT` is the port at which the application is running
 - `MONGO_URL` is a [Mongo connection string URI](https://docs.mongodb.com/manual/reference/connection-string/)
 
+::: warning Don't skip `npm install` on the target machine
+The `(cd programs/server && npm install)` step above is **not optional**. It runs the bundle's
+`npm-rebuild.js` script, which recompiles native (C/C++) addons for the operating system and
+CPU architecture of the machine that will *run* the app. Skipping it — or copying a
+`node_modules` directory built on a different OS/arch — leads to the "invalid ELF header" error
+:::
+
+#### Key rule
+
+Never copy a built `node_modules` (or an entire bundle's `programs/server/node_modules`) between
+machines with different operating systems or CPU architectures. Always let `npm install` rebuild
+native addons on the machine where the app will actually run.
+
 ## MongoDB options
 
 When you deploy your Meteor server, you need a `MONGO_URL` that points to your MongoDB database. You can either use a hosted MongoDB service or set up and run your own MongoDB server. We recommend using a hosted service, as the time saved and peace of mind are usually worth the cost.
@@ -209,6 +228,7 @@ When you deploy your Meteor server, you need a `MONGO_URL` that points to your M
 
 There are a variety of services out there:
 
+- [MongoDB hosted by Galaxy Cloud](https://galaxycloud.app/) - MongoDB hosting provided by Galaxy Cloud
 - [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) - The official MongoDB cloud service
 - [DigitalOcean Managed Databases](https://www.digitalocean.com/products/managed-databases-mongodb)
 - [AWS DocumentDB](https://aws.amazon.com/documentdb/) (MongoDB compatible)
@@ -265,7 +285,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # Match the version reported by `meteor node -v` for your release.
+          node-version: 26.10.0
 
       - name: Install Meteor
         run: curl https://install.meteor.com/ | sh
@@ -276,7 +297,7 @@ jobs:
         run: |
           echo "$METEOR_SESSION_FILE" > meteor-session.json
           METEOR_SESSION_FILE=meteor-session.json \
-          DEPLOY_HOSTNAME=us-east-1.galaxy.meteor.com \
+          DEPLOY_HOSTNAME=us-east-1.galaxy-deploy.meteor.com \
           meteor deploy your-app.com --settings settings.json
 ```
 

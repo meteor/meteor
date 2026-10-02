@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { Collapse } from 'vue-collapsed'
-import { ref } from 'vue'
-import Caret from './Caret.vue'
-import { types } from 'util'
+import { Collapse } from "vue-collapsed";
+import { ref } from "vue";
+import Caret from "./Caret.vue";
+import { types } from "util";
 
 const copyArray = <T>(arr: T[]): T[] => {
-  const newArr: T[] = []
-  for (const item of arr) newArr.push(item)
-  return newArr
-}
+  const newArr: T[] = [];
+  for (const item of arr) newArr.push(item);
+  return newArr;
+};
 const props = defineProps<{
   params: {
     name: string;
@@ -19,29 +19,33 @@ const props = defineProps<{
   from: {
     lineNumber: number;
     filePath: string;
-  }
-  options?: { description: string, name: string, type: { names: string[] }; optional?: boolean }[]
-}>()
-const localArr = copyArray(props.params)
+  };
+  options?: {
+    description: string;
+    name: string;
+    type: { names: string[] };
+    optional?: boolean;
+  }[];
+}>();
+const localArr = copyArray(props.params);
 const hasOptions = ({ params }: typeof props) => {
-  for (const param of params) if (param.name === "options") return true
-}
+  for (const param of params) if (param.name === "options") return true;
+};
 
-const isOptionsTableOpen = ref(false);
+const isOptionsTableOpen = ref(true);
 
 function toggleOptionsTable() {
-  isOptionsTableOpen.value = !isOptionsTableOpen.value
+  isOptionsTableOpen.value = !isOptionsTableOpen.value;
 }
 const showTypes = (types: string[]) => {
-  const typesArr = copyArray(types)
-  if (typesArr.length === 1) return typesArr[0]
+  const typesArr = copyArray(types);
+  if (typesArr.length === 1) return typesArr[0];
 
-  const last = typesArr.pop()
-  return typesArr.join(", ") + " or " + last
-}
+  const last = typesArr.pop();
+  return typesArr.join(", ") + " or " + last;
+};
 
-const sourceCode = `https://github.com/meteor/meteor/blob/devel/packages/${props.from.filePath}#L${props.from.lineNumber}`
-
+const sourceCode = `https://github.com/meteor/meteor/blob/devel/packages/${props.from.filePath}#L${props.from.lineNumber}`;
 </script>
 
 
@@ -51,9 +55,7 @@ const sourceCode = `https://github.com/meteor/meteor/blob/devel/packages/${props
   <div v-if="localArr.length > 0">
     <header>
       <h4>Arguments:</h4>
-      <a :href="sourceCode">
-        Source code
-      </a>
+      <a :href="sourceCode"> Source code </a>
     </header>
     <table>
       <thead>
@@ -71,7 +73,11 @@ const sourceCode = `https://github.com/meteor/meteor/blob/devel/packages/${props
           <template v-if="param.name === 'options'">
             <td>
               <span v-if="param.description" v-html="param.description"></span>
-              <button v-if="(props.options?.length || -1) > 0" type="button" @click="toggleOptionsTable">
+              <button
+                v-if="(props.options?.length || -1) > 0"
+                type="button"
+                @click="toggleOptionsTable"
+              >
                 {{ isOptionsTableOpen ? "Close" : "Open" }} options table
                 <Caret :is-open="isOptionsTableOpen" />
               </button>
@@ -84,8 +90,6 @@ const sourceCode = `https://github.com/meteor/meteor/blob/devel/packages/${props
         </tr>
       </tbody>
     </table>
-
-
     <Collapse :when ="isOptionsTableOpen" class ="options-table" v-show="hasOptions(props) && props.options && props.options?.length>0">
       <h4>Options:</h4>
       <table>
@@ -102,7 +106,7 @@ const sourceCode = `https://github.com/meteor/meteor/blob/devel/packages/${props
             <td>{{ param.name }}</td>
             <td>{{ param.type.names[0] }}</td>
             <td v-html="param.description ?? ``"></td>
-            <td> No </td>
+            <td>No</td>
           </tr>
         </tbody>
       </table>
@@ -120,11 +124,10 @@ table td {
 }
 
 .options-table {
-  --easing-dur: calc(var(--vc-auto-duration) * 1.5) cubic-bezier(0.33, 1, 0.68, 1);
+  --easing-dur: calc(var(--vc-auto-duration) * 1.5)
+    cubic-bezier(0.33, 1, 0.68, 1);
 
-  transition:
-    height var(--easing-dur),
-    background-color var(--easing-dur),
+  transition: height var(--easing-dur), background-color var(--easing-dur),
     border-radius var(--easing-dur);
 }
 

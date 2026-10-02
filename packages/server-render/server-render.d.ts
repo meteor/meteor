@@ -42,6 +42,7 @@ export type CategorizedRequest = Omit<http.IncomingMessage, 'url'> & {
   modern: boolean;
   path: string;
   url: URL;
+  cookies?: Record<string, string>;
 }
 
 export interface ServerSink extends ClientSink {

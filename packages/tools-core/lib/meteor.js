@@ -1,6 +1,13 @@
 const fs = require('fs');
 const path = require('path');
 
+const { logError } = require("./log");
+const { getGlobalState, setGlobalState } = require("./global-state");
+
+// Normalize a path to always use forward slashes (POSIX style).
+// Module identifiers must use '/' regardless of OS.
+const toPosix = (p) => p.replace(/\\/g, '/');
+
 /**
  * Returns the current working directory of the Meteor application.
  * @returns {string} The absolute path to the Meteor application directory.
@@ -11,11 +18,12 @@ export function getMeteorAppDir() {
 
 /**
  * Reads and parses the package.json file of the Meteor application.
+ * @param {string} [cwd] The directory containing the application's package.json file.
  * @returns {Object} The parsed content of the package.json file.
  */
-export function getMeteorAppPackageJson() {
+export function getMeteorAppPackageJson(cwd = getMeteorAppDir()) {
   return JSON.parse(
-    fs.readFileSync(`${getMeteorAppDir()}/package.json`, 'utf-8')
+    fs.readFileSync(path.join(cwd, 'package.json'), 'utf-8')
   );
 }
 
@@ -29,12 +37,45 @@ export function getMeteorAppConfig() {
     : getMeteorAppPackageJson()?.meteor;
 }
 
+const BARE_PORT_PATTERN = /^\d+$/;
+const SCHEME_PATTERN = /^[A-Za-z][A-Za-z0-9+\-.]*:\/\//;
+
 /**
- * Get Meteor's app port
- * @returns {false|*}
+ * Extracts the port from a `--port` value. Mirrors how the CLI parses the
+ * option, which accepts `port`, `[host:]port`, and a full URL, optionally
+ * with a path (`3000`, `localhost:3060`, `[::]:3005`, `http://localhost:3060/`).
+ * @param {string|number|undefined|null} value - The raw `--port`/`PORT` value.
+ * @returns {string|undefined} The port digits, or undefined when the value
+ * carries no port (e.g. a bare host such as `0.0.0.0`).
+ */
+export function parseMeteorAppPort(value) {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  const raw = String(value).trim();
+  if (BARE_PORT_PATTERN.test(raw)) {
+    return raw;
+  }
+
+  try {
+    const url = new URL(SCHEME_PATTERN.test(raw) ? raw : `http://${raw}`);
+    return url.port || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Get Meteor's app port, without any host prefix `--port` may carry.
+ * Callers derive other ports from it arithmetically, so it is always digits only.
+ * @returns {string}
  */
 export function getMeteorAppPort() {
-  return Package?.meteor?.global?.currentCommand?.options?.['port'] || process.env.PORT || '3000';
+  const rawPort =
+    Package?.meteor?.global?.currentCommand?.options?.['port'] ||
+    process.env.PORT;
+  return parseMeteorAppPort(rawPort) || '3000';
 }
 
 /**
@@ -56,10 +97,15 @@ export function isMeteorAppConfigModernVerbose() {
 
 /**
  * Retrieves the auto install deps flag from the app's package.json.
- * @returns {Boolean|*}
+ * @param {Object} [options]
+ * @param {string} [options.cwd] Read configuration from this directory.
+ * @returns {boolean}
  */
-export function hasMeteorAppConfigAutoInstallDeps() {
-  const { autoInstallDeps = true } = getMeteorAppConfig() || {};
+export function hasMeteorAppConfigAutoInstallDeps(options = {}) {
+  const config = options.cwd
+    ? getMeteorAppPackageJson(options.cwd)?.meteor
+    : getMeteorAppConfig();
+  const { autoInstallDeps = true } = config || {};
   return !!autoInstallDeps;
 }
 
@@ -74,11 +120,16 @@ export function hasMeteorAppConfigAutoInstallDeps() {
  */
 export function getMeteorAppEntrypoints() {
   const meteorConfig = getMeteorAppConfig();
+  const testModule = meteorConfig?.testModule;
+  const sharedTestModule = typeof testModule === "string"
+    ? testModule
+    : undefined;
+
   return {
     mainClient: meteorConfig?.mainModule?.client,
     mainServer: meteorConfig?.mainModule?.server,
-    testClient: meteorConfig?.testModule?.client || meteorConfig?.testModule,
-    testServer: meteorConfig?.testModule?.server || meteorConfig?.testModule,
+    testClient: testModule?.client || sharedTestModule,
+    testServer: testModule?.server || sharedTestModule,
   };
 }
 
@@ -106,13 +157,13 @@ export function getMeteorInitialAppEntrypoints() {
     );
 
     if (fs.existsSync(htmlPath)) {
-      mainClientHtml = path.join(clientDir, `${clientBasename}.html`);
+      mainClientHtml = toPosix(path.join(clientDir, `${clientBasename}.html`));
     } else {
       // Find first html in entry folder
       const files = fs.readdirSync(path.join(getMeteorAppDir(), clientDir));
       const htmlFile = files.find((file) => path.extname(file) === ".html");
       if (htmlFile) {
-        mainClientHtml = path.join(clientDir, htmlFile);
+        mainClientHtml = toPosix(path.join(clientDir, htmlFile));
       }
     }
   }
@@ -147,24 +198,32 @@ export function isMeteorAppTestModule() {
  * @param {Object} options - The entry points configuration object.
  * @param {string} [options.mainClient] - The client main module path.
  * @param {string} [options.mainServer] - The server main module path.
- * @param {string} [options.testModule] - The test module path.
+ * @param {Object} [options.mainModule] - Architecture-specific main entry overrides.
+ * @param {string|Object} [options.testModule] - The test module path or architecture overrides.
  * @param {string} [options.testClient] - The client test module path.
  * @param {string} [options.testServer] - The server test module path.
  */
 export function setMeteorAppEntrypoints({
   mainClient,
   mainServer,
+  mainModule,
   testModule,
   testClient,
   testServer,
 }) {
+  if (mainModule && typeof mainModule === 'object') {
+    process.env.METEOR_CONFIG_MAIN_MODULE = JSON.stringify(mainModule);
+  }
   if (mainClient) {
     process.env.METEOR_CONFIG_CLIENT = mainClient;
   }
   if (mainServer) {
     process.env.METEOR_CONFIG_SERVER = mainServer;
   }
-  if (testModule) {
+  if (testModule && typeof testModule === 'object') {
+    process.env.METEOR_CONFIG_TEST_MODULE = JSON.stringify(testModule);
+  }
+  if (typeof testModule === 'string') {
     process.env.METEOR_CONFIG_TEST = testModule;
   } else {
     if (testClient) {
@@ -177,13 +236,93 @@ export function setMeteorAppEntrypoints({
   global.reinitializeMeteorConfig?.();
 }
 
+// Exported so tests can model a fresh build-plugin evaluation.
+export const USER_METEOR_IGNORE_KEY = 'userMeteorIgnore';
+
+/**
+ * Records METEOR_IGNORE as the app author set it, before the first
+ * setMeteorAppIgnore() call starts appending meteor-tool-specific patterns to
+ * it. Integrations that hand the variable on to their own tooling need the
+ * author's patterns alone: the appended ones mean nothing to them and, on
+ * large projects, grow to tens of kilobytes.
+ *
+ * Called once as this module is evaluated, and idempotent because that is not
+ * once per process: build-plugin sources are evaluated per Isopack instance,
+ * and by the time a later instance runs, METEOR_IGNORE has already grown. The
+ * value therefore lives in global state, which survives re-instantiation,
+ * rather than in a module-level constant.
+ */
+export function captureUserMeteorIgnore() {
+  if (getGlobalState(USER_METEOR_IGNORE_KEY) === undefined) {
+    setGlobalState(USER_METEOR_IGNORE_KEY, process.env.METEOR_IGNORE || '');
+  }
+}
+
+captureUserMeteorIgnore();
+
+/**
+ * Returns the METEOR_IGNORE patterns the app author set, without the ones
+ * Meteor appends for its own bundler.
+ *
+ * Only meaningful inside meteor-tool — the CLI and its build plugins, where
+ * setMeteorAppIgnore() does the appending. An app's server process inherits an
+ * already-grown METEOR_IGNORE and never calls setMeteorAppIgnore(), so there is
+ * no author-only value to recover there.
+ *
+ * @returns {string} Space-delimited ignore patterns, or an empty string.
+ */
+export function getUserMeteorIgnore() {
+  return getGlobalState(USER_METEOR_IGNORE_KEY, '');
+}
+
 /**
  * Sets patterns to be ignored by the Meteor application in the environment variable.
- * Appends the new ignore pattern to any existing ones.
+ * Appends new patterns while deduplicating by keeping the last occurrence of
+ * each exact pattern. This preserves gitignore-style "last match wins"
+ * semantics while preventing unbounded growth.
  * @param {string} ignore - The pattern to be ignored.
+ * @param {Object} [options] - Ignore scope.
+ * @param {boolean} [options.root=false] - Match build-tool rules from the app root only.
+ * @param {string[]} [options.entrypoints] - Apply only when one of these modules is
+ * the architecture's entrypoint. Omit to apply to all architectures.
  */
-export function setMeteorAppIgnore(ignore) {
-  process.env.METEOR_IGNORE = `${process.env.METEOR_IGNORE || ''} ${ignore}`.trim();
+export function setMeteorAppIgnore(ignore, { root = false, entrypoints } = {}) {
+  const envName = root ? 'METEOR_IGNORE_ROOT' : 'METEOR_IGNORE';
+  const newPatterns = ignore.trim().split(/\s+/).filter(Boolean);
+
+  if (newPatterns.length === 0) {
+    return;
+  }
+
+  function appendPatterns(current) {
+    const currentPatterns = (current || '').trim().split(/\s+/).filter(Boolean);
+    const combinedPatterns = [...currentPatterns, ...newPatterns];
+    const seenPatterns = new Set();
+    const dedupedPatterns = [];
+
+    for (let index = combinedPatterns.length - 1; index >= 0; index -= 1) {
+      const pattern = combinedPatterns[index];
+
+      if (!seenPatterns.has(pattern)) {
+        seenPatterns.add(pattern);
+        dedupedPatterns.push(pattern);
+      }
+    }
+    return dedupedPatterns.reverse().join(' ');
+  }
+
+  if (entrypoints) {
+    const byEntrypointEnv = `${envName}_BY_ENTRYPOINT`;
+    const byEntrypoint = JSON.parse(process.env[byEntrypointEnv] || '{}');
+    for (const entrypoint of entrypoints) {
+      if (typeof entrypoint === 'string') {
+        byEntrypoint[entrypoint] = appendPatterns(byEntrypoint[entrypoint]);
+      }
+    }
+    process.env[byEntrypointEnv] = JSON.stringify(byEntrypoint);
+  } else {
+    process.env[envName] = appendPatterns(process.env[envName]);
+  }
 }
 
 /**
@@ -267,6 +406,9 @@ export function isMeteorAppNative() {
  * @returns {boolean} True if the application is in development mode, false otherwise.
  */
 export function isMeteorAppDevelopment() {
+  if (process.env.NODE_ENV) {
+    return process.env.NODE_ENV !== 'production';
+  }
   return Package.meteor?.Meteor.isDevelopment && !isMeteorAppBuild();
 }
 
@@ -275,6 +417,9 @@ export function isMeteorAppDevelopment() {
  * @returns {boolean} True if the application is in production mode, false otherwise.
  */
 export function isMeteorAppProduction() {
+  if (process.env.NODE_ENV) {
+    return process.env.NODE_ENV === 'production';
+  }
   return Package.meteor?.Meteor.isProduction || isMeteorAppBuild();
 }
 
@@ -293,11 +438,26 @@ export function isMeteorAppDebug() {
 }
 
 /**
+ * Checks if the Meteor application is running with METEOR_PROFILE enabled.
+ * @returns {boolean} True if METEOR_PROFILE is set, false otherwise.
+ */
+export function isMeteorAppProfile() {
+  return !!process.env.METEOR_PROFILE;
+}
+
+/**
  * Sets a custom script URL for the Meteor application in the environment variable.
  * @param {string} scriptUrl - The URL of the custom script.
+ * @param {Object} options
+ * @param {string[]} options.archs - Restrict injection to these architectures.
  */
-export function setMeteorAppCustomScriptUrl(scriptUrl) {
+export function setMeteorAppCustomScriptUrl(scriptUrl, { archs } = {}) {
   process.env.METEOR_APP_CUSTOM_SCRIPT_URL = scriptUrl;
+  if (archs) {
+    process.env.METEOR_APP_CUSTOM_SCRIPT_ARCHS = JSON.stringify(archs);
+  } else {
+    delete process.env.METEOR_APP_CUSTOM_SCRIPT_ARCHS;
+  }
 }
 
 /**
@@ -383,11 +543,11 @@ export function getMeteorAppFilesAndFolders(options = {}) {
           }
         } catch (error) {
           // Skip items that can't be accessed
-          console.error(`Error accessing ${itemPath}: ${error.message}`);
+          logError(`=> Failed to access ${itemPath}: ${error.message}`);
         }
       }
     } catch (error) {
-      console.error(`Error reading directory ${dirPath}: ${error.message}`);
+      logError(`=> Failed to read directory ${dirPath}: ${error.message}`);
     }
 
     return result;
@@ -486,4 +646,37 @@ export function getMeteorEnvPackageDirs() {
     // PACKAGE_DIRS (deprecated) always used ':' separator (yes, even Windows)
     ...(packageDirsFromEnvVar('PACKAGE_DIRS', ':')),
   ];
+}
+
+/**
+ * Spreads Meteor's TOOL_NODE_FLAGS to NODE_OPTIONS for proper inheritance
+ * of Meteor-specific tool environment process variables.
+ * Only spreads if TOOL_NODE_FLAGS_INHERIT is truthy (enabled by default).
+ * @param {Object} env - The current environment variables
+ * @returns {Object} The updated environment variables with NODE_OPTIONS
+ */
+export function inheritMeteorToolNodeFlags(env = {}) {
+  const toolFlags = env.TOOL_NODE_FLAGS;
+  if (!toolFlags) {
+    return env;
+  }
+
+  // Check if spreading is enabled (default: true)
+  // Only disable if TOOL_NODE_FLAGS_INHERIT is explicitly set to a falsy value
+  // Treat "0" as falsy for this specific case
+  const shouldSpread = env.TOOL_NODE_FLAGS_INHERIT !== undefined 
+    ? (env.TOOL_NODE_FLAGS_INHERIT !== "0" && !!env.TOOL_NODE_FLAGS_INHERIT)
+    : true;
+
+  if (!shouldSpread) {
+    return env;
+  }
+
+  return {
+    ...env,
+    NODE_OPTIONS: [toolFlags, env.NODE_OPTIONS]
+      .filter(Boolean)
+      .map(s => s.trim())
+      .join(' '),
+  };
 }

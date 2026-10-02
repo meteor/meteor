@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "target": "es2020",
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "types": []
+  },
+  "include": ["index.ts"]
+}

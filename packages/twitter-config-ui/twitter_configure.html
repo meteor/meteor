@@ -4,22 +4,28 @@
   </p>
   <ol>
     <li>
-      Visit <a href="https://developer.twitter.com/en/portal/projects/new" target="_blank">https://developer.twitter.com/en/portal/projects/new</a>
+      Visit <a href="https://developer.x.com/en/portal/dashboard" target="_blank">https://developer.x.com/en/portal/dashboard</a> and sign in.
     </li>
     <li>
-      Select "Add project".
+      Create a new project and app (or select an existing one).
     </li>
     <li>
-      Save the API keys.
+      In your app settings, click on "Set up" under "User authentication settings".
     </li>
     <li>
-      Once you create your project, click "Set up" under "User authentication settings"
+      Enable "OAuth 1.0a" (required for Meteor).
     </li>
     <li>
-      Set Callback URI to: <span class="url">{{siteUrl}}_oauth/twitter</span>
+      Set "Callback URI / Redirect URL" to: <span class="url">{{siteUrl}}_oauth/twitter</span>
     </li>
     <li>
-      Set Website to: <span class="url">{{siteUrl}}</span>
+      Set "Website URL" to: <span class="url">{{siteUrl}}</span>
+    </li>
+    <li>
+      Click "Save".
+    </li>
+    <li>
+      Go to the "Keys and tokens" tab and note down your "API Key" (Consumer Key) and "API Key Secret" (Consumer Secret).
     </li>
   </ol>
 </template>

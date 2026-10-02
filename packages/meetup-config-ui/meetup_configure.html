@@ -4,20 +4,25 @@
   </p>
   <ol>
     <li>
-      Visit <a href="http://www.meetup.com/meetup_api/oauth_consumers/create/" target="blank">http://www.meetup.com/meetup_api/oauth_consumers/create/</a>
+      Visit <a href="https://www.meetup.com/api/oauth/list/" target="blank">https://www.meetup.com/api/oauth/list/</a> and sign in.
     </li>
     <li>
-      Click on "Create New Consumer".
+      Click "Create new client".
     </li>
     <li>
-      Set the Consumer name to the name of your application.
+      Set the "Client name" to the name of your application.
     </li>
     <li>
-      Optionally set the Application Website to the URL of your
-      website.  You can leave this blank.
+      Set the "Application Website" to your site URL.
     </li>
     <li>
-      Set the <b>Redirect URI</b> to: <span class="url">{{siteUrl}}</span>  (Do not append a path to this URL.)
+      Set the <b>Redirect URI</b> to: <span class="url">{{siteUrl}}</span> (Do not append a path to this URL.)
+    </li>
+    <li>
+      Fill out all the other required fields.
+    </li>
+    <li>
+      Click "Create" and note down your "Key" (Client ID) and "Secret" (Client Secret).
     </li>
   </ol>
 </template>

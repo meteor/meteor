@@ -165,7 +165,9 @@ You can use `.swcrc` config in the root of your project to describe specific [SW
 
 You can also configure other options using the `.swcrc` format. For custom SWC configs, see the [SWC configuration API](https://swc.rs/docs/configuration/compilation).
 
-Use `swc.config.js` in your project root for dynamic configuration. Meteor will import and apply the SWC config automatically. This lets you choose a config based on environment variables or other runtime factors.
+Use `swc.config.js` in your project root for dynamic configuration. Meteor will import and apply the SWC config automatically. This lets you choose a config based on environment variables or other runtime factors. If you prefer TypeScript, `swc.config.ts` is also supported, Meteor will transpile and load it automatically.
+
+Meteor checks for config files in this order: `.swcrc` > `swc.config.js` > `swc.config.ts`. Only the first one found is used.
 
 You can also review these migration topics that use custom `.swcrc` configs:
 

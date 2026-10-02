@@ -6,8 +6,8 @@ import {
   EXPIRE_TOKENS_INTERVAL_MS,
 } from './accounts_common.js';
 import { URL } from 'meteor/url';
+export const _CurrentEndpointInvocation = new Meteor.EnvironmentVariable();
 
-const hasOwn = Object.prototype.hasOwnProperty;
 
 /**
  * @summary Constructor for the `Accounts` namespace on the server.
@@ -133,7 +133,11 @@ export class AccountsServer extends AccountsCommon {
       }
       return url.toString();
     };
+
+    // Expose the _CurrentEndpointInvocation
+    this._CurrentEndpointInvocation = _CurrentEndpointInvocation;
   }
+
 
   ///
   /// CURRENT USER
@@ -147,9 +151,15 @@ export class AccountsServer extends AccountsCommon {
     // runs. This is likely not what the user expects. The way to make this work
     // in a method or publish function is to do Meteor.find(this.userId).observe
     // and recompute when the user record changes.
-    const currentInvocation = DDP._CurrentMethodInvocation.get() || DDP._CurrentPublicationInvocation.get();
-    if (!currentInvocation)
-      throw new Error("Meteor.userId can only be invoked in method calls or publications.");
+    const currentInvocation =
+      DDP._CurrentMethodInvocation.get() ||
+      DDP._CurrentPublicationInvocation.get() ||
+      this._CurrentEndpointInvocation.get();
+    if (!currentInvocation) {
+      throw new Error(
+        "Meteor.userId can only be invoked inside a method, publication, or WebApp endpoint."
+      );
+    }
     return currentInvocation.userId;
   }
 
@@ -560,7 +570,7 @@ export class AccountsServer extends AccountsCommon {
     type,
     fn
   ) {
-    return await this._attemptLogin(
+    return this._attemptLogin(
       methodInvocation,
       methodName,
       methodArgs,
@@ -591,7 +601,7 @@ export class AccountsServer extends AccountsCommon {
     };
 
     if (result.userId) {
-      attempt.user = this.users.findOneAsync(result.userId, {fields: this._options.defaultFieldSelector});
+      attempt.user = await this.users.findOneAsync(result.userId, {fields: this._options.defaultFieldSelector});
     }
 
     await this._validateLogin(methodInvocation.connection, attempt);
@@ -707,7 +717,7 @@ export class AccountsServer extends AccountsCommon {
       const result = await accounts._runLoginHandlers(this, options);
       //console.log({result});
 
-      return await accounts._attemptLogin(this, "login", arguments, result);
+      return accounts._attemptLogin(this, "login", arguments, result);
     };
 
     methods.logout = async function () {
@@ -760,7 +770,7 @@ export class AccountsServer extends AccountsCommon {
       const newStampedToken = accounts._generateStampedLoginToken();
       newStampedToken.when = currentStampedToken.when;
       await accounts._insertLoginToken(this.userId, newStampedToken);
-      return await accounts._loginUser(this, this.userId, newStampedToken);
+      return accounts._loginUser(this, this.userId, newStampedToken);
     };
 
     // Removes all tokens except the token associated with the current
@@ -801,7 +811,7 @@ export class AccountsServer extends AccountsCommon {
 
         if (Package["oauth-encryption"]) {
           const { OAuthEncryption } = Package["oauth-encryption"]
-          if (hasOwn.call(options, 'secret') && OAuthEncryption.keyIsLoaded())
+          if (Object.hasOwn(options, 'secret') && OAuthEncryption.keyIsLoaded())
             options.secret = OAuthEncryption.seal(options.secret);
         }
 
@@ -905,10 +915,8 @@ export class AccountsServer extends AccountsCommon {
   //   - forLoggedInUser {Array} Array of fields published to the logged-in user
   //   - forOtherUsers {Array} Array of fields published to users that aren't logged in
   addAutopublishFields(opts) {
-    this._autopublishFields.loggedInUser.push.apply(
-      this._autopublishFields.loggedInUser, opts.forLoggedInUser);
-    this._autopublishFields.otherUsers.push.apply(
-      this._autopublishFields.otherUsers, opts.forOtherUsers);
+    this._autopublishFields.loggedInUser.push(...(opts.forLoggedInUser || []));
+    this._autopublishFields.otherUsers.push(...(opts.forOtherUsers || []));
   };
 
   // Replaces the fields to be automatically
@@ -1009,7 +1017,7 @@ export class AccountsServer extends AccountsCommon {
   // the observe that we started when we associated the connection with
   // this token.
   _removeTokenFromConnection(connectionId) {
-    if (hasOwn.call(this._userObservesForConnections, connectionId)) {
+    if (Object.hasOwn(this._userObservesForConnections, connectionId)) {
       const observe = this._userObservesForConnections[connectionId];
       if (typeof observe === 'number') {
         // We're in the process of setting up an observe for this connection. We
@@ -1215,13 +1223,13 @@ export class AccountsServer extends AccountsCommon {
   };
 
   // @override from accounts_common.js
-  config(options) {
+  config(...args) {
     // Call the overridden implementation of the method.
-    const superResult = AccountsCommon.prototype.config.apply(this, arguments);
+    const superResult = AccountsCommon.prototype.config.apply(this, args);
 
     // If the user set loginExpirationInDays to null, then we need to clear the
     // timer that periodically expires tokens.
-    if (hasOwn.call(this._options, 'loginExpirationInDays') &&
+    if (Object.hasOwn(this._options, 'loginExpirationInDays') &&
       this._options.loginExpirationInDays === null &&
       this.expireTokenInterval) {
       Meteor.clearInterval(this.expireTokenInterval);
@@ -1388,7 +1396,7 @@ export class AccountsServer extends AccountsCommon {
         "Can't use updateOrCreateUserFromExternalService with internal service "
         + serviceName);
     }
-    if (!hasOwn.call(serviceData, 'id')) {
+    if (!Object.hasOwn(serviceData, 'id')) {
       throw new Error(
         `Service data for service ${serviceName} must include id`);
     }
@@ -1477,8 +1485,8 @@ export class AccountsServer extends AccountsCommon {
   };
 
   /**
-   * @summary Add a default rule of limiting logins, creating new users and password reset
-   * to 5 times every 10 seconds per connection.
+   * @summary Add a default rule of limiting logins, creating new users, requesting
+   * passwordless login tokens and password reset to 5 times every 10 seconds per connection.
    * @locus Server
    * @importFromPackage accounts-base
    */
@@ -1488,7 +1496,8 @@ export class AccountsServer extends AccountsCommon {
         userId: null,
         clientAddress: null,
         type: 'method',
-        name: name => ['login', 'createUser', 'resetPassword', 'forgotPassword']
+        name: name => ['login', 'createUser', 'resetPassword', 'forgotPassword',
+          'requestLoginTokenForUser']
           .includes(name),
         connectionId: (connectionId) => true,
       }, 5, 10000);
@@ -1538,7 +1547,7 @@ export class AccountsServer extends AccountsCommon {
   ) {
     // Some tests need the ability to add users with the same case insensitive
     // value, hence the _skipCaseInsensitiveChecksForTest check
-    const skipCheck = Object.prototype.hasOwnProperty.call(
+    const skipCheck = Object.hasOwn(
       this._skipCaseInsensitiveChecksForTest,
       fieldValue
     );
@@ -1691,13 +1700,13 @@ const defaultResumeLoginHandler = async (accounts, options) => {
   // {hashedToken, when} for a hashed token or {token, when} for an
   // unhashed token.
   let oldUnhashedStyleToken;
-  let token = await user.services.resume.loginTokens.find(token =>
+  let token = user.services.resume.loginTokens.find(token =>
     token.hashedToken === hashedToken
   );
   if (token) {
     oldUnhashedStyleToken = false;
   } else {
-     token = await user.services.resume.loginTokens.find(token =>
+    token = user.services.resume.loginTokens.find(token =>
       token.token === options.resume
     );
     oldUnhashedStyleToken = true;
@@ -1835,20 +1844,23 @@ function defaultValidateNewUserHook(user) {
     return true;
   }
 
-  let emailIsGood = false;
-  if (user.emails && user.emails.length > 0) {
-    emailIsGood = user.emails.reduce(
-      (prev, email) => prev || this._testEmailDomain(email.address), false
-    );
-  } else if (user.services && Object.values(user.services).length > 0) {
-    // Find any email of any service and check it
-    emailIsGood = Object.values(user.services).reduce(
-      (prev, service) => service.email && this._testEmailDomain(service.email),
-      false,
-    );
+  const hasValidEmail = (user) => {
+    // Option A: user-provided emails
+    if (user.emails?.length) {
+      return user.emails.some(email => this._testEmailDomain(email.address));
+    }
+
+    // Option B: any connected service email
+    if (user.services) {
+      return Object.values(user.services).some(
+        service => service?.email && this._testEmailDomain(service.email)
+      );
+    }
+
+    return false;
   }
 
-  if (emailIsGood) {
+  if (hasValidEmail(user)) {
     return true;
   }
 

@@ -23,5 +23,5 @@ async function testHelper(server) {
     (match, n) => `module.id, ${ ++n }`,
   ));
 
-  await run.match("Meteor server restarted at: http://localhost:21000/");
+  await run.match("Meteor server restarted at http://localhost:21000/");
 }

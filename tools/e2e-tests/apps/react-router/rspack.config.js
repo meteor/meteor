@@ -1,0 +1,80 @@
+const { defineConfig } = require('@meteorjs/rspack');
+
+/**
+ * Rspack configuration for Meteor projects.
+ *
+ * Provides typed flags on the `Meteor` object, such as:
+ * - `Meteor.isClient` / `Meteor.isServer`
+ * - `Meteor.isDevelopment` / `Meteor.isProduction`
+ * - …and other flags available
+ *
+ * Use these flags to adjust your build settings based on environment.
+ */
+module.exports = defineConfig(Meteor => {
+  return {
+    resolve: {
+      alias: {
+        '@helper/alias': '/imports/helpers/alias.js',
+        '@react/alias': '/node_modules/react',
+      },
+      extensions: ['.jsx'],
+    },
+    module: {
+      rules: [
+        {
+          test: /\.jsx$/,
+          use: [
+            {
+              loader: 'builtin:swc-loader',
+              options: { jsc: { parser: { syntax: 'ecmascript', jsx: true } } },
+            },
+            { loader: 'babel-loader' },
+          ],
+          type: 'javascript/auto',
+        },
+        {
+          test: /\.less$/,
+          use: [
+            {
+              loader: 'less-loader',
+            },
+          ],
+          type: 'css/auto',
+        },
+      ],
+    },
+    ...(Meteor.isClient && {
+      optimization: {
+        splitChunks: {
+          chunks: 'all',
+          cacheGroups: {
+            reactRouter: {
+              test: /[\\/]node_modules[\\/](react-router|react-router-dom)[\\/]/,
+              name: 'react-router',
+              priority: 40,
+              enforce: true,
+            },
+            vendor: { test: /node_modules/, name: 'vendors' },
+          },
+        },
+      },
+    }),
+    plugins: [
+      Meteor.HtmlRspackPlugin({
+        title: 'react-router',
+        meta: {
+          'theme-color': '#4285f4',
+        },
+      }),
+    ],
+    // User-level devServer.onListening: verifies that meteor-rspack
+    // composes its default hook (which reports the dev server URL and
+    // installs the Windows socket guard) with a user-supplied hook
+    // instead of letting the user replace the default outright.
+    devServer: {
+      onListening(_devServer) {
+        console.log('[user-onListening] fired from rspack.config.js');
+      },
+    },
+  };
+});
