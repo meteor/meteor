@@ -351,8 +351,17 @@ Accounts.validateLoginAttempt(async attempt => {
   if (!user || !Accounts._check2faEnabled(user)) {
     return true;
   }
-  const code = attempt.methodArguments?.[0]?.code;
+  const loginOptions = attempt.methodArguments?.[0] || {};
+  const code = loginOptions.code;
   if (typeof code !== 'string') {
+    return true;
+  }
+  // An email code is not a TOTP step. The client sets twoFactorMethod when it
+  // chose email; otherwise the email factor records it on _2faLoginFactor.
+  const acceptedFactor = typeof Accounts._2faLoginFactor === 'function'
+    ? Accounts._2faLoginFactor(user._id)
+    : null;
+  if (loginOptions.twoFactorMethod === 'email' || acceptedFactor === 'email') {
     return true;
   }
   const step = Accounts._verify2faToken(

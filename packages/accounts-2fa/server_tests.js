@@ -176,6 +176,59 @@ Tinytest.addAsync(
   }
 );
 
+Tinytest.addAsync(
+  'account - 2fa - an email factor does not consume a TOTP step',
+  async test => {
+    const secret = new OTPAuth.Secret({ size: 20 }).base32;
+    const userId = await Accounts.insertUserDoc(
+      {},
+      {
+        emails: [{ address: `${Random.id()}@meteorapp.com`, verified: true }],
+        services: {
+          twoFactorAuthentication: { type: 'otp', secret },
+        },
+      }
+    );
+    const { token } = Accounts._generate2faToken(secret);
+    const invocation = {
+      connection: {
+        id: Random.id(),
+        close() {},
+      },
+      setUserId() {},
+    };
+    const previousFactor = Accounts._2faLoginFactor;
+    Accounts._2faLoginFactor = () => 'email';
+    const login = (code, twoFactorMethod) =>
+      Accounts._attemptLogin(
+        invocation,
+        'login',
+        [{ user: { id: userId }, code, ...(twoFactorMethod && { twoFactorMethod }) }],
+        { userId, type: 'password' }
+      );
+
+    try {
+      const byMethod = await login('000000', 'email');
+      test.equal(byMethod.id, userId);
+      const byFactor = await login('111111');
+      test.equal(byFactor.id, userId);
+      const user = await findUserById(userId);
+      test.isFalse(Number.isInteger(user.services?.twoFactorAuthentication?.lastUsedStep));
+
+      delete Accounts._2faLoginFactor;
+      const totp = await login(token);
+      test.equal(totp.id, userId);
+    } finally {
+      if (previousFactor) {
+        Accounts._2faLoginFactor = previousFactor;
+      } else {
+        delete Accounts._2faLoginFactor;
+      }
+      await Accounts.users.removeAsync(userId);
+    }
+  }
+);
+
 Tinytest.addAsync('account - 2fa - reset2faForUser clears 2FA and notifies hooks', async test => {
   const userId = await Accounts.insertUserDoc(
     {},
