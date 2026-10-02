@@ -1021,10 +1021,15 @@ Object.assign(AppRunner.prototype, {
 
         var oldPromise = self.runPromise = self._makePromise("run");
 
-        refreshClient();
-
         // Establish a watcher on the new files.
         setupClientWatcher();
+
+        // Observe refresh errors, but let a file change or stop request
+        // interrupt the wait if the app stops answering IPC messages.
+        await Promise.race([
+          refreshClient().catch(bundler.ignoreHarmlessErrors),
+          oldPromise,
+        ]);
 
         const postStartupResult = await runPostStartupCallbacks(bundleResult);
         if (postStartupResult) return postStartupResult;

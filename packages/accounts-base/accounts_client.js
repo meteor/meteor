@@ -1,5 +1,9 @@
 import {AccountsCommon} from "./accounts_common.js";
 
+// Five total attempts span the default ten-second cookie endpoint quota
+// window, while keeping startup recovery bounded.
+const COOKIE_LOGIN_RETRY_DELAYS = [250, 1000, 3000, 7000];
+
 /**
  * @summary Constructor for the `Accounts` object on the client.
  * @locus Client
@@ -10,7 +14,7 @@ import {AccountsCommon} from "./accounts_common.js";
  * @param {Object} options.connection Optional DDP connection to reuse.
  * @param {String} options.ddpUrl Optional URL for creating a new DDP connection.
  * @param {'session' | 'local' | 'none'} options.clientStorage Optional Define what kind of storage you want for credentials on the client. Default is 'local' to use `localStorage`. Set to 'session' to use session storage. Use 'none' to avoid persisting tokens.
- * @param {Boolean} options.useHttpOnlyCookies Optional Enable HttpOnly cookie flow for auth resume. When enabled, the client will try to refresh a login token from a server HttpOnly cookie during startup, and will sync the cookie after logins/logouts.
+ * @param {Boolean} options.useHttpOnlyCookies Optional Enable HttpOnly cookie flow for auth resume. When enabled, the client will try to refresh a login token from a server HttpOnly cookie during startup, and will sync the cookie after logins/logouts. The same option must also be enabled on the server, otherwise the cookie endpoints do not respond.
  */
 export class AccountsClient extends AccountsCommon {
   constructor(options) {
@@ -24,11 +28,12 @@ export class AccountsClient extends AccountsCommon {
 
     this._pageLoadLoginCallbacks = [];
     this._pageLoadLoginAttemptInfo = null;
+    this._cookieLoginAttempt = 0;
 
     this.savedHash = window.location.hash;
     this._initUrlMatching();
 
-    this.initStorageLocation();
+    this.initStorageLocation(options);
 
     // Read HttpOnly cookie setting from options or public settings
     this._useHttpOnlyCookies = !!(options?.useHttpOnlyCookies || Meteor.settings?.public?.packages?.accounts?.useHttpOnlyCookies);
@@ -155,6 +160,7 @@ export class AccountsClient extends AccountsCommon {
    * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
    */
   logout(callback) {
+    this._cancelHttpOnlyCookieLogin();
     this._loggingOut.set(true);
 
     this.connection.applyAsync('logout', [], {
@@ -183,6 +189,7 @@ export class AccountsClient extends AccountsCommon {
    * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
    */
   logoutAllClients(callback) {
+    this._cancelHttpOnlyCookieLogin();
     this._loggingOut.set(true);
 
     this.connection.applyAsync('logoutAllClients', [], {
@@ -290,6 +297,14 @@ export class AccountsClient extends AccountsCommon {
       ...options,
     };
 
+    // Cancel startup recovery before an independent login enters the DDP
+    // queue. Waiting for that login to succeed can let a cookie resume queue
+    // behind it and restore the previous user. The cookie flow keeps its
+    // attempt so its failure callback can still clean up the session.
+    if (options._cookieLoginAttempt === undefined) {
+      this._cancelHttpOnlyCookieLogin();
+    }
+
     // Set defaults for callback arguments to no-op functions; make sure we
     // override falsey values too.
     ['validateResult', 'userCallback'].forEach(f => {
@@ -368,6 +383,8 @@ export class AccountsClient extends AccountsCommon {
           } else {
             this.callLoginMethod({
               methodArguments: [{resume: result.token}],
+              // This is still the same login attempt, not a competing login.
+              _cookieLoginAttempt: options._cookieLoginAttempt,
               // Reconnect quiescence ensures that the user doesn't see an
               // intermediate state before the login method finishes. So we don't
               // need to show a logging-in animation.
@@ -473,6 +490,7 @@ export class AccountsClient extends AccountsCommon {
   }
 
   async makeClientLoggedOut() {
+    this._cancelHttpOnlyCookieLogin();
     let hookError;
 
     try {
@@ -501,11 +519,12 @@ export class AccountsClient extends AccountsCommon {
   }
 
   async makeClientLoggedIn(userId, token, tokenExpires) {
+    this._cancelHttpOnlyCookieLogin();
     this._storeLoginToken(userId, token, tokenExpires);
     this.connection.setUserId(userId);
     // Sync HttpOnly cookie if enabled
     if (this._useHttpOnlyCookies) {
-      await this._setHttpOnlyCookie(token, tokenExpires);
+      await this._setHttpOnlyCookie(token);
     }
   }
 
@@ -597,28 +616,65 @@ export class AccountsClient extends AccountsCommon {
     return Meteor.promisify(this.loginWithToken, this)(token);
   };
 
-  // Attempt startup login using an HttpOnly cookie by requesting a
-  // short-lived resume token from the server.
+  // Attempt startup login using an HttpOnly cookie by requesting the resume
+  // token into memory from the server.
   async loginWithCookie() {
-    try {
-      const res = await fetch('/_accounts/cookie/refresh', {
-        method: 'GET',
-        credentials: 'include',
-        headers: { Accept: 'application/json' },
-      });
-      if (!res.ok) return;
-      const body = await res.json();
-      if (body?.token) {
-        this.loginWithToken(body.token, async (err) => {
-          if (err) {
+    const attempt = ++this._cookieLoginAttempt;
+
+    for (let retry = 0; ; retry += 1) {
+      let res;
+      try {
+        res = await fetch('/_accounts/cookie/refresh', {
+          method: 'GET',
+          mode: 'same-origin',
+          credentials: 'include',
+          headers: { Accept: 'application/json' },
+        });
+      } catch (_e) {
+        if (!await this._waitForCookieLoginRetry(attempt, retry)) return;
+        continue;
+      }
+
+      if (attempt !== this._cookieLoginAttempt) return;
+      if (res.status === 429 || res.status >= 500) {
+        if (!await this._waitForCookieLoginRetry(attempt, retry)) return;
+        continue;
+      }
+      if (!res.ok || res.status === 204) return;
+
+      let body;
+      try {
+        body = await res.json();
+      } catch (_e) {
+        return;
+      }
+      if (!body?.token || attempt !== this._cookieLoginAttempt) return;
+
+      this.callLoginMethod({
+        methodArguments: [{ resume: body.token }],
+        _cookieLoginAttempt: attempt,
+        userCallback: async (err) => {
+          if (err && attempt === this._cookieLoginAttempt) {
             await this.makeClientLoggedOut();
           }
-        });
-      }
-    } catch (_e) {
-      // ignore
+        },
+      });
+      return;
     }
   };
+
+  _cancelHttpOnlyCookieLogin() {
+    this._cookieLoginAttempt += 1;
+  }
+
+  async _waitForCookieLoginRetry(attempt, retry) {
+    const delay = COOKIE_LOGIN_RETRY_DELAYS[retry];
+    if (delay === undefined || attempt !== this._cookieLoginAttempt) {
+      return false;
+    }
+    await new Promise(resolve => Meteor.setTimeout(resolve, delay));
+    return attempt === this._cookieLoginAttempt;
+  }
 
   // Semi-internal API. Call this function to re-enable auto login after
   // if it was disabled at startup.
@@ -661,13 +717,14 @@ export class AccountsClient extends AccountsCommon {
     this._lastLoginTokenWhenPolled = null;
   };
 
-  async _setHttpOnlyCookie(token, tokenExpires) {
+  async _setHttpOnlyCookie(token) {
     try {
       await fetch('/_accounts/cookie/set', {
         method: 'POST',
+        mode: 'same-origin',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, tokenExpires }),
+        body: JSON.stringify({ token }),
       });
     } catch (_e) {}
   }
@@ -676,6 +733,7 @@ export class AccountsClient extends AccountsCommon {
     try {
       await fetch('/_accounts/cookie/clear', {
         method: 'POST',
+        mode: 'same-origin',
         credentials: 'include'
       });
     } catch (_e) {}

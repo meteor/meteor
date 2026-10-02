@@ -34,7 +34,7 @@ var compiler = exports;
 // dependencies. (At least for now, packages only used in target creation (eg
 // minifiers) don't require you to update BUILT_BY, though you will need to quit
 // and rerun "meteor run".)
-compiler.BUILT_BY = 'meteor/34';
+compiler.BUILT_BY = 'meteor/35';
 
 // This is a list of all possible architectures that a build can target. (Client
 // is expanded into 'web.browser' and 'web.cordova')
@@ -187,6 +187,9 @@ compiler.compile = Profile(function (packageSource, options) {
     prodOnly: packageSource.prodOnly,
     testOnly: packageSource.testOnly,
     devOnly: packageSource.devOnly,
+    typesEntry: packageSource.typesEntry,
+    typesDir: packageSource.typesDir,
+    typesModules: packageSource.typesModules,
     pluginCacheDir: options.pluginCacheDir,
     isobuildFeatures
   });
@@ -506,7 +509,7 @@ var compileUnibuild = Profile(function (options) {
 
   // This function needs to be factored out to support legacy handlers later on
   // in the compilation process
-  function addAsset(contents, relPath, hash) {
+  function addAsset(contents, relPath, hash, fileOptions) {
     // XXX hack to strip out private and public directory names from app asset
     // paths
     if (! inputSourceArch.pkg.name) {
@@ -519,7 +522,8 @@ var compileUnibuild = Profile(function (options) {
       path: relPath,
       servePath: colonConverter.convert(
         files.pathJoin(inputSourceArch.pkg.serveRoot, relPath)),
-      hash: hash
+      hash: hash,
+      fileOptions,
     });
   }
 
@@ -532,7 +536,7 @@ var compileUnibuild = Profile(function (options) {
     const contents = optimisticReadFile(absPath);
     watchSet.addFile(absPath, hash);
 
-    addAsset(contents, relPath, hash);
+    addAsset(contents, relPath, hash, asset.fileOptions);
   });
 
   // Add and compile all source files
