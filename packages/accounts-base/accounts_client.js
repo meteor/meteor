@@ -79,6 +79,14 @@ export class AccountsClient extends AccountsCommon {
     }
   }
 
+  _onUsersCollectionChanged() {
+    // Secondary Accounts instances must not replace the global users collection.
+    if (this === Accounts) {
+      Meteor.users = this.users;
+    }
+    super._onUsersCollectionChanged();
+  }
+
   ///
   /// CURRENT USER
   ///
