@@ -827,7 +827,8 @@ export class AccountsServer extends AccountsCommon {
 
   _initServerPublications() {
     // Bring into lexical scope for publish callbacks that need `this`
-    const { users, _autopublishFields, _defaultPublishFields } = this;
+    const accounts = this;
+    const { _autopublishFields, _defaultPublishFields } = this;
 
     // Publish all login service configuration fields other than secret.
     this._server.publish("meteor.loginServiceConfiguration", function() {
@@ -853,7 +854,7 @@ export class AccountsServer extends AccountsCommon {
       // Publish the current user's record to the client.
       this._server.publish(null, function () {
         if (this.userId) {
-          return users.find({
+          return accounts.users.find({
             _id: this.userId
           }, {
             fields,
@@ -874,7 +875,7 @@ export class AccountsServer extends AccountsCommon {
       );
       this._server.publish(null, function () {
         if (this.userId) {
-          return users.find({ _id: this.userId }, {
+          return accounts.users.find({ _id: this.userId }, {
             fields: toFieldSelector(_autopublishFields.loggedInUser),
           })
         } else {
@@ -889,7 +890,7 @@ export class AccountsServer extends AccountsCommon {
       // function which filters out fields based on 'this.userId'.
       this._server.publish(null, function () {
         const selector = this.userId ? { _id: { $ne: this.userId } } : {};
-        return users.find(selector, {
+        return accounts.users.find(selector, {
           fields: toFieldSelector(_autopublishFields.otherUsers),
         })
       }, /*suppress autopublish warning*/{is_auto: true});
@@ -1231,7 +1232,9 @@ export class AccountsServer extends AccountsCommon {
   };
 
   _onUsersCollectionChanged() {
-    Meteor.users = this.users;
+    if (this === Accounts) {
+      Meteor.users = this.users;
+    }
     setupUsersCollection(this.users).catch(err => {
       console.error('Failed to setup users collection:', err);
     });
@@ -1860,7 +1863,10 @@ const setupUsersCollection = async users => {
   ///
   /// RESTRICTING WRITES TO USER OBJECTS
   ///
-  users.allow({
+  // Collections created with `defineMutationMethods: false` have no
+  // allow/deny validators (and no client mutation methods to protect);
+  // don't let allow() throw and skip every index below.
+  if (users._validators) users.allow({
     // clients can modify the profile field of their own document, and
     // nothing else.
     update: (userId, user, fields, modifier) => {
