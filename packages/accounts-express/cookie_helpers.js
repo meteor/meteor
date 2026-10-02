@@ -30,7 +30,7 @@ export function setCookieOnResponse(res, req, token, tokenExpires) {
     sameSite: "Lax",
     expires: tokenExpires instanceof Date ? tokenExpires : undefined,
   });
-  res.setHeader("Set-Cookie", cookie);
+  res.appendHeader("Set-Cookie", cookie);
 }
 
 /**
@@ -45,5 +45,5 @@ export function clearCookieOnResponse(res, req) {
     sameSite: "Lax",
     expires: new Date(0),
   });
-  res.setHeader("Set-Cookie", cookie);
+  res.appendHeader("Set-Cookie", cookie);
 }
