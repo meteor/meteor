@@ -96,6 +96,8 @@ To disable 2FA for a user use this method:
 
 To call this function the user must be already logged in.
 
+`Accounts.validate2faChange(fn)` receives `{ type, user, connection }` with `type` equal to `activation` or `deactivation`. Throw from `fn` to refuse the change. The registration returns `{ stop() }`.
+
 ## Log in with 2FA {#log-in-with-2fa}
 
 Now that you have a way to allow your users to enable 2FA on their accounts, you can create a login flow based on that.
