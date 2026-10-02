@@ -101,3 +101,25 @@ test("cancelling an installer does not leave a heartbeat renewing its lock", asy
   process.kill(child.pid, "SIGKILL");
   await waitFor(() => !fs.existsSync(lock), 5000);
 });
+
+test("a cancelled owner keeps the lock while its browser installer is still running", async (t) => {
+  const { root, lock, script, env } = fixture(t, { browserAvailable: false });
+  const child = spawn("bash", [script, "ddp-server"], {
+    cwd: root,
+    env,
+    stdio: "ignore",
+  });
+
+  t.after(() => {
+    try { process.kill(child.pid, "SIGKILL"); } catch {}
+  });
+
+  await waitFor(() => fs.existsSync(path.join(lock, "installer_pid")), 1000);
+  const installerPid = Number(fs.readFileSync(path.join(lock, "installer_pid"), "utf8"));
+  assert.doesNotThrow(() => process.kill(installerPid, 0));
+
+  process.kill(child.pid, "SIGKILL");
+  await new Promise(resolve => setTimeout(resolve, 150));
+  assert.equal(fs.existsSync(lock), true, "the active installer must keep its lock");
+  await waitFor(() => !fs.existsSync(lock), 5000);
+});
