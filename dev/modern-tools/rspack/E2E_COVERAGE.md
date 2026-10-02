@@ -109,7 +109,7 @@ Full-featured React Router app with custom packages, Less, and advanced rspack c
 
 ### assets
 
-Minimal app with a local package testing asset resolution and bundling.
+Minimal app with a local package testing asset resolution and bundling. `regressions/rspack-static-assets.test.js` boots a temporary production variant to exercise static requests.
 
 | What is covered | Phase |
 |----------------|-------|
@@ -120,6 +120,12 @@ Minimal app with a local package testing asset resolution and bundling.
 | `skipTestClient: true` (ignores client mocha tests) | Test once |
 | Assets skipped by compiler source discovery (#14566) | All |
 | Boot built bundle (`node main.js`) to test assets | Build |
+| Missing Rspack chunks/assets return uncached 404s without growing shared manifests | Build |
+| Existing files and alternate URL spellings do not accumulate manifest entries | Build |
+| Emitted assets and lazy chunks preserve GET/HEAD, ETag, range, and cache behavior | Build |
+| Removed files, directories, and malformed/traversing paths; restored files become available again | Build |
+| Client rebuild pauses and existing inline static content are preserved | Build |
+| Files removed between stat and open return uncached 404s without stale response headers | Build |
 
 ### blaze
 
@@ -548,3 +554,4 @@ Where each feature is tested across apps and skeletons.
 | `skipTestClient: true` test helper option | assets | |
 | Assets skipped by compiler source discovery (#14566) | assets | |
 | Boot built bundle (`node main.js`) to test assets | assets | |
+| Rspack static-file failures and bounded manifest state | assets | |
