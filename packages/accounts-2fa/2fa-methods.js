@@ -1,7 +1,21 @@
 import { Accounts } from 'meteor/accounts-base';
+import { Match } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 
+const MAX_2FA_CODE_LENGTH = 16;
+const VERIFIED_MARK_TTL_MS = 10 * 1000;
+const LOGIN_TYPES_WITH_2FA = new Set(['password', 'passwordless']);
+
 const verifiedHooks = [];
+const challengeHooks = [];
+const pendingVerified = new Map();
+
+/** A 2FA code is a short OTP or email code. Login handlers read this at check time. */
+Accounts._2faCodeMatch = Match.Where(value =>
+  typeof value === 'string' &&
+  value.length > 0 &&
+  value.length <= MAX_2FA_CODE_LENGTH
+);
 
 const registerHook = (hooks, fn) => {
   hooks.push(fn);
@@ -22,12 +36,59 @@ const runHooks = async (hooks, payload) => {
 };
 
 /**
- * @summary Called after a second factor was accepted, before the session is opened.
- * Throw is logged and ignored so a consumed code is not wasted.
+ * @summary Called from `Accounts.onLogin`, after `validateLoginAttempt` has allowed the login.
+ * A thrown error is logged and ignored. Issue a trusted-device token here:
+ * a login rejected by a validator never reaches this hook.
  * @locus Server
  * @param {Function} fn Receives `{ user, connection, method }`.
  */
 Accounts.on2faVerified = fn => registerHook(verifiedHooks, fn);
+
+/**
+ * @summary Called before an email code is sent. Throw to skip the send,
+ * for example when the account is locked. The login fails with that error.
+ * @locus Server
+ * @param {Function} fn Receives `{ user, connection, method }`.
+ */
+Accounts.validate2faChallenge = fn => registerHook(challengeHooks, fn);
+
+const rememberVerified = (userId, connection, method) => {
+  const now = Date.now();
+  for (const [id, mark] of pendingVerified) {
+    if (now - mark.at > VERIFIED_MARK_TTL_MS) {
+      pendingVerified.delete(id);
+    }
+  }
+  pendingVerified.set(userId, {
+    at: now,
+    connection: connection || null,
+    method,
+  });
+};
+
+Accounts.onLogin(async attempt => {
+  const userId = attempt?.user?._id;
+  if (!userId || !LOGIN_TYPES_WITH_2FA.has(attempt.type)) {
+    return;
+  }
+  const mark = pendingVerified.get(userId);
+  if (!mark) {
+    return;
+  }
+  pendingVerified.delete(userId);
+  if (Date.now() - mark.at > VERIFIED_MARK_TTL_MS) {
+    return;
+  }
+  try {
+    await runHooks(verifiedHooks, {
+      user: attempt.user,
+      connection: attempt.connection || mark.connection || null,
+      method: mark.method,
+    });
+  } catch (error) {
+    console.error('accounts-2fa: on2faVerified threw', error);
+  }
+});
 
 const CLIENT_CONTEXT_MAX_KEYS = 8;
 const CLIENT_CONTEXT_MAX_KEY = 32;
@@ -114,12 +175,8 @@ Accounts._is2faRequired = async (user, context = {}) => {
   return { required: emailEnabled || otpEnabled, availableMethods };
 };
 
-const acceptFactor = async (user, connection, method) => {
-  try {
-    await runHooks(verifiedHooks, { user, connection: connection || null, method });
-  } catch (error) {
-    console.error('accounts-2fa: on2faVerified threw', error);
-  }
+const acceptFactor = (user, connection, method) => {
+  rememberVerified(user._id, connection, method);
 };
 
 /**
@@ -163,6 +220,21 @@ Accounts._enforce2faOnLogin = async ({ user, code, method, context = {} }) => {
     let retryAfterMs = 0;
     if (sendEmail) {
       try {
+        await runHooks(challengeHooks, {
+          user,
+          connection: context.connection || null,
+          method: 'email',
+        });
+      } catch (error) {
+        if (error instanceof Meteor.Error) {
+          return error;
+        }
+        return twoFactorError(
+          '2fa-challenge-refused',
+          'The second factor cannot be sent'
+        );
+      }
+      try {
         const issued = await Accounts._issue2faEmailCode(user);
         emailSent = issued.sent;
         retryAfterMs = issued.retryAfterMs;
@@ -178,6 +250,10 @@ Accounts._enforce2faOnLogin = async ({ user, code, method, context = {} }) => {
       '2FA code must be informed',
       { methods: availableMethods, emailSent, retryAfterMs }
     );
+  }
+
+  if (typeof code === 'string' && code.length > MAX_2FA_CODE_LENGTH) {
+    return twoFactorError('invalid-2fa-code', 'Invalid 2FA code');
   }
 
   const tryOtp = !method || method === 'otp';

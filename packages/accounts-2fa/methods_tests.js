@@ -1,4 +1,5 @@
 import { Accounts } from 'meteor/accounts-base';
+import { Match } from 'meteor/check';
 import * as OTPAuth from 'otpauth';
 import { Random } from 'meteor/random';
 import crypto from 'crypto';
@@ -168,7 +169,111 @@ Tinytest.addAsync('account - 2fa - email code is single use, expires, and locks 
       test.equal(wrong.error, 'invalid-2fa-code');
     }
     const user = await findUserById(userId);
+    const spent = user.services?.twoFactorAuthentication?.emailCode;
+    test.isFalse(!!spent?.hash);
+    test.equal(spent.attempts, 5);
+    const resent = await Accounts._enforce2faOnLogin({
+      user,
+      context: { loginMethod: 'password' },
+    });
+    test.isFalse(resent.details.emailSent);
+    test.isTrue(resent.details.retryAfterMs > 0);
+  } finally {
+    restorePolicy();
+    await Accounts.users.removeAsync(userId);
+  }
+});
+
+Tinytest.addAsync('account - 2fa - validate2faChallenge can refuse the email', async test => {
+  const userId = await createUser();
+  const stop = Accounts.validate2faChallenge(() => {
+    throw new Meteor.Error(403, 'accountLocked');
+  });
+  try {
+    Accounts.configure2fa({ email: { enabled: true } });
+    Accounts._2faTestState = {};
+    const refused = await Accounts._enforce2faOnLogin({
+      user: await findUserById(userId),
+      context: { loginMethod: 'password' },
+    });
+    test.equal(refused.error, 403);
+    test.equal(refused.reason, 'accountLocked');
+    test.isFalse(!!Accounts._2faTestState.lastEmailCode);
+    const user = await findUserById(userId);
     test.isFalse(!!user.services?.twoFactorAuthentication?.emailCode);
+  } finally {
+    stop.stop();
+    restorePolicy();
+    await Accounts.users.removeAsync(userId);
+  }
+});
+
+Tinytest.addAsync('account - 2fa - on2faVerified runs only after the login is accepted', async test => {
+  const userId = await createUser();
+  let seen = 0;
+  const stop = Accounts.on2faVerified(() => {
+    seen += 1;
+  });
+  try {
+    Accounts.configure2fa({ email: { enabled: true } });
+    await Accounts._enforce2faOnLogin({
+      user: await findUserById(userId),
+      context: { loginMethod: 'password' },
+    });
+    const code = Accounts._2faTestState.lastEmailCode;
+    const accepted = await Accounts._enforce2faOnLogin({
+      user: await findUserById(userId),
+      code,
+      context: { loginMethod: 'password', connection: { id: 'conn' } },
+    });
+    test.isUndefined(accepted);
+    test.equal(seen, 0);
+
+    const user = await findUserById(userId);
+    await Accounts._successfulLogin({ id: 'other' }, {
+      type: 'resume',
+      allowed: true,
+      user,
+    });
+    test.equal(seen, 0);
+
+    await Accounts._successfulLogin({ id: 'conn' }, {
+      type: 'password',
+      allowed: true,
+      user,
+    });
+    test.equal(seen, 1);
+  } finally {
+    stop.stop();
+    restorePolicy();
+    await Accounts.users.removeAsync(userId);
+  }
+});
+
+Tinytest.addAsync('account - 2fa - a too-long code is rejected before it is hashed', async test => {
+  const userId = await createUser();
+  try {
+    Accounts.configure2fa({ email: { enabled: true } });
+    await Accounts._enforce2faOnLogin({
+      user: await findUserById(userId),
+      context: { loginMethod: 'password' },
+    });
+    const before = await findUserById(userId);
+    const refused = await Accounts._enforce2faOnLogin({
+      user: before,
+      code: '1'.repeat(17),
+      context: { loginMethod: 'password' },
+    });
+    test.equal(refused.error, 'invalid-2fa-code');
+    const after = await findUserById(userId);
+    test.equal(after.services.twoFactorAuthentication.emailCode.attempts, 0);
+    test.equal(
+      after.services.twoFactorAuthentication.emailCode.hash,
+      before.services.twoFactorAuthentication.emailCode.hash
+    );
+    test.isTrue(Match.test('123456', Accounts._2faCodeMatch));
+    test.isFalse(Match.test('1'.repeat(17), Accounts._2faCodeMatch));
+    test.isFalse(Match.test('', Accounts._2faCodeMatch));
   } finally {
     restorePolicy();
     await Accounts.users.removeAsync(userId);

@@ -126,7 +126,9 @@ Meteor.loginWithPasswordAnd2faCode(email, password, code, 'email', callback);
 // then a pending email code. Existing clients keep working.
 ```
 
-The email code is 6 digits, expires after 10 minutes, accepts 5 attempts, and can be resent after 60 seconds. It is stored as a hash and deleted once it is used. Pass `email.hashSecret` (from the private part of `Meteor.settings`, never `public`) so the hash is an HMAC-SHA256. Without it the package keeps a plain SHA-256 and logs a warning. Only a verified email address is used, unless `email.requireVerified` is set to `false`.
+The email code is 6 digits, expires after 10 minutes, accepts 5 attempts, and can be resent after 60 seconds. Using up the attempts discards the code, and a new one is not sent until that cooldown has elapsed. It is stored as a hash and deleted once it is used. Pass `email.hashSecret` (from the private part of `Meteor.settings`, never `public`) so the hash is an HMAC-SHA256. Without it the package keeps a plain SHA-256 and logs a warning. Only a verified email address is used, unless `email.requireVerified` is set to `false`.
+
+`Accounts.validate2faChallenge(({ user, connection, method }) => {})` runs before an email code is sent. Throw to skip the send, for example when the account is locked. The login then fails with that error instead of `no-2fa-code`, and no message is sent. The user document handed to the hook is the login projection: read lockout fields from the database if you need them.
 
 Customize the message with `Accounts.emailTemplates.twoFactorCode` (`subject` and `text` or `html`). The code is `extra.code`. In development the code is also printed on the server.
 
@@ -167,7 +169,7 @@ Accounts.config({
 
 `false` from the function is the only way to skip a user who enabled an authenticator. `Accounts.config({ require2fa: false })` does not.
 
-After a code is accepted, `Accounts.on2faVerified(({ user, connection, method }) => {})` runs. Issue the trusted-browser token from the app (random, stored as a hash, with an expiry) and hand it to the client from your own method. This package does not store it.
+`Accounts.on2faVerified(({ user, connection, method }) => {})` runs from `Accounts.onLogin`, after every `validateLoginAttempt` hook has allowed the login. Issue the trusted-browser token from the app there (random, stored as a hash, with an expiry) and hand it to the client from your own method. This package does not store it. A login that a validator rejects never reaches this hook, so the token is not issued.
 
 When a second factor is required and the user has none (no authenticator, and no usable email), the login fails with `2fa-method-unavailable`.
 
