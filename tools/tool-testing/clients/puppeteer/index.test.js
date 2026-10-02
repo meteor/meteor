@@ -49,11 +49,11 @@ jest.mock(
 
 import PuppeteerClient from "./index.js";
 
-describe("PuppeteerClient", () => {
+describe("PuppeteerClient Windows fallback", () => {
   const originalPlatform = process.platform;
 
   beforeAll(() => {
-    Object.defineProperty(process, 'platform', { configurable: true, value: 'darwin' });
+    Object.defineProperty(process, 'platform', { configurable: true, value: 'win32' });
   });
 
   afterAll(() => {
@@ -227,7 +227,7 @@ describe("PuppeteerClient", () => {
     );
   });
 });
-describe('PuppeteerClient Linux browser installation', () => {
+describe('PuppeteerClient Unix browser installation', () => {
   const originalPlatform = process.platform;
 
   beforeAll(() => {
@@ -249,10 +249,10 @@ describe('PuppeteerClient Linux browser installation', () => {
 
     expect(mockExecFile).toHaveBeenCalledTimes(1);
     expect(mockExecFile).toHaveBeenCalledWith(
-      'bash',
+      'perl',
       expect.arrayContaining([
-        expect.stringContaining('flock -w 600 9'),
-        expect.stringContaining('puppeteer-chrome-cache-25.9.0.flock'),
+        expect.stringContaining('with-browser-lock.pl'),
+        expect.stringContaining('puppeteer-chrome-cache-25.9.0-v2.flock'),
         process.execPath,
         expect.stringContaining('ensure-browser.cjs'),
         '/dev-bundle/lib/node_modules/puppeteer',

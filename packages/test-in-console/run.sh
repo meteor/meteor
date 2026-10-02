@@ -24,21 +24,13 @@ if ! ./dev_bundle/bin/node -e "process.exit(require('./dev_bundle/lib/node_modul
 fi
 
 PUPPETEER_CACHE_ROOT="${TMPDIR:-/tmp}"
-export PUPPETEER_CACHE_DIR="${PUPPETEER_CACHE_ROOT%/}/puppeteer-chrome-cache-25.9.0"
+export PUPPETEER_CACHE_DIR="${PUPPETEER_CACHE_ROOT%/}/puppeteer-chrome-cache-25.9.0-v2"
 export PUPPETEER_SKIP_CHROME_HEADLESS_SHELL_DOWNLOAD=true
 
-# Keep the lock file on disk: deleting it could let another process flock a
-# different inode. The installer inherits fd 9, so cancelled jobs cannot
+# The installer inherits the lock descriptor, so cancelled jobs cannot
 # release the lock while an orphaned extraction still runs.
-bash -c '
-  exec 9>>"$1"
-  if ! flock -w 600 9; then
-    echo "Timed out waiting for another Puppeteer installation" >&2
-    exit 1
-  fi
-  shift
-  exec "$@"
-' _ "${PUPPETEER_CACHE_DIR}.flock" \
+perl tools/tool-testing/clients/puppeteer/with-browser-lock.pl \
+  "${PUPPETEER_CACHE_DIR}.flock" \
   ./dev_bundle/bin/node tools/tool-testing/clients/puppeteer/ensure-browser.cjs \
   "$METEOR_HOME/dev_bundle/lib/node_modules/puppeteer"
 

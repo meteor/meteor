@@ -8,6 +8,10 @@ const { join } = require('node:path');
 const puppeteerDir = process.argv[2];
 const puppeteer = require(puppeteerDir);
 const cacheDir = process.env.PUPPETEER_CACHE_DIR;
+const lockFd = Number(process.env.PUPPETEER_INSTALL_LOCK_FD);
+if (!Number.isInteger(lockFd) || lockFd < 3) {
+  throw new Error('Puppeteer installer lock descriptor was not inherited');
+}
 
 function runFile(file, args, options = {}) {
   return new Promise((resolve, reject) => {
@@ -34,7 +38,7 @@ async function install() {
   await new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [join(puppeteerDir, 'install.mjs')], {
       env: { ...process.env, PUPPETEER_SKIP_CHROME_HEADLESS_SHELL_DOWNLOAD: 'true' },
-      stdio: ['ignore', 'inherit', 'inherit', 9],
+      stdio: ['ignore', 'inherit', 'inherit', lockFd],
     });
     child.once('error', reject);
     child.once('exit', (code, signal) => {
