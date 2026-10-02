@@ -100,7 +100,10 @@ function compileWithSwc(source, swcOptions = {}, { features }) {
       dynamicImport: true,
       ...(features.topLevelAwait && { topLevelAwait: true }),
       ...(features.compileForShell && { moduleAlias: 'module' }),
-      ...((features.modernBrowsers || features.nodeMajorVersion >= 8) && {
+      // Target check, not a version check: nodeMajorVersion is only set for
+      // Node targets and modernBrowsers only for modern web targets, so
+      // legacy web builds keep the conservative defaults above.
+      ...((features.modernBrowsers || features.nodeMajorVersion) && {
         avoidModernSyntax: false,
         generateLetDeclarations: true,
       }),
@@ -312,8 +315,6 @@ BCp.processOneFileForTarget = function (inputFile, source) {
 
     const isNodeTarget = arch.startsWith("os.");
     if (isNodeTarget) {
-      // Start with a much simpler set of Babel presets and plugins if
-      // we're compiling for Node 8.
       features.nodeMajorVersion = parseInt(process.versions.node, 10);
     } else if (arch === "web.browser") {
       features.modernBrowsers = true;
