@@ -17,6 +17,7 @@ npm run test:e2e:groups
 # Run the same group selected by CI
 npm run test:e2e:group -- monorepo
 npm run test:e2e:group -- server_runtime
+npm run test:e2e:group -- dev_lifecycle
 npm run test:e2e:group -- accounts
 
 # Narrow a group to a test file (paths are relative to tools/e2e-tests)
@@ -60,7 +61,7 @@ establish executed coverage.
 ## Workspace executable portability
 
 ```sh
-METEOR_E2E_TEST_RETRIES=0 npm run test:e2e:group -- regressions --runTestsByPath workspace-bin-portability.test.js --runInBand
+METEOR_E2E_TEST_RETRIES=0 npm run test:e2e:group -- build_regressions --runTestsByPath workspace-bin-portability.test.js --runInBand
 ```
 
 This focused POSIX regression installs a local command tarball and two external
@@ -92,7 +93,20 @@ automatically adds its CI job. The matrix includes `uncategorized`, which
 selects tests that match no named group; its job fails if those tests fail.
 The audit warns about these tests so they can be assigned to a named group.
 
-The `server_runtime` group runs separately from the other `regressions`.
+Regression coverage is split by behavior to keep sequential app setup and
+builds within each job's time budget:
+
+| Group | Coverage |
+| --- | --- |
+| `build_regressions` | Entrypoints, ignores, Cordova defaults, package tests, compilation failures, workspace executables, shrinkwrap pins, and dependency audits |
+| `dev_lifecycle` | Concurrent build modes, restarts, client refreshes, ports, startup ordering, and dynamic-import caching |
+| `server_runtime` | Server deployment and runtime integration |
+
+The two new groups replace the combined `regressions` CI job. The local
+`npm run test:e2e:group -- regressions` command still runs their union.
+New regression suites must be assigned to the appropriate group; otherwise they run in
+`uncategorized` and the audit reports the missing explicit assignment.
+
 `monorepo` includes npm, Yarn, pnpm, symlink fixtures, and the generated pnpm
 skeleton. Accounts tests are selected by file in the `accounts` group and run
 in the [E2E Accounts workflow](../../.github/workflows/e2e-accounts.yml).
