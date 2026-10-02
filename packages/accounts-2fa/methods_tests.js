@@ -38,6 +38,15 @@ const otpUserFields = () => ({
   },
 });
 
+Tinytest.add('account - 2fa - hashSecret may be omitted', () => {
+  try {
+    Accounts.configure2fa({ email: { enabled: true, hashSecret: undefined } });
+    Accounts.configure2fa({ email: { enabled: true, hashSecret: null } });
+  } finally {
+    restorePolicy();
+  }
+});
+
 Tinytest.addAsync('account - 2fa - email off keeps the historical TOTP-only policy', async test => {
   const plainId = await createUser();
   const otpId = await createUser(otpUserFields());

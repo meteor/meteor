@@ -83,7 +83,7 @@ Accounts.configure2fa = options => {
       resendCooldownMs: Match.Optional(Match.Integer),
       requireVerified: Match.Optional(Boolean),
       offerToOtpUsers: Match.Optional(Boolean),
-      hashSecret: Match.Optional(Match.OneOf(String, null)),
+      hashSecret: Match.Optional(Match.OneOf(String, null, undefined)),
     }),
   });
 
