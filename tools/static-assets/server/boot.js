@@ -473,8 +473,8 @@ const callShutdownHooks = Profile("Call Meteor.onShutdown hooks", async function
   }
   shutdownInProgress = true;
 
-  // Give signal listeners registered later by packages and application code
-  // one event-loop turn before the no-hooks path can call process.exit.
+  // Give the other signal listeners and their microtasks one event-loop turn
+  // before the hooks run and process.exit is called.
   await new Promise(function (resolve) { setImmediate(resolve); });
 
   const hooks = __meteor_bootstrap__.shutdownHooks || [];
