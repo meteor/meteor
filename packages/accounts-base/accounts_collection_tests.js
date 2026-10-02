@@ -3,6 +3,7 @@ import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
 import { Random } from 'meteor/random';
 import { Tinytest } from 'meteor/tinytest';
+import { waitForCollectionIndexes } from './accounts_collection_test_helpers.js';
 
 for (const shared of [false, true]) {
   Tinytest.add(`accounts - collection change - secondary instance preserves Meteor.users (shared=${shared})`, test => {
@@ -77,20 +78,15 @@ if (Meteor.isServer) {
       defineMutationMethods: false,
     });
     const userId = await users.insertAsync({ username: Random.id() });
+    const expectedIndexKeys = [
+      'username', 'emails.address',
+      'services.resume.loginTokens.hashedToken', 'services.password.enroll.when',
+      'services.email.verificationTokens.token',
+    ];
     try {
       Accounts.config({ collection: users });
-      let keys = [];
-      const deadline = Date.now() + 5000;
-      do {
-        keys = (await users.rawCollection().indexes())
-          .map(index => Object.keys(index.key).join(','));
-        if (keys.includes('services.password.enroll.when') &&
-            keys.includes('services.email.verificationTokens.token')) break;
-        await new Promise(resolve => Meteor.setTimeout(resolve, 50));
-      } while (Date.now() < deadline);
-      for (const key of ['username', 'emails.address',
-        'services.resume.loginTokens.hashedToken', 'services.password.enroll.when',
-        'services.email.verificationTokens.token']) {
+      const keys = await waitForCollectionIndexes(users, expectedIndexKeys);
+      for (const key of expectedIndexKeys) {
         test.isTrue(keys.includes(key), `Missing index: ${key}`);
       }
       test.isTrue(Meteor.users === users);
