@@ -133,7 +133,7 @@ Focused Blaze and Galvanized Iron Router fixture that exercises the standard E2E
 | Client-side app test executes instead of reporting a false zero-test success | Test once |
 | Rspack client boot marker is packaged in the deployable browser program | Build |
 | Concurrent development and full-app test commands preserve the development `.cjs` bundle | Run, Test |
-| Normal and full-app tests use isolated `_build/test` and `_build/app-test` module directories in both startup orders | Test |
+| Normal and full-app tests use isolated `_build/test` and `_build/app-test` module directories and persistent caches in both startup orders; the full-app Blaze client renders after switching modes with warm caches | Test |
 | Full-app tests build and execute the app client with no `testModule` or a server-only `testModule` | Test |
 
 ### full-blaze
@@ -146,6 +146,8 @@ Full Blaze app with an `imports/` structure and regular `meteor test` coverage. 
 | `imports/api/` test path structure | Test |
 | Regular test mode (`meteor test`, without `--full-app`) | Test, Test once |
 | FlowRouter Extra route renders the Blaze home template | Run, Prod |
+| FlowRouter dynamic imports defer compiled HTML download and registration until navigation, with templates ready before the controller executes (#14803); includes a default-bundler control and Rspack eager/lazy watch transitions | Run, Prod |
+| Route-lazy Blaze templates load and render in a built Rspack app | Build (boot) |
 | HMR disabled (incompatible with Blaze) | Run, Prod |
 
 ### typescript
