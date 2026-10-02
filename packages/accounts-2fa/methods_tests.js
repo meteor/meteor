@@ -115,6 +115,25 @@ Tinytest.addAsync('account - 2fa - email is sent only when TOTP is not set up', 
   }
 });
 
+Tinytest.addAsync('account - 2fa - parallel logins send a single email', async test => {
+  const userId = await createUser();
+  try {
+    Accounts.configure2fa({ email: { enabled: true } });
+    const user = await findUserById(userId);
+    const results = await Promise.all(
+      Array.from({ length: 5 }, () => Accounts._issue2faEmailCode(user))
+    );
+    test.equal(results.filter(result => result.sent).length, 1);
+    test.isTrue(results.every(result => result.sent || result.retryAfterMs > 0));
+    const stored = await findUserById(userId);
+    test.equal(stored.services.twoFactorAuthentication.emailCode.attempts, 0);
+    test.isTrue(!!stored.services.twoFactorAuthentication.emailCode.hash);
+  } finally {
+    restorePolicy();
+    await Accounts.users.removeAsync(userId);
+  }
+});
+
 Tinytest.addAsync('account - 2fa - email code is single use, expires, and locks out', async test => {
   const userId = await createUser();
   try {
