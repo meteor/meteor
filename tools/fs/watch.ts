@@ -417,7 +417,7 @@ export function readDirectory({ absPath, include, exclude, names }: {
 // All fields are private.
 export class Watcher {
   private watchSet: WatchSet;
-  private onChange: () => any;
+  private onChange: (changedPath?: string) => any;
   private stopped = false;
   private justCheckOnce = false;
   private async = false;
@@ -433,7 +433,7 @@ export class Watcher {
 
   constructor(options: {
     watchSet: WatchSet;
-    onChange: () => any;
+    onChange: (changedPath?: string) => any;
     async?: boolean;
     justCheckOnce?: boolean;
     includePotentiallyUnusedFiles?: boolean;
@@ -481,13 +481,13 @@ export class Watcher {
         return false;
       }
       // Nope, not what we expected.
-      this.fire();
+      this.fire(absPath);
       return true;
     }
 
     // File exists! Is that what we expected?
     if (oldHash === null) {
-      this.fire();
+      this.fire(absPath);
       return true;
     }
 
@@ -496,7 +496,7 @@ export class Watcher {
       return false;
     }
 
-    this.fire();
+    this.fire(absPath);
     return true;
   }
 
@@ -513,7 +513,7 @@ export class Watcher {
 
       // If the directory has changed (including being deleted or created).
       if (! _.isEqual(info.contents, newContents)) {
-        this.fire();
+        this.fire(infos[0].absPath);
         return true;
       }
     }
@@ -785,10 +785,10 @@ export class Watcher {
     });
   }
 
-  private fire() {
+  private fire(changedPath?: string) {
     if (this.stopped) return;
     this.stop();
-    this.onChange();
+    this.onChange(changedPath);
   }
 
   stop() {

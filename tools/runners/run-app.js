@@ -908,9 +908,10 @@ Object.assign(AppRunner.prototype, {
     if (self.watchForChanges) {
       serverWatcher = new watch.Watcher({
         watchSet: serverWatchSet,
-        onChange: function () {
+        onChange: function (changedPath) {
           self._resolvePromise("run", {
-            outcome: 'changed'
+            outcome: 'changed',
+            changedPath: changedPath,
           });
         },
         includePotentiallyUnusedFiles: false,
@@ -922,7 +923,7 @@ Object.assign(AppRunner.prototype, {
       clientWatcher && clientWatcher.stop();
       clientWatcher = new watch.Watcher({
         watchSet: bundleResult.clientWatchSet,
-        onChange: function () {
+        onChange: function (changedPath) {
           // Pass false for the includePotentiallyUnusedFiles parameter (which
           // defaults to true) to avoid restarting the server due to changes in
           // files that were not used by the server bundle. This assumes we have
@@ -932,7 +933,7 @@ Object.assign(AppRunner.prototype, {
           var outcome = watch.isUpToDate(serverWatchSet, false)
                       ? 'changed-refreshable' // only a client asset has changed
                       : 'changed'; // both a client and server asset changed
-          self._resolvePromise('run', { outcome: outcome });
+          self._resolvePromise('run', { outcome: outcome, changedPath: changedPath });
         },
         async: true,
         includePotentiallyUnusedFiles: false,
@@ -1017,7 +1018,7 @@ Object.assign(AppRunner.prototype, {
 
         maybePrintLintWarnings(bundleResult);
 
-        runLog.logClientRestart();
+        runLog.logClientRestart(ret.changedPath);
 
         var oldPromise = self.runPromise = self._makePromise("run");
 
