@@ -101,8 +101,10 @@ Accounts._issue2faEmailCode = async user => {
   const now = Date.now();
   if (current?.createdAt instanceof Date) {
     const age = now - current.createdAt.getTime();
-    const stillValid = age < emailConfig.expirationMs && current.attempts < emailConfig.maxAttempts;
-    if (stillValid && age < emailConfig.resendCooldownMs) {
+    // A spent code keeps createdAt. The cooldown still applies after the attempts are used up.
+    const exhausted = !current.hash || current.attempts >= emailConfig.maxAttempts;
+    const stillValid = !exhausted && age < emailConfig.expirationMs;
+    if (age < emailConfig.resendCooldownMs && (stillValid || exhausted)) {
       return {
         sent: false,
         retryAfterMs: emailConfig.resendCooldownMs - age,
@@ -150,8 +152,10 @@ Accounts._issue2faEmailCode = async user => {
   return { sent: true, retryAfterMs: 0 };
 };
 
+const MAX_2FA_CODE_LENGTH = 16;
+
 const codesMatch = (userId, code, hash) => {
-  if (typeof code !== 'string' || typeof hash !== 'string') {
+  if (typeof code !== 'string' || code.length > MAX_2FA_CODE_LENGTH || typeof hash !== 'string') {
     return false;
   }
   const actual = hashCode(userId, code.trim());
@@ -175,16 +179,19 @@ Accounts._verify2faEmailCode = async (user, code) => {
   }
 
   const expired = Date.now() - record.createdAt.getTime() >= emailConfig.expirationMs;
-  const exhausted = record.attempts >= emailConfig.maxAttempts;
-  if (expired || exhausted) {
+  if (expired) {
     await Meteor.users.updateAsync(user._id, {
       $unset: { 'services.twoFactorAuthentication.emailCode': 1 },
     });
     return false;
   }
+  if (record.attempts >= emailConfig.maxAttempts) {
+    return false;
+  }
 
   if (!codesMatch(user._id, code, record.hash)) {
-    // maxAttempts failures in total: the last one deletes the code.
+    // The last failure drops the hash so the code cannot be retried, and keeps
+    // createdAt so the resend cooldown still applies.
     const updated = await Meteor.users.updateAsync(
       {
         _id: user._id,
@@ -196,9 +203,18 @@ Accounts._verify2faEmailCode = async (user, code) => {
       { $inc: { 'services.twoFactorAuthentication.emailCode.attempts': 1 } }
     );
     if (!updated) {
-      await Meteor.users.updateAsync(user._id, {
-        $unset: { 'services.twoFactorAuthentication.emailCode': 1 },
-      });
+      await Meteor.users.updateAsync(
+        {
+          _id: user._id,
+          'services.twoFactorAuthentication.emailCode.hash': record.hash,
+        },
+        {
+          $set: {
+            'services.twoFactorAuthentication.emailCode.attempts': emailConfig.maxAttempts,
+          },
+          $unset: { 'services.twoFactorAuthentication.emailCode.hash': 1 },
+        }
+      );
     }
     return false;
   }

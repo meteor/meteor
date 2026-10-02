@@ -40,7 +40,10 @@ Accounts.registerLoginHandler('passwordless', async function (options) {
 
   check(options, {
     token: tokenValidator(),
-    code: Match.Optional(Match.NonEmptyString),
+    code: Match.Optional(Match.Where(value => {
+      const pattern = Accounts._2faCodeMatch || Match.NonEmptyString;
+      return Match.test(value, pattern);
+    })),
     twoFactorMethod: Match.Optional(Match.OneOf('otp', 'email')),
     twoFactorContext: twoFactorClientContext,
     selector: Accounts._userQueryValidator,
