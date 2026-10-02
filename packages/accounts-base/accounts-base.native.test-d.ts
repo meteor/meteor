@@ -225,3 +225,64 @@ expectTypeOf<Accounts.Password>().not.toBeAny();
 expectTypeOf<Accounts.StampedLoginToken>().toBeObject();
 expectTypeOf<Accounts.HashedStampedLoginToken>().toBeObject();
 expectTypeOf(Accounts._insertHashedLoginToken).returns.toEqualTypeOf<Promise<void>>();
+
+// --- Accounts API tokens ---
+expectTypeOf<Accounts.CreateApiTokenOptions>().toEqualTypeOf<{
+  name: string;
+  expiresAt: Date | null;
+  scopes?: string[] | null;
+}>();
+expectTypeOf<Accounts.ApiToken>().toEqualTypeOf<{
+  id: string;
+  name: string;
+  createdAt: Date;
+  expiresAt: Date | null;
+  scopes: string[] | null;
+}>();
+expectTypeOf<Accounts.CreatedApiToken>().toMatchTypeOf<
+  Accounts.ApiToken & { token: string }
+>();
+expectTypeOf(Accounts.createApiTokenAsync).toEqualTypeOf<
+  (userId: string, options: Accounts.CreateApiTokenOptions) => Promise<Accounts.CreatedApiToken>
+>();
+expectTypeOf(Accounts.listApiTokensAsync).toEqualTypeOf<
+  (userId: string) => Promise<Accounts.ApiToken[]>
+>();
+expectTypeOf(Accounts.revokeApiTokenAsync).toEqualTypeOf<
+  (userId: string, tokenId: string) => Promise<boolean>
+>();
+expectTypeOf(Accounts.revokeAllApiTokensAsync).toEqualTypeOf<
+  (userId: string) => Promise<void>
+>();
+
+expectTypeOf(Accounts.createApiTokenAsync("user-id", {
+  name: "ci reports",
+  expiresAt: new Date(),
+  scopes: ["reports:read"],
+})).toEqualTypeOf<Promise<Accounts.CreatedApiToken>>();
+
+Accounts.createApiTokenAsync("user-id", { name: "integration", expiresAt: null });
+Accounts.createApiTokenAsync("user-id", { name: "integration", expiresAt: null, scopes: null });
+Accounts.createApiTokenAsync("user-id", { name: "integration", expiresAt: null, scopes: [] });
+
+// @ts-expect-error A lifetime must be chosen explicitly.
+Accounts.createApiTokenAsync("user-id", { name: "integration" });
+// @ts-expect-error Expiry is a Date or null, not a session lifetime in days.
+Accounts.createApiTokenAsync("user-id", { name: "integration", expiresAt: 30 });
+// @ts-expect-error Scopes are a list of application-defined names.
+Accounts.createApiTokenAsync("user-id", { name: "integration", expiresAt: null, scopes: "reports:read" });
+
+expectTypeOf(Accounts.listApiTokensAsync("user-id")).toEqualTypeOf<Promise<Accounts.ApiToken[]>>();
+expectTypeOf(Accounts.revokeApiTokenAsync("user-id", "token-id")).toEqualTypeOf<Promise<boolean>>();
+expectTypeOf(Accounts.revokeAllApiTokensAsync("user-id")).toEqualTypeOf<Promise<void>>();
+
+declare const metadata: Accounts.ApiToken;
+expectTypeOf(metadata.expiresAt).toEqualTypeOf<Date | null>();
+expectTypeOf(metadata.scopes).toEqualTypeOf<string[] | null>();
+// @ts-expect-error Listing credentials must not expose their secret.
+expectTypeOf(metadata.token);
+// @ts-expect-error Listing credentials must not expose their stored hash.
+expectTypeOf(metadata.hashedToken);
+
+declare const issued: Accounts.CreatedApiToken;
+expectTypeOf(issued.token).toBeString();
