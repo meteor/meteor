@@ -3,6 +3,7 @@
   "compilerOptions": {
     "types": ["node"],
     "paths": {
+      "meteor/meteor-otel": ["./packages/meteor-otel/meteor-otel.d.ts"],
       "meteor/meteor": ["./packages/meteor/meteor.native.d.ts"],
       "meteor/mongo": ["./packages/mongo/mongo.native.d.ts"],
       "meteor/ddp": ["./packages/ddp/ddp.native.d.ts"],
