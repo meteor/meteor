@@ -107,7 +107,7 @@ Tinytest.addAsync('minimongo - updateAsync multiple using query operator', async
     _id: { $in: c.find().fetch().map(({_id}) => _id) }
   }, {
     type: 'test'
-  })
+  }, { multi: true })
 
   test.equal(c.find({
     type: 'test'
