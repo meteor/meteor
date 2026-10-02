@@ -71,6 +71,7 @@
     "sha",
     "shell-server",
     "socket-stream-client",
+    "thread-context",
     "tracker",
     "twitter-oauth",
     "url",
