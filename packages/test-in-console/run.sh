@@ -27,132 +27,20 @@ PUPPETEER_CACHE_ROOT="${TMPDIR:-/tmp}"
 export PUPPETEER_CACHE_DIR="${PUPPETEER_CACHE_ROOT%/}/puppeteer-chrome-cache-25.9.0"
 export PUPPETEER_SKIP_CHROME_HEADLESS_SHELL_DOWNLOAD=true
 
-PUPPETEER_INSTALL_LOCK="${PUPPETEER_CACHE_DIR}.lock"
-PUPPETEER_LOCK_ACQUIRED=false
-PUPPETEER_LOCK_HEARTBEAT_PID=""
-PUPPETEER_LOCK_OWNER_PID=$$
-
-puppeteer_installer_running() {
-  local installer_pid=""
-  [ -f "$PUPPETEER_INSTALL_LOCK/installer_pid" ] || return 1
-  read -r installer_pid < "$PUPPETEER_INSTALL_LOCK/installer_pid" || true
-  [[ "$installer_pid" =~ ^[0-9]+$ ]] && kill -0 "$installer_pid" 2>/dev/null
-}
-
-release_puppeteer_lock() {
-  local lock_pid
-  if [ -f "$PUPPETEER_INSTALL_LOCK/pid" ]; then
-    read -r lock_pid < "$PUPPETEER_INSTALL_LOCK/pid" || true
-    if [ "$lock_pid" = "$PUPPETEER_LOCK_OWNER_PID" ]; then
-      rm -f "$PUPPETEER_INSTALL_LOCK/pid" "$PUPPETEER_INSTALL_LOCK/installer_pid"
-      rmdir "$PUPPETEER_INSTALL_LOCK" 2>/dev/null || true
-    fi
-  fi
-}
-
-cleanup_puppeteer_lock() {
-  if [ "$PUPPETEER_LOCK_ACQUIRED" = true ]; then
-    # If cancellation leaves the installer alive, let the heartbeat retain the
-    # lock until that child finishes rather than starting a second extraction.
-    if puppeteer_installer_running; then
-      return
-    fi
-    if [ -n "$PUPPETEER_LOCK_HEARTBEAT_PID" ]; then
-      kill "$PUPPETEER_LOCK_HEARTBEAT_PID" 2>/dev/null || true
-      wait "$PUPPETEER_LOCK_HEARTBEAT_PID" 2>/dev/null || true
-    fi
-    release_puppeteer_lock
-  fi
-}
-
-trap cleanup_puppeteer_lock EXIT
-trap 'exit 1' INT TERM
-
-# Multiple test jobs can share a self-hosted runner. Wait until the current
-# installer has completely finished instead of accepting a browser binary that
-# appeared while the rest of its directory was still being extracted.
-for ((attempt = 0; attempt < 600; attempt++)); do
-  if mkdir "$PUPPETEER_INSTALL_LOCK" 2>/dev/null; then
-    PUPPETEER_LOCK_ACQUIRED=true
-    printf '%s\n' "$PUPPETEER_LOCK_OWNER_PID" > "$PUPPETEER_INSTALL_LOCK/pid"
-    break
-  fi
-
-  # A cancelled job can leave its heartbeat running, so a recent mtime alone
-  # does not prove that the installer still owns the lock.
-  if [ -f "$PUPPETEER_INSTALL_LOCK/pid" ]; then
-    read -r lock_pid < "$PUPPETEER_INSTALL_LOCK/pid" || true
-    if [[ "$lock_pid" =~ ^[0-9]+$ ]] && ! kill -0 "$lock_pid" 2>/dev/null && ! puppeteer_installer_running; then
-      rm -f "$PUPPETEER_INSTALL_LOCK/pid" "$PUPPETEER_INSTALL_LOCK/installer_pid"
-      rmdir "$PUPPETEER_INSTALL_LOCK" 2>/dev/null || true
-      continue
-    fi
-  fi
-
-  if ./dev_bundle/bin/node -e '
-    const fs = require("fs");
-    const age = Date.now() - fs.statSync(process.argv[1]).mtimeMs;
-    process.exit(age > 2 * 60 * 1000 ? 0 : 1);
-  ' "$PUPPETEER_INSTALL_LOCK" 2>/dev/null && ! puppeteer_installer_running; then
-    rm -f "$PUPPETEER_INSTALL_LOCK/pid" "$PUPPETEER_INSTALL_LOCK/installer_pid"
-    rmdir "$PUPPETEER_INSTALL_LOCK" 2>/dev/null || true
-    continue
-  fi
-
-  sleep 1
-done
-
-if [ "$PUPPETEER_LOCK_ACQUIRED" != true ]; then
-  echo "Timed out waiting for another Puppeteer installation" >&2
-  exit 1
-fi
-
-(
-  while [ -d "$PUPPETEER_INSTALL_LOCK" ]; do
-    if ! kill -0 "$PUPPETEER_LOCK_OWNER_PID" 2>/dev/null && ! puppeteer_installer_running; then
-      release_puppeteer_lock
-      break
-    fi
-    touch "$PUPPETEER_INSTALL_LOCK"
-    sleep 30
-  done
-) &
-PUPPETEER_LOCK_HEARTBEAT_PID=$!
-
-check_puppeteer() {
-  ./dev_bundle/bin/node <<'NODE'
-const { execFile } = require("child_process");
-const { statSync } = require("fs");
-const puppeteer = require("./dev_bundle/lib/node_modules/puppeteer");
-
-Promise.resolve(puppeteer.executablePath()).then((executablePath) => {
-  if (!statSync(executablePath).isFile()) {
-    process.exit(1);
-  }
-  execFile(executablePath, ["--version"], { timeout: 30000 }, (error) => {
-    process.exit(error ? 1 : 0);
-  });
-}).catch(() => process.exit(1));
-NODE
-}
-
-if ! check_puppeteer; then
-  # The installer skips an existing browser directory, even if extraction was
-  # interrupted. Remove this version-specific cache before retrying.
-  ./dev_bundle/bin/node -e 'require("fs").rmSync(process.env.PUPPETEER_CACHE_DIR, { force: true, recursive: true })'
-  ./dev_bundle/bin/node ./dev_bundle/lib/node_modules/puppeteer/install.mjs &
-  PUPPETEER_INSTALLER_PID=$!
-  printf '%s\n' "$PUPPETEER_INSTALLER_PID" > "$PUPPETEER_INSTALL_LOCK/installer_pid"
-  wait "$PUPPETEER_INSTALLER_PID"
-  rm -f "$PUPPETEER_INSTALL_LOCK/installer_pid"
-  if ! check_puppeteer; then
-    echo "Chrome for Puppeteer is unavailable after installation" >&2
+# Keep the lock file on disk: deleting it could let another process flock a
+# different inode. The installer inherits fd 9, so cancelled jobs cannot
+# release the lock while an orphaned extraction still runs.
+bash -c '
+  exec 9>>"$1"
+  if ! flock -w 600 9; then
+    echo "Timed out waiting for another Puppeteer installation" >&2
     exit 1
   fi
-fi
-
-cleanup_puppeteer_lock
-trap - EXIT INT TERM
+  shift
+  exec "$@"
+' _ "${PUPPETEER_CACHE_DIR}.flock" \
+  ./dev_bundle/bin/node tools/tool-testing/clients/puppeteer/ensure-browser.cjs \
+  "$METEOR_HOME/dev_bundle/lib/node_modules/puppeteer"
 
 export PATH=$METEOR_HOME:$PATH
 

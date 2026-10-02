@@ -50,6 +50,16 @@ jest.mock(
 import PuppeteerClient from "./index.js";
 
 describe("PuppeteerClient", () => {
+  const originalPlatform = process.platform;
+
+  beforeAll(() => {
+    Object.defineProperty(process, 'platform', { configurable: true, value: 'darwin' });
+  });
+
+  afterAll(() => {
+    Object.defineProperty(process, 'platform', { configurable: true, value: originalPlatform });
+  });
+
   beforeEach(() => {
     mockEnsureDependencies.mockReset().mockResolvedValue(undefined);
     mockExecFile
@@ -215,5 +225,54 @@ describe("PuppeteerClient", () => {
       expect.stringContaining("puppeteer-chrome-cache-25.9.0"),
       { force: true, recursive: true },
     );
+  });
+});
+describe('PuppeteerClient Linux browser installation', () => {
+  const originalPlatform = process.platform;
+
+  beforeAll(() => {
+    Object.defineProperty(process, 'platform', { configurable: true, value: 'linux' });
+  });
+
+  afterAll(() => {
+    Object.defineProperty(process, 'platform', { configurable: true, value: originalPlatform });
+  });
+
+  beforeEach(() => {
+    mockEnsureDependencies.mockReset().mockResolvedValue(undefined);
+    mockExecFile.mockReset().mockImplementation((_file, _args, _options, callback) => callback(null, '', ''));
+  });
+
+  it('runs the shared installer under the flock before using Chrome', async () => {
+    const client = new PuppeteerClient({ host: 'localhost', port: 3000 });
+    await client.init();
+
+    expect(mockExecFile).toHaveBeenCalledTimes(1);
+    expect(mockExecFile).toHaveBeenCalledWith(
+      'bash',
+      expect.arrayContaining([
+        expect.stringContaining('flock -w 600 9'),
+        expect.stringContaining('puppeteer-chrome-cache-25.9.0.flock'),
+        process.execPath,
+        expect.stringContaining('ensure-browser.cjs'),
+        '/dev-bundle/lib/node_modules/puppeteer',
+      ]),
+      expect.objectContaining({
+        env: expect.objectContaining({
+          PUPPETEER_CACHE_DIR: expect.stringContaining('puppeteer-chrome-cache-25.9.0'),
+          PUPPETEER_SKIP_CHROME_HEADLESS_SHELL_DOWNLOAD: 'true',
+        }),
+      }),
+      expect.any(Function),
+    );
+    expect(client.initialized).toBe(true);
+  });
+
+  it('fails initialization when the shared installer fails', async () => {
+    mockExecFile.mockImplementation((_file, _args, _options, callback) => callback(new Error('install failed')));
+    const client = new PuppeteerClient({ host: 'localhost', port: 3000 });
+
+    await expect(client.init()).rejects.toThrow('install failed');
+    expect(client.initialized).toBe(false);
   });
 });

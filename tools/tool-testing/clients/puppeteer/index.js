@@ -12,6 +12,7 @@ const NPM_DEPENDENCIES = {
 };
 const PUPPETEER_CACHE_DIR = join(tmpdir(), 'puppeteer-chrome-cache-25.9.0');
 const PUPPETEER_CACHE_LOCK_DIR = `${PUPPETEER_CACHE_DIR}.lock`;
+const PUPPETEER_CACHE_FLOCK_FILE = `${PUPPETEER_CACHE_DIR}.flock`;
 const BROWSER_CHECK_TIMEOUT_MS = 30000;
 const INSTALL_LOCK_TIMEOUT_MS = 10 * 60 * 1000;
 const INSTALL_LOCK_HEARTBEAT_MS = 30000;
@@ -68,6 +69,19 @@ export default class PuppeteerClient extends Client {
   }
 
   async _ensureBrowserDownloaded() {
+    if (process.platform === 'linux') {
+      const puppeteerDir = pathJoin(getDevBundle(), 'lib', 'node_modules', 'puppeteer');
+      await runFile('bash', [
+        '-c',
+        'exec 9>>"$1"; flock -w 600 9 || { echo "Timed out waiting for another Puppeteer installation" >&2; exit 1; }; shift; exec "$@"',
+        '_', PUPPETEER_CACHE_FLOCK_FILE, process.execPath,
+        pathJoin(__dirname, 'ensure-browser.cjs'), puppeteerDir
+      ], {
+        env: { ...process.env, PUPPETEER_SKIP_CHROME_HEADLESS_SHELL_DOWNLOAD: 'true' }
+      });
+      return;
+    }
+
     if (await this._browserExecutablePath()) {
       return;
     }
