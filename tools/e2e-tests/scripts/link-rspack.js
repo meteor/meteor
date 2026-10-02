@@ -10,6 +10,7 @@
  *      local meteor-rspack package (read from packages/rspack/lib/constants.js)
  *   3. Install `ignore-loader` in the app
  *   4. `npm link` the local meteor-rspack into the app
+ *   5. Verify SWC's native parser from both installation directories
  *
  */
 
@@ -19,8 +20,42 @@ const execa = require('execa');
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
 const METEOR_EXECUTABLE = path.join(REPO_ROOT, 'meteor');
+const METEOR_NODE_EXECUTABLE = path.join(
+  REPO_ROOT, 'dev_bundle', 'bin', process.platform === 'win32' ? 'node.exe' : 'node'
+);
 const RSPACK_PACKAGE_DIR = path.join(REPO_ROOT, 'npm-packages', 'meteor-rspack');
 const CONSTANTS_PATH = path.join(REPO_ROOT, 'packages', 'rspack', 'lib', 'constants.js');
+
+/**
+ * Exercise the native parser with the Node binary Meteor will run. Loader and
+ * cache warnings omit Error.cause; an uncaught setup error preserves the actual
+ * missing module or dynamic-library error before repeated startup timeouts.
+ */
+async function verifySwcNativeBinding(cwd, execOpts, { optional = false } = {}) {
+  let swcPath;
+
+  try {
+    swcPath = require.resolve('@swc/core', { paths: [cwd] });
+  } catch (error) {
+    // Apps without a standalone SWC loader can use only the adapter's parser.
+    if (optional && error.code === 'MODULE_NOT_FOUND') {
+      return;
+    }
+
+    throw error;
+  }
+
+  console.log(`Checking SWC native parser in ${cwd}...`);
+
+  await execa(METEOR_NODE_EXECUTABLE, ['--eval', `
+    const swcPath = process.argv[1];
+    console.log('[SWC native parser]', process.version, process.platform, process.arch, swcPath);
+
+    const swc = require(swcPath);
+    swc.parseSync('const verified = true;');
+    console.log('[SWC native parser]', swc.version, swc.getBinaryMetadata?.());
+  `, swcPath], { cwd, stdio: 'inherit', ...execOpts });
+}
 
 async function linkLocalRspack(appDir, { env } = {}) {
   if (!appDir || !fs.existsSync(appDir)) {
@@ -69,6 +104,9 @@ async function linkLocalRspack(appDir, { env } = {}) {
 
   console.log(`Linking local meteor-rspack from ${RSPACK_PACKAGE_DIR}...`);
   await execa('npm', ['link', RSPACK_PACKAGE_DIR], { cwd: appDir });
+
+  await verifySwcNativeBinding(RSPACK_PACKAGE_DIR, execOpts);
+  await verifySwcNativeBinding(appDir, execOpts, { optional: true });
 
   console.log('Local meteor-rspack linked successfully.');
 }

@@ -5,6 +5,8 @@ var archinfo = require('./archinfo');
 var buildmessage = require('./buildmessage.js');
 var files = require('../fs/files');
 var packageVersionParser = require('../packaging/package-version-parser.js');
+var isFileBackedSourceMap = require('./file-backed-source-map')
+  .isFileBackedSourceMap;
 
 var utils = exports;
 
@@ -724,6 +726,9 @@ exports.sourceMapLength = function (sm) {
   if (!sm) {
     return 0;
   }
+  if (isFileBackedSourceMap(sm)) {
+    return sm.byteLength;
+  }
   // sum the length of sources and the mappings, the size of
   // metadata is ignored, but it is not a big deal
   return sm.mappings.length
@@ -787,4 +792,3 @@ export function isEmacs() {
   emacsDetected = !!(process.env.EMACS === "t" || process.env.INSIDE_EMACS);
   return emacsDetected;
 }
-

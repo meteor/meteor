@@ -1,0 +1,1622 @@
+use std::borrow::Cow;
+use std::collections::HashMap;
+use std::fs::{self, File};
+use std::io::{BufWriter, Read, Seek, SeekFrom, Write};
+use std::path::{Path, PathBuf};
+
+use anyhow::{Context, Result, anyhow, bail};
+use memmap2::Mmap;
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+
+mod source_map_document;
+
+use source_map_document::{JsonSpan, SourceMapDocument};
+
+pub const PROTOCOL_VERSION: u32 = 1;
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Request {
+    pub protocol_version: u32,
+    pub workspace_root: PathBuf,
+    #[serde(default)]
+    pub input_roots: Vec<PathBuf>,
+    pub output: OutputRequest,
+    pub pieces: Vec<Piece>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OutputRequest {
+    pub code_path: PathBuf,
+    pub map_path: PathBuf,
+    #[serde(default)]
+    pub file: Option<String>,
+    #[serde(default)]
+    pub source_prefix: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+pub enum Piece {
+    Literal {
+        value: String,
+    },
+    Mapped {
+        code_path: PathBuf,
+        map_path: PathBuf,
+        #[serde(default)]
+        relative_path: Option<String>,
+    },
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Response {
+    pub protocol_version: u32,
+    pub success: bool,
+    pub code_path: PathBuf,
+    pub map_path: PathBuf,
+    pub code_bytes: u64,
+    pub map_bytes: u64,
+    pub code_sha256: String,
+    pub map_sha256: String,
+}
+
+#[derive(Debug, Default)]
+struct RawSourceMap {
+    version: serde_json::Value,
+    sources: Vec<String>,
+    names: Vec<String>,
+    source_root: Option<String>,
+    sources_content: Vec<JsonSpan>,
+    mappings: Option<JsonSpan>,
+    sections: Vec<RawSection>,
+}
+
+#[derive(Debug)]
+struct RawSection {
+    offset: RawOffset,
+    map: Box<RawSourceMap>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RawOffset {
+    line: u32,
+    column: u32,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct DecodedMapping {
+    generated_line: u32,
+    generated_column: u32,
+    source: Option<u32>,
+    original_line: Option<u32>,
+    original_column: Option<u32>,
+    name: Option<u32>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct OutputMapping {
+    generated_line: u32,
+    generated_column: u32,
+    source: Option<u32>,
+    original_line: Option<u32>,
+    original_column: Option<u32>,
+    name: Option<u32>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct OriginalLocation {
+    source: u32,
+    line: u32,
+    column: u32,
+    name: Option<u32>,
+}
+
+struct MappedInput<'a> {
+    map: &'a RawSourceMap,
+    sources: Vec<String>,
+}
+
+#[derive(Clone, Debug)]
+struct InflatedMapping {
+    generated_line: u32,
+    generated_column: u32,
+    source: Option<String>,
+    original_line: Option<u32>,
+    original_column: Option<u32>,
+    name: Option<String>,
+}
+
+struct OutputMap {
+    mapping_path: PathBuf,
+    mapping_writer: BufWriter<File>,
+    source_contents_path: PathBuf,
+    source_contents_writer: BufWriter<CountedFile>,
+    sources: Vec<String>,
+    source_indexes: HashMap<String, u32>,
+    names: Vec<String>,
+    name_indexes: HashMap<String, u32>,
+    source_contents: HashMap<String, SourceContentLocation>,
+    pending: Vec<OutputMapping>,
+    previous_generated_line: u32,
+    previous_generated_column: i64,
+    previous_original_line: i64,
+    previous_original_column: i64,
+    previous_source: i64,
+    previous_name: i64,
+    wrote_mapping: bool,
+    source_prefix: Option<String>,
+}
+
+#[derive(Clone, Copy)]
+struct SourceContentLocation {
+    offset: u64,
+    length: u64,
+}
+
+struct CountedFile {
+    file: File,
+    bytes: u64,
+}
+
+impl Write for CountedFile {
+    fn write(&mut self, buffer: &[u8]) -> std::io::Result<usize> {
+        let written = self.file.write(buffer)?;
+        self.bytes += written as u64;
+        Ok(written)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.file.flush()
+    }
+}
+
+struct OutputCode {
+    writer: BufWriter<File>,
+    hasher: Sha256,
+    bytes: u64,
+    line: u32,
+    column: u32,
+    active_original: Option<OriginalLocation>,
+}
+
+struct Composer {
+    code: OutputCode,
+    map: OutputMap,
+}
+
+struct MappedCodeState<'a> {
+    cursor: CodeCursor<'a>,
+    last_generated_line: u32,
+    last_generated_column: u32,
+    last_mapping: Option<DecodedMapping>,
+}
+
+impl<'a> MappedCodeState<'a> {
+    fn new(code: &'a str) -> Self {
+        Self {
+            cursor: CodeCursor::new(code),
+            last_generated_line: 1,
+            last_generated_column: 0,
+            last_mapping: None,
+        }
+    }
+}
+
+pub fn execute(request: Request) -> Result<Response> {
+    if request.protocol_version != PROTOCOL_VERSION {
+        bail!(
+            "unsupported protocol version {}; expected {PROTOCOL_VERSION}",
+            request.protocol_version
+        );
+    }
+
+    let root = request.workspace_root.canonicalize().with_context(|| {
+        format!(
+            "resolving workspace root {}",
+            request.workspace_root.display()
+        )
+    })?;
+
+    validate_output_path(&root, &request.output.code_path)?;
+    validate_output_path(&root, &request.output.map_path)?;
+
+    let mut input_roots = Vec::with_capacity(request.input_roots.len() + 1);
+    input_roots.push(root.clone());
+    for input_root in &request.input_roots {
+        input_roots.push(
+            input_root
+                .canonicalize()
+                .with_context(|| format!("resolving input root {}", input_root.display()))?,
+        );
+    }
+
+    if let Some(parent) = request.output.code_path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    if let Some(parent) = request.output.map_path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+
+    let mapping_path = sibling_temporary_path(&request.output.map_path, "mappings");
+    let source_contents_path = sibling_temporary_path(&request.output.map_path, "source-contents");
+    let code_file = File::create(&request.output.code_path)
+        .with_context(|| format!("creating {}", request.output.code_path.display()))?;
+    let mut composer = Composer {
+        code: OutputCode {
+            writer: BufWriter::new(code_file),
+            hasher: Sha256::new(),
+            bytes: 0,
+            line: 1,
+            column: 0,
+            active_original: None,
+        },
+        map: OutputMap::new(
+            mapping_path.clone(),
+            source_contents_path.clone(),
+            request.output.source_prefix.clone(),
+        )?,
+    };
+
+    let result = (|| -> Result<()> {
+        for piece in request.pieces {
+            match piece {
+                Piece::Literal { value } => composer.emit(&value, None)?,
+                Piece::Mapped {
+                    code_path,
+                    map_path,
+                    relative_path,
+                } => {
+                    validate_input_path(&input_roots, &code_path)?;
+                    validate_input_path(&input_roots, &map_path)?;
+                    composer.emit_mapped_file(&code_path, &map_path, relative_path.as_deref())?;
+                }
+            }
+        }
+
+        composer.code.writer.flush()?;
+        composer
+            .map
+            .finish(&request.output.map_path, request.output.file.as_deref())?;
+        Ok(())
+    })();
+
+    if let Err(error) = result {
+        let _ = fs::remove_file(&request.output.code_path);
+        let _ = fs::remove_file(&request.output.map_path);
+        let _ = fs::remove_file(&mapping_path);
+        let _ = fs::remove_file(&source_contents_path);
+        return Err(error);
+    }
+
+    let code_sha256 = hex_digest(composer.code.hasher.finalize());
+    let code_bytes = composer.code.bytes;
+    let map_bytes = fs::metadata(&request.output.map_path)?.len();
+    let map_sha256 = hash_file(&request.output.map_path)?;
+
+    Ok(Response {
+        protocol_version: PROTOCOL_VERSION,
+        success: true,
+        code_path: request.output.code_path,
+        map_path: request.output.map_path,
+        code_bytes,
+        map_bytes,
+        code_sha256,
+        map_sha256,
+    })
+}
+
+impl Composer {
+    fn emit_mapped_file(
+        &mut self,
+        code_path: &Path,
+        map_path: &Path,
+        relative_path: Option<&str>,
+    ) -> Result<()> {
+        let code_file = File::open(code_path)?;
+        let code_mmap = unsafe { Mmap::map(&code_file)? };
+        let code = std::str::from_utf8(&code_mmap).context("mapped code is not UTF-8")?;
+
+        let document = SourceMapDocument::open(map_path)?;
+        let raw = &document.root;
+
+        validate_version(&raw.version)?;
+        if raw.sections.is_empty() {
+            let mut sources = Vec::with_capacity(raw.sources.len());
+            for source in &raw.sources {
+                let normalized = normalize_path(source);
+                let resolved = compute_source_url(raw.source_root.as_deref(), &normalized);
+                sources.push(match relative_path {
+                    Some(base) => join_path(base, &resolved),
+                    None => resolved,
+                });
+            }
+
+            let input = MappedInput { map: raw, sources };
+            self.emit_basic_map(code, &document, &input)?;
+
+            for (index, source) in input.sources.iter().enumerate() {
+                if let Some(span) = input.map.sources_content.get(index)
+                    && let Some(content) = document.read_optional_string(*span)?
+                {
+                    self.map.set_source_content(source, &content)?;
+                }
+            }
+        } else {
+            self.emit_indexed_map(code, &document, raw, relative_path)?;
+        }
+
+        Ok(())
+    }
+
+    fn emit_indexed_map(
+        &mut self,
+        code: &str,
+        document: &SourceMapDocument,
+        map: &RawSourceMap,
+        relative_path: Option<&str>,
+    ) -> Result<()> {
+        let mut mappings = inflate_indexed_mappings(document, map)?;
+        mappings.sort_by(compare_inflated_mappings);
+
+        let mut sources = Vec::<String>::new();
+        let mut source_indexes = HashMap::<String, u32>::new();
+        let mut names = Vec::<String>::new();
+        let mut name_indexes = HashMap::<String, u32>::new();
+        let mut decoded = Vec::with_capacity(mappings.len());
+
+        for mapping in &mappings {
+            let source = mapping.source.as_ref().map(|value| {
+                let value = match relative_path {
+                    Some(base) => join_path(base, value),
+                    None => value.clone(),
+                };
+                *source_indexes.entry(value.clone()).or_insert_with(|| {
+                    let index = sources.len() as u32;
+                    sources.push(value);
+                    index
+                })
+            });
+            let name = mapping.name.as_ref().map(|value| {
+                *name_indexes.entry(value.clone()).or_insert_with(|| {
+                    let index = names.len() as u32;
+                    names.push(value.clone());
+                    index
+                })
+            });
+            decoded.push(DecodedMapping {
+                generated_line: mapping.generated_line,
+                generated_column: mapping.generated_column,
+                source,
+                original_line: mapping.original_line,
+                original_column: mapping.original_column,
+                name,
+            });
+        }
+
+        let synthetic = RawSourceMap {
+            version: serde_json::Value::from(3),
+            sources: Vec::new(),
+            names,
+            source_root: None,
+            sources_content: Vec::new(),
+            mappings: None,
+            sections: Vec::new(),
+        };
+        let input = MappedInput {
+            map: &synthetic,
+            sources,
+        };
+        let mut state = MappedCodeState::new(code);
+        for mapping in decoded {
+            self.emit_decoded_mapping(&mut state, mapping, &input)?;
+        }
+        self.finish_decoded_map(&mut state, &input)?;
+
+        visit_source_contents(document, map, &mut |source, content| {
+            let source = match relative_path {
+                Some(base) => join_path(base, &source),
+                None => source,
+            };
+            self.map.set_source_content(&source, &content)
+        })?;
+        Ok(())
+    }
+
+    fn emit_basic_map(
+        &mut self,
+        code: &str,
+        document: &SourceMapDocument,
+        input: &MappedInput<'_>,
+    ) -> Result<()> {
+        let mut state = MappedCodeState::new(code);
+        let mut line_mappings = Vec::new();
+
+        decode_mappings(document.mapping_reader(input.map.mappings)?, |mapping| {
+            if line_mappings.first().is_some_and(|first: &DecodedMapping| {
+                first.generated_line != mapping.generated_line
+            }) {
+                self.emit_basic_map_line(&mut state, &mut line_mappings, input)?;
+            }
+
+            line_mappings.push(mapping);
+            Ok(())
+        })?;
+
+        self.emit_basic_map_line(&mut state, &mut line_mappings, input)?;
+        self.finish_decoded_map(&mut state, input)
+    }
+
+    fn emit_basic_map_line(
+        &mut self,
+        state: &mut MappedCodeState<'_>,
+        line_mappings: &mut Vec<DecodedMapping>,
+        input: &MappedInput<'_>,
+    ) -> Result<()> {
+        // BasicSourceMapConsumer sorts equal generated positions by the remaining fields.
+        // Buffering one line preserves that order without retaining the entire mapping stream.
+        line_mappings.sort_by(compare_decoded_mappings);
+        for mapping in line_mappings.drain(..) {
+            self.emit_decoded_mapping(state, mapping, input)?;
+        }
+
+        Ok(())
+    }
+
+    fn emit_decoded_mapping(
+        &mut self,
+        state: &mut MappedCodeState<'_>,
+        mapping: DecodedMapping,
+        input: &MappedInput<'_>,
+    ) -> Result<()> {
+        if let Some(previous) = state.last_mapping {
+            if state.last_generated_line < mapping.generated_line {
+                let chunk = state.cursor.take_current_line();
+                self.emit_decoded(chunk, previous, input)?;
+                state.last_generated_line += 1;
+                state.last_generated_column = 0;
+            } else {
+                let width = mapping
+                    .generated_column
+                    .saturating_sub(state.last_generated_column);
+                let chunk = state.cursor.take_prefix(width);
+                self.emit_decoded(chunk, previous, input)?;
+                state.last_generated_column = mapping.generated_column;
+                state.last_mapping = Some(mapping);
+                return Ok(());
+            }
+        }
+
+        while state.last_generated_line < mapping.generated_line {
+            let chunk = state.cursor.take_current_line();
+            self.emit(chunk, None)?;
+            state.last_generated_line += 1;
+        }
+
+        if state.last_generated_column < mapping.generated_column {
+            let chunk = state.cursor.take_prefix(mapping.generated_column);
+            self.emit(chunk, None)?;
+            state.last_generated_column = mapping.generated_column;
+        }
+
+        state.last_mapping = Some(mapping);
+        Ok(())
+    }
+
+    fn finish_decoded_map(
+        &mut self,
+        state: &mut MappedCodeState<'_>,
+        input: &MappedInput<'_>,
+    ) -> Result<()> {
+        if !state.cursor.is_finished() {
+            if let Some(previous) = state.last_mapping {
+                let chunk = state.cursor.take_current_line();
+                self.emit_decoded(chunk, previous, input)?;
+            }
+            let rest = state.cursor.take_rest();
+            self.emit(rest, None)?;
+        }
+
+        Ok(())
+    }
+
+    fn emit_decoded(
+        &mut self,
+        chunk: &str,
+        mapping: DecodedMapping,
+        input: &MappedInput<'_>,
+    ) -> Result<()> {
+        let original = match (
+            mapping.source,
+            mapping.original_line,
+            mapping.original_column,
+        ) {
+            (Some(source), Some(line), Some(column)) => {
+                let source = input
+                    .sources
+                    .get(source as usize)
+                    .ok_or_else(|| anyhow!("source index {source} is out of range"))?;
+                let name = mapping
+                    .name
+                    .map(|index| {
+                        input
+                            .map
+                            .names
+                            .get(index as usize)
+                            .map(|value| value.as_ref())
+                            .ok_or_else(|| anyhow!("name index {index} is out of range"))
+                    })
+                    .transpose()?;
+                Some((source.as_str(), line, column, name))
+            }
+            _ => None,
+        };
+
+        self.emit_named(chunk, original)
+    }
+
+    fn emit(&mut self, chunk: &str, original: Option<(&str, u32, u32)>) -> Result<()> {
+        self.emit_named(
+            chunk,
+            original.map(|(source, line, column)| (source, line, column, None)),
+        )
+    }
+
+    fn emit_named(
+        &mut self,
+        chunk: &str,
+        original: Option<(&str, u32, u32, Option<&str>)>,
+    ) -> Result<()> {
+        if chunk.is_empty() {
+            return Ok(());
+        }
+
+        let location = match original {
+            Some((source, line, column, name)) => Some(OriginalLocation {
+                source: self.map.intern_source(source),
+                line,
+                column,
+                name: name.map(|value| self.map.intern_name(value)),
+            }),
+            None => None,
+        };
+
+        match location {
+            Some(current) => {
+                if self.code.active_original != Some(current) {
+                    self.map.add(OutputMapping {
+                        generated_line: self.code.line,
+                        generated_column: self.code.column,
+                        source: Some(current.source),
+                        original_line: Some(current.line),
+                        original_column: Some(current.column),
+                        name: current.name,
+                    })?;
+                }
+                self.code.active_original = Some(current);
+            }
+            None if self.code.active_original.is_some() => {
+                self.map.add(OutputMapping {
+                    generated_line: self.code.line,
+                    generated_column: self.code.column,
+                    source: None,
+                    original_line: None,
+                    original_column: None,
+                    name: None,
+                })?;
+                self.code.active_original = None;
+            }
+            None => {}
+        }
+
+        self.code.writer.write_all(chunk.as_bytes())?;
+        self.code.hasher.update(chunk.as_bytes());
+        self.code.bytes += chunk.len() as u64;
+
+        let mut chars = chunk.char_indices().peekable();
+        while let Some((_, character)) = chars.next() {
+            if character == '\n' {
+                self.code.line += 1;
+                self.code.column = 0;
+                if chars.peek().is_none() {
+                    self.code.active_original = None;
+                } else if let Some(current) = self.code.active_original {
+                    self.map.add(OutputMapping {
+                        generated_line: self.code.line,
+                        generated_column: 0,
+                        source: Some(current.source),
+                        original_line: Some(current.line),
+                        original_column: Some(current.column),
+                        name: current.name,
+                    })?;
+                }
+            } else {
+                self.code.column += character.len_utf16() as u32;
+            }
+        }
+
+        Ok(())
+    }
+}
+
+fn inflate_indexed_mappings(
+    document: &SourceMapDocument,
+    map: &RawSourceMap,
+) -> Result<Vec<InflatedMapping>> {
+    validate_version(&map.version)?;
+    let mut output = Vec::new();
+    let mut last_offset: Option<(u32, u32)> = None;
+
+    for section in &map.sections {
+        let offset = (section.offset.line, section.offset.column);
+        if last_offset.is_some_and(|last| last > offset) {
+            bail!("section offsets must be ordered and non-overlapping");
+        }
+        last_offset = Some(offset);
+
+        let child = inflate_consumer_mappings(document, &section.map)?;
+        let section_source = compute_source_url(consumer_source_root(&section.map), "");
+        for mapping in child {
+            let generated_line = mapping
+                .generated_line
+                .checked_add(section.offset.line)
+                .ok_or_else(|| anyhow!("indexed generated line exceeds 2**32"))?;
+            let generated_column = if section.offset.line + 1 == mapping.generated_line {
+                mapping
+                    .generated_column
+                    .checked_add(section.offset.column)
+                    .ok_or_else(|| anyhow!("indexed generated column exceeds 2**32"))?
+            } else {
+                mapping.generated_column
+            };
+            output.push(InflatedMapping {
+                generated_line,
+                generated_column,
+                source: Some(section_source.clone()),
+                original_line: mapping.original_line,
+                original_column: mapping.original_column,
+                name: mapping.name.filter(|name| !name.is_empty()),
+            });
+        }
+    }
+
+    Ok(output)
+}
+
+fn inflate_consumer_mappings(
+    document: &SourceMapDocument,
+    map: &RawSourceMap,
+) -> Result<Vec<InflatedMapping>> {
+    validate_version(&map.version)?;
+    if !map.sections.is_empty() {
+        return inflate_indexed_mappings(document, map);
+    }
+
+    let sources = map
+        .sources
+        .iter()
+        .map(|source| {
+            compute_source_url(map.source_root.as_deref(), &normalize_path(source.as_ref()))
+        })
+        .collect::<Vec<_>>();
+    let mut output = Vec::new();
+    decode_mappings(document.mapping_reader(map.mappings)?, |mapping| {
+        output.push(InflatedMapping {
+            generated_line: mapping.generated_line,
+            generated_column: mapping.generated_column,
+            source: mapping
+                .source
+                .and_then(|index| sources.get(index as usize).cloned()),
+            original_line: mapping.original_line,
+            original_column: mapping.original_column,
+            name: mapping
+                .name
+                .and_then(|index| map.names.get(index as usize))
+                .map(|value| value.to_string()),
+        });
+        Ok(())
+    })?;
+    output.sort_by(compare_inflated_mappings);
+    Ok(output)
+}
+
+fn compare_inflated_mappings(
+    left: &InflatedMapping,
+    right: &InflatedMapping,
+) -> std::cmp::Ordering {
+    left.generated_line
+        .cmp(&right.generated_line)
+        .then_with(|| left.generated_column.cmp(&right.generated_column))
+        .then_with(|| compare_nullable_strings(left.source.as_deref(), right.source.as_deref()))
+        .then_with(|| left.original_line.cmp(&right.original_line))
+        .then_with(|| left.original_column.cmp(&right.original_column))
+        .then_with(|| compare_nullable_strings(left.name.as_deref(), right.name.as_deref()))
+}
+
+fn compare_decoded_mappings(left: &DecodedMapping, right: &DecodedMapping) -> std::cmp::Ordering {
+    left.generated_column
+        .cmp(&right.generated_column)
+        .then_with(|| compare_nullable_indices(left.source, right.source))
+        .then_with(|| left.original_line.cmp(&right.original_line))
+        .then_with(|| left.original_column.cmp(&right.original_column))
+        .then_with(|| compare_nullable_indices(left.name, right.name))
+}
+
+fn compare_nullable_indices(left: Option<u32>, right: Option<u32>) -> std::cmp::Ordering {
+    match (left, right) {
+        (Some(left), Some(right)) => left.cmp(&right),
+        (Some(_), None) => std::cmp::Ordering::Less,
+        (None, Some(_)) => std::cmp::Ordering::Greater,
+        (None, None) => std::cmp::Ordering::Equal,
+    }
+}
+
+fn compare_nullable_strings(left: Option<&str>, right: Option<&str>) -> std::cmp::Ordering {
+    match (left, right) {
+        (Some(left), Some(right)) => left.cmp(right),
+        (Some(_), None) => std::cmp::Ordering::Less,
+        (None, Some(_)) => std::cmp::Ordering::Greater,
+        (None, None) => std::cmp::Ordering::Equal,
+    }
+}
+
+fn consumer_source_root(map: &RawSourceMap) -> Option<&str> {
+    if map.sections.is_empty() {
+        map.source_root.as_deref()
+    } else {
+        None
+    }
+}
+
+fn visit_source_contents<F>(
+    document: &SourceMapDocument,
+    map: &RawSourceMap,
+    callback: &mut F,
+) -> Result<()>
+where
+    F: FnMut(String, String) -> Result<()>,
+{
+    validate_version(&map.version)?;
+    if !map.sections.is_empty() {
+        for section in &map.sections {
+            visit_source_contents(document, &section.map, callback)?;
+        }
+        return Ok(());
+    }
+
+    for (index, source) in map.sources.iter().enumerate() {
+        if let Some(span) = map.sources_content.get(index)
+            && let Some(content) = document.read_optional_string(*span)?
+        {
+            let source = compute_source_url(map.source_root.as_deref(), &normalize_path(source));
+            callback(source, content)?;
+        }
+    }
+    Ok(())
+}
+
+impl OutputMap {
+    fn new(
+        mapping_path: PathBuf,
+        source_contents_path: PathBuf,
+        source_prefix: Option<String>,
+    ) -> Result<Self> {
+        let file = File::create(&mapping_path)?;
+        let source_contents_file = File::create(&source_contents_path)?;
+        Ok(Self {
+            mapping_path,
+            mapping_writer: BufWriter::new(file),
+            source_contents_path,
+            source_contents_writer: BufWriter::new(CountedFile {
+                file: source_contents_file,
+                bytes: 0,
+            }),
+            sources: Vec::new(),
+            source_indexes: HashMap::new(),
+            names: Vec::new(),
+            name_indexes: HashMap::new(),
+            source_contents: HashMap::new(),
+            pending: Vec::new(),
+            previous_generated_line: 1,
+            previous_generated_column: 0,
+            previous_original_line: 0,
+            previous_original_column: 0,
+            previous_source: 0,
+            previous_name: 0,
+            wrote_mapping: false,
+            source_prefix,
+        })
+    }
+
+    fn intern_source(&mut self, source: &str) -> u32 {
+        let source = self.rewrite_source(source);
+        if let Some(index) = self.source_indexes.get(source.as_ref()) {
+            return *index;
+        }
+        let index = self.sources.len() as u32;
+        let owned = source.into_owned();
+        self.sources.push(owned.clone());
+        self.source_indexes.insert(owned, index);
+        index
+    }
+
+    fn intern_name(&mut self, name: &str) -> u32 {
+        if let Some(index) = self.name_indexes.get(name) {
+            return *index;
+        }
+        let index = self.names.len() as u32;
+        let owned = name.to_owned();
+        self.names.push(owned.clone());
+        self.name_indexes.insert(owned, index);
+        index
+    }
+
+    fn set_source_content(&mut self, source: &str, content: &str) -> Result<()> {
+        let source = self.rewrite_source(source).into_owned();
+        let offset = self.source_contents_writer.get_ref().bytes;
+        serde_json::to_writer(&mut self.source_contents_writer, content)?;
+        self.source_contents_writer.flush()?;
+        let length = self.source_contents_writer.get_ref().bytes - offset;
+        self.source_contents
+            .insert(source, SourceContentLocation { offset, length });
+        Ok(())
+    }
+
+    fn rewrite_source<'a>(&self, source: &'a str) -> Cow<'a, str> {
+        let Some(prefix) = self.source_prefix.as_deref() else {
+            return Cow::Borrowed(source);
+        };
+        if source.starts_with(prefix) {
+            return Cow::Borrowed(source);
+        }
+
+        Cow::Owned(format!(
+            "{prefix}{}{source}",
+            if source.starts_with('/') { "" } else { "/" }
+        ))
+    }
+
+    fn add(&mut self, mapping: OutputMapping) -> Result<()> {
+        if let Some(first) = self.pending.first()
+            && (first.generated_line, first.generated_column)
+                != (mapping.generated_line, mapping.generated_column)
+        {
+            self.flush_pending()?;
+        }
+        self.pending.push(mapping);
+        Ok(())
+    }
+
+    fn flush_pending(&mut self) -> Result<()> {
+        let sources = &self.sources;
+        let names = &self.names;
+        self.pending.sort_by(|left, right| {
+            compare_optional_string(left.source, right.source, sources)
+                .then_with(|| left.original_line.cmp(&right.original_line))
+                .then_with(|| left.original_column.cmp(&right.original_column))
+                .then_with(|| compare_optional_string(left.name, right.name, names))
+        });
+
+        let mut previous: Option<OutputMapping> = None;
+        let pending = std::mem::take(&mut self.pending);
+        for mapping in pending {
+            if previous == Some(mapping) {
+                continue;
+            }
+            self.encode(mapping)?;
+            previous = Some(mapping);
+        }
+        Ok(())
+    }
+
+    fn encode(&mut self, mapping: OutputMapping) -> Result<()> {
+        if mapping.generated_line != self.previous_generated_line {
+            self.previous_generated_column = 0;
+            while self.previous_generated_line < mapping.generated_line {
+                self.mapping_writer.write_all(b";")?;
+                self.previous_generated_line += 1;
+            }
+        } else if self.wrote_mapping {
+            self.mapping_writer.write_all(b",")?;
+        }
+
+        write_vlq(
+            &mut self.mapping_writer,
+            mapping.generated_column as i64 - self.previous_generated_column,
+        )?;
+        self.previous_generated_column = mapping.generated_column as i64;
+
+        if let Some(source) = mapping.source {
+            write_vlq(
+                &mut self.mapping_writer,
+                source as i64 - self.previous_source,
+            )?;
+            self.previous_source = source as i64;
+
+            let original_line = mapping.original_line.expect("mapped line") as i64 - 1;
+            write_vlq(
+                &mut self.mapping_writer,
+                original_line - self.previous_original_line,
+            )?;
+            self.previous_original_line = original_line;
+
+            let original_column = mapping.original_column.expect("mapped column") as i64;
+            write_vlq(
+                &mut self.mapping_writer,
+                original_column - self.previous_original_column,
+            )?;
+            self.previous_original_column = original_column;
+
+            if let Some(name) = mapping.name {
+                write_vlq(&mut self.mapping_writer, name as i64 - self.previous_name)?;
+                self.previous_name = name as i64;
+            }
+        }
+
+        self.wrote_mapping = true;
+        Ok(())
+    }
+
+    fn finish(&mut self, output_path: &Path, file: Option<&str>) -> Result<()> {
+        self.flush_pending()?;
+        self.mapping_writer.flush()?;
+        self.source_contents_writer.flush()?;
+
+        let mut output = BufWriter::new(File::create(output_path)?);
+        output.write_all(b"{\"version\":3,\"sources\":")?;
+        serde_json::to_writer(&mut output, &self.sources)?;
+        output.write_all(b",\"names\":")?;
+        serde_json::to_writer(&mut output, &self.names)?;
+        output.write_all(b",\"mappings\":\"")?;
+
+        let mut mappings = File::open(&self.mapping_path)?;
+        std::io::copy(&mut mappings, &mut output)?;
+        output.write_all(b"\"")?;
+
+        if let Some(file) = file {
+            output.write_all(b",\"file\":")?;
+            serde_json::to_writer(&mut output, file)?;
+        }
+
+        if !self.source_contents.is_empty() {
+            let mut source_contents = File::open(&self.source_contents_path)?;
+            output.write_all(b",\"sourcesContent\":[")?;
+            for (index, source) in self.sources.iter().enumerate() {
+                if index > 0 {
+                    output.write_all(b",")?;
+                }
+                match self.source_contents.get(source) {
+                    Some(location) => {
+                        source_contents.seek(SeekFrom::Start(location.offset))?;
+                        std::io::copy(
+                            &mut (&mut source_contents).take(location.length),
+                            &mut output,
+                        )?;
+                    }
+                    None => output.write_all(b"null")?,
+                }
+            }
+            output.write_all(b"]")?;
+        }
+
+        output.write_all(b"}")?;
+        output.flush()?;
+        fs::remove_file(&self.mapping_path)?;
+        fs::remove_file(&self.source_contents_path)?;
+        Ok(())
+    }
+}
+
+struct CodeCursor<'a> {
+    code: &'a str,
+    byte_offset: usize,
+    line_end: usize,
+}
+
+impl<'a> CodeCursor<'a> {
+    fn new(code: &'a str) -> Self {
+        let mut cursor = Self {
+            code,
+            byte_offset: 0,
+            line_end: 0,
+        };
+        cursor.advance_line_end();
+        cursor
+    }
+
+    fn is_finished(&self) -> bool {
+        self.byte_offset >= self.code.len()
+    }
+
+    fn current_line_end(&self) -> usize {
+        self.line_end
+    }
+
+    fn advance_line_end(&mut self) {
+        self.line_end = self.code.as_bytes()[self.byte_offset..]
+            .iter()
+            .position(|byte| *byte == b'\n')
+            .map(|offset| self.byte_offset + offset + 1)
+            .unwrap_or(self.code.len());
+    }
+
+    fn take_current_line(&mut self) -> &'a str {
+        let start = self.byte_offset;
+        let end = self.current_line_end();
+        self.byte_offset = end;
+        self.advance_line_end();
+        &self.code[start..end]
+    }
+
+    fn take_prefix(&mut self, utf16_units: u32) -> &'a str {
+        let start = self.byte_offset;
+        let end = self.current_line_end();
+        let line = &self.code[start..end];
+        let mut units = 0_u32;
+        let mut byte_len = 0_usize;
+        for character in line.chars() {
+            let next = units + character.len_utf16() as u32;
+            if next > utf16_units {
+                break;
+            }
+            units = next;
+            byte_len += character.len_utf8();
+            if units == utf16_units {
+                break;
+            }
+        }
+        self.byte_offset += byte_len;
+        &self.code[start..self.byte_offset]
+    }
+
+    fn take_rest(&mut self) -> &'a str {
+        let start = self.byte_offset;
+        self.byte_offset = self.code.len();
+        &self.code[start..]
+    }
+}
+
+fn decode_mappings<R, F>(mappings: R, mut callback: F) -> Result<()>
+where
+    R: Read,
+    F: FnMut(DecodedMapping) -> Result<()>,
+{
+    let mut input = MappingInput::new(mappings);
+    let mut generated_line = 1_u32;
+    let mut generated_column = 0_i64;
+    let mut source = 0_i64;
+    let mut original_line = 0_i64;
+    let mut original_column = 0_i64;
+    let mut name = 0_i64;
+
+    while let Some(current) = input.peek()? {
+        match current {
+            b';' => {
+                generated_line = generated_line
+                    .checked_add(1)
+                    .ok_or_else(|| anyhow!("generated line exceeds 2**32"))?;
+                generated_column = 0;
+                input.consume();
+            }
+            b',' => input.consume(),
+            _ => {
+                generated_column += decode_vlq(&mut input)?;
+                ensure_u32("generated column", generated_column)?;
+
+                let mut mapping = DecodedMapping {
+                    generated_line,
+                    generated_column: generated_column as u32,
+                    source: None,
+                    original_line: None,
+                    original_column: None,
+                    name: None,
+                };
+
+                if input.has_field()? {
+                    source += decode_vlq(&mut input)?;
+                    original_line += decode_vlq(&mut input)?;
+                    original_column += decode_vlq(&mut input)?;
+                    ensure_u32("source index", source)?;
+                    ensure_u32("original line", original_line)?;
+                    ensure_u32("original column", original_column)?;
+                    mapping.source = Some(source as u32);
+                    mapping.original_line = Some(original_line as u32 + 1);
+                    mapping.original_column = Some(original_column as u32);
+
+                    if input.has_field()? {
+                        name += decode_vlq(&mut input)?;
+                        ensure_u32("name index", name)?;
+                        mapping.name = Some(name as u32);
+                    }
+                }
+
+                if input.has_field()? {
+                    bail!("mapping segment has more than five fields");
+                }
+                callback(mapping)?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+struct MappingInput<R> {
+    reader: R,
+    buffer: Box<[u8; 64 * 1024]>,
+    index: usize,
+    length: usize,
+}
+
+impl<R> MappingInput<R>
+where
+    R: Read,
+{
+    fn new(reader: R) -> Self {
+        Self {
+            reader,
+            buffer: Box::new([0; 64 * 1024]),
+            index: 0,
+            length: 0,
+        }
+    }
+
+    fn peek(&mut self) -> Result<Option<u8>> {
+        if self.index == self.length {
+            self.length = self.reader.read(self.buffer.as_mut_slice())?;
+            self.index = 0;
+        }
+        Ok((self.index < self.length).then(|| self.buffer[self.index]))
+    }
+
+    fn consume(&mut self) {
+        self.index += 1;
+    }
+
+    fn has_field(&mut self) -> Result<bool> {
+        Ok(self
+            .peek()?
+            .is_some_and(|value| !matches!(value, b',' | b';')))
+    }
+}
+
+fn decode_vlq<R>(input: &mut MappingInput<R>) -> Result<i64>
+where
+    R: Read,
+{
+    let mut value = 0_u64;
+    let mut shift = 0_u32;
+    loop {
+        let byte = input
+            .peek()?
+            .ok_or_else(|| anyhow!("reached EOF while parsing VLQ"))?;
+        if matches!(byte, b',' | b';') {
+            bail!("reached end of segment while parsing VLQ");
+        }
+        input.consume();
+        let digit = decode_base64(byte)?;
+        value |= ((digit & 31) as u64) << shift;
+        if digit & 32 == 0 {
+            break;
+        }
+        shift += 5;
+        if shift > 35 {
+            bail!("VLQ value exceeds 2**32");
+        }
+    }
+
+    let magnitude = (value >> 1) as i64;
+    Ok(if value & 1 == 1 {
+        -magnitude
+    } else {
+        magnitude
+    })
+}
+
+fn write_vlq(writer: &mut impl Write, value: i64) -> Result<()> {
+    const BASE64: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut vlq = if value < 0 {
+        ((-value) as u64) * 2 + 1
+    } else {
+        (value as u64) * 2
+    };
+    loop {
+        let mut digit = (vlq & 31) as u8;
+        vlq >>= 5;
+        if vlq > 0 {
+            digit |= 32;
+        }
+        writer.write_all(&[BASE64[digit as usize]])?;
+        if vlq == 0 {
+            return Ok(());
+        }
+    }
+}
+
+fn decode_base64(byte: u8) -> Result<u8> {
+    match byte {
+        b'A'..=b'Z' => Ok(byte - b'A'),
+        b'a'..=b'z' => Ok(byte - b'a' + 26),
+        b'0'..=b'9' => Ok(byte - b'0' + 52),
+        b'+' => Ok(62),
+        b'/' => Ok(63),
+        _ => bail!("invalid base64 character 0x{byte:02x}"),
+    }
+}
+
+fn ensure_u32(label: &str, value: i64) -> Result<()> {
+    if !(0..=u32::MAX as i64).contains(&value) {
+        bail!("{label} is negative or exceeds 2**32");
+    }
+    Ok(())
+}
+
+fn compare_optional_string(
+    left: Option<u32>,
+    right: Option<u32>,
+    values: &[String],
+) -> std::cmp::Ordering {
+    match (left, right) {
+        (Some(left), Some(right)) => values[left as usize].cmp(&values[right as usize]),
+        (Some(_), None) => std::cmp::Ordering::Less,
+        (None, Some(_)) => std::cmp::Ordering::Greater,
+        (None, None) => std::cmp::Ordering::Equal,
+    }
+}
+
+fn validate_version(version: &serde_json::Value) -> Result<()> {
+    let valid = version.as_u64() == Some(3) || version.as_str() == Some("3");
+    if !valid {
+        bail!("unsupported source-map version {version}");
+    }
+    Ok(())
+}
+
+fn normalize_path(value: &str) -> String {
+    if let Some(path_start) = url_path_start(value) {
+        let (url_prefix, path) = value.split_at(path_start);
+        if path.is_empty() {
+            return value.to_owned();
+        }
+
+        return format!("{url_prefix}{}", normalize_path_component(path));
+    }
+
+    normalize_path_component(value)
+}
+
+fn url_path_start(value: &str) -> Option<usize> {
+    let authority_start = if let Some(scheme_end) = value.find("://") {
+        let scheme = &value[..scheme_end];
+        if scheme.is_empty()
+            || !scheme
+                .chars()
+                .all(|character| character.is_ascii_alphanumeric() || "+-.".contains(character))
+        {
+            return None;
+        }
+        scheme_end + 3
+    } else if value.starts_with("//") {
+        2
+    } else {
+        return None;
+    };
+
+    Some(
+        value[authority_start..]
+            .find('/')
+            .map_or(value.len(), |offset| authority_start + offset),
+    )
+}
+
+fn normalize_path_component(value: &str) -> String {
+    let absolute = value.starts_with('/');
+    let trailing_slash = value.ends_with('/') && value.len() > 1;
+    let mut parts = Vec::new();
+    for part in value.split('/') {
+        match part {
+            "" | "." => {}
+            ".." if parts.last().is_some_and(|part| *part != "..") => {
+                parts.pop();
+            }
+            ".." if !absolute => parts.push(part),
+            ".." => {}
+            _ => parts.push(part),
+        }
+    }
+    let joined = parts.join("/");
+    let mut normalized = if absolute {
+        format!("/{joined}")
+    } else if joined.is_empty() {
+        ".".to_owned()
+    } else {
+        joined
+    };
+    if trailing_slash && normalized != "/" && normalized != "." {
+        normalized.push('/');
+    }
+    normalized
+}
+
+fn join_path(root: &str, path: &str) -> String {
+    if path.starts_with('/') || path.contains("://") || path.starts_with("data:") {
+        return path.to_owned();
+    }
+    normalize_path(&format!("{}/{path}", root.trim_end_matches('/')))
+}
+
+fn compute_source_url(source_root: Option<&str>, source: &str) -> String {
+    match source_root.filter(|root| !root.is_empty()) {
+        Some(root) if !root.ends_with('/') && !source.starts_with('/') => {
+            normalize_path(&format!("{root}/{source}"))
+        }
+        Some(root) => normalize_path(&format!("{root}{source}")),
+        None => normalize_path(source),
+    }
+}
+
+fn validate_input_path(roots: &[PathBuf], path: &Path) -> Result<()> {
+    let canonical = path
+        .canonicalize()
+        .with_context(|| format!("resolving input {}", path.display()))?;
+    if !roots.iter().any(|root| canonical.starts_with(root)) {
+        bail!("input path {} is outside the allowed roots", path.display());
+    }
+    Ok(())
+}
+
+fn validate_output_path(root: &Path, path: &Path) -> Result<()> {
+    let parent = path
+        .parent()
+        .ok_or_else(|| anyhow!("output path {} has no parent", path.display()))?;
+    let existing = parent
+        .ancestors()
+        .find(|candidate| candidate.exists())
+        .ok_or_else(|| anyhow!("output path {} has no existing ancestor", path.display()))?;
+    let canonical = existing.canonicalize()?;
+    if !canonical.starts_with(root) {
+        bail!("output path {} is outside workspace", path.display());
+    }
+    Ok(())
+}
+
+fn sibling_temporary_path(path: &Path, label: &str) -> PathBuf {
+    let name = path
+        .file_name()
+        .and_then(|value| value.to_str())
+        .unwrap_or("source-map");
+    path.with_file_name(format!(".{name}.{label}.{}.tmp", std::process::id()))
+}
+
+fn hash_file(path: &Path) -> Result<String> {
+    let mut file = File::open(path)?;
+    let mut hasher = Sha256::new();
+    let mut buffer = [0_u8; 64 * 1024];
+    loop {
+        let count = file.read(&mut buffer)?;
+        if count == 0 {
+            break;
+        }
+        hasher.update(&buffer[..count]);
+    }
+    Ok(hex_digest(hasher.finalize()))
+}
+
+fn hex_digest(value: impl AsRef<[u8]>) -> String {
+    let mut output = String::with_capacity(value.as_ref().len() * 2);
+    for byte in value.as_ref() {
+        use std::fmt::Write as _;
+        write!(&mut output, "{byte:02x}").expect("writing to String");
+    }
+    output
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+
+    use super::*;
+
+    #[test]
+    fn vlq_round_trips_signed_values() {
+        for value in [-4096, -33, -1, 0, 1, 16, 4096] {
+            let mut encoded = Vec::new();
+            write_vlq(&mut encoded, value).unwrap();
+            let mut input = MappingInput::new(encoded.as_slice());
+            assert_eq!(decode_vlq(&mut input).unwrap(), value);
+            assert_eq!(input.peek().unwrap(), None);
+        }
+    }
+
+    #[test]
+    fn rejects_paths_outside_workspace() {
+        let root = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        let file = outside.path().join("input.map");
+        fs::write(&file, "{}").unwrap();
+        assert!(validate_input_path(&[root.path().to_owned()], &file).is_err());
+        assert!(validate_output_path(root.path(), &outside.path().join("out.map")).is_err());
+    }
+
+    #[test]
+    fn source_map_document_streams_deferred_fields() {
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join("input.js.map");
+        fs::write(
+            &path,
+            r#"{
+                "version": 3,
+                "sources": ["a.js", "b.js"],
+                "names": ["value"],
+                "sourcesContent": ["const value = \"✓\";", null],
+                "mappings": "AAAA\u0041"
+            }"#,
+        )
+        .unwrap();
+
+        let document = SourceMapDocument::open(&path).unwrap();
+        assert_eq!(document.root.sources[0], "a.js");
+        assert_eq!(document.root.names[0], "value");
+        assert_eq!(
+            document
+                .read_optional_string(document.root.sources_content[0])
+                .unwrap(),
+            Some("const value = \"✓\";".to_owned())
+        );
+        assert_eq!(
+            document
+                .read_optional_string(document.root.sources_content[1])
+                .unwrap(),
+            None
+        );
+
+        let mut mappings = Vec::new();
+        decode_mappings(
+            document.mapping_reader(document.root.mappings).unwrap(),
+            |mapping| {
+                mappings.push(mapping);
+                Ok(())
+            },
+        )
+        .unwrap();
+        assert_eq!(mappings.len(), 1);
+        assert_eq!(mappings[0].name, Some(0));
+    }
+
+    #[test]
+    fn source_map_document_parses_indexed_maps() {
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join("input.js.map");
+        fs::write(
+            &path,
+            r#"{
+                "version": 3,
+                "sections": [{
+                    "offset": {"line": 2, "column": 4},
+                    "map": {"version": 3, "sources": ["a.js"], "names": [], "mappings": "AAAA"}
+                }]
+            }"#,
+        )
+        .unwrap();
+
+        let document = SourceMapDocument::open(&path).unwrap();
+        assert_eq!(document.root.sections.len(), 1);
+        let section = &document.root.sections[0];
+        assert_eq!(section.offset.line, 2);
+        assert_eq!(section.offset.column, 4);
+        assert_eq!(section.map.sources[0], "a.js");
+    }
+
+    #[test]
+    fn source_map_document_rejects_trailing_input() {
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join("input.js.map");
+        fs::write(
+            &path,
+            r#"{"version":3,"sources":[],"names":[],"mappings":""} false"#,
+        )
+        .unwrap();
+
+        assert!(SourceMapDocument::open(&path).is_err());
+    }
+
+    #[test]
+    fn basic_map_sorts_mappings_at_the_same_generated_column() {
+        let root = tempfile::tempdir().unwrap();
+        let code_path = root.path().join("input.js");
+        let map_path = root.path().join("input.js.map");
+        let output_code_path = root.path().join("output.js");
+        let output_map_path = root.path().join("output.js.map");
+        fs::write(&code_path, "a").unwrap();
+        fs::write(
+            &map_path,
+            r#"{"version":3,"sources":["a.js"],"names":[],"mappings":"AAAC,AAAD"}"#,
+        )
+        .unwrap();
+
+        execute(Request {
+            protocol_version: PROTOCOL_VERSION,
+            workspace_root: root.path().to_owned(),
+            input_roots: Vec::new(),
+            output: OutputRequest {
+                code_path: output_code_path,
+                map_path: output_map_path.clone(),
+                file: Some("output.js".to_owned()),
+                source_prefix: None,
+            },
+            pieces: vec![
+                Piece::Literal {
+                    value: "header\n(".to_owned(),
+                },
+                Piece::Mapped {
+                    code_path,
+                    map_path,
+                    relative_path: None,
+                },
+                Piece::Literal {
+                    value: ")\nfooter".to_owned(),
+                },
+            ],
+        })
+        .unwrap();
+
+        let output: serde_json::Value =
+            serde_json::from_slice(&fs::read(output_map_path).unwrap()).unwrap();
+        assert_eq!(output["mappings"], ";CAAC,C");
+    }
+
+    #[test]
+    fn basic_map_sorts_source_and_name_indices_before_inflation() {
+        let cases = [
+            (
+                r#"{"version":3,"sources":["z.js","a.js"],"names":[],"mappings":"ACAA,ADAA"}"#,
+                serde_json::json!(["a.js"]),
+                serde_json::json!([]),
+            ),
+            (
+                r#"{"version":3,"sources":["a.js"],"names":["z","a"],"mappings":"AAAAC,AAAAD"}"#,
+                serde_json::json!(["a.js"]),
+                serde_json::json!(["a"]),
+            ),
+        ];
+
+        for (map, expected_sources, expected_names) in cases {
+            let root = tempfile::tempdir().unwrap();
+            let code_path = root.path().join("input.js");
+            let map_path = root.path().join("input.js.map");
+            let output_map_path = root.path().join("output.js.map");
+            fs::write(&code_path, "a").unwrap();
+            fs::write(&map_path, map).unwrap();
+
+            execute(Request {
+                protocol_version: PROTOCOL_VERSION,
+                workspace_root: root.path().to_owned(),
+                input_roots: Vec::new(),
+                output: OutputRequest {
+                    code_path: root.path().join("output.js"),
+                    map_path: output_map_path.clone(),
+                    file: None,
+                    source_prefix: None,
+                },
+                pieces: vec![Piece::Mapped {
+                    code_path,
+                    map_path,
+                    relative_path: None,
+                }],
+            })
+            .unwrap();
+
+            let output: serde_json::Value =
+                serde_json::from_slice(&fs::read(output_map_path).unwrap()).unwrap();
+            assert_eq!(output["sources"], expected_sources);
+            assert_eq!(output["names"], expected_names);
+        }
+    }
+}

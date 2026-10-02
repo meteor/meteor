@@ -286,6 +286,63 @@ Function Invoke-NativeCommandLoud {
   return $LASTEXITCODE
 }
 
+Function Add-SourceMapHelper {
+  # tools/rust/rust-toolchain.toml pins the tested toolchain. Keep Rust local to
+  # this build: runners need not have Cargo installed, and only the compiled
+  # helper belongs in the dev bundle.
+  $rustHost = 'x86_64-pc-windows-msvc'
+  $previousCargoHome = $env:CARGO_HOME
+  $previousRustupHome = $env:RUSTUP_HOME
+  $previousPath = $env:PATH
+
+  try {
+    $env:CARGO_HOME = Join-Path $dirTemp 'cargo'
+    $env:RUSTUP_HOME = Join-Path $dirTemp 'rustup'
+    $cargoBin = Join-Path $env:CARGO_HOME 'bin'
+    $rustupInstaller = Join-Path $dirTemp 'rustup-init.exe'
+    $rustupUrl = "https://static.rust-lang.org/rustup/dist/${rustHost}/rustup-init.exe"
+
+    Write-Host 'Installing rustup for the pinned tools/rust toolchain...' `
+      -ForegroundColor Magenta
+    $webclient.DownloadFile($rustupUrl, $rustupInstaller)
+    $rustupExit = Invoke-NativeCommandLoud $rustupInstaller @(
+      '-y', '--no-modify-path', '--profile', 'minimal',
+      '--default-host', $rustHost, '--default-toolchain', 'none'
+    )
+    if ($rustupExit -ne 0) {
+      throw "Couldn't install rustup (rustup-init exited with code $rustupExit)."
+    }
+
+    $env:PATH = "$cargoBin;$previousPath"
+    $cargo = Join-Path $cargoBin 'cargo.exe'
+    $rustWorkspace = Join-Path $dirCheckout 'tools\rust'
+    $sourceMapHelperTarget = Join-Path $dirTemp 'source-map-helper-target'
+
+    Push-Location $rustWorkspace
+    try {
+      $cargoExit = Invoke-NativeCommandLoud $cargo @(
+        'build', '--package', 'meteor-source-map-helper',
+        '--release', '--locked', '--target', $rustHost,
+        '--target-dir', $sourceMapHelperTarget
+      )
+    } finally {
+      Pop-Location
+    }
+    if ($cargoExit -ne 0) {
+      throw "Couldn't build meteor-source-map-helper (Cargo exited with code $cargoExit)."
+    }
+
+    Copy-Item `
+      (Join-Path $sourceMapHelperTarget `
+        "$rustHost\release\meteor-source-map-helper.exe") `
+      (Join-Path $dirBin 'meteor-source-map-helper.exe')
+  } finally {
+    $env:CARGO_HOME = $previousCargoHome
+    $env:RUSTUP_HOME = $previousRustupHome
+    $env:PATH = $previousPath
+  }
+}
+
 Function Add-NpmModulesFromJsBundleFile {
   Param (
     [Parameter(Mandatory=$True, Position=0)]
@@ -357,6 +414,8 @@ $env:PATH = "$env:PATH;$dirBin"
 
 # Install Node.js and npm and get their paths to use from here on.
 $toolCmds = Add-NodeAndNpm
+
+Add-SourceMapHelper
 
 "Location of node.exe:"
 & Get-Command node | Select-Object -ExpandProperty Definition
