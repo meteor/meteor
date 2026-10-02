@@ -9,6 +9,7 @@ const LOGIN_TYPES_WITH_2FA = new Set(['password', 'passwordless']);
 const verifiedHooks = [];
 const challengeHooks = [];
 const pendingVerified = new Map();
+const loginFactors = new Map();
 
 /** A 2FA code is a short OTP or email code. Login handlers read this at check time. */
 Accounts._2faCodeMatch = Match.Where(value =>
@@ -57,6 +58,7 @@ const rememberVerified = (userId, connection, method) => {
   for (const [id, mark] of pendingVerified) {
     if (now - mark.at > VERIFIED_MARK_TTL_MS) {
       pendingVerified.delete(id);
+      loginFactors.delete(id);
     }
   }
   pendingVerified.set(userId, {
@@ -64,6 +66,27 @@ const rememberVerified = (userId, connection, method) => {
     connection: connection || null,
     method,
   });
+  // Read by the TOTP replay hook when that package is also loaded.
+  // An email acceptance must not be checked as a TOTP step.
+  loginFactors.set(userId, { at: now, method });
+};
+
+/**
+ * @summary Factor accepted for the login in progress, then forgotten.
+ * `email` tells the TOTP replay hook to leave the authenticator step alone.
+ * @param {String} userId
+ * @returns {String|null}
+ */
+Accounts._2faLoginFactor = userId => {
+  const mark = loginFactors.get(userId);
+  if (!mark) {
+    return null;
+  }
+  loginFactors.delete(userId);
+  if (Date.now() - mark.at > VERIFIED_MARK_TTL_MS) {
+    return null;
+  }
+  return mark.method;
 };
 
 Accounts.onLogin(async attempt => {

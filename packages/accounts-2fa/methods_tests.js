@@ -250,6 +250,50 @@ Tinytest.addAsync('account - 2fa - on2faVerified runs only after the login is ac
   }
 });
 
+Tinytest.addAsync('account - 2fa - an email code accepted for a TOTP user is not a TOTP step', async test => {
+  const secret = new OTPAuth.Secret({ size: 20 }).base32;
+  const userId = await createUser({
+    services: {
+      twoFactorAuthentication: { type: 'otp', secret },
+    },
+  });
+  const invocation = {
+    connection: { id: Random.id(), close() {} },
+    setUserId() {},
+  };
+  try {
+    Accounts.configure2fa({ email: { enabled: true } });
+    await Accounts._enforce2faOnLogin({
+      user: await findUserById(userId),
+      method: 'email',
+      context: { loginMethod: 'password' },
+    });
+    const code = Accounts._2faTestState.lastEmailCode;
+    const accepted = await Accounts._enforce2faOnLogin({
+      user: await findUserById(userId),
+      code,
+      method: 'email',
+      context: { loginMethod: 'password' },
+    });
+    test.isUndefined(accepted);
+
+    // The client omits twoFactorMethod when both factors are offered.
+    // The replay hook, when present, must not treat this code as a TOTP.
+    const loggedIn = await Accounts._attemptLogin(
+      invocation,
+      'login',
+      [{ user: { id: userId }, code }],
+      { userId, type: 'password' }
+    );
+    test.equal(loggedIn.id, userId);
+    const user = await findUserById(userId);
+    test.isFalse(Number.isInteger(user.services?.twoFactorAuthentication?.lastUsedStep));
+  } finally {
+    restorePolicy();
+    await Accounts.users.removeAsync(userId);
+  }
+});
+
 Tinytest.addAsync('account - 2fa - a too-long code is rejected before it is hashed', async test => {
   const userId = await createUser();
   try {
