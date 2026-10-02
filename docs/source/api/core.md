@@ -71,8 +71,12 @@ A second `SIGTERM`/`SIGINT` received while shutdown is already running is
 treated as a force-quit (e.g. double Ctrl-C): the process exits at once
 without waiting for the remaining hooks or the timeout.
 
-Meteor gives existing Node signal listeners one event-loop turn before it
-starts running shutdown hooks, but it cannot await promises returned from
+Meteor installs its shutdown signal listeners when the first
+`Meteor.onShutdown` hook is registered. Applications that do not register any
+hooks retain their existing signal handling and exit behavior.
+
+Once enabled, Meteor gives existing Node signal listeners one event-loop turn
+before it starts running shutdown hooks, but it cannot await promises returned from
 `process.on(...)` listeners. Move asynchronous cleanup from raw signal
 listeners into `Meteor.onShutdown` so it participates in ordering and timeout
 handling.

@@ -528,9 +528,13 @@ const callShutdownHooks = Profile("Call Meteor.onShutdown hooks", async function
   process.exit(exitCode);
 });
 
-['SIGTERM', 'SIGINT'].forEach(function (signal) {
-  process.on(signal, function () { callShutdownHooks(signal); });
-});
+// Install signal listeners only when an application registers its first hook.
+// Apps that do not use Meteor.onShutdown retain their existing signal handling.
+__meteor_bootstrap__.enableShutdownHooks = function () {
+  ['SIGTERM', 'SIGINT'].forEach(function (signal) {
+    process.on(signal, function () { callShutdownHooks(signal); });
+  });
+};
 
 var runMain = Profile("Run main()", async function () {
   // find and run main()

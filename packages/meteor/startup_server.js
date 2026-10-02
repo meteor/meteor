@@ -50,6 +50,9 @@ Meteor.onShutdown = function onShutdown(callback) {
   const bootstrap = global.__meteor_bootstrap__;
   if (bootstrap && bootstrap.shutdownHooks) {
     bootstrap.shutdownHooks.push(callback);
+    if (bootstrap.shutdownHooks.length === 1) {
+      bootstrap.enableShutdownHooks();
+    }
   } else {
     // shutdownHooks is null -> shutdown has already begun (or core is missing).
     // Warn loudly and best-effort the hook via a microtask; if the process

@@ -22,7 +22,7 @@ selftest.define("boot utils", function (options) {
   selftest.expectFalse(bootUtils.validPid("123foo"));
 });
 
-selftest.define("Meteor.onShutdown", ["yet-unsolved-windows-failure"], async function () {
+selftest.define("meteor onShutdown", ["yet-unsolved-windows-failure"], async function () {
   var s = new Sandbox({ fakeMongo: true });
   await s.init();
 
@@ -65,9 +65,34 @@ selftest.define("Meteor.onShutdown", ["yet-unsolved-windows-failure"], async fun
   await run.matchErr("expected shutdown hook failure");
   await run.expectExit(143);
 
-  // The bootstrap listener is registered before application listeners. It
-  // must yield before exiting so existing synchronous signal cleanup runs.
+  // Apps that do not register shutdown hooks retain their existing async
+  // signal cleanup and choose their own exit status. Waiting on a timer (not
+  // just a resolved Promise) catches premature exit after one event-loop turn.
+  for (const signal of ["SIGTERM", "SIGINT"]) {
+    s.write("print.js", `
+      process.on("${signal}", async function () {
+        await new Promise(function (resolve) { setTimeout(resolve, 100); });
+        console.log("raw-signal-cleanup-complete");
+        process.exit(0);
+      });
+      Meteor.startup(function () {
+        console.log("raw-signal-ready:" + process.pid);
+      });
+    `);
+
+    run = s.run("--once", "--port", getAppPort());
+    await run.tellMongo(MONGO_LISTENING);
+    run.waitSecs(30);
+    match = await run.match(/raw-signal-ready:(\d+)/);
+    process.kill(Number(match[1]), signal);
+    await run.match("raw-signal-cleanup-complete");
+    await run.expectExit(0);
+  }
+
+  // With shutdown hooks enabled, the bootstrap listener must still yield so
+  // synchronous signal cleanup and its microtasks run before exiting.
   s.write("print.js", `
+    Meteor.onShutdown(function () {});
     process.on("SIGTERM", async function () {
       await Promise.resolve();
       console.log("raw-signal-listener-ran");
