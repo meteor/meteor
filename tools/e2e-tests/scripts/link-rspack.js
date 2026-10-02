@@ -101,6 +101,12 @@ async function linkLocalRspack(appDir, { env, packageManager } = {}) {
         ...(rspackDevServerVersion
           ? [`@rspack/dev-server@${rspackDevServerVersion}`]
           : []),
+        ...(rsdoctorRspackPluginVersion
+          ? [
+              `@rsdoctor/rspack-plugin@${rsdoctorRspackPluginVersion}`,
+              `@rsdoctor/core@${rsdoctorRspackPluginVersion}`,
+            ]
+          : []),
         '--no-save',
         '--no-package-lock',
       ],

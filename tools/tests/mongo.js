@@ -1,5 +1,6 @@
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
+var utils = require('../utils/utils.js');
 
 // Tests that observeChanges continues to work even over a mongo failover.
 selftest.define("mongo failover", ["slow"], async function () {
@@ -82,7 +83,24 @@ selftest.define("mongo with multiple --port numbers (#7563)", async function () 
       run.waitSecs(10);
       await run.match(m);
     }
+    const mongoPid = Number(s.read('.meteor/local/db/mongod.lock'));
     await run.stop();
+
+    // The tool can exit before its Mongo child finishes shutting down. Wait
+    // before starting that same database on another port.
+    if (mongoPid > 0) {
+      const deadline = Date.now() + 10000 * utils.timeoutScaleFactor;
+      for (;;) {
+        try {
+          process.kill(mongoPid, 0);
+        } catch (error) {
+          if (error.code !== 'ESRCH') throw error;
+          break;
+        }
+        if (Date.now() >= deadline) selftest.fail('mongo-shutdown-timeout');
+        await utils.sleepMs(100);
+      }
+    }
   }
 
   // Make absolutely sure we're creating the database for the first time.

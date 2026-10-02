@@ -131,6 +131,9 @@ export default class Run {
       await self.stderrMatcher.endAsync();
     }
     this.matcherEndPromise = this.matcherEndPromise || endFunctions();
+    // Process exit starts this work without awaiting it. Observe its rejection
+    // so the test runner can retry; expectExit still awaits the original promise.
+    this.matcherEndPromise.catch(() => {});
     return this.matcherEndPromise;
   }
 

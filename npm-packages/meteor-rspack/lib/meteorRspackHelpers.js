@@ -1,4 +1,5 @@
 const path = require("path");
+const { formatDevServerHost } = require("./devServerUrl");
 const { prepareMeteorRspackConfig } = require("./meteorRspackConfigFactory");
 const { builtinModules } = require("module");
 
@@ -203,7 +204,6 @@ function disablePlugins(config, matchers) {
   }
 
   const plugins = Array.isArray(config.plugins) ? config.plugins : [];
-  const kept = [];
 
   const list = Array.isArray(matchers) ? matchers : [matchers];
 
@@ -341,6 +341,7 @@ module.exports = {
   makeWebNodeBuiltinsAlias,
   disablePlugins,
   outputMeteorRspack,
+  formatDevServerHost,
   enablePortableBuild,
   persistDevFiles,
   createPersistCallback,

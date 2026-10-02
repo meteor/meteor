@@ -149,7 +149,15 @@ jobs:
 
       - name: Prepare Meteor
         if: steps.deps-cache.outputs.cache-hit != 'true'
-        run: ./meteor --get-ready --allow-superuser
+        run: |
+          status=0
+          ./meteor --get-ready --allow-superuser || status=$?
+          if [ "$status" -eq 134 ]; then
+            echo "::warning::Meteor preparation aborted in native code; retrying once."
+            ./meteor --get-ready --allow-superuser
+          else
+            exit "$status"
+          fi
 
       - name: Run tests for ${{ matrix.category }}
         id: test-run
@@ -164,6 +172,10 @@ jobs:
           # orphan processes (EADDRINUSE) and temp dirs. The retry recreates
           # each app fresh, so only container leftovers need clearing.
           echo "Cleaning up after the failed attempt..."
+          # Stop the old test runner before sweeping apps. Otherwise its hooks
+          # can keep running after the step timeout and kill the retry's apps.
+          pkill -9 -f '[/]jest/bin/jest.js' || true
+          pkill -9 -f 'scripts/run-test-group[.]js' || true
           pkill -9 -f 'meteortest-' || true
           # Detached bundler/db children may not carry the temp path in argv.
           pkill -9 -f mongod || true

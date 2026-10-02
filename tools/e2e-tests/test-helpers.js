@@ -37,7 +37,6 @@ import {
 import fs from "fs-extra";
 import path from "path";
 import execa from "execa";
-import waitOn from "wait-on";
 
 const isCI = process.env.GITHUB_ACTIONS === "true";
 // Link local npm-packages/meteor-rspack so tests run against the latest dev version.
@@ -646,12 +645,13 @@ export function testMeteorRspackBundler(options) {
           commandOptions: ['--extra-packages', 'bundle-visualizer', '--production'],
           isMonorepo,
           monorepoAppPath,
-          env: env.meteorRunProduction
+          env: { ...env, ...(env.meteorRunProduction || {}) },
         });
         meteorProcess = result.meteorProcess;
 
-        // Wait for a margin
-        await wait(WAIT_ON);
+        await waitForMeteorOutput(result.outputLines, /Rsdoctor v\d+\.\d+\.\d+/, {
+          meteorProcess,
+        });
 
         // Assert that the app files exists
         await assertFileExist(appDir, `${buildDir}/main-prod/client-entry.js`);
@@ -661,25 +661,11 @@ export function testMeteorRspackBundler(options) {
         await assertFileExist(appDir, `${buildDir}/main-prod/server-rspack.js`);
         await assertFileExist(appDir, `${buildDir}/main-prod/server-meteor.js`);
         await assertFileExist(appDir, `${buildDir}/main-prod/index.html`);
+        await assertFileExist(appDir, 'public/.rsdoctor/manifest.json');
+        await assertFileExist(appDir, 'private/.rsdoctor/manifest.json');
 
         // Assert that the Meteor app is running correctly
         await assertMeteorReactApp(port, { title: appName });
-
-        // Wait for bundle-visualizer ports to be available
-        console.log('Waiting for bundle-visualizer ports 8081 and 8082 to be available...');
-        try {
-          await waitOn({
-            resources: [
-              `http-get://localhost:8081`,
-              `http-get://localhost:8082`
-            ],
-            timeout: 30000
-          });
-          console.log('Bundle-visualizer ports 8081 and 8082 are available');
-        } catch (error) {
-          console.error('Error waiting for bundle-visualizer ports:', error);
-          throw error;
-        }
 
         // Run custom assertions if provided
         if (customAssertions && customAssertions.afterRunBundleVisualizer) {
@@ -1079,11 +1065,6 @@ export function testMeteorSkeleton(options) {
     // Rspack dev server port. Defaults to 18080 to avoid colliding with dev servers
     // that some skeletons bundle on :8080 (e.g. Angular CLI's webpack-dev-server).
     devServerPort = 18080,
-    filePaths = {
-      client: "client/main.jsx",
-      server: "server/main.js",
-      test: "tests/main.js"
-    },
     customAssertions = {},
     checkBodyStyles = true,
     checkAppTitle = true,

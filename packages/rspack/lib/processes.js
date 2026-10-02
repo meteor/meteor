@@ -36,7 +36,6 @@ const {
   getMeteorInitialAppEntrypoints,
   isMeteorAppConfigModernVerbose,
   isMeteorBundleVisualizerProject,
-  getMeteorAppPort,
   inheritMeteorToolNodeFlags,
 } = require('meteor/tools-core/lib/meteor');
 
@@ -149,50 +148,20 @@ function failFirstCompilation(side, detail) {
   require('./compilation').failFirstCompilation(side, detail);
 }
 
-/**
- * Calculates the devServerPort based on process.env.PORT
- * Base port is 8077, and we add the sum of the digits of process.env.PORT
- * @returns {number} The calculated devServerPort
- */
-export function calculateDevServerPort() {
-  const port = getMeteorAppPort();
-  const basePort = 8077;
+function recordRsdoctorPorts(config) {
+  const ports = [
+    ["rsdoctorClientPort", "RSDOCTOR_CLIENT_PORT", "client"],
+    ["rsdoctorServerPort", "RSDOCTOR_SERVER_PORT", "server"],
+  ];
 
-  // Sum the digits of the port
-  const digitSum = port.split('').reduce((sum, digit) => sum + parseInt(digit, 10), 0);
-
-  return basePort + digitSum;
-}
-
-/**
- * Calculates the Rsdoctor client port based on process.env.PORT
- * Base port is 8885, and we add the sum of the digits of process.env.PORT
- * @returns {number} The calculated Rsdoctor client port
- */
-export function calculateRsdoctorClientPort() {
-  const port = getMeteorAppPort();
-  const basePort = 8885;
-
-  // Sum the digits of the port
-  const digitSum = port.split('').reduce((sum, digit) => sum + parseInt(digit, 10), 0);
-
-  return basePort + digitSum;
-}
-
-/**
- * Calculates the Rsdoctor server port based on process.env.PORT
- * Base port is 8885, and we add the sum of the digits of process.env.PORT + 1
- * @returns {number} The calculated Rsdoctor server port
- */
-export function calculateRsdoctorServerPort() {
-  const port = getMeteorAppPort();
-  const basePort = 8885;
-
-  // Sum the digits of the port
-  const digitSum = port.split('').reduce((sum, digit) => sum + parseInt(digit, 10), 0);
-
-  // Add 1 to differentiate from client port
-  return basePort + digitSum + 1;
+  for (const [configKey, envKey, label] of ports) {
+    const port = config?.[configKey];
+    if (!port) continue;
+    process.env[envKey] = String(port);
+    logRaw(
+      `=> Started Rsdoctor ${label} analyzer at http://localhost:${port}/`,
+    );
+  }
 }
 
 /**
@@ -307,7 +276,7 @@ export function getRspackCliPath() {
         }
       }
     }
-  } catch (err) {
+  } catch {
     // Fall through to hardcoded fallback if package.json isn't exported
   }
 
@@ -497,7 +466,9 @@ export function getRspackEnv({ isClient, isServer, arch, isTest: inIsTest, isTes
     ["chunksContext", chunksContext],
     ["assetsContext", outputArch ? `${chunksContext}/assets` : getRspackAssetsContext(isTest, isTestFullApp)],
     ...(outputArch ? [["clientOutputContext", chunksContext]] : []),
-    ["devServerPort", process.env.RSPACK_DEVSERVER_PORT],
+    ...(process.env.RSPACK_DEVSERVER_PORT
+      ? [["devServerPort", process.env.RSPACK_DEVSERVER_PORT]]
+      : []),
     ["projectConfigPath", projectConfigPath],
     ["configPath", configPath],
     ...((isTest &&
@@ -529,8 +500,12 @@ export function getRspackEnv({ isClient, isServer, arch, isTest: inIsTest, isTes
     ...((isJsxEnabled && [["isJsxEnabled", isJsxEnabled]]) || []),
     ...((isBundleVisualizerEnabled && [
       ["isBundleVisualizerEnabled", isBundleVisualizerEnabled],
-      ["rsdoctorClientPort", process.env.RSDOCTOR_CLIENT_PORT],
-      ["rsdoctorServerPort", process.env.RSDOCTOR_SERVER_PORT],
+      ...(process.env.RSDOCTOR_CLIENT_PORT
+        ? [["rsdoctorClientPort", process.env.RSDOCTOR_CLIENT_PORT]]
+        : []),
+      ...(process.env.RSDOCTOR_SERVER_PORT
+        ? [["rsdoctorServerPort", process.env.RSDOCTOR_SERVER_PORT]]
+        : []),
     ]) ||
       []),
   ].filter(Boolean);
@@ -584,7 +559,9 @@ export function startRspackClientServe(options = {}) {
       unsetEnv: RSPACK_UNSET_ENV,
       onStdout: (data) => {
         const { cleanedData, config } = parseMeteorRspackOutput(data);
-        if (config && !!config?.devServerUrl) {
+        recordRsdoctorPorts(config);
+        if (config?.devServerUrl) {
+          process.env.RSPACK_DEVSERVER_PORT = new URL(config.devServerUrl).port;
           logHmrServerStarted(config);
         }
         if (onCompile && config && (config?.compilationCount || 0) > 0) {
@@ -703,6 +680,7 @@ export function startRspackServerWatch(options = {}) {
     unsetEnv: RSPACK_UNSET_ENV,
     onStdout: (data) => {
       const { cleanedData, config } = parseMeteorRspackOutput(data);
+      recordRsdoctorPorts(config);
       if (onCompile && config && (config?.compilationCount || 0) > 0) {
         onCompile(cleanedData, config);
       }
@@ -811,6 +789,7 @@ export function runRspackBuild({ isClient, isServer, arch, isTest, isTestModule,
       unsetEnv: RSPACK_UNSET_ENV,
       onStdout: (data) => {
         const { cleanedData, config } = parseMeteorRspackOutput(data);
+        recordRsdoctorPorts(config);
         if (waitForFirstCompile && config?.compilationCount > 0) {
           if (config.hasErrors) reject(new Error(`Rspack ${endpoint} compilation failed`));
           else resolve();

@@ -22,6 +22,7 @@ const {
   makeWebNodeBuiltinsAlias,
   disablePlugins,
   outputMeteorRspack,
+  formatDevServerHost,
   enablePortableBuild,
   persistDevFiles,
   createPersistCallback,
@@ -197,7 +198,7 @@ function createRemoteDevServerConfig() {
           },
         };
       }
-    } catch (err) {
+    } catch {
       console.warn(`Invalid ROOT_URL "${rootUrl}", falling back to localhost`);
     }
   }
@@ -209,7 +210,7 @@ function createRemoteDevServerConfig() {
 // Keep files outside of build folders
 function keepOutsideBuild() {
   return (p) => {
-    const normalized = '/' + path.normalize(p).replaceAll(path.sep, '/').replace(/^\/+/, '');
+    const normalized = `/${path.normalize(p).replaceAll(path.sep, '/').replace(/^\/+/, '')}`;
     const isInBuildRoot = /\/build(\/|$)/.test(normalized);
     const isInBuildStar = /\/build-[^/]+(\/|$)/.test(normalized);
     return !(isInBuildRoot || isInBuildStar);
@@ -236,7 +237,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   const isTestLike = !!Meteor.isTestLike;
   const swcExternalHelpers = !!Meteor.swcExternalHelpers;
   const isNative = !!Meteor.isNative;
-  const devServerPort = Meteor.devServerPort || 8080;
+  const devServerPort = Meteor.devServerPort || "auto";
 
   const projectDir = process.cwd();
   const projectConfigPath =
@@ -521,16 +522,18 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   const rsdoctorModule = isBundleVisualizerEnabled
     ? safeRequire("@rsdoctor/rspack-plugin")
     : null;
-  const doctorPluginConfig =
+  const configuredRsdoctorPort = isClient
+    ? Meteor.rsdoctorClientPort
+    : Meteor.rsdoctorServerPort;
+  const rsdoctorPlugin =
     isRun && isBundleVisualizerEnabled && rsdoctorModule?.RsdoctorRspackPlugin
-      ? [
-          new rsdoctorModule.RsdoctorRspackPlugin({
-            port: isClient
-              ? parseInt(Meteor.rsdoctorClientPort || "8888", 10)
-              : parseInt(Meteor.rsdoctorServerPort || "8889", 10),
+      ? new rsdoctorModule.RsdoctorRspackPlugin({
+          ...(configuredRsdoctorPort && {
+            port: parseInt(configuredRsdoctorPort, 10),
           }),
-        ]
-      : [];
+        })
+      : null;
+  const doctorPluginConfig = rsdoctorPlugin ? [rsdoctorPlugin] : [];
   const bannerPluginConfig = !isBuild
     ? [
         new BannerPlugin({
@@ -574,17 +577,21 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       ? path.resolve(process.cwd(), testEntry)
       : path.resolve(process.cwd(), buildContext, entryPath);
   const clientNameConfig = `[${(isTest && "test-") || ""}${arch || 'client'}-rspack]`;
+  let devServerUrl;
 
   // Default onListening provided by meteor-rspack. Kept as a named
   // reference so we can detect a user-supplied override after merge
   // and compose (run default first, then user's).
   const meteorDefaultOnListening = function (devServer) {
     if (!devServer) return;
-    const { host, port } = devServer.options;
-    const protocol =
-      devServer.options.server?.type === "https" ? "https" : "http";
-    const devServerUrl = `${protocol}://${host || "localhost"}:${port}`;
-    outputMeteorRspack({ devServerUrl });
+    const { host } = devServer.options;
+    const address = devServer.server?.address();
+    if (address && typeof address !== "string") {
+      const protocol =
+        devServer.options.server?.type === "https" ? "https" : "http";
+      devServerUrl = `${protocol}://${formatDevServerHost(host)}:${address.port}`;
+      outputMeteorRspack({ devServerUrl });
+    }
 
     // Windows-only: webpack-dev-server tracks accepted sockets
     // but doesn't attach 'error'. On Windows, teardown of a
@@ -612,7 +619,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   };
 
   // Base client config
-  let clientConfig = {
+  const clientConfig = {
     name: clientNameConfig,
     target: isLegacy ? ["web", "es5"] : "web",
     mode,
@@ -755,7 +762,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       : path.resolve(projectDir, buildContext, entryPath);
   const serverNameConfig = `[${(isTest && "test-") || ""}server-rspack]`;
   // Base server config
-  let serverConfig = {
+  const serverConfig = {
     name: serverNameConfig,
     target: "node",
     mode,
@@ -960,8 +967,16 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     );
   }
 
+  const activeRsdoctorPlugin =
+    isDevEnvironment &&
+    !rsdoctorPlugin?.options.disableClientServer &&
+    config.plugins?.includes(rsdoctorPlugin)
+      ? rsdoctorPlugin
+      : null;
+
   // Add MeteorRspackOutputPlugin as the last plugin to output compilation info
   const meteorRspackOutputPlugin = new MeteorRspackOutputPlugin({
+    waitFor: () => activeRsdoctorPlugin?._bootstrapTask,
     getData: (stats, { isRebuild, compilationCount, compiler }) => {
       const generatedAppPaths = [
         path.join('.meteor', 'local'),
@@ -993,6 +1008,12 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         statsOverrided,
         compilationCount,
         isRebuild,
+        ...(!isRebuild &&
+          activeRsdoctorPlugin && {
+            [isClient ? "rsdoctorClientPort" : "rsdoctorServerPort"]:
+              activeRsdoctorPlugin.sdk.server.port,
+          }),
+        ...(devServerUrl && { devServerUrl }),
         ...(!isRebuild && compiler && {
           delegatedExtensions: extractDelegatedExtensions(stats, compiler),
         }),

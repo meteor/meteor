@@ -36,8 +36,12 @@ const EXPLICIT_TEST_GROUPS = Object.freeze({
     pattern: '^(?:Other /|Meteor Skeletons / Other / Bare Skeleton /)',
   },
   react_vue: {
-    label: 'React & Vue',
-    pattern: '^(?:React App Bundling /|Meteor Skeletons / (?:Apollo|ChakraUI|React) Skeleton /|Vue App Bundling /|Meteor Skeletons / Vue Skeleton /)',
+    label: 'React & Vue apps',
+    pattern: '^(?:React App Bundling /|Vue App Bundling /)',
+  },
+  react_vue_skeletons: {
+    label: 'React & Vue skeletons',
+    pattern: '^Meteor Skeletons / (?:Apollo|ChakraUI|React|Vue) Skeleton /',
   },
   react_router: {
     label: 'R.Router',
@@ -47,9 +51,14 @@ const EXPLICIT_TEST_GROUPS = Object.freeze({
     label: 'Server Runtime',
     pattern: '^Regressions / Server Runtime',
   },
+  // Repeated production and test-context builds need a separate CI time budget.
+  regressions_build: {
+    label: 'Regression build contexts',
+    pattern: '^Regressions / (?:Architecture-specific entrypoints|Legacy npm dependencies|Rspack concurrent modes) /',
+  },
   regressions: {
     label: 'Regressions',
-    pattern: '^(?:Regressions / (?!Server Runtime)|Regression /|Rspack bundle probe)',
+    pattern: '^(?:Regressions / (?!Server Runtime|Architecture-specific entrypoints /|Legacy npm dependencies /|Rspack concurrent modes /)|Regression /|Rspack bundle probe)',
   },
   solid_svelte: {
     label: 'Solid & Svelte',

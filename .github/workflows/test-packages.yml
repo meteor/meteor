@@ -64,4 +64,11 @@ jobs:
           export phantom="false"
           export TIMEOUT_SCALE_FACTOR="20"
           export METEOR_HEADLESS="true"
-          ./packages/test-in-console/run.sh
+          status=0
+          ./packages/test-in-console/run.sh || status=$?
+          if [ "$status" -eq 75 ]; then
+            echo "::warning::Chrome bootstrap lost network connectivity; restarting the suite once."
+            ./packages/test-in-console/run.sh
+          else
+            exit "$status"
+          fi

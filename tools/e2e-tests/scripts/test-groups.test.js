@@ -33,6 +33,22 @@ describe('CLI / E2E test group fallback /', () => {
       .toEqual(['monorepo']);
     expect(matchingGroups('Blaze Router Integration / renders a route'))
       .toEqual(['blaze']);
+    expect(matchingGroups('Regressions / Architecture-specific entrypoints / production build'))
+      .toEqual(['regressions_build']);
+    expect(matchingGroups('Regressions / Legacy npm dependencies / production isolates the React app'))
+      .toEqual(['regressions_build']);
+    expect(matchingGroups('Regressions / Rspack concurrent modes / keeps builds running together'))
+      .toEqual(['regressions_build']);
+    expect(matchingGroups('Regressions / PortCleanup / releases rspack port after SIGTERM'))
+      .toEqual(['regressions']);
+    expect(matchingGroups('React App Bundling / Meteor+Rspack Bundler / builds the app'))
+      .toEqual(['react_vue']);
+    expect(matchingGroups('Vue App Bundling / Meteor+Rspack Bundler / runs the app'))
+      .toEqual(['react_vue']);
+    for (const skeleton of ['Apollo', 'ChakraUI', 'React', 'Vue']) {
+      expect(matchingGroups(`Meteor Skeletons / ${skeleton} Skeleton / creates the app`))
+        .toEqual(['react_vue_skeletons']);
+    }
     expect(matchingGroups('Meteor Skeletons / PWA Skeleton / registers its worker'))
       .toEqual(['full_pwa_skeleton']);
     expect(matchingGroups('Meteor Skeletons / Angular Skeleton / creates the app'))

@@ -1916,7 +1916,7 @@ const getSelfConnectionUrl = function () {
 if (Meteor.isServer) {
   Meteor.methods({
     reverse: function (arg) {
-      // Return something notably different from reverse.meteor.com.
+      // Distinguish the app server from the reconnect test fixture.
       return (
         arg
           .split('')
@@ -1927,47 +1927,31 @@ if (Meteor.isServer) {
   });
 }
 
-testAsyncMulti('livedata connection - reconnect to a different server', [
-  function (test, expect) {
-    const self = this;
-    self.conn = DDP.connect('reverse.meteor.com');
-    pollUntil(
-      expect,
-      function () {
-        return self.conn.status().connected;
-      },
-      5000,
-      100,
-      false
-    );
-  },
-  function (test, expect) {
-    const self = this;
-    self.doTest = self.conn.status().connected;
-    if (self.doTest) {
-      self.conn.call(
-        'reverse',
-        'foo',
-        expect(function (err, res) {
-          test.equal(res, 'oof');
-        })
-      );
-    }
-  },
-  function (test, expect) {
-    const self = this;
-    if (self.doTest) {
-      self.conn.reconnect({ url: getSelfConnectionUrl() });
-      self.conn.call(
-        'reverse',
-        'bar',
-        expect(function (err, res) {
-          test.equal(res, 'rab LOCAL');
-        })
-      );
+Tinytest.addAsync(
+  'livedata connection - reconnect to a different server',
+  async function (test) {
+    const control = DDP.connect(getSelfConnectionUrl());
+    let fixture;
+    let conn;
+    try {
+      await waitUntil(() => control.status().connected, { timeout: 5000 });
+      fixture = await control.callAsync('startReconnectTestServer');
+      conn = DDP.connect(fixture.url);
+      await waitUntil(() => conn.status().connected, { timeout: 5000 });
+      test.equal(await conn.callAsync('reverse', 'foo'), 'oof');
+
+      conn.reconnect({ url: getSelfConnectionUrl() });
+      test.equal(await conn.callAsync('reverse', 'bar'), 'rab LOCAL');
+    } finally {
+      conn?.disconnect();
+      try {
+        if (fixture) await control.callAsync('stopReconnectTestServer', fixture.id);
+      } finally {
+        control.disconnect();
+      }
     }
   }
-]);
+);
 
 Tinytest.addAsync(
   'livedata connection - version negotiation requires renegotiating',
