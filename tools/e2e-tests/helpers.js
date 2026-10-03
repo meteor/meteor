@@ -83,14 +83,23 @@ export async function clearBuildArtifacts(appDir) {
  * @param {Object} options - Additional options
  * @param {boolean} options.isMonorepo - Whether the app is a monorepo
  * @param {boolean} options.preserveFixtureSymlinks - Whether to preserve symlinks when copying the fixture
+ * @param {string[]} options.tempDirSegments - Path segments to insert below the system temp directory
  * @returns {string} - Path to the temporary directory containing the app
  */
 export async function setupMeteorApp(appName, options = {}) {
-  const { isMonorepo = false, preserveFixtureSymlinks = false } = options;
+  const {
+    isMonorepo = false,
+    preserveFixtureSymlinks = false,
+    tempDirSegments = [],
+  } = options;
 
   // Create a unique temporary directory
   const randomSuffix = Math.random().toString(36).substring(2, 10);
-  const tempDir = path.join(os.tmpdir(), `meteortest-${appName}-${randomSuffix}`);
+  const tempDir = path.join(
+    os.tmpdir(),
+    ...tempDirSegments,
+    `meteortest-${appName}-${randomSuffix}`,
+  );
 
   // Source app directory
   const sourceAppDir = path.join(__dirname, 'apps', appName);
