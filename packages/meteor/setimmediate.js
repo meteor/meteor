@@ -30,7 +30,7 @@
 
 "use strict";
 
-var global = this;
+var global = typeof globalThis !== "undefined" ? globalThis : this;
 
 
 // IE 10, Node >= 9.1
