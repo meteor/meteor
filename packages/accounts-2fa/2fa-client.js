@@ -67,8 +67,9 @@ Accounts.enableUser2fa = (code, callback) => {
 /**
  * @summary Disable user 2FA
  * @locus Client
- * @param {String|Function} [codeOrCallback] TOTP code when the server requires one
- *   (`requireCodeToDisable`), or the callback when called the historical way.
+ * @param {String|Function} [codeOrCallback] TOTP code. Required unless the server
+ *   sets `requireCodeToDisable` to false. Pass the callback alone to call it
+ *   the historical way.
  * @param {Function} [callback] Optional callback.
  *   Called with no arguments on success, or with a single `Error` argument
  *   on failure.

@@ -4,7 +4,6 @@ import QRCode from 'qrcode-svg';
 import { Meteor } from 'meteor/meteor';
 import { check, Match } from 'meteor/check';
 import { DDPRateLimiter } from 'meteor/ddp-rate-limiter';
-import crypto from 'crypto';
 
 const validateChangeHooks = [];
 
@@ -38,7 +37,6 @@ const TOTP_DIGITS = 6;
 const TOTP_PERIOD = 30;
 const TOTP_SECRET_SIZE = 20;
 const DEFAULT_WINDOW = 10;
-const ENCRYPTED_PREFIX = 'v1:';
 const TWO_FACTOR_METHODS = [
   'generate2faActivationQrCode',
   'enableUser2fa',
@@ -48,15 +46,12 @@ const TWO_FACTOR_METHODS = [
 const DEFAULT_CONFIG = {
   window: DEFAULT_WINDOW,
   preventReplay: true,
-  requireCodeToDisable: false,
+  requireCodeToDisable: true,
   allowPlaintextSecrets: true,
   rateLimit: { numRequests: 5, timeInterval: 60_000 },
 };
 
-/** @type {typeof DEFAULT_CONFIG & { encryptionKey: string|null }} */
-let config = { ...DEFAULT_CONFIG, encryptionKey: null };
-/** @type {Buffer|null} */
-let encryptionKey = null;
+let config = { ...DEFAULT_CONFIG };
 
 const changeHooks = [];
 const codeFailureHooks = [];
@@ -83,26 +78,16 @@ const generateActivationData = ({ issuer, label }) => {
   };
 };
 
-const assertEncryptionKey = key => {
-  const buffer = Buffer.from(key, 'base64');
-  if (buffer.length !== 32) {
-    throw new Error(
-      'accounts-2fa: encryptionKey must be 32 bytes encoded in base64'
-    );
-  }
-  return buffer;
-};
-
 /**
- * @summary Configure TOTP verification, replay protection and secret encryption.
+ * @summary Configure TOTP verification and replay protection.
  * Call this at startup, before the first 2FA method runs.
- * Defaults stay compatible with previous releases, except replay protection which is on.
+ * Defaults stay compatible with previous releases, except replay protection,
+ * which is on, and disabling 2FA, which requires a current code.
  * @locus Server
  * @param {Object} options
  * @param {Number} [options.window=10] TOTP steps accepted on each side of the current step.
  * @param {Boolean} [options.preventReplay=true] Reject a code whose time step was already used.
- * @param {Boolean} [options.requireCodeToDisable=false] Require a valid TOTP code to disable 2FA.
- * @param {String} [options.encryptionKey] 32-byte AES-256-GCM key, base64. Secrets are stored encrypted when set.
+ * @param {Boolean} [options.requireCodeToDisable=true] Require a valid TOTP code to disable 2FA.
  * @param {Boolean} [options.allowPlaintextSecrets=true] Accept secrets stored before encryption was enabled.
  * @param {{numRequests: Number, timeInterval: Number}} [options.rateLimit]
  */
@@ -111,7 +96,6 @@ Accounts.configure2fa = options => {
     window: Match.Optional(Match.Integer),
     preventReplay: Match.Optional(Boolean),
     requireCodeToDisable: Match.Optional(Boolean),
-    encryptionKey: Match.Optional(Match.OneOf(String, null)),
     allowPlaintextSecrets: Match.Optional(Boolean),
     rateLimit: Match.Optional({
       numRequests: Match.Integer,
@@ -130,12 +114,6 @@ Accounts.configure2fa = options => {
       ? { ...options.rateLimit }
       : config.rateLimit,
   };
-
-  if (options.encryptionKey) {
-    encryptionKey = assertEncryptionKey(options.encryptionKey);
-  } else if (options.encryptionKey === null) {
-    encryptionKey = null;
-  }
 };
 
 /**
@@ -152,53 +130,32 @@ Accounts.on2faChange = fn => registerHook(changeHooks, fn);
  */
 Accounts.on2faCodeFailure = fn => registerHook(codeFailureHooks, fn);
 
+const oauthEncryption = () => Package['oauth-encryption']?.OAuthEncryption;
+
 const encryptSecret = plain => {
-  if (!encryptionKey) {
+  const encryption = oauthEncryption();
+  if (!encryption?.keyIsLoaded()) {
     return plain;
   }
-  const iv = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv('aes-256-gcm', encryptionKey, iv);
-  const ciphertext = Buffer.concat([
-    cipher.update(plain, 'utf8'),
-    cipher.final(),
-  ]);
-  const tag = cipher.getAuthTag();
-  return [
-    'v1',
-    iv.toString('base64'),
-    tag.toString('base64'),
-    ciphertext.toString('base64'),
-  ].join(':');
+  return encryption.seal(plain);
 };
 
 const decryptSecret = stored => {
-  if (typeof stored !== 'string' || stored.length === 0) {
-    return null;
+  const encryption = oauthEncryption();
+  if (encryption?.isSealed(stored)) {
+    if (!encryption.keyIsLoaded()) {
+      return null;
+    }
+    try {
+      return encryption.open(stored);
+    } catch (error) {
+      return null;
+    }
   }
-  if (!stored.startsWith(ENCRYPTED_PREFIX)) {
-    return config.allowPlaintextSecrets ? stored : null;
+  if (typeof stored === 'string' && stored.length > 0 && config.allowPlaintextSecrets) {
+    return stored;
   }
-  if (!encryptionKey) {
-    return null;
-  }
-  const [, iv, tag, ciphertext] = stored.split(':');
-  if (!iv || !tag || !ciphertext) {
-    return null;
-  }
-  try {
-    const decipher = crypto.createDecipheriv(
-      'aes-256-gcm',
-      encryptionKey,
-      Buffer.from(iv, 'base64')
-    );
-    decipher.setAuthTag(Buffer.from(tag, 'base64'));
-    return Buffer.concat([
-      decipher.update(Buffer.from(ciphertext, 'base64')),
-      decipher.final(),
-    ]).toString('utf8');
-  } catch (error) {
-    return null;
-  }
+  return null;
 };
 
 /**
@@ -207,9 +164,9 @@ const decryptSecret = stored => {
  * @returns {Promise<Number>} Number of users migrated.
  */
 Accounts.encryptExisting2faSecrets = async () => {
-  if (!encryptionKey) {
+  if (!oauthEncryption()?.keyIsLoaded()) {
     throw new Error(
-      'accounts-2fa: configure2fa({ encryptionKey }) is required before encrypting existing secrets'
+      'accounts-2fa: add oauth-encryption and set Accounts.config({ oauthSecretKey }) before encrypting existing secrets'
     );
   }
   const users = await Meteor.users
@@ -222,7 +179,7 @@ Accounts.encryptExisting2faSecrets = async () => {
   let migrated = 0;
   for (const user of users) {
     const secret = user.services?.twoFactorAuthentication?.secret;
-    if (typeof secret !== 'string' || secret.startsWith(ENCRYPTED_PREFIX)) {
+    if (typeof secret !== 'string') {
       continue;
     }
     await Meteor.users.updateAsync(user._id, {
@@ -486,12 +443,9 @@ Meteor.methods({
       connection: this.connection,
     });
 
-    if (config.requireCodeToDisable) {
+    if (config.requireCodeToDisable && Accounts._check2faEnabled(user)) {
       const secret = user.services?.twoFactorAuthentication?.secret;
-      const step =
-        Accounts._check2faEnabled(user) && secret
-          ? Accounts._verify2faToken(secret, code)
-          : null;
+      const step = secret ? Accounts._verify2faToken(secret, code) : null;
       if (step === null) {
         await rejectInvalidCode(userId, 'disableUser2fa');
       }

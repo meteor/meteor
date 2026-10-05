@@ -4,6 +4,7 @@ import { DDPCommon } from 'meteor/ddp-common';
 import * as OTPAuth from 'otpauth';
 import { Random } from 'meteor/random';
 import crypto from 'crypto';
+import { OAuthEncryption } from 'meteor/oauth-encryption';
 
 const findUserById =
   async id => await Meteor.users.findOneAsync(id);
@@ -81,20 +82,35 @@ Tinytest.addAsync('account - 2fa - validate2faChange can refuse an activation', 
 });
 
 const restore2faConfig = () => {
+  OAuthEncryption.loadKey(null);
   Accounts.configure2fa({
     window: 10,
     preventReplay: true,
-    requireCodeToDisable: false,
-    encryptionKey: null,
+    requireCodeToDisable: true,
     allowPlaintextSecrets: true,
     rateLimit: { numRequests: 5, timeInterval: 60_000 },
   });
 };
 
+const callAsUser = (userId, name, args) => {
+  const method = Meteor.server.method_handlers[name];
+  const invocation = new DDPCommon.MethodInvocation({
+    userId,
+    isSimulation: false,
+    setUserId: () => {},
+    unblock: () => {},
+    connection: { id: 'conn', close() {} },
+    randomSeed: Random.id(),
+  });
+  return DDP._CurrentMethodInvocation.withValue(invocation, () =>
+    method.apply(invocation, args)
+  );
+};
+
 Tinytest.addAsync(
-  'account - 2fa - encrypted secrets still validate and plaintext can be rejected',
+  'account - 2fa - sealed secrets still validate and plaintext can be rejected',
   async test => {
-    const key = crypto.randomBytes(32).toString('base64');
+    const key = crypto.randomBytes(16).toString('base64');
     const secret = new OTPAuth.Secret({ size: 20 }).base32;
     const userId = await Accounts.insertUserDoc(
       {},
@@ -107,22 +123,104 @@ Tinytest.addAsync(
     );
 
     try {
-      Accounts.configure2fa({
-        encryptionKey: key,
-        allowPlaintextSecrets: false,
-      });
+      OAuthEncryption.loadKey(key);
+      Accounts.configure2fa({ allowPlaintextSecrets: false });
 
       test.equal(await Accounts.encryptExisting2faSecrets(), 1);
       const user = await findUserById(userId);
       const stored = user.services.twoFactorAuthentication.secret;
-      test.isTrue(stored.startsWith('v1:'));
+      test.isTrue(OAuthEncryption.isSealed(stored));
 
       const { token } = Accounts._generate2faToken(stored);
       test.isTrue(Accounts._isTokenValid(stored, token));
       test.isFalse(Accounts._isTokenValid(secret, token));
 
-      Accounts.configure2fa({ encryptionKey: crypto.randomBytes(32).toString('base64') });
+      OAuthEncryption.loadKey(crypto.randomBytes(16).toString('base64'));
       test.isFalse(Accounts._isTokenValid(stored, token));
+    } finally {
+      restore2faConfig();
+      await Accounts.users.removeAsync(userId);
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'account - 2fa - disabling 2FA requires a current code',
+  async test => {
+    const secret = new OTPAuth.Secret({ size: 20 }).base32;
+    const userId = await Accounts.insertUserDoc(
+      {},
+      {
+        emails: [{ address: `${Random.id()}@meteorapp.com`, verified: true }],
+        services: {
+          twoFactorAuthentication: { type: 'otp', secret },
+        },
+      }
+    );
+    const { token } = Accounts._generate2faToken(secret);
+
+    try {
+      Accounts.configure2fa({ requireCodeToDisable: true });
+      let refused = null;
+      try {
+        await callAsUser(userId, 'disableUser2fa', []);
+      } catch (error) {
+        refused = error;
+      }
+      test.equal(refused && refused.error, 'invalid-2fa-code');
+      test.isTrue(Accounts._check2faEnabled(await findUserById(userId)));
+
+      await callAsUser(userId, 'disableUser2fa', [token]);
+      test.isFalse(Accounts._check2faEnabled(await findUserById(userId)));
+    } finally {
+      restore2faConfig();
+      await Accounts.users.removeAsync(userId);
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'account - 2fa - a secret that was never activated can be discarded without a code',
+  async test => {
+    const userId = await Accounts.insertUserDoc(
+      {},
+      { emails: [{ address: `${Random.id()}@meteorapp.com`, verified: true }] }
+    );
+
+    try {
+      Accounts.configure2fa({ requireCodeToDisable: true });
+      await callAsUser(userId, 'generate2faActivationQrCode', ['Test app']);
+      const pending = await findUserById(userId);
+      test.isTrue(!!pending.services?.twoFactorAuthentication?.secret);
+      test.isFalse(Accounts._check2faEnabled(pending));
+
+      await callAsUser(userId, 'disableUser2fa', []);
+      const user = await findUserById(userId);
+      test.isFalse(!!user.services?.twoFactorAuthentication);
+    } finally {
+      restore2faConfig();
+      await Accounts.users.removeAsync(userId);
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'account - 2fa - requireCodeToDisable false keeps disable without a code',
+  async test => {
+    const userId = await Accounts.insertUserDoc(
+      {},
+      {
+        emails: [{ address: `${Random.id()}@meteorapp.com`, verified: true }],
+        services: {
+          twoFactorAuthentication: { type: 'otp', secret: 'superSecret' },
+        },
+      }
+    );
+
+    try {
+      Accounts.configure2fa({ requireCodeToDisable: false });
+      await callAsUser(userId, 'disableUser2fa', []);
+      test.isFalse(Accounts._check2faEnabled(await findUserById(userId)));
     } finally {
       restore2faConfig();
       await Accounts.users.removeAsync(userId);

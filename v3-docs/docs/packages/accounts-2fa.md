@@ -98,29 +98,35 @@ To call this function the user must be already logged in.
 
 `Accounts.validate2faChange(fn)` receives `{ type, user, connection }` with `type` equal to `activation` or `deactivation`. Throw from `fn` to refuse the change. The registration returns `{ stop() }`.
 
-By default the call takes no code, which matches previous releases. To require a valid TOTP code, call `Accounts.configure2fa({ requireCodeToDisable: true })` and pass that code as the first argument: `Accounts.disableUser2fa(code, callback)`.
+Disabling 2FA requires a valid TOTP code: `Accounts.disableUser2fa(code, callback)`. This is a breaking change from previous releases, which accepted a call with no code. Set `Accounts.configure2fa({ requireCodeToDisable: false })` to keep that behavior. A secret that was generated but never activated (no `type: 'otp'`) can still be discarded without a code.
 
 An administrator recovery flow can remove 2FA without a code from the server, with `Accounts.reset2faForUser(userId)`.
 
 ## Configuration {#configuration}
 
-Call `Accounts.configure2fa` once, at server startup and before any 2FA method runs. Every option is optional. Defaults stay compatible with previous releases, except that a TOTP code can no longer be reused (`preventReplay` defaults to `true`).
+Call `Accounts.configure2fa` once, at server startup and before any 2FA method runs. Every option is optional. Defaults stay compatible with previous releases, except that a TOTP code can no longer be reused (`preventReplay` defaults to `true`) and disabling 2FA requires a current code (`requireCodeToDisable` defaults to `true`).
 
 ```js
+import { Meteor } from 'meteor/meteor';
 import { Accounts } from 'meteor/accounts-base';
+
+// meteor add oauth-encryption
+// 16 bytes, base64. The same key encrypts OAuth secrets.
+// node -e "console.log(require('crypto').randomBytes(16).toString('base64'))"
+Accounts.config({
+  oauthSecretKey: Meteor.settings.private.oauthSecretKey,
+});
 
 Accounts.configure2fa({
   window: 1, // steps accepted on each side of the current 30s step (default 10)
   preventReplay: true,
   requireCodeToDisable: true,
-  // 32 bytes, base64. Example: node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
-  encryptionKey: process.env.ACCOUNTS_2FA_KEY,
   allowPlaintextSecrets: true, // set to false after migrating existing secrets
   rateLimit: { numRequests: 5, timeInterval: 60_000 },
 });
 ```
 
-When `encryptionKey` is set, newly stored secrets are encrypted with AES-256-GCM (`v1:<iv>:<tag>:<ciphertext>`). Migrate secrets that are already in the database with `Accounts.encryptExisting2faSecrets()`, then set `allowPlaintextSecrets` to `false`.
+When the `oauth-encryption` package is loaded and `oauthSecretKey` is set, newly stored secrets are encrypted with AES-128-GCM through `OAuthEncryption.seal`. The stored value is `{ iv, ciphertext, algorithm, authTag }`. Migrate secrets that are already in the database with `Accounts.encryptExisting2faSecrets()`, then set `allowPlaintextSecrets` to `false`. Without the package, secrets stay in plaintext, which is the historical behavior.
 
 Hooks:
 
