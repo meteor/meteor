@@ -38,6 +38,29 @@ const otpUserFields = () => ({
   },
 });
 
+Tinytest.addAsync('account - 2fa - email code goes to the first verified address', async test => {
+  const unverified = `${Random.id()}@meteorapp.com`;
+  const firstVerified = `${Random.id()}@meteorapp.com`;
+  const secondVerified = `${Random.id()}@meteorapp.com`;
+  const userId = await createUser({
+    emails: [
+      { address: unverified, verified: false },
+      { address: firstVerified, verified: true },
+      { address: secondVerified, verified: true },
+    ],
+  });
+  try {
+    Accounts.configure2fa({ email: { enabled: true } });
+    const issued = await Accounts._issue2faEmailCode(await findUserById(userId));
+    test.isTrue(issued.sent);
+    const stored = await findUserById(userId);
+    test.equal(stored.services.twoFactorAuthentication.emailCode.email, firstVerified);
+  } finally {
+    restorePolicy();
+    await Accounts.users.removeAsync(userId);
+  }
+});
+
 Tinytest.add('account - 2fa - hashSecret may be omitted', () => {
   try {
     Accounts.configure2fa({ email: { enabled: true, hashSecret: undefined } });

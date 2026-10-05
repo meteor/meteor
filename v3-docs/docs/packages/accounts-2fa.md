@@ -126,7 +126,7 @@ Meteor.loginWithPasswordAnd2faCode(email, password, code, 'email', callback);
 // then a pending email code. Existing clients keep working.
 ```
 
-The email code is 6 digits, expires after 10 minutes, accepts 5 attempts, and can be resent after 60 seconds. Using up the attempts discards the code, and a new one is not sent until that cooldown has elapsed. It is stored as a hash and deleted once it is used. Pass `email.hashSecret` (from the private part of `Meteor.settings`, never `public`) so the hash is an HMAC-SHA256. Without it the package keeps a plain SHA-256 and logs a warning. Only a verified email address is used, unless `email.requireVerified` is set to `false`.
+The email code is 6 digits, expires after 10 minutes, accepts 5 attempts, and can be resent after 60 seconds. Using up the attempts discards the code, and a new one is not sent until that cooldown has elapsed. It is stored as a hash and deleted once it is used. Pass `email.hashSecret` (from the private part of `Meteor.settings`, never `public`) so the hash is an HMAC-SHA256. Without it the package keeps a plain SHA-256 and logs a warning. The code is sent to the first verified entry of `user.emails`, in array order. Set `email.requireVerified` to `false` to use the first address instead, verified or not.
 
 `Accounts.validate2faChallenge(({ user, connection, method }) => {})` runs before an email code is sent. Throw to skip the send, for example when the account is locked. The login then fails with that error instead of `no-2fa-code`, and no message is sent. The user document handed to the hook is the login projection: read lockout fields from the database if you need them.
 

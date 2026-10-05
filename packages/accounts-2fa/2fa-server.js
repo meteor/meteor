@@ -67,7 +67,6 @@ const generateActivationData = ({ issuer, label }) => {
  * @param {Boolean} [options.email.enabled]
  * @param {Boolean} [options.email.offerToOtpUsers=true] Let a user who already has TOTP choose email.
  * @param {Boolean} [options.email.requireVerified=true]
- * @param {Number} [options.email.codeLength=6]
  * @param {Number} [options.email.expirationMs=600000]
  * @param {Number} [options.email.maxAttempts=5]
  * @param {Number} [options.email.resendCooldownMs=60000]
@@ -77,7 +76,6 @@ Accounts.configure2fa = options => {
   check(options, {
     email: Match.Optional({
       enabled: Match.Optional(Boolean),
-      codeLength: Match.Optional(Match.Integer),
       expirationMs: Match.Optional(Match.Integer),
       maxAttempts: Match.Optional(Match.Integer),
       resendCooldownMs: Match.Optional(Match.Integer),
@@ -86,11 +84,6 @@ Accounts.configure2fa = options => {
       hashSecret: Match.Optional(Match.OneOf(String, null, undefined)),
     }),
   });
-
-  if (options.email?.codeLength !== undefined &&
-    (options.email.codeLength < 4 || options.email.codeLength > 8)) {
-    throw new Error('accounts-2fa: email.codeLength must be between 4 and 8');
-  }
 
   if (options.email) {
     Accounts._configure2faEmail(options.email);

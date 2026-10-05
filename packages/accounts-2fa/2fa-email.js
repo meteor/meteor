@@ -3,9 +3,10 @@ import { Email } from 'meteor/email';
 import { Meteor } from 'meteor/meteor';
 import crypto from 'crypto';
 
+const EMAIL_CODE_LENGTH = 6;
+
 const DEFAULT_EMAIL_CONFIG = {
   enabled: false,
-  codeLength: 6,
   expirationMs: 10 * 60 * 1000,
   maxAttempts: 5,
   resendCooldownMs: 60 * 1000,
@@ -73,9 +74,8 @@ const hashCode = (userId, code) => {
 };
 
 const randomCode = () => {
-  const length = emailConfig.codeLength;
-  const max = 10 ** length;
-  return String(crypto.randomInt(0, max)).padStart(length, '0');
+  const max = 10 ** EMAIL_CODE_LENGTH;
+  return String(crypto.randomInt(0, max)).padStart(EMAIL_CODE_LENGTH, '0');
 };
 
 const ensureTemplate = () => {
