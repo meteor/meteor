@@ -566,6 +566,8 @@ class File {
     // against. Set with setSourceMap.
     this.sourceMap = null;
     this.sourceMapRoot = null;
+    // A hidden source map is written next to the file but never served.
+    this.hiddenSourceMap = false;
 
     // Where this file is intended to reside within the target's
     // filesystem.
@@ -1478,6 +1480,7 @@ class Target {
 
         if (await file.sourceMap) {
           newFile.setSourceMap(await file.sourceMap, '/');
+          newFile.hiddenSourceMap = !!file.hiddenSourceMap;
         }
 
         if (file.path) {
@@ -1804,7 +1807,11 @@ class ClientTarget extends Target {
         return Buffer.from(")]}'\n" + sourceMap, 'utf8');
       });
 
-      if (file.sourceMap) {
+      if (file.sourceMap && file.hiddenSourceMap) {
+        await builder.writeToGeneratedFilename(file.targetPath + '.map', {
+          data: Buffer.from(JSON.stringify(file.sourceMap), 'utf8'),
+        });
+      } else if (file.sourceMap) {
         let mapData = null;
 
         // don't need to do this in devel mode

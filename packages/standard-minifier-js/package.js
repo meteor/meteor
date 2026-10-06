@@ -1,6 +1,6 @@
 Package.describe({
   name: 'standard-minifier-js',
-  version: '3.2.0',
+  version: '3.3.0',
   summary: 'Standard javascript minifiers used with Meteor apps by default.',
   documentation: 'README.md',
   devOnly: true,
@@ -19,10 +19,12 @@ Package.registerBuildPlugin({
     '@babel/parser': '7.22.7',
     'terser': '5.19.2',
     '@meteorjs/reify': '0.25.4',
+    '@jridgewell/sourcemap-codec': '1.6.0',
   },
   sources: [
     'plugin/minify-js.js',
     'plugin/stats.js',
+    'plugin/source-map-concatenator.js',
   ],
 });
 
