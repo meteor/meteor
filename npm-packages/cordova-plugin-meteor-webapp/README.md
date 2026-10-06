@@ -64,6 +64,7 @@ With a freshly installed app, the `currentAssetBundle` will be initialized to th
 ## Downloading updates
 
 - When checking for updates, we first download the asset manifest. Then:
+  - If the manifest is invalid, we invoke the `onError()` callback and stop. Besides missing fields, this includes a version that can’t be used as a single directory name (empty, `.`, `..`, or containing `/`) and asset or source map paths that are empty, absolute, or contain `..` segments, also when percent-decoded. This way a manifest can never make us write or delete files outside our own directories
   - If we’re already serving that version or if it is pending, do nothing (this could happen if we invoke `checkForUpdates()` manually, or on startup)
   - If we have an existing downloaded version, use that (this could only happen if we revert to a version that we downloaded before but aren’t currently serving or have set as pending)
   - Else, we create a new asset bundle from the asset manifest and point it to a fresh `Downloading` directory. Then:
