@@ -15,10 +15,11 @@ export class SourceMapConcatenator {
   }
 
   append(code, map) {
+    const lines = code.split('\n');
     if (map) {
-      this._appendMappings(typeof map === 'string' ? JSON.parse(map) : map);
+      this._appendMappings(typeof map === 'string' ? JSON.parse(map) : map, lines.length);
     }
-    this._advance(code);
+    this._advance(lines);
   }
 
   toJSON() {
@@ -31,14 +32,14 @@ export class SourceMapConcatenator {
     };
   }
 
-  _appendMappings(map) {
+  _appendMappings(map, lineCount) {
     const sourceRoot = map.sourceRoot ? map.sourceRoot.replace(/\/?$/, '/') : '';
     const sourceIndexes = (map.sources || []).map((source, i) =>
       this._addSource(sourceRoot + source, map.sourcesContent?.[i] ?? null)
     );
     const nameIndexes = (map.names || []).map((name) => this._addName(name));
 
-    decode(map.mappings).forEach((segments, i) => {
+    decode(map.mappings).slice(0, lineCount).forEach((segments, i) => {
       const columnOffset = i === 0 ? this._column : 0;
       const line = this._lineAt(this._line + i);
       for (const segment of segments) {
@@ -54,8 +55,7 @@ export class SourceMapConcatenator {
     });
   }
 
-  _advance(code) {
-    const lines = code.split('\n');
+  _advance(lines) {
     const lastLine = lines[lines.length - 1];
     this._line += lines.length - 1;
     this._column = lines.length === 1 ? this._column + lastLine.length : lastLine.length;
@@ -70,13 +70,13 @@ export class SourceMapConcatenator {
   }
 
   _addSource(source, content) {
-    const known = this._sourceIndexes.get(source);
-    if (known !== undefined && this._sourcesContent[known] === content) {
-      return known;
+    const key = `${source}\0${content ?? ''}`;
+    let index = this._sourceIndexes.get(key);
+    if (index === undefined) {
+      index = this._sources.push(source) - 1;
+      this._sourcesContent.push(content);
+      this._sourceIndexes.set(key, index);
     }
-    const index = this._sources.push(source) - 1;
-    this._sourcesContent.push(content);
-    this._sourceIndexes.set(source, index);
     return index;
   }
 

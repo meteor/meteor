@@ -1808,9 +1808,12 @@ class ClientTarget extends Target {
       });
 
       if (file.sourceMap && file.hiddenSourceMap) {
-        await builder.writeToGeneratedFilename(file.targetPath + '.map', {
-          data: Buffer.from(JSON.stringify(file.sourceMap), 'utf8'),
-        });
+        // The Cordova build copies this whole directory into the app, so a hidden map would ship with it.
+        if (! archinfo.matches(this.arch, 'web.cordova')) {
+          await builder.writeToGeneratedFilename(file.targetPath + '.map', {
+            data: Buffer.from(JSON.stringify(file.sourceMap), 'utf8'),
+          });
+        }
       } else if (file.sourceMap) {
         let mapData = null;
 
