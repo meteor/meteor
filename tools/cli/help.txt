@@ -541,6 +541,11 @@ unset Meteor.settings, pass an empty settings file.
 The --delete flag permanently removes a deployed application, including
 all of its stored data.
 
+Meteor finds the Galaxy region of an existing site over HTTPS and only accepts
+deploy servers under galaxy-deploy.meteor.com. To use a specific region or
+another deploy server, set the DEPLOY_HOSTNAME environment variable, for example
+`DEPLOY_HOSTNAME=eu-west-1.galaxy-deploy.meteor.com meteor deploy <site>`.
+
 Options:
   --delete, -D    permanently delete this deployment
   --debug         deploy in debug mode (don't minify, etc)
