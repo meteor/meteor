@@ -223,6 +223,57 @@ if (Meteor.isServer) {
   });
 }
 
+if (Meteor.isServer) {
+  Tinytest.addAsync('collection - allow/deny accounts for __proto__ fields', async test => {
+    let updateCalls = 0;
+    const profileOnly = (_userId, _doc, fields) =>
+      fields.length === 1 && fields[0] === 'profile';
+    const collection = {
+      _validators: {
+        update: { allow: [profileOnly], deny: [] },
+        fetch: [],
+        fetchAllFields: true,
+      },
+      _collection: {
+        findOneAsync: async () => ({ _id: 'document-id', profile: {} }),
+        updateAsync: async () => {
+          updateCalls += 1;
+          return 1;
+        },
+      },
+    };
+
+    const maliciousModifier = JSON.parse(
+      '{"$set":{"profile.name":"allowed","__proto__.isAdmin":true}}'
+    );
+    let rejected = false;
+    try {
+      await Mongo.Collection.prototype._validatedUpdateAsync.call(
+        collection,
+        'user-id',
+        'document-id',
+        maliciousModifier,
+        {}
+      );
+    } catch (error) {
+      rejected = true;
+      test.equal(error.error, 403);
+    }
+    test.isTrue(rejected, '__proto__ must be visible to the allow rule');
+    test.equal(updateCalls, 0, 'rejected modifier must not reach MongoDB');
+
+    const result = await Mongo.Collection.prototype._validatedUpdateAsync.call(
+      collection,
+      'user-id',
+      'document-id',
+      { $set: { 'profile.name': 'allowed' } },
+      {}
+    );
+    test.equal(result, 1, 'ordinary profile-only updates still pass');
+    test.equal(updateCalls, 1);
+  });
+}
+
 if (Meteor.isClient) {
   ['STRING', 'MONGO'].forEach(function (idGeneration) {
     // Set up a bunch of test collections... on the client! They match the ones
