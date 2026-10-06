@@ -45,3 +45,58 @@ Tinytest.add('account - 2fa - existing lowercase secrets remain valid', test => 
 
   test.isTrue(Accounts._isTokenValid(secret, token));
 });
+
+Tinytest.addAsync(
+  'account - 2fa - a login code cannot be replayed',
+  async test => {
+    const secret = new OTPAuth.Secret({ size: 20 }).base32;
+    const userId = await Accounts.insertUserDoc(
+      {},
+      {
+        emails: [{ address: `${Random.id()}@meteorapp.com`, verified: true }],
+        services: {
+          twoFactorAuthentication: { type: 'otp', secret },
+        },
+      }
+    );
+    const { token } = Accounts._generate2faToken(secret);
+    const invocation = {
+      connection: {
+        id: Random.id(),
+        close() {},
+      },
+      setUserId() {},
+    };
+    const attempt = () =>
+      Accounts._attemptLogin(
+        invocation,
+        'login',
+        [{ user: { id: userId }, code: token }],
+        { userId, type: 'password' }
+      );
+
+    try {
+      const first = await attempt();
+      test.equal(first.id, userId);
+
+      let replayError = null;
+      try {
+        await attempt();
+      } catch (error) {
+        replayError = error;
+      }
+      test.equal(replayError && replayError.error, 'invalid-2fa-code');
+
+      const next = Accounts._generate2faToken(secret, Date.now() + 30_000).token;
+      const nextLogin = await Accounts._attemptLogin(
+        invocation,
+        'login',
+        [{ user: { id: userId }, code: next }],
+        { userId, type: 'password' }
+      );
+      test.equal(nextLogin.id, userId);
+    } finally {
+      await Accounts.users.removeAsync(userId);
+    }
+  }
+);
