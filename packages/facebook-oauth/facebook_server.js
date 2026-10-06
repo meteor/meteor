@@ -26,12 +26,42 @@ Facebook.handleAuthFromAccessToken = async (accessToken, expiresAt) => {
   };
 };
 
+const verifyTokenApp = async (accessToken) => {
+  const config = await ServiceConfiguration.configurations.findOneAsync({
+    service: 'facebook',
+  });
+  if (!config) throw new ServiceConfiguration.ConfigError();
+
+  const appToken = `${config.appId}|${OAuth.openSecret(config.secret)}`;
+  const response = await OAuth._fetch(
+    `https://graph.facebook.com/v${API_VERSION}/debug_token`,
+    'GET',
+    { queryParams: { input_token: accessToken, access_token: appToken } }
+  ).then(res => res.json());
+
+  // Fail closed: the token must be valid AND minted for this exact app.
+  // debug_token returns app_id as a string, while config.appId may be stored
+  // as a Number (e.g. an unquoted value in settings.json), so compare as
+  // strings to avoid rejecting every legitimate login on such deployments.
+  if (!response?.data?.is_valid ||
+      String(response?.data?.app_id) !== String(config.appId)) {
+    throw new Meteor.Error(403, 'Facebook access token was not issued for this application');
+  }
+};
+
 Accounts.registerLoginHandler(async request => {
   if (request.facebookSignIn !== true) {
     return;
   }
+  await verifyTokenApp(request.accessToken);
   const facebookData = await Facebook.handleAuthFromAccessToken(request.accessToken, (+new Date) + (1000 * request.expirationTime));
   if (!facebookData) return;
+  // Fail closed if the identity lookup did not resolve to a Facebook user id,
+  // so a token that passes verification but whose /me lookup silently failed
+  // cannot proceed to log in as an unintended (id: undefined) account.
+  if (!facebookData.serviceData?.id) {
+    throw new Meteor.Error(403, 'Facebook access token did not resolve to a valid user');
+  }
   return Accounts.updateOrCreateUserFromExternalService('facebook', facebookData.serviceData, facebookData.options);
 });
 

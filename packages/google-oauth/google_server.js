@@ -76,6 +76,41 @@ const getServiceDataFromTokens = async (tokens, callback) => {
   return returnValue;
 };
 
+// Confirm that a client-supplied access token was actually issued for THIS
+// application's OAuth client. Without this check the direct-accessToken login
+// path is a confused-deputy: an attacker could replay a victim's token that was
+// minted for a different (attacker-controlled) Google client and be logged in
+// as the victim. The tokeninfo endpoint returns the client the token was minted
+// for as `audience` (a.k.a. `issued_to`); fail closed on any mismatch, missing
+// audience, or network/parse error.
+const verifyTokenClient = async (accessToken) => {
+  const config = await ServiceConfiguration.configurations.findOneAsync({
+    service: 'google',
+  });
+  if (!config) throw new ServiceConfiguration.ConfigError();
+
+  const content = new URLSearchParams({ access_token: accessToken });
+  let response;
+  try {
+    const request = await OAuth._fetch(
+      `https://www.googleapis.com/oauth2/v1/tokeninfo?${content.toString()}`,
+      'GET',
+      { headers: { Accept: 'application/json' } }
+    );
+    response = await request.json();
+  } catch (e) {
+    throw new Meteor.Error(403, 'Failed to verify Google access token');
+  }
+
+  const audience = response?.audience ?? response?.issued_to;
+  if (!audience || String(audience) !== String(config.clientId)) {
+    throw new Meteor.Error(
+      403,
+      'Google access token was not issued for this application'
+    );
+  }
+};
+
 Accounts.registerLoginHandler(async (request) => {
   if (request.googleSignIn !== true) {
     return;
@@ -95,6 +130,11 @@ Accounts.registerLoginHandler(async (request) => {
     );
   }
 
+  // Verify the token's audience against this app's clientId before trusting the
+  // identity derived from it. Runs before the try/catch below so the 403 is
+  // surfaced verbatim instead of being wrapped as a generic handshake failure.
+  await verifyTokenClient(tokens.accessToken);
+
   let result;
   try {
     result = await getServiceDataFromTokens(tokens);
@@ -106,16 +146,10 @@ Accounts.registerLoginHandler(async (request) => {
       { response: err.response }
     );
   }
+
   return Accounts.updateOrCreateUserFromExternalService(
     'google',
-    {
-      id: request.userId,
-      idToken: request.idToken,
-      accessToken: request.accessToken,
-      email: request.email,
-      picture: request.imageUrl,
-      ...result.serviceData,
-    },
+    result.serviceData,
     result.options
   );
 });
