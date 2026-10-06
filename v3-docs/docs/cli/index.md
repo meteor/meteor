@@ -704,6 +704,20 @@ meteor deploy your-app.meteorapp.com
 | `--deploy-polling-timeout <ms>` | Time to wait for build/deploy (defaults to 15 minutes) |
 | `--no-wait` | Exit after code upload instead of waiting for deploy to complete |
 
+### Deploy Region
+
+For a site that is already on Galaxy, `meteor deploy` finds the app's region by requesting `https://<site>/.well-known/meteor/deploy-url`. This lookup only uses HTTPS and only accepts a deploy server on Galaxy's deploy domain, `galaxy-deploy.meteor.com` (for example `eu-west-1.galaxy-deploy.meteor.com`). If the lookup gets no answer, the `us-east-1` region is used.
+
+To choose a region yourself, or to use any other deploy server, set `DEPLOY_HOSTNAME`:
+
+```bash
+DEPLOY_HOSTNAME=eu-west-1.galaxy-deploy.meteor.com meteor deploy your-app.com
+```
+
+::: warning
+The deploy server receives your Meteor account credentials, so only set `DEPLOY_HOSTNAME` to a server you trust.
+:::
+
 ### Free Deployment
 
 Deploy a free app with MongoDB using:
