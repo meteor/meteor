@@ -15,3 +15,12 @@ When running your page, `spiderable` will wait for all publications to be ready.
 ## Notes
 
 If you deploy your application with `meteor bundle`, you must install `phantomjs` ([http://phantomjs.org](http://phantomjs.org/)) somewhere in your `$PATH`. If you use `meteor deploy` this is already taken care of.
+
+The server limits PhantomJS rendering to two concurrent requests and queues up
+to eight additional requests for five seconds. Further requests, or requests
+that time out in the queue, receive the normal page without PhantomJS, as when
+rendering fails. Applications may change these limits at startup with
+`Spiderable.maxConcurrentRequests`, `Spiderable.maxQueuedRequests`, and
+`Spiderable.queueTimeoutMs`. Invalid values fall back to the defaults.
+A render is stopped after `Spiderable.requestTimeoutMs` (15 seconds by
+default); a PhantomJS process that does not exit is killed one second later.
