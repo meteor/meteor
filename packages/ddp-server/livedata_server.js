@@ -419,7 +419,10 @@ Object.assign(Session.prototype, {
           return true;
         });
 
-        if (msg.msg in self.protocol_handlers) {
+        if (
+          typeof msg.msg === "string" &&
+          Object.hasOwn(self.protocol_handlers, msg.msg)
+        ) {
           const result = self.protocol_handlers[msg.msg].call(
             self,
             msg,
@@ -427,7 +430,12 @@ Object.assign(Session.prototype, {
           );
 
           if (Meteor._isPromise(result)) {
-            result.finally(() => unblock());
+            // setImmediate runs outside the socket callback; catch rejected handlers here.
+            result
+              .catch((e) => {
+                Meteor._debug("Internal exception while processing message", msg, e);
+              })
+              .finally(() => unblock());
           } else {
             unblock();
           }
