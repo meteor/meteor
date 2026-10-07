@@ -26,7 +26,7 @@ Package.onUse((api) => {
 
   // If the 'blaze' package is loaded, we'll define some helpers like
   // {{currentUser}}.  If not, no biggie.
-  api.use("blaze", "client", { weak: true });
+  api.use("blaze@3.0.3", "client", { weak: true });
 
   // Allow us to detect 'autopublish', and publish some Meteor.users fields if
   // it's loaded.
