@@ -5,8 +5,6 @@
 // @deprecated
 // XXX COMPAT WITH 1.1.0.2
 
-var _ = require('underscore');
-
 var archinfo = require('../utils/archinfo');
 var buildmessage = require('../utils/buildmessage.js');
 var files = require('../fs/files');
@@ -20,7 +18,7 @@ var convertSourceMapPaths = function (sourcemap, f) {
   }
 
   var srcmap = JSON.parse(sourcemap);
-  srcmap.sources = _.map(srcmap.sources, f);
+  srcmap.sources = srcmap.sources.map(f);
   return JSON.stringify(srcmap);
 };
 
@@ -29,7 +27,7 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
   var addAsset = options.addAsset;
 
   var relPath = sourceItem.relPath;
-  var fileOptions = _.clone(sourceItem.fileOptions) || {};
+  var fileOptions = sourceItem.fileOptions ? {...sourceItem.fileOptions} : {};
   var absPath = files.pathResolve(inputSourceArch.pkg.sourceRoot, relPath);
   var filename = files.pathBasename(relPath);
   var hash = file.hash;
@@ -251,7 +249,7 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
      * @memberOf CompileStep
      * @instance
      */
-    declaredExports: _.pluck(inputSourceArch.declaredExports, 'name'),
+    declaredExports: (inputSourceArch.declaredExports || []).map(e => e.name),
 
     /**
      * @summary Read from the input file. If `n` is specified, returns the
@@ -272,7 +270,7 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
     },
 
     _getOption(name, options) {
-      if (options && _.has(options, name)) {
+      if (options && (name in options)) {
         return options[name];
       }
       const fileOptions = this.fileOptions;
@@ -369,7 +367,7 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
       }
 
       let sourcePath = this.inputPath;
-      if (_.has(options, "sourcePath") &&
+      if (("sourcePath" in options) &&
           typeof options.sourcePath === "string") {
         sourcePath = options.sourcePath;
       }
@@ -414,7 +412,7 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
      */
     addAsset: function (options) {
       if (! (options.data instanceof Buffer)) {
-        if (_.isString(options.data)) {
+        if (typeof options.data === 'string') {
           options.data = Buffer.from(options.data);
         } else {
           throw new Error("'data' option to addAsset must be a Buffer or String.");
@@ -436,7 +434,7 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
      */
     error: function (options) {
       let sourcePath = this.inputPath;
-      if (_.has(options, "sourcePath") &&
+      if (("sourcePath" in options) &&
           typeof options.sourcePath === "string") {
         sourcePath = options.sourcePath;
       }

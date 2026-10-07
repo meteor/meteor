@@ -1,4 +1,3 @@
-var _ = require('underscore');
 var sourcemap = require('source-map');
 var buildmessage = require('../utils/buildmessage.js');
 var watch = require('../fs/watch');
@@ -74,9 +73,9 @@ Object.assign(Module.prototype, {
     var self = this;
 
     var maxInFile = [];
-    _.each(self.files, function (file) {
+    self.files.forEach(function (file) {
       var m = 0;
-      _.each(file.source.split('\n'), function (line) {
+      file.source.split('\n').forEach(function (line) {
         if (line.length <= ignoreOver && line.length > m) {
           m = line.length;
         }
@@ -84,7 +83,7 @@ Object.assign(Module.prototype, {
       maxInFile.push(m);
     });
 
-    return _.max(maxInFile);
+    return Math.max(...maxInFile);
   },
 
   // Figure out which vars need to be specifically put in the module
@@ -103,12 +102,10 @@ Object.assign(Module.prototype, {
     // Find all global references in any files
     var assignedVariables = [];
     for (const file of self.files) {
-      assignedVariables = assignedVariables.concat(
-          await file.computeAssignedVariables());
+      const vars = await file.computeAssignedVariables();
+      assignedVariables.push(...vars);
     }
-    assignedVariables = _.uniq(assignedVariables);
-
-    return assignedVariables;
+    return [...new Set(assignedVariables)];
   }),
 
   // Output is a list of objects with keys 'source', 'servePath', 'sourceMap',
@@ -125,7 +122,7 @@ Object.assign(Module.prototype, {
     if (self.useGlobalNamespace &&
         ! haveMeteorInstallOptions) {
       // Ignore lazy files unless we have a module system.
-      const eagerFiles = _.filter(self.files, file => ! file.lazy);
+      const eagerFiles = self.files.filter(file => ! file.lazy);
 
       const ret = [];
       for (const file of eagerFiles) {
@@ -172,7 +169,7 @@ Object.assign(Module.prototype, {
     // Otherwise..
 
     // Find the maximum line length.
-    var sourceWidth = _.max([68, self.maxLineLength(120 - 2)]);
+    var sourceWidth = Math.max(68, self.maxLineLength(120 - 2));
 
     const result = {
       // This object will be populated with .source, .servePath,
@@ -222,7 +219,7 @@ Object.assign(Module.prototype, {
           continue;
         }
 
-        if (!_.isEmpty(chunks)) {
+        if (chunks.length > 0) {
           chunks.push("\n\n\n\n\n\n");
         }
 
@@ -316,8 +313,8 @@ Object.assign(Module.prototype, {
 
           function tryMain(name) {
             const value = file.jsonData[name];
-            if (_.isString(value) ||
-                _.isObject(value)) {
+            if (typeof value === 'string' ||
+                (typeof value === 'object' && value !== null)) {
               stub[name] = value;
             }
           }
@@ -347,8 +344,8 @@ Object.assign(Module.prototype, {
   async _chunkifyModuleTrees(trees, chunks, sourceWidth) {
     const self = this;
 
-    assert.ok(_.isArray(chunks));
-    assert.ok(_.isNumber(sourceWidth));
+    assert.ok(Array.isArray(chunks));
+    assert.ok(typeof sourceWidth === 'number');
 
     let moduleCount = 0;
 
@@ -379,7 +376,7 @@ Object.assign(Module.prototype, {
         chunks.push(await t.getPrelinkedOutput({
           sourceWidth,
         }));
-      } else if (_.isObject(t)) {
+      } else if (typeof t === 'object' && t !== null) {
         chunks.push("{");
         const keys = Object.keys(t);
         for (const [i, key] of keys.entries()) {
@@ -462,7 +459,7 @@ export function addToTree(value, path, tree) {
       return;
     }
 
-    tree = _.has(tree, part)
+    tree = (part in tree)
       ? tree[part]
       : tree[part] = i < lastIndex ? {} : value;
   });
@@ -476,16 +473,16 @@ export function addToTree(value, path, tree) {
 // ensure that its parents exist. For example, {'A.B.C': null} means
 // to make sure that symbol tree contains at least {A: {B: {}}}.
 var buildSymbolTree = function (symbolMap) {
-  var ret = {};
+  var ret = Object.create(null);
 
-  _.each(symbolMap, function (value, symbol) {
+  Object.entries(symbolMap).forEach(function ([symbol, value]) {
     var parts = symbol.split('.');
     var lastPart = parts.pop();
 
     var walk = ret;
-    _.each(parts, function (part) {
+    parts.forEach(function (part) {
       if (! (part in walk)) {
-        walk[part] = {};
+        walk[part] = Object.create(null);
       }
       walk = walk[part];
     });
@@ -512,7 +509,7 @@ var writeSymbolTree = function (symbolTree, indent) {
     var spacing = new Array(indent + 1).join(' ');
     // XXX prettyprint!
     return "{\n" +
-      _.map(node, function (value, key) {
+      Object.entries(node).map(function ([key, value]) {
         return spacing + "  " + key + ": " + put(value, indent + 2);
       }).join(',\n') + "\n" + spacing + "}";
   };
@@ -589,8 +586,8 @@ export function File(inputFile, arch) {
 function getNonDynamicDeps(inputFileDeps) {
   const nonDynamicDeps = Object.create(null);
 
-  if (! _.isEmpty(inputFileDeps)) {
-    _.each(inputFileDeps, (info, id) => {
+  if (inputFileDeps && Object.keys(inputFileDeps).length > 0) {
+    Object.entries(inputFileDeps).forEach(([id, info]) => {
       if (! info.dynamic) {
         nonDynamicDeps[id] = info;
       }
@@ -845,7 +842,7 @@ async function getOutputWithSourceMapCached(file, servePath, options) {
 // fits is used.
 var banner = function (lines, bannerWidth) {
   if (!bannerWidth) {
-    bannerWidth = 6 + _.max(lines, function (x) { return x.length; }).length;
+    bannerWidth = 6 + Math.max(...lines.map(x => x.length));
   }
 
   var divider = dividerLine(bannerWidth);
@@ -853,7 +850,7 @@ var banner = function (lines, bannerWidth) {
   var padding = bannerPadding(bannerWidth);
 
   var buf = divider + spacer;
-  _.each(lines, function (line) {
+  lines.forEach(function (line) {
     buf += "// " + (line + padding).slice(0, bannerWidth - 6) + " //\n";
   });
   buf += spacer + divider;
@@ -915,7 +912,7 @@ export var prelink = Profile("linker.prelink", async function (options) {
     combinedServePath: options.combinedServePath,
   });
 
-  _.each(options.inputFiles, function (inputFile) {
+  options.inputFiles.forEach(function (inputFile) {
     module.addFile(inputFile);
   });
 
@@ -956,12 +953,11 @@ var getHeader = function (options) {
     );
   }
 
-  const packageVariables = _.filter(
-    options.packageVariables,
-    name => ! _.has(options.imports, name),
+  const packageVariables = options.packageVariables.filter(
+    name => !Object.prototype.hasOwnProperty.call(options.imports, name),
   );
 
-  if (!_.isEmpty(packageVariables)) {
+  if (packageVariables.length > 0) {
     chunks.push(
       "/* Package-scope variables */\nvar ",
       packageVariables.join(', '),
@@ -975,20 +971,20 @@ var getHeader = function (options) {
 function getImportCode(imports, header, omitVar) {
   var self = this;
 
-  if (_.isEmpty(imports)) {
+  if (Object.keys(imports).length === 0) {
     return "";
   }
 
   // Imports
   var scratch = {};
-  _.each(imports, function (name, symbol) {
+  Object.entries(imports).forEach(function ([symbol, name]) {
     scratch[symbol] = packageDot(name) + "." + symbol;
   });
   var tree = buildSymbolTree(scratch);
 
   // Generate output
   var buf = header;
-  _.each(tree, function (node, key) {
+  Object.entries(tree).forEach(function ([key, node]) {
     buf += (omitVar ? "" : "var " ) +
       key + " = " + writeSymbolTree(node) + ";\n";
   });
@@ -1012,9 +1008,9 @@ function getFooter ({
   let chunks = [];
   let returnObj = Object.create(null);
 
-  if (! _.isEmpty(exported)) {
+  if (exported && exported.length > 0) {
     const scratch = {};
-    _.each(exported, symbol => scratch[symbol] = symbol);
+    exported.forEach(symbol => scratch[symbol] = symbol);
     const symbolTree = writeSymbolTree(buildSymbolTree(scratch), 4);
     returnObj.export = `function () { return ${symbolTree};}`;
   }
@@ -1155,13 +1151,13 @@ export var fullLink = Profile("linker.fullLink", async function (inputFiles, {
   // package itself, or any build plugins with no dependencies
   let hasRuntime = deps.some(entry => entry.unordered !== true);
 
-  _.each(inputFiles, file => module.addFile(file));
+  inputFiles.forEach(file => module.addFile(file));
 
   var prelinkedFiles = await module.getPrelinkedFiles();
 
   let eagerModulePaths;
   let mainModulePath;
-  _.each(prelinkedFiles, file => {
+  prelinkedFiles.forEach(file => {
     if (file.eagerModulePaths && file.eagerModulePaths.length > 0) {
       eagerModulePaths = file.eagerModulePaths;
       mainModulePath = file.mainModulePath;
@@ -1209,7 +1205,7 @@ export var fullLink = Profile("linker.fullLink", async function (inputFiles, {
       return wrapWithHeaderAndFooter(prelinkedFiles, header, footer);
     }
 
-    if (! _.isEmpty(imports)) {
+    if (Object.keys(imports).length > 0) {
       prelinkedFiles.unshift({
         source: getImportCode(
           imports,
@@ -1244,7 +1240,7 @@ export var fullLink = Profile("linker.fullLink", async function (inputFiles, {
   if (prelinkedFiles.every(file => ! file.source)) {
     const newImports = {};
     declaredExports.forEach(name => {
-      if (_.has(imports, name)) {
+      if (Object.prototype.hasOwnProperty.call(imports, name)) {
         newImports[name] = imports[name]
       }
     });
@@ -1256,7 +1252,7 @@ export var fullLink = Profile("linker.fullLink", async function (inputFiles, {
   var header = getHeader({
     name,
     imports,
-    packageVariables: _.union(assignedVariables, declaredExports),
+    packageVariables: [...new Set([...assignedVariables, ...declaredExports])],
     hasRuntime,
     deps
   });
