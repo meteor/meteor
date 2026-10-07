@@ -118,6 +118,10 @@ expectTypeOf(Meteor.deferProd).toBeFunction();
 
 // --- utils ---
 expectTypeOf(Meteor.startup).toBeFunction();
+expectTypeOf(Meteor.onShutdown).toBeFunction();
+Meteor.onShutdown(async (signal) => {
+  expectTypeOf(signal).toEqualTypeOf<"SIGINT" | "SIGTERM">();
+});
 expectTypeOf(Meteor.fetch).toBeFunction();
 expectTypeOf(Meteor.wrapAsync).toBeFunction();
 expectTypeOf(Meteor.bindEnvironment).toBeFunction();
