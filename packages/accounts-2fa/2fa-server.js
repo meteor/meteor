@@ -9,10 +9,12 @@ const TOTP_DIGITS = 6;
 const TOTP_PERIOD = 30;
 const TOTP_SECRET_SIZE = 20;
 const DEFAULT_WINDOW = 10;
+const DEFAULT_LOGIN_TYPES = ['password', 'passwordless'];
 
 const DEFAULT_CONFIG = {
   window: DEFAULT_WINDOW,
   preventReplay: true,
+  loginTypes: DEFAULT_LOGIN_TYPES,
 };
 
 let config = { ...DEFAULT_CONFIG };
@@ -45,17 +47,19 @@ const generateActivationData = ({ issuer, label }) => {
  * @locus Server
  * @param {Object} options
  * @param {Number} [options.window=10] TOTP steps accepted on each side of the current step.
- * @param {Boolean} [options.preventReplay=true] Reject a code whose time step was already used.
+ * @param {Boolean} [options.preventReplay=true] Reject a step at or before the last accepted one.
+ * @param {String[]} [options.loginTypes] Login attempt types that get replay protection. Replaces the default list.
  */
 Accounts.configure2fa = options => {
   check(options, {
-    window: Match.Optional(Match.Integer),
+    window: Match.Optional(Match.Where(w => {
+      check(w, Match.Integer);
+      if (w < 0) throw new Match.Error('accounts-2fa: window must be >= 0');
+      return true;
+    })),
     preventReplay: Match.Optional(Boolean),
+    loginTypes: Match.Optional([String]),
   });
-
-  if (options.window !== undefined && options.window < 0) {
-    throw new Error('accounts-2fa: window must be >= 0');
-  }
 
   config = {
     ...config,
@@ -147,13 +151,16 @@ const consumeStep = async (userId, step, extraSet = {}, extraSelector = {}) => {
       },
     }
   );
-  const affected = typeof updated === 'number' ? updated : 0;
-  return affected > 0;
+  return updatedOne(updated);
 };
 
-const rejectInvalidCode = () => {
-  Accounts._handleError('Invalid 2FA code', true, 'invalid-2fa-code');
-};
+const updatedOne = updated => (typeof updated === 'number' ? updated : 0) > 0;
+
+const invalidCodeError = () =>
+  Accounts._handleError('Invalid 2FA code', false, 'invalid-2fa-code');
+
+const secretChangedError = () =>
+  Accounts._handleError('2FA secret changed', false, '2fa-secret-changed');
 
 // A replayed login code is rejected here, after the password handler accepted it.
 // Throwing sets attempt.error and the following validateLoginAttempt hooks still run.
@@ -161,25 +168,30 @@ Accounts.validateLoginAttempt(async attempt => {
   if (!config.preventReplay || attempt.error || attempt.allowed === false) {
     return true;
   }
-  const user = attempt.user;
-  if (!user || !Accounts._check2faEnabled(user)) {
+  if (!attempt.user || !config.loginTypes.includes(attempt.type)) {
     return true;
   }
-  const loginOptions = attempt.methodArguments?.[0] || {};
-  const code = loginOptions.code;
+  const code = attempt.methodArguments?.[0]?.code;
   if (typeof code !== 'string') {
     return true;
   }
-  const step = Accounts._verify2faToken(
-    user.services.twoFactorAuthentication.secret,
-    code
-  );
-  if (step === null) {
-    rejectInvalidCode();
+  // attempt.user is loaded with defaultFieldSelector, which may omit services.
+  const user = await Meteor.users.findOneAsync(attempt.user._id, {
+    fields: { 'services.twoFactorAuthentication': 1 },
+  });
+  if (!user || !Accounts._check2faEnabled(user)) {
+    return true;
   }
-  const consumed = await consumeStep(user._id, step);
+  const secret = user.services.twoFactorAuthentication.secret;
+  const step = Accounts._verify2faToken(secret, code);
+  if (step === null) {
+    throw invalidCodeError();
+  }
+  const consumed = await consumeStep(user._id, step, {}, {
+    'services.twoFactorAuthentication.secret': secret,
+  });
   if (!consumed) {
-    rejectInvalidCode();
+    throw invalidCodeError();
   }
   return true;
 });
@@ -242,7 +254,7 @@ Meteor.methods({
 
     const step = Accounts._verify2faToken(twoFactorAuthentication.secret, code);
     if (step === null) {
-      rejectInvalidCode();
+      throw invalidCodeError();
     }
 
     const secretSelector = {
@@ -255,13 +267,19 @@ Meteor.methods({
         { 'services.twoFactorAuthentication.type': 'otp' },
         secretSelector
       )
-      : (await Meteor.users.updateAsync(
+      : updatedOne(await Meteor.users.updateAsync(
         { _id: user._id, ...secretSelector },
         { $set: { 'services.twoFactorAuthentication.type': 'otp' } }
-      )) > 0;
+      ));
 
     if (!enabled) {
-      rejectInvalidCode();
+      const current = await Meteor.users.findOneAsync(user._id, {
+        fields: { 'services.twoFactorAuthentication.secret': 1 },
+      });
+      if (current?.services?.twoFactorAuthentication?.secret !== twoFactorAuthentication.secret) {
+        throw secretChangedError();
+      }
+      throw invalidCodeError();
     }
   },
   async disableUser2fa() {
