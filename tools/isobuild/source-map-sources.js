@@ -8,7 +8,7 @@ export function resolveFileRelativeSources(sourceMap, servePath) {
     return sourceMap;
   }
 
-  const sourceRoot = sourceMap.sourceRoot ? sourceMap.sourceRoot.replace(/\/?$/, '/') : '';
+  const sourceRoot = fileRelativeSourceRoot(sourceMap.sourceRoot);
   const sources = sourceMap.sources.map((source) =>
     sourceRoot && !URL_OR_ABSOLUTE.test(source) ? sourceRoot + source : source
   );
@@ -24,6 +24,15 @@ export function resolveFileRelativeSources(sourceMap, servePath) {
       FILE_RELATIVE.test(source) ? resolvePath(directory, source) : source
     ),
   };
+}
+
+// Meteor's own maps set no sourceRoot, so a relative one comes from a map that follows the spec: relative to the file.
+function fileRelativeSourceRoot(sourceRoot) {
+  if (!sourceRoot) {
+    return '';
+  }
+  const root = URL_OR_ABSOLUTE.test(sourceRoot) || FILE_RELATIVE.test(sourceRoot) ? sourceRoot : `./${sourceRoot}`;
+  return root.replace(/\/?$/, '/');
 }
 
 function resolvePath(directory, relativePath) {

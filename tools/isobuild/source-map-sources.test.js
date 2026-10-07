@@ -23,6 +23,25 @@ describe('resolveFileRelativeSources', () => {
     expect(result).not.toHaveProperty('sourceRoot');
   });
 
+  it('resolves a sourceRoot without ./ or ../ against the file, as the spec does', () => {
+    for (const sourceRoot of ['src', 'src/']) {
+      const result = resolveFileRelativeSources(map({ sourceRoot, sources: ['plain.ts'] }), servePath);
+      expect(result.sources).toEqual(['packages/minified-vendor/dist/src/plain.ts']);
+    }
+  });
+
+  it('keeps sources that are absolute even with a relative sourceRoot', () => {
+    const result = resolveFileRelativeSources(
+      map({ sourceRoot: 'src', sources: ['plain.ts', 'webpack:///client/main.ts', '/node_modules/x.js'] }),
+      servePath
+    );
+    expect(result.sources).toEqual([
+      'packages/minified-vendor/dist/src/plain.ts',
+      'webpack:///client/main.ts',
+      '/node_modules/x.js',
+    ]);
+  });
+
   it('keeps app-root paths, URLs and absolute paths', () => {
     const sources = [
       'packages/ejson/ejson.js',
