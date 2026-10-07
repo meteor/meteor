@@ -14,10 +14,11 @@ export class SourceMapConcatenator {
     this._nameIndexes = new Map();
   }
 
-  append(code, map) {
+  // filePath is the appended file's path in the bundle; its map's ./ and ../ sources resolve against it.
+  append(code, map, filePath = '') {
     const lines = code.split('\n');
     if (map) {
-      this._appendMappings(typeof map === 'string' ? JSON.parse(map) : map, lines.length);
+      this._appendMappings(typeof map === 'string' ? JSON.parse(map) : map, lines.length, filePath);
     }
     this._advance(lines);
   }
@@ -32,10 +33,10 @@ export class SourceMapConcatenator {
     };
   }
 
-  _appendMappings(map, lineCount) {
+  _appendMappings(map, lineCount, filePath) {
     const sourceRoot = map.sourceRoot ? map.sourceRoot.replace(/\/?$/, '/') : '';
     const sourceIndexes = (map.sources || []).map((source, i) =>
-      this._addSource(sourceRoot + source, map.sourcesContent?.[i] ?? null)
+      this._addSource(resolveSource(sourceRoot + source, filePath), map.sourcesContent?.[i] ?? null)
     );
     const nameIndexes = (map.names || []).map((name) => this._addName(name));
 
@@ -89,4 +90,20 @@ export class SourceMapConcatenator {
     }
     return index;
   }
+}
+
+// Meteor reads plain source paths from the app root, so only explicitly relative ones move.
+function resolveSource(source, filePath) {
+  if (!/^\.\.?\//.test(source)) {
+    return source;
+  }
+  const parts = filePath.split('/').slice(0, -1);
+  for (const part of source.split('/')) {
+    if (part === '..' && parts.length > 0 && parts[parts.length - 1] !== '..') {
+      parts.pop();
+    } else if (part !== '.' && part !== '') {
+      parts.push(part);
+    }
+  }
+  return parts.join('/');
 }
