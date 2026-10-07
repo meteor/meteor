@@ -96,7 +96,26 @@ To disable 2FA for a user use this method:
 
 To call this function the user must be already logged in.
 
-`Accounts.validate2faChange(fn)` receives `{ type, user, connection }` with `type` equal to `activation` or `deactivation`. Throw from `fn` to refuse the change. The registration returns `{ stop() }`.
+### Validating 2FA changes {#validating-2fa-changes}
+
+`Accounts.validate2faChange(fn)` runs before a secret is issued, before 2FA is turned on, and before it is turned off. The registration returns `{ stop() }`, which removes the callback.
+
+`fn` receives `{ type, stage, user, connection }`:
+
+- `type` is `activation` or `deactivation`.
+- `stage` is `setup` when a secret is about to be issued (`generate2faActivationQrCode`), and `confirm` when 2FA is about to be turned on (`enableUser2fa`). `enableUser2fa` also runs when 2FA is already on, and the hook sees that case as `stage: 'confirm'` too. A deactivation has no `stage`.
+- `user` has the same shape as `Meteor.user()`, so it respects `defaultFieldSelector`.
+- `connection` is the DDP connection of the method call.
+
+Throw a `Meteor.Error` to refuse the change and report the reason to the user. Any other exception reaches the client as a 500 (`Internal server error`).
+
+```js
+Accounts.validate2faChange(({ type }) => {
+  if (type === 'activation') {
+    throw new Meteor.Error('2fa-change-refused', 'Authenticator enrollment is not available');
+  }
+});
+```
 
 ## Log in with 2FA {#log-in-with-2fa}
 

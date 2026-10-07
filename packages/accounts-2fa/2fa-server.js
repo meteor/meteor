@@ -25,9 +25,16 @@ const runHooks = async (hooks, payload) => {
 };
 
 /**
- * @summary Reject an activation or a deactivation. Throw from the callback to refuse it.
+ * @summary Reject an activation or a deactivation.
+ * Throw a `Meteor.Error` from the callback to refuse the change and report
+ * the reason to the user. Any other exception reaches the client as a 500
+ * (`Internal server error`).
  * @locus Server
- * @param {Function} fn Receives `{ type, user, connection }`. `type` is `activation` or `deactivation`.
+ * @param {Function} fn Receives `{ type, stage, user, connection }`.
+ * `type` is `activation` or `deactivation`. When `type` is `activation`,
+ * `stage` is `setup` (a secret is about to be issued) or `confirm` (2FA is
+ * about to be turned on, including when it is already on).
+ * @returns {{stop: Function}} Call `stop()` to remove the callback.
  */
 Accounts.validate2faChange = fn => registerHook(validateChangeHooks, fn);
 
@@ -119,6 +126,7 @@ Meteor.methods({
 
     await runHooks(validateChangeHooks, {
       type: 'activation',
+      stage: 'setup',
       user,
       connection: this.connection,
     });
@@ -164,6 +172,7 @@ Meteor.methods({
 
     await runHooks(validateChangeHooks, {
       type: 'activation',
+      stage: 'confirm',
       user,
       connection: this.connection,
     });
