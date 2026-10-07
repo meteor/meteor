@@ -1,4 +1,5 @@
 import { extractModuleSizesTree } from "./stats.js";
+import { SourceMapConcatenator } from "./source-map-concatenator.js";
 
 const statsEnabled = process.env.DISABLE_CLIENT_STATS !== 'true'
 
@@ -30,6 +31,22 @@ function getMeteorConfig() {
   return Plugin?.getMeteorConfig() || {};
 }
 
+export function isModernMinifierEnabled(meteorConfig) {
+  const modern = meteorConfig?.modern;
+  const minifier = modern?.minifier;
+  return modern === true || minifier === true ||
+    (typeof minifier === 'object' && minifier !== null);
+}
+
+// "hidden" writes the map next to the bundle without serving it; true also serves it.
+export function getProductionSourceMapMode(meteorConfig) {
+  if (!isModernMinifierEnabled(meteorConfig)) {
+    return false;
+  }
+  const sourceMap = meteorConfig.modern?.minifier?.sourceMap;
+  return sourceMap === true || sourceMap === 'hidden' ? sourceMap : false;
+}
+
 let swc;
 
 // Register the minifier only when Plugin is available (not in tests)
@@ -43,7 +60,7 @@ if (typeof Plugin !== 'undefined') {
 }
 
 export class MeteorMinifier {
-  _minifyWithSWC(file) {
+  _minifyWithSWC(file, { sourceMap = false } = {}) {
     return Profile('_minifyWithSWC', () => {
       swc = swc || require('@meteorjs/swc-core'); 
       const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -68,13 +85,14 @@ export class MeteorMinifier {
             },
           },
           safari10: true,
-          inlineSourcesContent: true
+          inlineSourcesContent: true,
+          ...(sourceMap && { sourceMap: swcSourceMapOption(file) }),
         }
       );
     })();
   }
 
-  _minifyWithTerser(file) {
+  _minifyWithTerser(file, { sourceMap = false } = {}) {
     return Profile('_minifyWithTerser', async () => {
       let terser = require('terser');
       const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -92,7 +110,8 @@ export class MeteorMinifier {
         // Fix issue meteor/meteor#9866, as explained in this comment:
         // https://github.com/mishoo/UglifyJS2/issues/1753#issuecomment-324814782
         // And fix terser issue #117: https://github.com/terser-js/terser/issues/117
-        safari10: true
+        safari10: true,
+        ...(sourceMap && { sourceMap: terserSourceMapOption(file) }),
       }).then(result => {
         if (!result) {
           throw new Error(`Terser produced empty result for ${file.getPathInBundle()}`);
@@ -104,26 +123,21 @@ export class MeteorMinifier {
     })();
   }
 
-  minifyOneFile(file) {
+  minifyOneFile(file, options = {}) {
     return Profile('minifyOneFile', () => {
       const meteorConfig = getMeteorConfig();
-      const modern =
-        meteorConfig &&
-        (meteorConfig?.modern === true ||
-          (meteorConfig?.modern &&
-            meteorConfig?.modern?.minifier === true));
       // check if config is an empty object
-      if(meteorConfig && Object.keys(meteorConfig).length === 0 || !modern) {
+      if(meteorConfig && Object.keys(meteorConfig).length === 0 || !isModernMinifierEnabled(meteorConfig)) {
         Meteor._debug(`Minifying using Terser  | file: ${file.getPathInBundle()}`);
-        return this._minifyWithTerser(file);
+        return this._minifyWithTerser(file, options);
       }
 
       try {
         Meteor._debug(`Minifying using SWC  | file: ${file.getPathInBundle()}`);
-        return this._minifyWithSWC(file);
+        return this._minifyWithSWC(file, options);
       } catch (swcError) {
         Meteor._debug(`SWC failed  | file: ${file.getPathInBundle()}`);
-        return this._minifyWithTerser(file);
+        return this._minifyWithTerser(file, options);
       }
     })();
   }
@@ -182,10 +196,22 @@ MeteorMinifier.prototype.processFilesForBundle = Profile('processFilesForBundle'
     stats: Object.create(null)
   };
 
+  const configuredSourceMapMode = getProductionSourceMapMode(getMeteorConfig());
+  // The bundler writes no hidden map for Cordova, so building one would be wasted work.
+  const sourceMapMode =
+    configuredSourceMapMode === 'hidden' && files[0]?.getArch?.() === 'web.cordova'
+      ? false
+      : configuredSourceMapMode;
+  const sourceMap = sourceMapMode ? new SourceMapConcatenator() : null;
+  const appendCode = (code, map = null) => {
+    toBeAdded.data += code;
+    sourceMap?.append(code, map);
+  };
+
   for (let file of files) {
     // Don't reminify *.min.js.
     if (/\.min\.js$/.test(file.getPathInBundle())) {
-      toBeAdded.data += file.getContentsAsString();
+      appendCode(file.getContentsAsString(), file.getSourceMap());
       Plugin.nudge();
       continue;
     }
@@ -203,7 +229,7 @@ MeteorMinifier.prototype.processFilesForBundle = Profile('processFilesForBundle'
       // Need to update this approach for async/await
       let minifyPromise;
       Profile.time(label, () => {
-        minifyPromise = this.minifyOneFile(file);
+        minifyPromise = this.minifyOneFile(file, { sourceMap: !!sourceMap });
       });
       minified = await minifyPromise;
       
@@ -231,20 +257,44 @@ MeteorMinifier.prototype.processFilesForBundle = Profile('processFilesForBundle'
         // of code being minified
       });
       // Add the minified code outside of the Profile.time
-      toBeAdded.data += minified.code;
+      appendCode(minified.code, sourceMap ? outputSourceMap(minified.map, file) : null);
     } else {
       // If stats are disabled, still need to add the minified code
-      toBeAdded.data += minified.code;
+      appendCode(minified.code, sourceMap ? outputSourceMap(minified.map, file) : null);
     }
 
-    toBeAdded.data += '\n\n';
+    appendCode('\n\n');
     
     Plugin.nudge();
   }
 
   // this is where the minified code gets added to one
   // JS file that is delivered to the client
+  if (sourceMap) {
+    toBeAdded.sourceMap = sourceMap.toJSON();
+    toBeAdded.hiddenSourceMap = sourceMapMode === 'hidden';
+  }
+
   if (files.length) {
     files[0].addJavaScript(toBeAdded);
   }
 });
+
+// Without an input map, the minifiers map back to the file as it is in the bundle.
+function swcSourceMapOption(file) {
+  const inputSourceMap = file.getSourceMap();
+  return inputSourceMap ? { content: inputSourceMap } : true;
+}
+
+function terserSourceMapOption(file) {
+  const inputSourceMap = file.getSourceMap();
+  return { ...(inputSourceMap && { content: inputSourceMap }), includeSources: true };
+}
+
+function outputSourceMap(map, file) {
+  if (!map || file.getSourceMap()) {
+    return map;
+  }
+  const parsed = typeof map === 'string' ? JSON.parse(map) : map;
+  return { ...parsed, sources: [file.getPathInBundle()] };
+}

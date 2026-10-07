@@ -423,7 +423,7 @@ Besides the common input files' methods, these methods are available:
 - `getPathInBundle` - returns a path of the processed file in the bundle.
 - `getSourcePath` - returns absolute path of the input file if available, or null.
 - `getSourceMap` - returns the source-map for the processed file if there is such.
-- `addJavaScript` - same as compilers
+- `addJavaScript` - same as compilers. In production, a minifier can also pass `hiddenSourceMap: true` with a `sourceMap`: the map is then written next to the file but not served (needs `isobuild:minifier-plugin@1.1.0`).
 - `addStylesheet` - same as compilers
 - `readAndWatchFileWithHash` - only available for css minifiers. Same as compilers.
 
@@ -499,3 +499,7 @@ This is the known Isobuild feature "packages" sorted by the first release of Met
 of Meteor that don't support that format.
 - `prod-only@1.0.0`: Allows use of the `prodOnly` flag in `Package.describe`.
 - `isobuild:cordova@5.4.0`: This package depends on a specific version of Cordova, most likely as a result of the Cordova plugins it depends on.
+
+### Introduced in the next Meteor release {#isobuild-features-next}
+
+- `minifier-plugin@1.1.0`: Allows a minifier to pass `hiddenSourceMap` to `addJavaScript`.

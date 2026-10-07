@@ -28,7 +28,8 @@ const KNOWN_ISOBUILD_FEATURE_PACKAGES = {
 
   // This package directly calls Plugin.registerMinifier. Package authors
   // must explicitly depend on this feature package to use the API.
-  'isobuild:minifier-plugin': ['1.0.0'],
+  // 1.1.0: addJavaScript accepts hiddenSourceMap.
+  'isobuild:minifier-plugin': ['1.0.0', '1.1.0'],
 
   // This package directly calls Plugin.registerLinter. Package authors
   // must explicitly depend on this feature package to use the API.

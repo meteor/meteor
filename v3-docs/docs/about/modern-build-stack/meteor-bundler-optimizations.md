@@ -450,6 +450,30 @@ By default, `"modern": true` enables all build stack upgrades. To opt out of the
 }
 ```
 
+### Production source maps
+
+The minifier can write a source map for the production client bundle, for example to upload it to an error tracker. It is off by default.
+
+```json
+"meteor": {
+  "modern": {
+    "minifier": {
+      "sourceMap": "hidden"
+    }
+  }
+}
+```
+
+| `sourceMap` | Result |
+|-------------|--------|
+| `false` (default) | No source map. |
+| `"hidden"` | `meteor build` writes `<hash>.js.map` next to the bundle in `programs/<arch>/`. The server does not serve it, and the bundle does not point to it. Upload it at deploy time. Cordova builds get no hidden map, because the app package would include it. |
+| `true` | Meteor writes the source map and also serves it, with an `X-SourceMap` header on the bundle. Anyone can then read your client source. |
+
+Any object value for `minifier`, such as `{ "sourceMap": "hidden" }`, turns on the SWC minifier. With `"minifier": false`, `"modern": false` or `METEOR_MODERN`, the option has no effect.
+
+The map covers the main bundle and leads back to your original files, including through the Rspack bundle. Its source paths start with `meteor://💻app/`. Each module loaded with Meteor's dynamic `import()` gets its own map next to it under `dynamic/`: written only with `"hidden"`, also served with `true`.
+
 ## Web Arch
 
 > Web archs are the builds Meteor generates for modern browsers, legacy browsers, and Cordova.
