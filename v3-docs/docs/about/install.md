@@ -110,10 +110,10 @@ For a MongoDB 7 server, FCV must be `"7.0"` before upgrading to MongoDB 8. If it
 db.adminCommand({ setFeatureCompatibilityVersion: "7.0", confirm: true })
 ```
 
-Exit the database shell and stop the app before updating Meteor. For this beta:
+Exit the database shell and stop the app before updating Meteor. For this release candidate:
 
 ```bash
-meteor update --release 3.6-beta.3
+meteor update --release 3.6-rc.0
 meteor run
 ```
 

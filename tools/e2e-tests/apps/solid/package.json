@@ -22,7 +22,7 @@
     "modern": true
   },
   "devDependencies": {
-    "@meteorjs/rspack": "^3.0.0-beta.3",
+    "@meteorjs/rspack": "^3.0.0-rc.0",
     "@rspack/cli": "^2.2.7",
     "@rspack/core": "^2.2.7",
     "@rspack/dev-server": "^2.2.1",

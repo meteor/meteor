@@ -1,6 +1,6 @@
 Package.describe({
   name: 'instrumentation',
-  version: '0.0.1-beta360.3',
+  version: '0.0.1-rc360.0',
   summary: 'Read-only lifecycle instrumentation seam (methods, publications, DDP connections)',
 });
 

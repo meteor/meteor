@@ -101,7 +101,7 @@ By default, Meteor installs or updates them for you on the first run after addin
    • @rspack/core                    2.2.7          (new)
    • @rspack/cli                     2.2.7          (new)
    • @rspack/dev-server              2.2.1          (new)
-   • @meteorjs/rspack                2.2.0-beta.1 -> 3.0.0-beta.3
+   • @meteorjs/rspack                2.2.0-beta.1 -> 3.0.0-rc.0
    • @swc/core                       1.16.2         (new)
    • @rsdoctor/rspack-plugin         1.6.4          (new)
    Dependencies:
@@ -132,14 +132,14 @@ With this flag off, Meteor still detects when a required dependency is missing o
    • @rspack/core                    2.2.7          (not installed)
    • @rspack/cli                     2.2.7          (not installed)
    • @rspack/dev-server              2.2.1          (not installed)
-   • @meteorjs/rspack                3.0.0-beta.3   (currently 2.2.0-beta.1)
+   • @meteorjs/rspack                3.0.0-rc.0   (currently 2.2.0-beta.1)
    • @swc/core                       1.16.2         (not installed)
    • @rsdoctor/rspack-plugin         1.6.4          (not installed)
    Dependencies:
    • @swc/helpers                    0.5.23         (not installed)
 
    To bring your project in line, run:
-       meteor npm install --save-dev @rspack/core@2.2.7 @rspack/cli@2.2.7 @rspack/dev-server@2.2.1 @meteorjs/rspack@3.0.0-beta.3 @swc/core@1.16.2 @rsdoctor/rspack-plugin@1.6.4
+       meteor npm install --save-dev @rspack/core@2.2.7 @rspack/cli@2.2.7 @rspack/dev-server@2.2.1 @meteorjs/rspack@3.0.0-rc.0 @swc/core@1.16.2 @rsdoctor/rspack-plugin@1.6.4
        meteor npm install --save @swc/helpers@0.5.23
 => ℹ️  Set `"meteor": { "autoInstallDeps": true }` in package.json to manage them automatically.
 ```
@@ -150,7 +150,7 @@ If your CI or Docker pipeline reports missing NPM dependencies after disabling a
 
 #### Upgrading from Rspack 1.x
 
-Meteor 3.6 moves the modern build stack to Rspack 2.x. On the first run after updating, the dependency check above bumps `@rspack/core` and `@rspack/cli` to 2.2.7, `@rspack/dev-server` to 2.2.1, `@meteorjs/rspack` to 3.0.0-beta.3, and the related `@swc/*`, `@rspack/plugin-react-refresh`, and `@rsdoctor/rspack-plugin` versions. When an existing lockfile still holds Rspack 1.x peer dependencies, Meteor runs that install with `--legacy-peer-deps` so npm does not reject the coordinated upgrade; fresh installs and already-upgraded apps keep npm's normal peer validation.
+Meteor 3.6 moves the modern build stack to Rspack 2.x. On the first run after updating, the dependency check above bumps `@rspack/core` and `@rspack/cli` to 2.2.7, `@rspack/dev-server` to 2.2.1, `@meteorjs/rspack` to 3.0.0-rc.0, and the related `@swc/*`, `@rspack/plugin-react-refresh`, and `@rsdoctor/rspack-plugin` versions. When an existing lockfile still holds Rspack 1.x peer dependencies, Meteor runs that install with `--legacy-peer-deps` so npm does not reject the coordinated upgrade; fresh installs and already-upgraded apps keep npm's normal peer validation.
 
 If you disabled auto-install, run the printed `meteor npm install --save-dev ...` command. It already includes `--legacy-peer-deps` when the old Rspack 1.x peers require it.
 
@@ -1447,8 +1447,6 @@ module.exports = defineConfig(Meteor => ({
 ```
 
 You can combine both solutions: raise the heap limit with `TOOL_NODE_FLAGS` (3.4.1+) or `NODE_OPTIONS` (3.4) and disable persistent cache to reduce overall memory pressure.
-
-Rspack itself has reported plans to optimize persistent cache and overall RAM consumption in [Rspack 2.0](https://rspack.rs/misc/planning/roadmap), which should improve memory behavior in future Meteor-Rspack releases.
 
 ### CI & Docker {#docker}
 
