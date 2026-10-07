@@ -51,9 +51,16 @@ const EXPLICIT_TEST_GROUPS = Object.freeze({
     label: 'Server Runtime',
     pattern: '^Regressions / Server Runtime',
   },
-  regressions: {
-    label: 'Regressions',
-    pattern: '^(?:Regressions / (?!Server Runtime)|Regression /|Rspack bundle probe)',
+  build_regressions: {
+    label: 'Build regressions',
+    pattern: [
+      '^Regressions / (?:Architecture-specific entrypoints|Legacy npm dependencies|Rspack root-scoped ignores|\\.meteorignore negation patterns|CordovaModernDefault|Test-in-browser|Rspack first-compilation failures) /',
+      '^(?:Regressions / (?:Workspace executable portability |@meteorjs/rspack dependency audit /)|Regression / npm-shrinkwrap transitive deps /|Rspack bundle probe )',
+    ].join('|'),
+  },
+  dev_lifecycle: {
+    label: 'Development lifecycle',
+    pattern: '^Regressions / (?:Rspack concurrent modes|Rapid server restarts|PortCleanup|Host-prefixed --port|tla|Dynamic import cache) /',
   },
   solid_svelte: {
     label: 'Solid & Svelte',
@@ -102,6 +109,15 @@ const TEST_GROUPS = Object.freeze({
 });
 
 function getTestGroup(name) {
+  // Preserve the local aggregate command without scheduling the same tests
+  // twice in CI or hiding unassigned regressions from the coverage audit.
+  if (name === 'regressions') {
+    return {
+      label: 'All regressions',
+      pattern: ['build_regressions', 'dev_lifecycle']
+        .map(group => TEST_GROUPS[group].pattern).join('|'),
+    };
+  }
   const group = Object.hasOwn(TEST_GROUPS, name) && TEST_GROUPS[name];
   if (!group) {
     throw new Error(`Unknown E2E test group "${name || ''}". Available groups: ${Object.keys(TEST_GROUPS).join(', ')}`);

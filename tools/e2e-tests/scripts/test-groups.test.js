@@ -21,12 +21,22 @@ describe('CLI / E2E test group fallback /', () => {
 
     expect(matchingGroups('Regressions / Server Runtime / builds the app'))
       .toEqual(['server_runtime']);
-    expect(matchingGroups('Regressions / Concurrent Modes / isolates artifacts'))
-      .toEqual(['regressions']);
+    expect(matchingGroups('Regressions / Rspack concurrent modes / isolates artifacts'))
+      .toEqual(['dev_lifecycle']);
+    expect(matchingGroups('Regressions / Rapid server restarts / applies edits'))
+      .toEqual(['dev_lifecycle']);
+    expect(matchingGroups('Regressions / Architecture-specific entrypoints / builds the app'))
+      .toEqual(['build_regressions']);
+    expect(matchingGroups('Regressions / Rspack root-scoped ignores / runs tests'))
+      .toEqual(['build_regressions']);
+    expect(matchingGroups('Regressions / .meteorignore negation patterns / applies overrides'))
+      .toEqual(['build_regressions']);
     expect(matchingGroups('Regression / npm-shrinkwrap transitive deps / honours pins'))
-      .toEqual(['regressions']);
+      .toEqual(['build_regressions']);
+    expect(matchingGroups('Regressions / Workspace executable portability executes commands'))
+      .toEqual(['build_regressions']);
     expect(matchingGroups('Rspack bundle probe fails with diagnostics'))
-      .toEqual(['regressions']);
+      .toEqual(['build_regressions']);
     expect(matchingGroups('Pnpm Monorepo App Bundling / installs dependencies'))
       .toEqual(['monorepo']);
     expect(matchingGroups('Meteor Skeletons / Pnpm Skeleton / creates the app'))
@@ -47,6 +57,25 @@ describe('CLI / E2E test group fallback /', () => {
       .toEqual(['react_vue_skeletons']);
     expect(matchingGroups('Svelte App Bundling / builds the app'))
       .toEqual(['solid_svelte']);
+  });
+
+  test('new regressions use the audited fallback until assigned by behavior', () => {
+    const name = 'Regressions / New behavior / preserves the contract';
+    const selected = Object.entries(TEST_GROUPS)
+      .filter(([, group]) => matchesTestGroup(group, '/workspace/new.test.js', name))
+      .map(([group]) => group);
+    expect(selected).toEqual(['uncategorized']);
+  });
+
+  test('keeps the local regressions command without duplicating CI jobs', () => {
+    const args = getGroupJestArgs('regressions');
+    const pattern = new RegExp(args[args.indexOf('--testNamePattern') + 1]);
+    expect(pattern.test('Regressions / Rspack root-scoped ignores / runs tests')).toBe(true);
+    expect(pattern.test('Regressions / Rapid server restarts / applies edits')).toBe(true);
+    expect(pattern.test('Regression / npm-shrinkwrap transitive deps / honours pins')).toBe(true);
+    expect(pattern.test('Regressions / Server Runtime / builds the app')).toBe(false);
+    expect(pattern.test('Regressions / New behavior / needs assignment')).toBe(false);
+    expect(getTestGroupMatrix().include.some(({ group }) => group === 'regressions')).toBe(false);
   });
 
   test('selects names that do not match an explicit group', () => {
