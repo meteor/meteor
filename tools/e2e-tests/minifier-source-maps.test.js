@@ -25,6 +25,31 @@ async function setMinifierConfig(appDir, minifier) {
   await fs.writeJson(pkgPath, pkg, { spaces: 2 });
 }
 
+// A package file with its own source map, whose source path is relative to that file.
+async function addVendorPackageWithMap(appDir) {
+  const packageDir = path.join(appDir, 'packages', 'vendor-with-map');
+  await fs.outputFile(path.join(packageDir, 'package.js'), [
+    "Package.describe({ name: 'vendor-with-map', version: '0.0.1' });",
+    "Package.onUse((api) => {",
+    "  api.use('ecmascript');",
+    "  api.addFiles('dist/vendor.js', 'client');",
+    "});",
+  ].join('\n'));
+  await fs.outputFile(
+    path.join(packageDir, 'dist', 'vendor.js'),
+    'window.vendorWithMapAnswer = function () { return 42; };\n//# sourceMappingURL=vendor.js.map\n'
+  );
+  await fs.outputJson(path.join(packageDir, 'dist', 'vendor.js.map'), {
+    version: 3,
+    file: 'vendor.js',
+    sources: ['../src/vendor.ts'],
+    sourcesContent: ['export const vendorWithMapAnswer = () => 42;'],
+    names: [],
+    mappings: 'AAAA',
+  });
+  await runMeteorCommand('add', ['vendor-with-map'], appDir, { checkExitCode: true });
+}
+
 async function readClientBundle(buildOutputDir) {
   const clientDir = path.join(buildOutputDir, 'bundle', 'programs', 'web.browser');
   const program = await fs.readJson(path.join(clientDir, 'program.json'));
@@ -47,6 +72,7 @@ describe('Regressions / Minifier production source maps /', () => {
     ({ tempDir } = await setupMeteorApp('react'));
     await runMeteorCommand('add', ['rspack'], tempDir, { checkExitCode: true });
     await linkLocalRspack(tempDir);
+    await addVendorPackageWithMap(tempDir);
   }, 600000);
 
   afterAll(async () => {
@@ -87,6 +113,16 @@ describe('Regressions / Minifier production source maps /', () => {
     const original = originalPositionFor(new TraceMap(map), { line: line + 1, column });
     expect(original.source).toMatch(/imports\/ui\/Hello\.jsx$/);
     expect(map.sourcesContent[helloIndex].split('\n')[original.line - 1]).toContain('Click Me');
+  });
+
+  test('a source path relative to its package file resolves inside that package', async () => {
+    const { mapPath } = await build({ sourceMap: 'hidden' });
+
+    const map = JSON.parse(await fs.readFile(mapPath, 'utf8'));
+    const vendorIndex = map.sources.findIndex((source) => source.endsWith('/vendor.ts'));
+    expect(map.sources[vendorIndex]).toBe('meteor://💻app/packages/vendor-with-map/src/vendor.ts');
+    expect(map.sourcesContent[vendorIndex]).toContain('vendorWithMapAnswer');
+    expect(map.sources.filter((source) => source.includes('../'))).toEqual([]);
   });
 
   test('true writes the source map and serves it next to the bundle', async () => {

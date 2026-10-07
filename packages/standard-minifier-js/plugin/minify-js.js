@@ -203,15 +203,15 @@ MeteorMinifier.prototype.processFilesForBundle = Profile('processFilesForBundle'
       ? false
       : configuredSourceMapMode;
   const sourceMap = sourceMapMode ? new SourceMapConcatenator() : null;
-  const appendCode = (code, map = null, filePath = '') => {
+  const appendCode = (code, map = null) => {
     toBeAdded.data += code;
-    sourceMap?.append(code, map, filePath);
+    sourceMap?.append(code, map);
   };
 
   for (let file of files) {
     // Don't reminify *.min.js.
     if (/\.min\.js$/.test(file.getPathInBundle())) {
-      appendCode(file.getContentsAsString(), file.getSourceMap(), file.getPathInBundle());
+      appendCode(file.getContentsAsString(), file.getSourceMap());
       Plugin.nudge();
       continue;
     }
@@ -257,10 +257,10 @@ MeteorMinifier.prototype.processFilesForBundle = Profile('processFilesForBundle'
         // of code being minified
       });
       // Add the minified code outside of the Profile.time
-      appendCode(minified.code, sourceMap ? outputSourceMap(minified.map, file) : null, file.getPathInBundle());
+      appendCode(minified.code, sourceMap ? outputSourceMap(minified.map, file) : null);
     } else {
       // If stats are disabled, still need to add the minified code
-      appendCode(minified.code, sourceMap ? outputSourceMap(minified.map, file) : null, file.getPathInBundle());
+      appendCode(minified.code, sourceMap ? outputSourceMap(minified.map, file) : null);
     }
 
     appendCode('\n\n');
