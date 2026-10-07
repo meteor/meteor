@@ -39,7 +39,7 @@ async function readClientBundle(buildOutputDir) {
   };
 }
 
-describe('Minifier / Production source maps /', () => {
+describe('Regressions / Minifier production source maps /', () => {
   let tempDir;
   const buildOutputDirs = [];
 

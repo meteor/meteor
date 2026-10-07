@@ -196,7 +196,12 @@ MeteorMinifier.prototype.processFilesForBundle = Profile('processFilesForBundle'
     stats: Object.create(null)
   };
 
-  const sourceMapMode = getProductionSourceMapMode(getMeteorConfig());
+  const configuredSourceMapMode = getProductionSourceMapMode(getMeteorConfig());
+  // The bundler writes no hidden map for Cordova, so building one would be wasted work.
+  const sourceMapMode =
+    configuredSourceMapMode === 'hidden' && files[0]?.getArch?.() === 'web.cordova'
+      ? false
+      : configuredSourceMapMode;
   const sourceMap = sourceMapMode ? new SourceMapConcatenator() : null;
   const appendCode = (code, map = null) => {
     toBeAdded.data += code;

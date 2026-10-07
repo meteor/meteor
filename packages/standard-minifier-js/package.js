@@ -29,5 +29,6 @@ Package.registerBuildPlugin({
 });
 
 Package.onUse(function(api) {
-  api.use('isobuild:minifier-plugin@1.0.0');
+  // An older tool would serve a map meant to be hidden.
+  api.use('isobuild:minifier-plugin@1.1.0');
 });

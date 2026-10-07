@@ -70,13 +70,14 @@ export class SourceMapConcatenator {
   }
 
   _addSource(source, content) {
-    const key = `${source}\0${content ?? ''}`;
-    let index = this._sourceIndexes.get(key);
-    if (index === undefined) {
-      index = this._sources.push(source) - 1;
-      this._sourcesContent.push(content);
-      this._sourceIndexes.set(key, index);
+    const indexes = this._sourceIndexes.get(source) ?? [];
+    const known = indexes.find((index) => this._sourcesContent[index] === content);
+    if (known !== undefined) {
+      return known;
     }
+    const index = this._sources.push(source) - 1;
+    this._sourcesContent.push(content);
+    this._sourceIndexes.set(source, [...indexes, index]);
     return index;
   }
 
