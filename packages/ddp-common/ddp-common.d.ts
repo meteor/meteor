@@ -54,6 +54,37 @@ export namespace DDPCommon {
   /** Serialize a DDP message object to its wire string. */
   function stringifyDDP(msg: Record<string, unknown>): string;
 
+  /**
+   * Converts DDP messages to and from the transport payload. The serializer is
+   * process-wide: the server and every client connecting to it must install the
+   * same one before any connection is opened.
+   */
+  interface Serializer {
+    /** Identifier, `'ejson'` for the default serializer. */
+    name: string;
+    /** Frame type the transport must use. Only `'text'` is accepted for now. */
+    wireFormat: 'text';
+    /** Encode a DDP message for the wire. Must not mutate its input. */
+    serialize(msg: Record<string, unknown>): string;
+    /** Decode a wire payload into a DDP message. Throws on invalid input. */
+    deserialize(raw: string): Record<string, unknown>;
+  }
+
+  /** Install the process-wide DDP serializer. Throws when `serialize`, `deserialize` or `wireFormat` is invalid. */
+  function setSerializer(serializer: Serializer): void;
+
+  /** The active DDP serializer. */
+  function getSerializer(): Serializer;
+
+  /** Create the default EJSON serializer, which produces Meteor's historical DDP wire format. */
+  function createEJSONSerializer(): Serializer;
+
+  /** Move cleared fields (`undefined` values in `fields`) into a wire-level `cleared` array. Returns the input itself when nothing is cleared. */
+  function toWireMessage(msg: Record<string, unknown>): Record<string, unknown>;
+
+  /** Restore the `cleared` entries of a wire message as `undefined` values in `fields`, in place. */
+  function fromWireMessage(msg: Record<string, unknown>): Record<string, unknown>;
+
   /** Derive the deterministic random seed used by a method stub. */
   function makeRpcSeed(enclosing: MethodInvocation | null | undefined, methodName: string): string;
 
