@@ -93,7 +93,7 @@ Accounts.registerLoginHandler('passwordless', async options => {
 
 // Utility for plucking addresses from emails
 const pluckAddresses = (emails = []) => emails.map(email => email.address);
-const createUser = async userData => {
+const createUser = async (userData = {}) => {
   const { username, email } = userData;
   if (!username && !email) {
     throw new Meteor.Error(400, 'Need to set a username or email');
@@ -114,7 +114,20 @@ function generateSequence() {
 }
 
 Meteor.methods({
-  requestLoginTokenForUser: async ({ selector, userData, options = {} }) => {
+  requestLoginTokenForUser: async payload => {
+    // Check the method argument so audit-argument-checks recognizes it.
+    check(payload, {
+      selector: Accounts._userQueryValidator,
+      // Keep custom account-creation data while validating lookup fields.
+      userData: Match.Maybe(Match.ObjectIncluding({
+        username: Match.Optional(Match.OneOf(String, null)),
+        email: Match.Optional(Match.OneOf(String, null)),
+      })),
+      options: Match.Maybe(Object),
+    });
+
+    const { selector, userData, options = {} } = payload;
+
     let user = await Accounts._findUserByQuery(selector, {
       fields: { emails: 1 },
     });
@@ -235,15 +248,20 @@ Accounts.sendLoginTokenEmail = async ({ userId, sequence, email, extra = {} }) =
   return { email, user, token: sequence, url, options };
 };
 
-const setupUsersCollection = () => {
-  Meteor.users.createIndexAsync('services.passwordless.tokens.token', {
+const createPasswordlessIndexes = async (users) => {
+  await users.createIndexAsync('services.passwordless.tokens.token', {
     unique: true,
     sparse: true,
   });
-  Meteor.users.createIndexAsync('services.passwordless.token', {
+  await users.createIndexAsync('services.passwordless.token', {
     unique: true,
     sparse: true,
   });
 };
 
-Meteor.startup(() => setupUsersCollection());
+Meteor.startup(() => createPasswordlessIndexes(Meteor.users));
+Accounts.onUsersCollectionChanged(users => {
+  createPasswordlessIndexes(users).catch(err => {
+    console.error('Failed to create passwordless indexes:', err);
+  });
+});

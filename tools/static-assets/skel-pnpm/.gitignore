@@ -1,0 +1,9 @@
+node_modules/
+pnpm-debug.log*
+
+# Meteor and modern tooling build output
+.meteor/local/
+_build/
+build-assets/
+build-chunks/
+.rsdoctor/

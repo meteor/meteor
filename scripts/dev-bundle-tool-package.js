@@ -10,12 +10,15 @@ var packageJson = {
   dependencies: {
     // Explicit dependency because we are replacing it with a bundled version
     // and we want to make sure there are no dependencies on a higher version
-    npm: "11.12.1",
+    npm: "11.19.1",
     "node-gyp": "10.2.0",
+    // Required by argon2's install script when Meteor rebuilds native
+    // dependencies in its isolated npm environment.
+    "cross-env": "10.0.0",
     "node-gyp-build": "4.8.4",
     "@mapbox/node-pre-gyp": "2.0.3",
     typescript: "5.9.3",
-    "@meteorjs/babel": "7.20.0",
+    "@meteorjs/babel": "7.20.2-rc.1",
     // Keep the versions of these packages consistent with the versions
     // found in dev-bundle-server-package.js.
     "@meteorjs/reify": "0.25.4",
@@ -44,6 +47,8 @@ var packageJson = {
     // TODO: maybe replace with https://www.npmjs.com/package/better-sqlite3
     sqlite3: "5.1.7",
     inquirer: "8.2.6",
+    // Live-search multi-select prompt used by `meteor add` interactive mode.
+    "inquirer-checkbox-plus-prompt": "1.4.2",
     "http-proxy-3": "1.22.0",
     "is-reachable": "3.1.0",
     "wordwrap": "1.0.0",

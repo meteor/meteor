@@ -305,22 +305,38 @@ meteor add accounts-passwordless
 
 ### Requesting a login token
 
-On the client, call `Accounts.requestLoginTokenForUser` to send a one-time token to the user's email address:
+On the client, call `Accounts.requestLoginTokenForUser` to send a one-time token to the user's email address. It reports completion through a callback, so wrap it in a Promise when using `await`:
 
 ```js
 // Client
-await Accounts.requestLoginTokenForUser({
-  selector: { email: "ada@lovelace.com" },
-  // options.userCreationDisabled: true prevents creating a new account
-  // if no existing user matches the selector
-  options: {},
-});
+const requestLoginToken = (options) =>
+  new Promise((resolve, reject) =>
+    Accounts.requestLoginTokenForUser(options, (error) =>
+      error ? reject(error) : resolve()
+    )
+  );
+
+try {
+  await requestLoginToken({
+    selector: { email: "ada@lovelace.com" },
+    // Require an existing account for this request.
+    options: { userCreationDisabled: true },
+  });
+} catch (error) {
+  console.error(
+    error.error === "too-many-requests"
+      ? "Wait before requesting another login token."
+      : error.reason || error.message
+  );
+}
 ```
 
-If no account exists for the given selector and `userCreationDisabled` is not set, you can pass `userData` to create the account on the fly:
+Starting with Meteor 3.6, the default Accounts rule permits five token requests every ten seconds per method and connection. Display errors in your login form and wait before enabling another resend attempt. An object selector must contain exactly one non-empty `id`, `username`, or `email` string; the client wrapper also accepts an email or username string. See the [Passwordless guide](/packages/accounts-passwordless) for the validation rules for custom DDP calls.
+
+If no account exists for the given selector and `userCreationDisabled` is not set, you can pass `userData` to create the account on the fly. Use the same error handling as above:
 
 ```js
-await Accounts.requestLoginTokenForUser({
+await requestLoginToken({
   selector: { email: "ada@lovelace.com" },
   userData: { email: "ada@lovelace.com", profile: { name: "Ada Lovelace" } },
 });
@@ -717,6 +733,22 @@ Note that the schema is different when users register with different login servi
 2. DDP, Meteor's data publication protocol, only knows how to resolve conflicts in top-level fields. This means that you can't have one publication send `services.facebook.first_name` and another send `services.facebook.locale` - one of them will win. The best way to fix this is to denormalize the data you want onto custom top-level fields.
 3. When finding users by email or username, make sure to use the case-insensitive functions provided by `accounts-password`.
 
+### Choosing a users collection
+
+To store accounts in a collection with a different name, configure Accounts in shared startup code loaded on both the client and server, before your application reads `Meteor.users` or attaches collection rules:
+
+```js
+import { Accounts } from "meteor/accounts-base";
+
+Accounts.config({ collection: "appUsers" });
+```
+
+The `collection` option also accepts a `Mongo.Collection` instance. Starting with Meteor 3.6, changing this option keeps `Meteor.users` pointing to the selected collection, including when you pass a different instance with the same collection name.
+
+Meteor creates the usual account indexes and the indexes required by the installed password, OAuth, and passwordless packages on the selected collection. When upgrading an app that already uses a custom collection, review existing data and indexes and check the server logs for index-creation errors.
+
+If the collection has client mutation methods enabled, Meteor also applies the default rule that lets a user update only the `profile` field of their own document. Review your collection's `allow` and `deny` rules during the upgrade. To block all client updates, use the existing [profile protection example](#dont-use-profile) on the selected `Meteor.users` collection. Collections created with `defineMutationMethods: false` receive account indexes without this client update rule.
+
 ## Custom data about users
 
 As your app gets more complex, you will invariably need to store some data about individual users, and the most natural place to put that data is in additional fields on the `Meteor.users` collection.
@@ -786,7 +818,7 @@ Accounts.onCreateUser(async (options, user) => {
 });
 ```
 
-### Don't use profile
+### Don't use profile {#dont-use-profile}
 
 There's a tempting existing field called `profile` that is added by default when a new user registers. This field was historically intended to be used as a scratch pad for user-specific data. Because of this, **the `profile` field on every user is automatically writeable by that user from the client**. It's also automatically published to the client for that particular user.
 

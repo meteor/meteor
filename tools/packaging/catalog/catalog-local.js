@@ -158,7 +158,11 @@ Object.assign(LocalCatalog.prototype, {
             pattern = files.convertToOSPath(pattern);
           }
 
-          glob(pattern).forEach(
+          glob(pattern, {
+            // convertToOSPath uses backslashes on Windows. glob treats those
+            // as escapes unless this option makes them path separators.
+            windowsPathsNoEscape: process.platform === "win32",
+          }).forEach(
             p => list.push(files.pathResolve(p))
           );
         });

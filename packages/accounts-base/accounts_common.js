@@ -25,6 +25,8 @@ const VALID_CONFIG_KEYS = [
   'tokenSequenceLength',
   'clientStorage',
   'useHttpOnlyCookies',
+  'httpOnlyCookieAllowedOrigins',
+  'httpOnlyCookieRateLimit',
   'ddpUrl',
   'connection',
 ];
@@ -52,6 +54,11 @@ export class AccountsCommon {
     // Currently this is read directly by packages like accounts-password
     // and accounts-ui-unstyled.
     this._options = options || {};
+
+    // Callbacks registered by sub-packages (accounts-password, accounts-oauth,
+    // etc.) to re-run their setup (e.g. index creation) when the users
+    // collection is replaced via Accounts.config({ collection }).
+    this._usersCollectionChangeCallbacks = [];
 
     // Note that setting this.connection = null causes this.users to be a
     // LocalCollection, which is not what we want.
@@ -223,10 +230,13 @@ export class AccountsCommon {
    * @param {Number} options.argon2MemoryCost Allows override of the amount of memory (in KiB) used by the argon2 algorithm. The default is 19456 (19MB).
    * @param {Number} options.argon2Parallelism Allows override of the number of threads used by the argon2 algorithm. The default is 1.
    * @param {MongoFieldSpecifier} options.defaultFieldSelector To exclude by default large custom fields from `Meteor.user()` and `Meteor.findUserBy...()` functions when called without a field selector, and all `onLogin`, `onLoginFailure` and `onLogout` callbacks.  Example: `Accounts.config({ defaultFieldSelector: { myBigArray: 0 }})`. Beware when using this. If, for instance, you do not include `email` when excluding the fields, you can have problems with functions like `forgotPassword` that will break because they won't have the required data available. It's recommend that you always keep the fields `_id`, `username`, and `email`.
-   * @param {String|Mongo.Collection} options.collection A collection name or a Mongo.Collection object to hold the users.
+   * @param {String|Mongo.Collection} options.collection A collection name or a Mongo.Collection object to hold the users. When set, `Meteor.users` is automatically updated to point to the new collection, and the default indexes (username, emails.address, login tokens, etc.) are created on it. This is useful when connecting to a remote users collection from another Meteor instance, or when storing users in a collection with a custom name. Should be set early in the startup sequence, before any clients connect or subscriptions are established, similar to other config options. Example: `Accounts.config({ collection: 'app_users' })` or `Accounts.config({ collection: new Mongo.Collection('users', { _driver: remoteDriver }) })`.
    * @param {Number} options.loginTokenExpirationHours When using the package `accounts-2fa`, use this to set the amount of time a token sent is valid. As it's just a number, you can use, for example, 0.5 to make the token valid for just half hour. The default is 1 hour.
    * @param {Number} options.tokenSequenceLength When using the package `accounts-2fa`, use this to the size of the token sequence generated. The default is 6.
    * @param {'session' | 'local'} options.clientStorage By default login credentials are stored in local storage, setting this to true will switch to using session storage.
+   * @param {Boolean} options.useHttpOnlyCookies Keep the persistent copy of the resume token in an HttpOnly cookie instead of Web Storage. The client still loads it into memory to authenticate DDP. Must be enabled on the server for the `/_accounts/cookie/*` endpoints to respond, and mirrored to the client through `Meteor.settings.public.packages.accounts.useHttpOnlyCookies`.
+   * @param {String[]} options.httpOnlyCookieAllowedOrigins Additional origins (`scheme://host[:port]`) allowed to call the cookie set and clear endpoints with credentialed CORS. The origin of `ROOT_URL` and of the request `Host` are always allowed. `SameSite=Strict` and browser cookie policy still apply. Server only.
+   * @param {Object | false} options.httpOnlyCookieRateLimit Per-client-address rate limit for the cookie endpoints as `{ max, windowMs }`. Defaults to 30 requests per 10 seconds; `false` disables it. Server only.
    * 
    * @example
    * // For UI-related options like forbidClientAccountCreation, call Accounts.config on both client and server
@@ -298,8 +308,33 @@ export class AccountsCommon {
       }
     }
 
-    if (options.collection && options.collection !== this.users._name && options.collection !== this.users) {
-      this.users = this._initializeCollection(options);
+    if (options.collection) {
+      const isNewCollection = options.collection instanceof Mongo.Collection
+        ? options.collection !== this.users
+        : options.collection !== this.users._name;
+      if (isNewCollection) {
+        this.users = this._initializeCollection(options);
+        this._onUsersCollectionChanged();
+      }
+    }
+  }
+
+  /**
+   * @summary Register a callback to be called when the users collection is
+   * replaced via `Accounts.config({ collection })`. This is used by
+   * sub-packages (accounts-password, accounts-oauth, accounts-passwordless)
+   * to recreate their indexes on the new collection.
+   * @locus Server
+   * @param {Function} callback Called with the new users collection.
+   */
+  onUsersCollectionChanged(callback) {
+    this._usersCollectionChangeCallbacks.push(callback);
+  }
+
+  // Called when this.users is replaced via config(). Override in subclasses.
+  _onUsersCollectionChanged() {
+    for (const callback of this._usersCollectionChangeCallbacks) {
+      callback(this.users);
     }
   }
 
