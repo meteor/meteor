@@ -22,3 +22,4 @@ expectTypeOf(MeteorDeveloperAccounts.retrieveCredential).parameters.toEqualTypeO
   [string, (string | null)?]
 >();
 expectTypeOf(MeteorDeveloperAccounts.retrieveCredential).returns.toMatchTypeOf<Promise<unknown>>();
+expectTypeOf(MeteorDeveloperAccounts.retrieveCredential).returns.resolves.extract<Error>().toEqualTypeOf<Error>();

@@ -16,6 +16,7 @@ Facebook.requestCredential(() => {}, () => {});
 
 expectTypeOf(Facebook.retrieveCredential).parameters.toEqualTypeOf<[string, (string | null)?]>();
 expectTypeOf(Facebook.retrieveCredential).returns.toMatchTypeOf<Promise<unknown>>();
+expectTypeOf(Facebook.retrieveCredential).returns.resolves.extract<Error>().toEqualTypeOf<Error>();
 
 expectTypeOf(Facebook.handleAuthFromAccessToken).parameters.toEqualTypeOf<[string, number]>();
 expectTypeOf(Facebook.handleAuthFromAccessToken).returns.toEqualTypeOf<
