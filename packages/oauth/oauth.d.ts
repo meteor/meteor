@@ -1,3 +1,4 @@
+import * as http from "http";
 import { Mongo } from 'meteor/mongo';
 
 export type OAuthLoginStyle = 'popup' | 'redirect';
@@ -14,14 +15,23 @@ export interface OAuthPopupDimensions {
   height?: number;
 }
 
-export interface OAuthLaunchLoginOptions {
+/** The popup flow needs the completion callback; the redirect flow ignores it. */
+export type OAuthLaunchLoginOptions = {
   loginService: string;
-  loginStyle: OAuthLoginStyle;
   loginUrl: string;
   credentialToken: string;
-  credentialRequestCompleteCallback: (credentialToken: string, error?: Error) => void;
-  popupOptions?: OAuthPopupDimensions;
-}
+} & (
+  | {
+      loginStyle: 'popup';
+      credentialRequestCompleteCallback: (credentialToken: string, error?: Error) => void;
+      popupOptions?: OAuthPopupDimensions;
+    }
+  | {
+      loginStyle: 'redirect';
+      credentialRequestCompleteCallback?: (credentialToken: string, error?: Error) => void;
+      popupOptions?: OAuthPopupDimensions;
+    }
+);
 
 export interface OAuthDataAfterRedirect {
   loginService: string;
@@ -36,16 +46,49 @@ export interface OAuthServiceUrls {
   authenticate?: string;
 }
 
-export interface OAuthRequestData {
-  serviceName: string;
-  version: 1 | 2;
-  query: Record<string, string>;
-  httpMethod?: string;
+/** What a service handler returns; `serviceData` ends up in `user.services[name]`. */
+export interface OAuthHandlerResult {
+  serviceData: Record<string, unknown>;
+  options?: Record<string, unknown>;
 }
 
-export type OAuthRequestHandler = (
-  request: OAuthRequestData
-) => { serviceData?: Record<string, unknown>; options?: Record<string, unknown> } | Promise<{ serviceData?: Record<string, unknown>; options?: Record<string, unknown> }> | null | undefined;
+/** OAuth 2 handler: receives the query string of the provider's callback request. */
+export type OAuth2RequestHandler = {
+  bivarianceHack(query: Record<string, string>): OAuthHandlerResult | Promise<OAuthHandlerResult>;
+}["bivarianceHack"];
+
+/** OAuth 1 handler: receives the prepared `OAuth1Binding` and the callback query. */
+export type OAuth1RequestHandler = {
+  bivarianceHack(
+    binding: unknown,
+    request: { query: Record<string, string> }
+  ): OAuthHandlerResult | Promise<OAuthHandlerResult>;
+}["bivarianceHack"];
+
+/** Handler for a service whose arguments are chosen by a custom `_requestHandlers` entry. */
+export type OAuthRequestHandler = {
+  bivarianceHack(...args: unknown[]): OAuthHandlerResult | Promise<OAuthHandlerResult>;
+}["bivarianceHack"];
+
+export interface OAuthRegisteredService {
+  serviceName: string;
+  version: number | string;
+  urls: OAuthServiceUrls | null;
+  handleOauthRequest: OAuthRequestHandler;
+}
+
+/** Per-version middleware stored in `OAuth._requestHandlers`; it must end the response. */
+export type OAuthVersionRequestHandler = (
+  service: OAuthRegisteredService,
+  query: Record<string, string>,
+  res: http.ServerResponse
+) => Promise<void>;
+
+export interface OAuthCredential {
+  serviceName: string;
+  serviceData: Record<string, unknown>;
+  options?: Record<string, unknown>;
+}
 
 export interface OAuthPendingCredentialDocument {
   _id?: string;
@@ -71,16 +114,31 @@ export const OAuth: {
   /** Registers a server-side OAuth service handler. */
   registerService(
     name: string,
-    version: 1 | 2,
+    version: 2,
+    urls: null,
+    handleOauthRequest: OAuth2RequestHandler
+  ): void;
+  registerService(
+    name: string,
+    version: 1,
+    urls: OAuthServiceUrls,
+    handleOauthRequest: OAuth1RequestHandler
+  ): void;
+  registerService(
+    name: string,
+    version: number | string,
     urls: OAuthServiceUrls | null,
     handleOauthRequest: OAuthRequestHandler
   ): void;
 
-  /** Retrieves a pending credential and removes it from storage. */
+  /** Retrieves a pending credential and removes it from storage. Resolves to the stored `Error` when the flow failed. */
   retrieveCredential(
     credentialToken: string,
     credentialSecret?: string | null
-  ): Promise<unknown | Error | undefined>;
+  ): Promise<OAuthCredential | Error | undefined>;
+
+  /** Maps an OAuth version to its callback middleware; `oauth1` and `oauth2` register `'1'` and `'2'`. */
+  _requestHandlers: Record<string, OAuthVersionRequestHandler>;
 
   /** Stores a pending OAuth credential keyed by credentialToken. */
   _storePendingCredential(
@@ -89,11 +147,11 @@ export const OAuth: {
     credentialSecret?: string | null
   ): Promise<void>;
 
-  /** Retrieves and removes a pending credential. */
+  /** Retrieves and removes a pending credential. Overridable, so the stored shape is not assumed. */
   _retrievePendingCredential(
     credentialToken: string,
     credentialSecret?: string | null
-  ): Promise<unknown | Error | undefined>;
+  ): Promise<unknown>;
 
   /** Collection backing `_storePendingCredential`. */
   _pendingCredentials: Mongo.Collection<OAuthPendingCredentialDocument>;

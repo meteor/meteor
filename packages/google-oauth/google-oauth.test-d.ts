@@ -20,6 +20,9 @@ Google.requestCredential(() => {}, () => {});
 
 expectTypeOf(Google.retrieveCredential).parameters.toEqualTypeOf<[string, (string | null)?]>();
 expectTypeOf(Google.retrieveCredential).returns.toMatchTypeOf<Promise<unknown>>();
+// A failed flow stores an Error, which the thin wrapper over `OAuth.retrieveCredential` resolves.
+expectTypeOf(Google.retrieveCredential).returns.resolves.extract<Error>().toEqualTypeOf<Error>();
+expectTypeOf(Google.retrieveCredential).returns.resolves.exclude<Error | undefined>().toHaveProperty("serviceName");
 
 expectTypeOf(Google.signIn).toBeFunction();
 Google.signIn((error) => {
