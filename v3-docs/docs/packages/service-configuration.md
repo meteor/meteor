@@ -408,14 +408,13 @@ await ServiceConfiguration.configurations.upsertAsync(
 
 ### Setting up Meteor Developer OAuth
 
-1. Visit [https://beta.galaxycloud.app/](https://beta.galaxycloud.app/) and sign in
+1. Visit [https://my.galaxycloud.app/](https://my.galaxycloud.app/) and sign in
 
-2. Go to **Settings** -> **Authorized Domains** and **Add New Domain**
+2. Go to **Settings** -> **API & Integrations** -> **Authorized Domains** and add a domain
 
+3. Enter an **App Name** (for your own reference) and set the **Redirect URI** to `YOUR_SITE_URL/_oauth/meteor-developer` (e.g., `http://localhost:3000/_oauth/meteor-developer`)
 
-3. Set the **"OAuth Redirect URL"** to `YOUR_SITE_URL/_oauth/meteor-developer` (e.g., `http://localhost:3000/_oauth/meteor-developer`)
-
-4. Click **"Create"** and note down your **"Client ID"** and **"Client Secret"**
+4. Click **Add Domain** and note down the **Client ID** and **Secret** shown for it
 
 ### Configuration
 
