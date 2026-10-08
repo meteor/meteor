@@ -607,16 +607,23 @@ api.addAssets('${relPath}', 'client').`);
       continue;
     }
 
-    const contents = optimisticReadFile(absPath);
-    const hash = optimisticHashOrNull(absPath);
+    const isSyntheticSource = _.has(source, "data");
+    const contents = isSyntheticSource
+      ? source.data
+      : optimisticReadFile(absPath);
+    const hash = isSyntheticSource
+      ? watch.sha1(source.data)
+      : optimisticHashOrNull(absPath);
     const file = { contents, hash };
 
     // When files are handled by a new-style compiler plugin, the SourceResource
     // class tracks if each file is actually used.
-    if (classification.isNonLegacySource()) {
-      watchSet.addPotentiallyUnusedFile(absPath, hash);
-    } else {
-      watchSet.addFile(absPath, hash);
+    if (! isSyntheticSource) {
+      if (classification.isNonLegacySource()) {
+        watchSet.addPotentiallyUnusedFile(absPath, hash);
+      } else {
+        watchSet.addFile(absPath, hash);
+      }
     }
     await Console.yield();
 
@@ -838,9 +845,12 @@ async function runLinters({inputSourceArch, isopackCache, sources,
         `Unexpected classification for ${ relPath }: ${ classification.type }`);
     }
 
+    const isSyntheticSource = _.has(sourceItem, "data");
     const absPath = files.pathResolve(inputSourceArch.sourceRoot, relPath);
-    const hash = optimisticHashOrNull(absPath);
-    if (!watchSet.hasFile(absPath)) {
+    const hash = isSyntheticSource
+      ? watch.sha1(sourceItem.data)
+      : optimisticHashOrNull(absPath);
+    if (!isSyntheticSource && !watchSet.hasFile(absPath)) {
       watchSet.addFile(absPath, hash);
     }
 
@@ -851,7 +861,9 @@ async function runLinters({inputSourceArch, isopackCache, sources,
       return;
     }
 
-    const contents = optimisticReadFile(absPath);
+    const contents = isSyntheticSource
+      ? sourceItem.data
+      : optimisticReadFile(absPath);
     const wrappedSource = {
       relPath, contents, hash, fileOptions,
       arch: inputSourceArch.arch,
