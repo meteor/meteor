@@ -18,9 +18,10 @@ export namespace Reload {
 
   /**
    * Attempt to migrate; `tryReload` is the retry callback handed to migration
-   * handlers. Returns `false` if some provider isn't ready yet, `true` if migrated.
+   * handlers (a no-op when omitted). Returns `false` if some provider isn't
+   * ready yet, `true` if migrated.
    */
-  export function _migrate(tryReload: () => void, options?: { immediateMigration?: boolean }): boolean;
+  export function _migrate(tryReload?: () => void, options?: { immediateMigration?: boolean }): boolean;
 
   /** Reload the client program, running migration handlers first. */
   export function _reload(options?: { immediateMigration?: boolean }): void;

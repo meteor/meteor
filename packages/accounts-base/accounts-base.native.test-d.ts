@@ -165,6 +165,21 @@ Accounts.validateNewUser(async (user) => {
 expectTypeOf(Accounts.findUserByEmail).toBeFunction();
 expectTypeOf(Accounts.findUserByUsername).toBeFunction();
 
+// --- External login services (#14815) ---
+expectTypeOf(Accounts.updateOrCreateUserFromExternalService).toBeFunction();
+expectTypeOf(
+  Accounts.updateOrCreateUserFromExternalService(
+    "github",
+    { id: "42", accessToken: "token" },
+    { profile: { name: "Ada" } },
+  ),
+).resolves.toEqualTypeOf<{ type: string; userId: string }>();
+expectTypeOf(
+  Accounts.updateOrCreateUserFromExternalService("twitter", { id: 42 }),
+).resolves.toEqualTypeOf<{ type: string; userId: string }>();
+// @ts-expect-error Service data must include the user's id within the service.
+Accounts.updateOrCreateUserFromExternalService("github", { accessToken: "token" });
+
 // --- Accounts email sending ---
 expectTypeOf<Accounts.SendEmailOptions>().toBeObject();
 expectTypeOf<Accounts.SendEmailResult>().toBeObject();
