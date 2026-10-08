@@ -1,11 +1,11 @@
 Package.describe({
   summary: "Logging facility.",
-  version: "1.3.7-rc360.0",
+  version: "1.3.7-rc360.1",
 });
 
 Npm.depends({
   chalk: "4.1.2",
-  "@babel/runtime": "7.20.7",
+  "@babel/runtime": "7.29.10",
 });
 
 Npm.strip({

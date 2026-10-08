@@ -1,12 +1,12 @@
 Package.describe({
   name: 'ecmascript',
-  version: "0.19.2-rc360.0",
+  version: "0.19.2-rc360.1",
   summary: 'Compiler plugin that supports ES2015+ in all .js files',
   documentation: 'README.md',
 });
 
 Npm.depends({
-  '@babel/runtime': '7.20.7'
+  '@babel/runtime': '7.29.10'
 });
 
 
