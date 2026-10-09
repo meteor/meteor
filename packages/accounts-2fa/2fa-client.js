@@ -69,7 +69,7 @@ let contextProvider = null;
 /**
  * @summary Provide data sent with every login so the server policy can read it.
  * The DDP connection does not forward cookies, so a trusted-browser token has to travel here.
- * Values must be strings. The server drops anything larger than a small string map.
+ * Values must be strings. Non-string values are dropped. The server treats an invalid context as absent.
  * @locus Client
  * @param {Function} fn Returns an object such as `{ trustedDeviceToken }`.
  */
@@ -86,7 +86,16 @@ Accounts._get2faClientContext = () => {
     if (!value || typeof value !== 'object' || Array.isArray(value)) {
       return undefined;
     }
-    return value;
+    const stringsOnly = {};
+    for (const [key, entry] of Object.entries(value)) {
+      if (typeof entry === 'string') {
+        stringsOnly[key] = entry;
+      }
+    }
+    if (!Object.keys(stringsOnly).length) {
+      return undefined;
+    }
+    return stringsOnly;
   } catch (error) {
     return undefined;
   }

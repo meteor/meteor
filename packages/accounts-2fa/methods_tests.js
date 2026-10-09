@@ -23,6 +23,8 @@ const restorePolicy = () => {
       expirationMs: 10 * 60 * 1000,
       maxAttempts: 5,
       resendCooldownMs: 60 * 1000,
+      requireVerified: true,
+      offerToOtpUsers: false,
       hashSecret: null,
     },
   });
@@ -124,15 +126,17 @@ Tinytest.addAsync('account - 2fa - email is sent only when TOTP is not set up', 
       user: await findUserById(otpId),
       context: { loginMethod: 'password' },
     });
-    test.equal(otpChallenge.details.methods, ['otp', 'email']);
+    test.equal(otpChallenge.details.methods, ['otp']);
     test.isFalse(otpChallenge.details.emailSent);
 
+    Accounts._2faTestState = {};
     const requested = await Accounts._enforce2faOnLogin({
       user: await findUserById(otpId),
       method: 'email',
       context: { loginMethod: 'password' },
     });
-    test.isTrue(requested.details.emailSent);
+    test.equal(requested.error, '2fa-method-unavailable');
+    test.isUndefined(Accounts._2faTestState.lastEmailCode);
 
     const cooledDown = await Accounts._enforce2faOnLogin({
       user: await findUserById(plainId),
@@ -301,50 +305,6 @@ Tinytest.addAsync('account - 2fa - on2faVerified runs only after the login is ac
   }
 });
 
-Tinytest.addAsync('account - 2fa - an email code accepted for a TOTP user is not a TOTP step', async test => {
-  const secret = new OTPAuth.Secret({ size: 20 }).base32;
-  const userId = await createUser({
-    services: {
-      twoFactorAuthentication: { type: 'otp', secret },
-    },
-  });
-  const invocation = {
-    connection: { id: Random.id(), close() {} },
-    setUserId() {},
-  };
-  try {
-    Accounts.configure2fa({ email: { enabled: true } });
-    await Accounts._enforce2faOnLogin({
-      user: await findUserById(userId),
-      method: 'email',
-      context: { loginMethod: 'password' },
-    });
-    const code = Accounts._2faTestState.lastEmailCode;
-    const accepted = await Accounts._enforce2faOnLogin({
-      user: await findUserById(userId),
-      code,
-      method: 'email',
-      context: { loginMethod: 'password' },
-    });
-    test.isUndefined(accepted);
-
-    // The client omits twoFactorMethod when both factors are offered.
-    // The replay hook, when present, must not treat this code as a TOTP.
-    const loggedIn = await Accounts._attemptLogin(
-      invocation,
-      'login',
-      [{ user: { id: userId }, code }],
-      { userId, type: 'password' }
-    );
-    test.equal(loggedIn.id, userId);
-    const user = await findUserById(userId);
-    test.isFalse(Number.isInteger(user.services?.twoFactorAuthentication?.lastUsedStep));
-  } finally {
-    restorePolicy();
-    await Accounts.users.removeAsync(userId);
-  }
-});
-
 Tinytest.addAsync('account - 2fa - a too-long code is rejected before it is hashed', async test => {
   const userId = await createUser();
   try {
@@ -415,6 +375,7 @@ Tinytest.addAsync('account - 2fa - passwordless login cannot use the email facto
   const userId = await createUser();
   try {
     Accounts.configure2fa({ email: { enabled: true } });
+    Accounts.config({ require2fa: true });
     const result = await Accounts._enforce2faOnLogin({
       user: await findUserById(userId),
       context: { loginMethod: 'passwordless' },
@@ -429,7 +390,7 @@ Tinytest.addAsync('account - 2fa - passwordless login cannot use the email facto
 Tinytest.addAsync('account - 2fa - an old client code matches TOTP, then a pending email code', async test => {
   const userId = await createUser(otpUserFields());
   try {
-    Accounts.configure2fa({ email: { enabled: true, resendCooldownMs: 0 } });
+    Accounts.configure2fa({ email: { enabled: true, offerToOtpUsers: true, resendCooldownMs: 0 } });
     await Accounts._enforce2faOnLogin({
       user: await findUserById(userId),
       method: 'email',
@@ -485,6 +446,128 @@ Tinytest.addAsync('account - 2fa - email hashSecret changes the stored hash', as
     });
     test.isUndefined(verified);
   } finally {
+    restorePolicy();
+    await Accounts.users.removeAsync(userId);
+  }
+});
+
+Tinytest.addAsync('account - 2fa - email is not offered to a TOTP user unless the app opts in', async test => {
+  const userId = await createUser(otpUserFields());
+  try {
+    Accounts.configure2fa({ email: { enabled: true } });
+    const result = await Accounts._enforce2faOnLogin({
+      user: await findUserById(userId),
+      method: 'email',
+      context: { loginMethod: 'password' },
+    });
+    test.equal(result.error, '2fa-method-unavailable');
+    test.isUndefined(Accounts._2faTestState.lastEmailCode);
+  } finally {
+    restorePolicy();
+    await Accounts.users.removeAsync(userId);
+  }
+});
+
+Tinytest.addAsync('account - 2fa - enabling email does not lock out users with no factor', async test => {
+  const userId = await createUser({
+    emails: [{ address: `${Random.id()}@meteorapp.com`, verified: false }],
+  });
+  try {
+    Accounts.configure2fa({ email: { enabled: true } });
+    const result = await Accounts._enforce2faOnLogin({
+      user: await findUserById(userId),
+      context: { loginMethod: 'password' },
+    });
+    test.isUndefined(result);
+  } finally {
+    restorePolicy();
+    await Accounts.users.removeAsync(userId);
+  }
+});
+
+Tinytest.addAsync('account - 2fa - on2faVerified only runs for the connection that passed', async test => {
+  const userId = await createUser();
+  let seen = 0;
+  const stop = Accounts.on2faVerified(() => {
+    seen += 1;
+  });
+  try {
+    Accounts.configure2fa({ email: { enabled: true } });
+    await Accounts._enforce2faOnLogin({
+      user: await findUserById(userId),
+      context: { loginMethod: 'password' },
+    });
+    await Accounts._enforce2faOnLogin({
+      user: await findUserById(userId),
+      code: Accounts._2faTestState.lastEmailCode,
+      context: { loginMethod: 'password', connection: { id: 'browser-a' } },
+    });
+    await Accounts._successfulLogin({ id: 'browser-b' }, {
+      type: 'password',
+      allowed: true,
+      user: await findUserById(userId),
+    });
+    test.equal(seen, 0);
+  } finally {
+    stop.stop();
+    restorePolicy();
+    await Accounts.users.removeAsync(userId);
+  }
+});
+
+Tinytest.addAsync('account - 2fa - a null context value does not break the login', async test => {
+  const username = Random.id();
+  const userId = await Accounts.createUserAsync({ username, password: 'pw-123456' });
+  try {
+    const result = await Accounts._runLoginHandlers(
+      { connection: { id: Random.id(), close() {} }, setUserId() {} },
+      { user: { username }, password: 'pw-123456', twoFactorContext: { trustedDeviceToken: null } }
+    );
+    test.isUndefined(result.error);
+    test.equal(result.userId, userId);
+  } finally {
+    await Accounts.users.removeAsync(userId);
+  }
+});
+
+Tinytest.addAsync('account - 2fa - TOTP-only apps see the same failed attempt as before', async test => {
+  restorePolicy();
+  const username = Random.id();
+  const userId = await Accounts.createUserAsync({ username, password: 'pw-123456' });
+  await Meteor.users.updateAsync(userId, {
+    $set: { 'services.twoFactorAuthentication': otpUserFields().services.twoFactorAuthentication },
+  });
+  let failedUser = 'not-called';
+  const stop = Accounts.onLoginFailure(attempt => {
+    failedUser = attempt.user;
+  });
+  const invocation = { connection: { id: Random.id(), close() {} }, setUserId() {} };
+  const options = { user: { username }, password: 'pw-123456' };
+  try {
+    const result = await Accounts._runLoginHandlers(invocation, options);
+    await Accounts._attemptLogin(invocation, 'login', [options], result).catch(() => {});
+    test.isUndefined(failedUser);
+  } finally {
+    stop.stop();
+    await Accounts.users.removeAsync(userId);
+  }
+});
+
+Tinytest.addAsync('account - 2fa - a failed send does not block the next one', async test => {
+  const { Email } = Package.email;
+  const previous = Email.customTransport;
+  const userId = await createUser();
+  try {
+    Accounts.configure2fa({ email: { enabled: true } });
+    Email.customTransport = () => {
+      throw new Error('smtp down');
+    };
+    await Accounts._issue2faEmailCode(await findUserById(userId)).catch(() => {});
+    Email.customTransport = () => {};
+    const retry = await Accounts._issue2faEmailCode(await findUserById(userId));
+    test.isTrue(retry.sent);
+  } finally {
+    Email.customTransport = previous;
     restorePolicy();
     await Accounts.users.removeAsync(userId);
   }

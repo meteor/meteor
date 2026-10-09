@@ -28,12 +28,9 @@ const findUserWithOptions = async ({ selector }) => {
   );
 };
 // Handler to login with an ott.
-const twoFactorClientContext = Match.Optional(Match.Where(value => {
-  if (typeof Accounts._isValid2faClientContext === 'function') {
-    return Accounts._isValid2faClientContext(value);
-  }
-  return !!value && typeof value === 'object' && !Array.isArray(value);
-}));
+/** An invalid context is dropped. `localStorage.getItem` returns null when nothing is stored. */
+const clientContextOrNull = value =>
+  Accounts._isValid2faClientContext?.(value) ? value : null;
 
 Accounts.registerLoginHandler('passwordless', async function (options) {
   if (!options.token) return undefined; // don't handle
@@ -45,7 +42,7 @@ Accounts.registerLoginHandler('passwordless', async function (options) {
       return Match.test(value, pattern);
     })),
     twoFactorMethod: Match.Optional(Match.OneOf('otp', 'email')),
-    twoFactorContext: twoFactorClientContext,
+    twoFactorContext: Match.Optional(Match.Any),
     selector: Accounts._userQueryValidator,
   });
 
@@ -81,10 +78,13 @@ Accounts.registerLoginHandler('passwordless', async function (options) {
         context: {
           loginMethod: 'passwordless',
           connection: this.connection,
-          clientContext: options.twoFactorContext || null,
+          clientContext: clientContextOrNull(options.twoFactorContext),
         },
       });
       if (twoFactorError) {
+        if (!Accounts._2faPolicyOptedIn?.()) {
+          throw twoFactorError;
+        }
         return { userId: user._id, error: twoFactorError };
       }
     } else if (Accounts._check2faEnabled?.(user)) {

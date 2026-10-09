@@ -9,7 +9,6 @@ const LOGIN_TYPES_WITH_2FA = new Set(['password', 'passwordless']);
 const verifiedHooks = [];
 const challengeHooks = [];
 const pendingVerified = new Map();
-const loginFactors = new Map();
 
 /** A 2FA code is a short OTP or email code. Login handlers read this at check time. */
 Accounts._2faCodeMatch = Match.Where(value =>
@@ -53,40 +52,20 @@ Accounts.on2faVerified = fn => registerHook(verifiedHooks, fn);
  */
 Accounts.validate2faChallenge = fn => registerHook(challengeHooks, fn);
 
+/** One mark per user and connection, so concurrent logins do not share a factor. */
+const verifiedMarkKey = (userId, connection) => `${userId}:${connection?.id ?? ''}`;
+
 const rememberVerified = (userId, connection, method) => {
   const now = Date.now();
   for (const [id, mark] of pendingVerified) {
     if (now - mark.at > VERIFIED_MARK_TTL_MS) {
       pendingVerified.delete(id);
-      loginFactors.delete(id);
     }
   }
-  pendingVerified.set(userId, {
+  pendingVerified.set(verifiedMarkKey(userId, connection), {
     at: now,
-    connection: connection || null,
     method,
   });
-  // Read by the TOTP replay hook when that package is also loaded.
-  // An email acceptance must not be checked as a TOTP step.
-  loginFactors.set(userId, { at: now, method });
-};
-
-/**
- * @summary Factor accepted for the login in progress, then forgotten.
- * `email` tells the TOTP replay hook to leave the authenticator step alone.
- * @param {String} userId
- * @returns {String|null}
- */
-Accounts._2faLoginFactor = userId => {
-  const mark = loginFactors.get(userId);
-  if (!mark) {
-    return null;
-  }
-  loginFactors.delete(userId);
-  if (Date.now() - mark.at > VERIFIED_MARK_TTL_MS) {
-    return null;
-  }
-  return mark.method;
 };
 
 Accounts.onLogin(async attempt => {
@@ -94,24 +73,33 @@ Accounts.onLogin(async attempt => {
   if (!userId || !LOGIN_TYPES_WITH_2FA.has(attempt.type)) {
     return;
   }
-  const mark = pendingVerified.get(userId);
+  const key = verifiedMarkKey(userId, attempt.connection);
+  const mark = pendingVerified.get(key);
   if (!mark) {
     return;
   }
-  pendingVerified.delete(userId);
+  pendingVerified.delete(key);
   if (Date.now() - mark.at > VERIFIED_MARK_TTL_MS) {
     return;
   }
   try {
     await runHooks(verifiedHooks, {
       user: attempt.user,
-      connection: attempt.connection || mark.connection || null,
+      connection: attempt.connection || null,
       method: mark.method,
     });
   } catch (error) {
     console.error('accounts-2fa: on2faVerified threw', error);
   }
 });
+
+/**
+ * @summary Whether the app opted into the new login result (`{ userId, error }`).
+ * Until then, a missing or wrong code is thrown, as in 3.1.0.
+ * @returns {Boolean}
+ */
+Accounts._2faPolicyOptedIn = () =>
+  Accounts._is2faEmailEnabled() || Accounts._options.require2fa !== undefined;
 
 const CLIENT_CONTEXT_MAX_KEYS = 8;
 const CLIENT_CONTEXT_MAX_KEY = 32;
@@ -194,8 +182,12 @@ Accounts._is2faRequired = async (user, context = {}) => {
     return { required: true, availableMethods };
   }
 
-  // Default: everyone, once an app opts into the email factor. Otherwise only TOTP users.
-  return { required: emailEnabled || otpEnabled, availableMethods };
+  // Default: TOTP users, and anyone with a usable factor once email is enabled.
+  // Users with no factor can still sign in. `require2fa: true` blocks them.
+  return {
+    required: otpEnabled || (emailEnabled && availableMethods.length > 0),
+    availableMethods,
+  };
 };
 
 const acceptFactor = (user, connection, method) => {

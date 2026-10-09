@@ -11,7 +11,7 @@ const DEFAULT_EMAIL_CONFIG = {
   maxAttempts: 5,
   resendCooldownMs: 60 * 1000,
   requireVerified: true,
-  offerToOtpUsers: true,
+  offerToOtpUsers: false,
 };
 
 let emailConfig = { ...DEFAULT_EMAIL_CONFIG };
@@ -51,7 +51,7 @@ Accounts._configure2faEmail = options => {
 
 Accounts._is2faEmailEnabled = () => emailConfig.enabled === true;
 
-Accounts._2faEmailOffersToOtpUsers = () => emailConfig.offerToOtpUsers !== false;
+Accounts._2faEmailOffersToOtpUsers = () => emailConfig.offerToOtpUsers === true;
 
 const usableEmail = user => {
   const emails = user?.emails || [];
@@ -161,9 +161,6 @@ Accounts._issue2faEmailCode = async user => {
   if (Meteor.isPackageTest) {
     Accounts._2faTestState = { ...(Accounts._2faTestState || {}), lastEmailCode: code };
   }
-  if (Meteor.isDevelopment && !Meteor.isPackageTest) {
-    console.log(`\n2FA email code for ${address}: ${code}`);
-  }
 
   ensureTemplate();
   try {
@@ -176,6 +173,14 @@ Accounts._issue2faEmailCode = async user => {
     );
     await Email.sendAsync(options);
   } catch (error) {
+    // The user received nothing, so the cooldown must not block the next request.
+    await Meteor.users.updateAsync(
+      {
+        _id: user._id,
+        'services.twoFactorAuthentication.emailCode.createdAt': issuedAt,
+      },
+      { $unset: { 'services.twoFactorAuthentication.emailCode': 1 } }
+    );
     console.error('accounts-2fa: failed to send the email code', error);
     throw new Meteor.Error(
       '2fa-email-failed',
@@ -214,9 +219,14 @@ Accounts._verify2faEmailCode = async (user, code) => {
 
   const expired = Date.now() - record.createdAt.getTime() >= emailConfig.expirationMs;
   if (expired) {
-    await Meteor.users.updateAsync(user._id, {
-      $unset: { 'services.twoFactorAuthentication.emailCode': 1 },
-    });
+    // Match the hash that was checked, so a code issued since then is left in place.
+    await Meteor.users.updateAsync(
+      {
+        _id: user._id,
+        'services.twoFactorAuthentication.emailCode.hash': record.hash,
+      },
+      { $unset: { 'services.twoFactorAuthentication.emailCode': 1 } }
+    );
     return false;
   }
   if (record.attempts >= emailConfig.maxAttempts) {
