@@ -33,11 +33,18 @@ const verifyTokenApp = async (accessToken) => {
   if (!config) throw new ServiceConfiguration.ConfigError();
 
   const appToken = `${config.appId}|${OAuth.openSecret(config.secret)}`;
-  const response = await OAuth._fetch(
-    `https://graph.facebook.com/v${API_VERSION}/debug_token`,
-    'GET',
-    { queryParams: { input_token: accessToken, access_token: appToken } }
-  ).then(res => res.json());
+  // Network and parse errors can carry the request URL, which holds the app
+  // secret, so they are replaced instead of being logged.
+  let response;
+  try {
+    response = await OAuth._fetch(
+      `https://graph.facebook.com/v${API_VERSION}/debug_token`,
+      'GET',
+      { queryParams: { input_token: accessToken, access_token: appToken } }
+    ).then(res => res.json());
+  } catch (e) {
+    throw new Meteor.Error(403, 'Failed to verify Facebook access token');
+  }
 
   // Fail closed: the token must be valid AND minted for this exact app.
   // debug_token returns app_id as a string, while config.appId may be stored
