@@ -706,7 +706,7 @@ meteor deploy your-app.meteorapp.com
 
 ### Deploy Region
 
-For a site that is already on Galaxy, `meteor deploy` finds the app's region by requesting `https://<site>/.well-known/meteor/deploy-url`. This lookup only uses HTTPS and only accepts a deploy server on Galaxy's deploy domain, `galaxy-deploy.meteor.com` (for example `eu-west-1.galaxy-deploy.meteor.com`). If the lookup gets no answer, the `us-east-1` region is used.
+`meteor deploy` finds the app's region by requesting `https://<site>/.well-known/meteor/deploy-url`, or the same address over HTTP when the site has no certificate yet. It only accepts a deploy server on Galaxy's deploy domain, `galaxy-deploy.meteor.com` (for example `eu-west-1.galaxy-deploy.meteor.com`). If the lookup gets no answer, the `us-east-1` region is used.
 
 To choose a region yourself, or to use any other deploy server, set `DEPLOY_HOSTNAME`:
 
