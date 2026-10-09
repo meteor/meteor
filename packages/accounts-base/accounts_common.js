@@ -227,7 +227,7 @@ export class AccountsCommon {
    * @param {String|Mongo.Collection} options.collection A collection name or a Mongo.Collection object to hold the users.
    * @param {Number} options.loginTokenExpirationHours When using the package `accounts-2fa`, use this to set the amount of time a token sent is valid. As it's just a number, you can use, for example, 0.5 to make the token valid for just half hour. The default is 1 hour.
    * @param {Number} options.tokenSequenceLength When using the package `accounts-2fa`, use this to the size of the token sequence generated. The default is 6.
-   * @param {Boolean|Function} options.require2fa Server only. When `accounts-2fa` is installed, decides whether a login must present a second factor. `undefined` (default): required for every user when the email factor is enabled, otherwise only for users who turned on TOTP. `true`: required for every user. `false`: required only for users who turned on TOTP. A function `(userId, context) => boolean | Promise<boolean>` lets the app decide (roles, trusted browser). If the function throws, a second factor is required. `context` is `{ loginMethod, connection, clientContext, availableMethods }`.
+   * @param {Boolean|Function} options.require2fa Server only. When `accounts-2fa` is installed, decides whether a login must present a second factor. `undefined` (default): required for users who turned on TOTP, and, when the email factor is enabled, for users who have a usable second factor. Users with no factor can still sign in. `true`: required for every user. `false`: required only for users who turned on TOTP. A function `(userId, context) => boolean | Promise<boolean>` lets the app decide (roles, trusted browser). If the function throws, a second factor is required. `context` is `{ loginMethod, connection, clientContext, availableMethods }`. Ignored, with a warning, when `accounts-2fa` is not installed.
    * @param {'session' | 'local'} options.clientStorage By default login credentials are stored in local storage, setting this to true will switch to using session storage.
    * 
    * @example
@@ -251,6 +251,16 @@ export class AccountsCommon {
     // having their full effects.
     if (Meteor.isServer) {
       __meteor_runtime_config__.accountsConfigCalled = true;
+      if (options.require2fa !== undefined) {
+        // accounts-2fa may load after this call, so check once packages are ready.
+        Meteor.startup(() => {
+          if (!Package['accounts-2fa']) {
+            console.warn(
+              'Accounts.config: `require2fa` has no effect unless the accounts-2fa package is installed.'
+            );
+          }
+        });
+      }
     } else if (!__meteor_runtime_config__.accountsConfigCalled) {
       // XXX would be nice to "crash" the client and replace the UI with an error
       // message, but there's no trivial way to do this.

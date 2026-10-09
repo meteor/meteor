@@ -28,12 +28,9 @@ const findUserWithOptions = async ({ selector }) => {
   );
 };
 // Handler to login with an ott.
-const twoFactorClientContext = Match.Optional(Match.Where(value => {
-  if (typeof Accounts._isValid2faClientContext === 'function') {
-    return Accounts._isValid2faClientContext(value);
-  }
-  return !!value && typeof value === 'object' && !Array.isArray(value);
-}));
+/** An invalid context is dropped. `localStorage.getItem` returns null when nothing is stored. */
+const clientContextOrNull = value =>
+  Accounts._isValid2faClientContext?.(value) ? value : null;
 
 Accounts.registerLoginHandler('passwordless', async function (options) {
   if (!options.token) return undefined; // don't handle
@@ -45,7 +42,7 @@ Accounts.registerLoginHandler('passwordless', async function (options) {
       return Match.test(value, pattern);
     })),
     twoFactorMethod: Match.Optional(Match.OneOf('otp', 'email')),
-    twoFactorContext: twoFactorClientContext,
+    twoFactorContext: Match.Optional(Match.Any),
     selector: Accounts._userQueryValidator,
   });
 
@@ -69,8 +66,9 @@ Accounts.registerLoginHandler('passwordless', async function (options) {
   });
   const { verifiedEmail, error } = result;
 
-  if (!error && verifiedEmail) {
+  if (!error) {
     // Email alone cannot be the second factor of an email login.
+    // The check also covers an id login, which succeeds without `verifiedEmail`.
     if (Accounts._enforce2faOnLogin) {
       const twoFactorError = await Accounts._enforce2faOnLogin({
         user,
@@ -79,10 +77,13 @@ Accounts.registerLoginHandler('passwordless', async function (options) {
         context: {
           loginMethod: 'passwordless',
           connection: this.connection,
-          clientContext: options.twoFactorContext || null,
+          clientContext: clientContextOrNull(options.twoFactorContext),
         },
       });
       if (twoFactorError) {
+        if (!Accounts._2faPolicyOptedIn?.()) {
+          throw twoFactorError;
+        }
         return { userId: user._id, error: twoFactorError };
       }
     } else if (Accounts._check2faEnabled?.(user)) {
@@ -99,6 +100,9 @@ Accounts.registerLoginHandler('passwordless', async function (options) {
         Accounts._handleError('Invalid 2FA code', true, 'invalid-2fa-code');
         return;
       }
+    }
+    if (!verifiedEmail) {
+      return result;
     }
     // It's necessary to make sure we don't remove the token if the user has 2fa enabled
     // otherwise, it would be necessary to generate a new one if this method is called without

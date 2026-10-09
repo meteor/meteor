@@ -27,6 +27,7 @@ Package.onTest(function (api) {
   api.use([
     "accounts-base",
     "accounts-password",
+    "email",
     "ddp-client",
     "ddp-common",
     "check",

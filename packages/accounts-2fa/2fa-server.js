@@ -65,7 +65,7 @@ const generateActivationData = ({ issuer, label }) => {
  * @param {Object} options
  * @param {Object} [options.email] Email second factor. Disabled until `enabled` is set.
  * @param {Boolean} [options.email.enabled]
- * @param {Boolean} [options.email.offerToOtpUsers=true] Let a user who already has TOTP choose email.
+ * @param {Boolean} [options.email.offerToOtpUsers=false] Let a user who already has TOTP choose email. Off until the app opts in.
  * @param {Boolean} [options.email.requireVerified=true]
  * @param {Number} [options.email.expirationMs=600000]
  * @param {Number} [options.email.maxAttempts=5]
@@ -203,17 +203,19 @@ Meteor.methods({
       Accounts._handleError('Invalid 2FA code', true, 'invalid-2fa-code');
     }
 
-    await Meteor.users.updateAsync(
-      { _id: user._id },
+    // Set only `type`. Replacing the subdocument would restore an email code
+    // that was consumed after this user document was read. The secret in the
+    // selector keeps a secret regenerated meanwhile from being activated unverified.
+    const updated = await Meteor.users.updateAsync(
       {
-        $set: {
-          'services.twoFactorAuthentication': {
-            ...twoFactorAuthentication,
-            type: 'otp',
-          },
-        },
-      }
+        _id: user._id,
+        'services.twoFactorAuthentication.secret': twoFactorAuthentication.secret,
+      },
+      { $set: { 'services.twoFactorAuthentication.type': 'otp' } }
     );
+    if (!updated) {
+      Accounts._handleError('Invalid 2FA code', true, 'invalid-2fa-code');
+    }
   },
   async disableUser2fa() {
     const user = await Meteor.userAsync();

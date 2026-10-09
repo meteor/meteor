@@ -79,3 +79,45 @@ Tinytest.addAsync('account - 2fa - validate2faChange can refuse an activation', 
   const user = await Meteor.users.findOneAsync(userId);
   test.isFalse(!!user.services?.twoFactorAuthentication?.secret);
 });
+
+Tinytest.addAsync('account - 2fa - a secret regenerated during activation stays inactive', async test => {
+  const verifiedSecret = 'JBSWY3DPEHPK3PXP';
+  const newSecret = 'KRUGS4ZANFZSAYJA';
+  const userId = await Accounts.insertUserDoc(
+    {},
+    {
+      emails: [{ address: `${Random.id()}@meteorapp.com`, verified: true }],
+      services: { twoFactorAuthentication: { secret: verifiedSecret } },
+    }
+  );
+  const guard = Accounts.validate2faChange(async ({ type }) => {
+    if (type === 'activation') {
+      await Meteor.users.updateAsync(userId, {
+        $set: { 'services.twoFactorAuthentication': { secret: newSecret } },
+      });
+    }
+  });
+  const method = Meteor.server.method_handlers.enableUser2fa;
+  const invocation = new DDPCommon.MethodInvocation({
+    userId,
+    isSimulation: false,
+    setUserId: () => {},
+    unblock: () => {},
+    connection: { id: 'conn', close() {} },
+    randomSeed: Random.id(),
+  });
+  const { token } = Accounts._generate2faToken(verifiedSecret);
+  try {
+    await DDP._CurrentMethodInvocation.withValue(invocation, () =>
+      method.apply(invocation, [token])
+    );
+    test.fail('the activation should have been refused');
+  } catch (error) {
+    test.equal(error.error, 'invalid-2fa-code');
+  } finally {
+    guard.stop();
+  }
+  const user = await Meteor.users.findOneAsync(userId);
+  test.equal(user.services.twoFactorAuthentication.secret, newSecret);
+  test.isFalse(!!user.services.twoFactorAuthentication.type);
+});

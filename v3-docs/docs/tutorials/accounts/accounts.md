@@ -459,7 +459,7 @@ When 2FA is enabled, completing a password reset (`Accounts.resetPassword`) or e
 Accounts.config({
   loginTokenExpirationHours: 1, // how long a TOTP window stays valid (default: 1 hour)
   tokenSequenceLength: 6, // TOTP code length (default: 6)
-  // Server only. Omit it to keep today's behavior until the email factor is enabled.
+  // Server only. Omit it to require a second factor only for users who have one.
   // require2fa: async (userId, context) => context.clientContext?.trusted !== 'yes',
 });
 ```

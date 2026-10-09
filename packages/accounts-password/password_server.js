@@ -310,21 +310,23 @@ const passwordValidator = Match.OneOf(
 //
 // Note that neither password option is secure without SSL.
 //
-const twoFactorClientContext = Match.Optional(Match.Where(value => {
-  if (typeof Accounts._isValid2faClientContext === 'function') {
-    return Accounts._isValid2faClientContext(value);
-  }
-  return !!value && typeof value === 'object' && !Array.isArray(value);
-}));
+/** An invalid context is dropped. `localStorage.getItem` returns null when nothing is stored. */
+const clientContextOrNull = value =>
+  Accounts._isValid2faClientContext?.(value) ? value : null;
 
 /**
  * Ask accounts-2fa to enforce the second factor. Falls back to the historical
  * synchronous check when an older accounts-2fa (without `_enforce2faOnLogin`) is installed.
- * The fallback throws. The new path returns a Meteor.Error so the caller can keep `userId`.
+ * The fallback throws. The new path returns a Meteor.Error so the caller can keep `userId`,
+ * but only after the app opts in. Otherwise the error is thrown, as before.
  */
 const enforceSecondFactor = async (user, code, method, context) => {
   if (Accounts._enforce2faOnLogin) {
-    return Accounts._enforce2faOnLogin({ user, code, method, context });
+    const twoFactorError = await Accounts._enforce2faOnLogin({ user, code, method, context });
+    if (twoFactorError && !Accounts._2faPolicyOptedIn?.()) {
+      throw twoFactorError;
+    }
+    return twoFactorError;
   }
   if (!Accounts._check2faEnabled?.(user)) {
     return undefined;
@@ -367,7 +369,7 @@ Accounts.registerLoginHandler("password", async function (options) {
       return Match.test(value, pattern);
     })),
     twoFactorMethod: Match.Optional(Match.OneOf('otp', 'email')),
-    twoFactorContext: twoFactorClientContext,
+    twoFactorContext: Match.Optional(Match.Any),
   });
 
 
@@ -385,8 +387,9 @@ Accounts.registerLoginHandler("password", async function (options) {
   }
 
   const result = await checkPasswordAsync(user, options.password);
-  // Returning { userId, error } (instead of throwing) lets validateLoginAttempt
-  // see the user, so an account lockout still applies during the second factor.
+  // Once the app opts in, returning { userId, error } (instead of throwing) lets
+  // validateLoginAttempt see the user, so an account lockout still applies
+  // during the second factor. Without an opt-in, enforceSecondFactor throws.
   if (!result.error) {
     const twoFactorError = await enforceSecondFactor(
       user,
@@ -395,7 +398,7 @@ Accounts.registerLoginHandler("password", async function (options) {
       {
         loginMethod: 'password',
         connection: this.connection,
-        clientContext: options.twoFactorContext || null,
+        clientContext: clientContextOrNull(options.twoFactorContext),
       }
     );
     if (twoFactorError) {

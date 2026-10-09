@@ -111,10 +111,10 @@ Accounts.configure2fa({
 });
 ```
 
-After that, a second factor is required for every user (see the policy below).
+After that, a second factor is required for every user who has one (see the policy below). A user with no authenticator and no verified address can still sign in.
 
-- If the user has not set up an authenticator, the code is emailed as soon as the password is accepted.
-- If the user has set up an authenticator, nothing is emailed until they ask for it. The client receives `error.error === 'no-2fa-code'` and `error.details.methods`, for example `['otp', 'email']`.
+- If the user has not set up an authenticator and has a verified address, the code is emailed as soon as the password is accepted.
+- If the user has set up an authenticator, the email factor is not offered. The client receives `error.error === 'no-2fa-code'` and `error.details.methods` of `['otp']`. Set `email.offerToOtpUsers` to `true` to let that user choose email as well. Nothing is emailed until they ask for it, and `error.details.methods` is then `['otp', 'email']`.
 
 ```js
 Accounts.request2faEmailCode(email, password, error => {
@@ -130,7 +130,7 @@ The email code is 6 digits, expires after 10 minutes, accepts 5 attempts, and ca
 
 `Accounts.validate2faChallenge(({ user, connection, method }) => {})` runs before an email code is sent. Throw to skip the send, for example when the account is locked. The login then fails with that error instead of `no-2fa-code`, and no message is sent. The user document handed to the hook is the login projection: read lockout fields from the database if you need them.
 
-Customize the message with `Accounts.emailTemplates.twoFactorCode` (`subject` and `text` or `html`). The code is `extra.code`. In development the code is also printed on the server.
+Customize the message with `Accounts.emailTemplates.twoFactorCode` (`subject` and `text` or `html`). The code is `extra.code`. Without `MAIL_URL`, the `email` package prints the message on the server.
 
 `Meteor.passwordlessLoginWithToken` cannot be completed with an email code. An email login plus an email code is still one factor, so only an authenticator code is accepted there.
 
@@ -140,8 +140,8 @@ Email codes are not an AAL2 authenticator in NIST SP 800-63B. Use the authentica
 
 `Accounts.config({ require2fa })` is server-only:
 
-- omitted: every user, once `email.enabled` is set; otherwise only users who turned on the authenticator (the historical behavior);
-- `true`: every user;
+- omitted: users who turned on the authenticator, and, once `email.enabled` is set, users who have a usable second factor. Users with none can still sign in;
+- `true`: every user, including users who have no second factor (`2fa-method-unavailable`);
 - `false`: only users who turned on the authenticator;
 - `(userId, context) => boolean`: the app decides. If the function throws, a second factor is required.
 
@@ -169,9 +169,9 @@ Accounts.config({
 
 `false` from the function is the only way to skip a user who enabled an authenticator. `Accounts.config({ require2fa: false })` does not.
 
-`Accounts.on2faVerified(({ user, connection, method }) => {})` runs from `Accounts.onLogin`, after every `validateLoginAttempt` hook has allowed the login. Issue the trusted-browser token from the app there (random, stored as a hash, with an expiry) and hand it to the client from your own method. This package does not store it. A login that a validator rejects never reaches this hook, so the token is not issued.
+`Accounts.on2faVerified(({ user, connection, method }) => {})` runs from `Accounts.onLogin`, after every `validateLoginAttempt` hook has allowed the login. It runs only for the connection that presented the accepted code. Issue the trusted-browser token from the app there (random, stored as a hash, with an expiry) and hand it to the client from your own method. This package does not store it. A login that a validator rejects never reaches this hook, so the token is not issued.
 
-When a second factor is required and the user has none (no authenticator, and no usable email), the login fails with `2fa-method-unavailable`.
+When `require2fa` is `true`, or the callback returns `true`, and the user has no second factor (no authenticator, and no usable email), the login fails with `2fa-method-unavailable`. The default policy does not: a user with no factor can still sign in.
 
 `Accounts.resetPassword` and `Accounts.verifyEmail` still change the account, but they do not open a session when the policy requires a second factor (`2fa-enabled`). The user signs in afterwards.
 
