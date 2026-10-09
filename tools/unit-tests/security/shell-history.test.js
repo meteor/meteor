@@ -88,20 +88,36 @@ posixTest('history linked to /dev/null to disable it keeps working', () => {
   }
 });
 
-test('failed permission repair closes the descriptor and installs no history listener', () => {
+test('failed permission repair disables history without throwing', () => {
   let openedFd;
+  const warn = jest.fn();
   const session = historySession(directory, {
     ...fs,
     openSync(...args) { return openedFd = fs.openSync(...args); },
     fchmodSync() { throw new Error('synthetic permission failure'); },
-  });
+  }, { console: { warn } });
   try {
-    expect(() => session.initializeHistory()).toThrow('synthetic permission failure');
+    expect(() => session.initializeHistory()).not.toThrow();
     expect(() => fs.fstatSync(openedFd)).toThrow();
     expect(session.repl.listenerCount('line')).toBe(0);
+    expect(session.repl.listenerCount('exit')).toBe(0);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0][0]).toContain('synthetic permission failure');
   } finally {
     try { fs.closeSync(openedFd); } catch {}
   }
+});
+
+test('history that cannot be opened disables history without throwing', () => {
+  const warn = jest.fn();
+  const session = historySession(directory, {
+    ...fs,
+    openSync() { throw new Error('synthetic open failure'); },
+  }, { console: { warn } });
+  expect(() => session.initializeHistory()).not.toThrow();
+  expect(session.repl.listenerCount('line')).toBe(0);
+  expect(warn).toHaveBeenCalledTimes(1);
+  expect(warn.mock.calls[0][0]).toContain('synthetic open failure');
 });
 
 function compileSession(directory, filesystem = fs) {

@@ -346,17 +346,26 @@ class Server {
   initializeHistory() {
     const repl = this.repl;
     const historyFile = getHistoryFile(this.shellDir);
-    let historyFd = openSync(historyFile, "a+", 0o600);
+    let historyFd = -1;
     let historyLines;
     try {
+      historyFd = openSync(historyFile, "a+", 0o600);
       // Use the opened descriptor to avoid a path race; /dev/null may disable history.
       if (fstatSync(historyFd).isFile()) {
         fchmodSync(historyFd, 0o600);
       }
       historyLines = readFileSync(historyFd, "utf8").split("\n");
     } catch (error) {
-      closeSync(historyFd);
-      throw error;
+      if (historyFd >= 0) {
+        closeSync(historyFd);
+      }
+      // The shell works without persistent history; throwing here would
+      // crash the app server, since this runs in a socket data handler.
+      console.warn(
+        "meteor shell: command history is not saved because " +
+          historyFile + " could not be opened privately: " + error.message
+      );
+      return;
     }
     const seenLines = Object.create(null);
 
