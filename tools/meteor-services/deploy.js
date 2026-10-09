@@ -981,12 +981,15 @@ async function getDeployURL(site) {
     return galaxyDiscoveryCache.get(site);
   }
 
-  // Otherwise, try https, then just use the default. There is deliberately
-  // no plain http attempt: whoever answers discovery chooses where the
-  // account token goes.
+  // Otherwise, try https, then http, then just use the default. Galaxy only
+  // answers over http for sites without a certificate yet, such as a new
+  // app's first deploy outside us-east-1. Whoever answers discovery chooses
+  // where the account token goes, so either answer must name a Galaxy deploy
+  // server below.
   let discoveredURL;
   try {
-    discoveredURL = await discoverGalaxy(site);
+    discoveredURL = await discoverGalaxy(site, "https")
+      .catch(() => discoverGalaxy(site, "http"));
   } catch (e) {
     galaxyDiscoveryCache.set(site, DEFAULT_DEPLOY_URL);
     return DEFAULT_DEPLOY_URL;
@@ -1006,8 +1009,8 @@ async function getDeployURL(site) {
   return deployURL;
 }
 
-async function discoverGalaxy(site) {
-  const discoveryURL = "https://" + site + "/.well-known/meteor/deploy-url";
+async function discoverGalaxy(site, scheme) {
+  const discoveryURL = scheme + "://" + site + "/.well-known/meteor/deploy-url";
   // If httpHelpers.request throws, the returned Promise will reject, which is
   // fine.
   const { response, body } = await request({

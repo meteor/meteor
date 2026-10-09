@@ -143,6 +143,32 @@ describe('Galaxy discovery (MET-009)', () => {
       expectTokenOnlySentToGalaxy();
     });
 
+    test('a site without a certificate is found over http', async () => {
+      // Galaxy has no certificate for an app that does not exist yet, so a
+      // first deploy to another region is only discovered over http.
+      load({
+        discovery: url => url.startsWith('https://')
+          ? { error: new Error('synthetic TLS failure') }
+          : galaxyAnswer(GALAXY_DEPLOY_URLS[1])(),
+      });
+
+      expect(await deploy.listAuthorized(SITE)).toBe(0);
+
+      expect(wire.filter(r => r.url.endsWith(DISCOVERY_PATH)).map(r => r.url))
+        .toEqual([`https://${SITE}${DISCOVERY_PATH}`, `http://${SITE}${DISCOVERY_PATH}`]);
+      expect(rpcRequests().map(r => r.url))
+        .toEqual([`${GALAXY_DEPLOY_URLS[1]}/info/${SITE}`]);
+      expectTokenOnlySentToGalaxy();
+    });
+
+    test('http is not tried when https discovery answers', async () => {
+      load({ discovery: galaxyAnswer(GALAXY_DEPLOY_URLS[1]) });
+
+      expect(await deploy.listAuthorized(SITE)).toBe(0);
+
+      expect(wire.filter(r => r.url.startsWith('http://'))).toEqual([]);
+    });
+
     test('a site that is not on Galaxy uses the default server', async () => {
       load({ discovery: () => ({ statusCode: 404, body: 'Not found' }) });
 
@@ -177,16 +203,26 @@ describe('Galaxy discovery (MET-009)', () => {
       expect(errorOutput()).toMatch(/DEPLOY_HOSTNAME/);
     });
 
-    test('route 2: no plaintext discovery after an https failure', async () => {
+    test('route 2: plaintext discovery selecting an attacker server', async () => {
       load({
         discovery: url => url.startsWith('https://')
           ? { error: new Error('synthetic TLS failure') }
           : galaxyAnswer('https://collector.attacker.example')(),
       });
 
+      const status = await deploy.listAuthorized(SITE);
+
+      expect(requestsWithToken()).toEqual([]);
+      expect(rpcRequests()).toEqual([]);
+      expect(status).toBe(1);
+      expect(errorOutput()).toMatch(/not a Galaxy deploy server/);
+    });
+
+    test('route 2: failed https and http discovery use the default server', async () => {
+      load({ discovery: () => ({ error: new Error('synthetic network failure') }) });
+
       expect(await deploy.listAuthorized(SITE)).toBe(0);
 
-      expect(wire.filter(r => r.url.startsWith('http://'))).toEqual([]);
       expect(rpcRequests().map(r => r.url))
         .toEqual([`${DEFAULT_DEPLOY_URL}/info/${SITE}`]);
       expectTokenOnlySentToGalaxy();
