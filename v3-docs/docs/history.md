@@ -10,6 +10,136 @@ This is a complete history of changes for Meteor releases.
 
 [//]: # (go to meteor/docs/generators/changelog/docs)
 
+
+
+## v3.3.3, 2026-10-13
+
+### Highlights
+
+- Validate Google and Facebook direct-login tokens against the application's OAuth configuration, use provider-verified Google identity fields, and keep Facebook verification errors from exposing the app secret.
+- Prevent server crashes caused by invalid DDP protocol-handler names and unhandled asynchronous handler rejections.
+- Include all modified top-level fields in allow/deny checks, closing a field-authorization bypass.
+- Bound dynamic-import request size and complexity, batch large legitimate module graphs, and limit failed module reads and logging.
+- Keep `meteor shell` history and compilation caches private on POSIX systems, and keep the app running when private history persistence is unavailable.
+- Restrict deploy destinations returned by discovery to trusted HTTPS Galaxy servers before sending account credentials, while preserving HTTP discovery for first deploys.
+
+#### Breaking Changes
+
+- `google-oauth`: Native sign-in that directly supplies an iOS or Android access token without `serverAuthCode` must list that client in `additionalClientIds`, or supply a Google-validated `idToken` for an accepted client and the same user. Google email and picture data no longer fall back to client-supplied fields; apps must request the corresponding scopes.
+- `dynamic-import`: Oversized or malformed requests now receive HTTP 413 or 400. The updated client batches large valid graphs, but already-open clients running older code may need a refresh during a rolling deployment. Individual module paths must fit the new enforced limits.
+- `allow-deny`: Update validators now receive `__proto__` in the modified-field list instead of omitting it. Review validators that rely on that list.
+- Deploy discovery now rejects destinations outside Galaxy's HTTPS deploy domain. Custom deploy servers must be selected explicitly through `DEPLOY_HOSTNAME`; that override remains trusted with the account credentials.
+
+#### Internal API changes
+
+- DDP protocol dispatch accepts only string names for handlers defined directly on the handler table. Extensions that inherit protocol handlers must define them directly.
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+meteor update --release 3.3.3
+```
+
+- **Google sign-in:** For native access-token sign-in without `serverAuthCode`, set `additionalClientIds` in the server's Google service configuration to your application's iOS and Android OAuth client IDs, or send a matching `idToken` that Google can validate for an accepted client. Request `email` and `profile` scopes if your app needs those fields. Allow outbound access to `oauth2.googleapis.com` when using ID-token validation, alongside the existing Google API endpoints. The standard server authorization-code flow exchanges the code for tokens before validation.
+- **Dynamic imports:** Deploy the updated client and server together. If older open clients fail to load a large uncached module graph after the server update, refresh them to load the client that batches requests.
+- **Allow/deny:** Check validators that restrict updates by field name, including applications that intentionally use a top-level `__proto__` field.
+- **Meteor shell:** If a permissions warning appears, check ownership and permission support for `.meteor/local/shell`. The shell continues without persistent history when it cannot ensure privacy, and compilation runs without disk caching when the cache cannot be made private.
+- **Deploy:** Review any `DEPLOY_HOSTNAME` override and trust its destination before supplying account credentials. Automatic discovery still tries HTTP when HTTPS discovery fails, including first deploys before a site has a certificate; the discovery-selected deploy server must use trusted Galaxy HTTPS.
+
+#### Bumped Meteor Packages
+
+- allow-deny@2.1.1
+- ddp-server@3.1.3
+- dynamic-import@0.8.0
+- facebook-oauth@1.12.0
+- google-oauth@1.5.0
+- shell-server@0.6.3
+- meteor-tool@3.3.3
+
+#### Bumped NPM Packages
+
+N/A
+
+#### Special thanks to
+
+✨✨✨
+
+- [@italojs](https://github.com/italojs), for implementing and adapting the fixes.
+- [@Grubba27](https://github.com/Grubba27) and [@nachocodoner](https://github.com/nachocodoner), for reviewing dynamic-import.
+- Vext Labs, for the OAuth vulnerability disclosure.
+
+✨✨✨
+## v3.3.2, 05-08-2025
+
+### Highlights
+
+- Async-compatible account URLs and email-sending coverage [#13740](https://github.com/meteor/meteor/pull/13740)
+- Move `findUserByEmail` method from `accounts-password` to `accounts-base` [#13859](https://github.com/meteor/meteor/pull/13859)
+- Return `insertedId` on client `upsert` to match Meteor 2.x behavior [#13891](https://github.com/meteor/meteor/pull/13891)
+- Unrecognized operator bug fixed [#13895](https://github.com/meteor/meteor/pull/13895)
+- Security fix for `sha.js` [#13908](https://github.com/meteor/meteor/pull/13908)
+
+
+All Merged PRs@[GitHub PRs 3.3.2](https://github.com/meteor/meteor/pulls?q=is%3Apr+is%3Amerged+base%3Arelease-3.3.2)
+
+#### Breaking Changes
+
+N/A
+
+##### Cordova Upgrade
+
+- Enable modern browser support for Cordova unless explicitly disabled [#13896](https://github.com/meteor/meteor/pull/13896)
+
+####  Internal API changes
+
+- lodash.template dependency was removed [#13898](https://github.com/meteor/meteor/pull/13898)
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+meteor update --release 3.3.2
+```
+
+---
+
+If you find any issues, please report them to the [Meteor issues tracker](https://github.com/meteor/meteor).
+
+#### Bumped Meteor Packages
+
+- accounts-base@3.1.2
+- accounts-password@3.2.1
+- accounts-passwordless@3.0.2
+- meteor-node-stubs@1.2.24
+- babel-compiler@7.12.2
+- boilerplate-generator@2.0.2
+- ecmascript@0.16.13
+- minifier@3.0.4
+- minimongo@2.0.4
+- mongo@2.1.4
+- coffeescript-compiler@2.4.3
+- npm-mongo@6.16.1
+- shell-server@0.6.2
+- typescript@5.6.6
+
+#### Bumped NPM Packages
+
+- meteor-node-stubs@1.2.23
+
+#### Special thanks to
+
+✨✨✨
+
+- [@italojs](https://github.com/italojs)
+- [@nachocodoner](https://github.com/nachocodoner)
+- [@graemian](https://github.com/graemian)
+- [@Grubba27](https://github.com/Grubba27)
+- [@copleykj](https://github.com/copleykj)
+
+✨✨✨
 ## v3.3.1, 05-08-2025
 
 ### Highlights
@@ -125,8 +255,7 @@ If you find any issues, please report them to the [Meteor issues tracker](https:
 - [@welkinwong](https://github.com/welkinwong)
 - [@Saksham-Goel1107](https://github.com/Saksham-Goel1107)
 
-✨✨✨
-
+✨✨✨ 
 ## v3.3.0, 2025-06-11
 
 ### Highlights
@@ -239,7 +368,6 @@ If you find any issues, please report them to the [Meteor issues tracker](https:
 - [@StorytellerCZ](https://github.com/StorytellerCZ)
 
 ✨✨✨ 
-
 ## v3.2.2, 2025-05-02
 
 ### Highlights
@@ -264,7 +392,7 @@ Please run the following command to update your project:
 
 ```bash
 
-meteor update --release 3.2.1
+meteor update --release 3.2.2
 
 ```
 
@@ -838,6 +966,7 @@ For making this great framework even better!
   - `Accounts.sendVerificationEmail`
   - `Accounts.addEmail`
   - `Accounts.removeEmail`
+  - `Accounts.replaceEmailAsync`
   - `Accounts.verifyEmail`
   - `Accounts.createUserVerifyingEmail`
   - `Accounts.createUser`

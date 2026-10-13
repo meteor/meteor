@@ -97,6 +97,29 @@ if (false) {
 
 Make sure the whitelist is imported from both the client and server entry points.
 
+## Request limits and updates
+
+Dynamic-import requests have a maximum body size of 1 MiB and limits on the
+depth and size of the requested module tree. The client automatically batches
+large module graphs into smaller requests, so you can keep using `import()`
+without splitting the graph yourself.
+
+The server rejects oversized request bodies with HTTP 413 and malformed or
+overly complex request trees with HTTP 400. Each individual module path must
+also fit the path length and nesting limits; batching cannot shorten a path.
+Shorten file or directory names, or reduce directory nesting, if an individual
+path exceeds those limits.
+
+::: warning
+**Updating existing deployments**
+
+Deploy the updated client and server together. During a rolling deployment,
+an already-open client running older code can still send a request that exceeds
+the new limits. If it fails to load a large uncached module graph, refresh it
+to load the client that batches requests.
+
+:::
+
 ## Difference to other bundling systems
 
 In Meteor's implementation, the client has perfect information about which

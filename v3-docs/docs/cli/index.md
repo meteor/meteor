@@ -706,7 +706,9 @@ meteor deploy your-app.meteorapp.com
 
 ### Deploy Region
 
-`meteor deploy` finds the app's region by requesting `https://<site>/.well-known/meteor/deploy-url`, or the same address over HTTP when the site has no certificate yet. It only accepts a deploy server on Galaxy's deploy domain, `galaxy-deploy.meteor.com` (for example `eu-west-1.galaxy-deploy.meteor.com`). If the lookup gets no answer, the `us-east-1` region is used.
+`meteor deploy` finds the app's region by requesting `https://<site>/.well-known/meteor/deploy-url`. If HTTPS discovery fails, it tries the same address over HTTP, including for first deploys before a site has a certificate. If both lookups fail, the `us-east-1` region is used.
+
+Automatic discovery only accepts HTTPS URLs on Galaxy's deploy domain, `galaxy-deploy.meteor.com`, or its subdomains (for example `https://eu-west-1.galaxy-deploy.meteor.com`). If a discovery response names another destination, deployment stops before account credentials are sent.
 
 To choose a region yourself, or to use any other deploy server, set `DEPLOY_HOSTNAME`:
 
@@ -1597,8 +1599,14 @@ The `meteor shell` command connects to a running Meteor server and provides an i
 | Feature | Description |
 |---------|-------------|
 | **Tab Completion** | Built-in tab completion for global variables like `Meteor`, `Mongo`, and `Package` |
-| **Persistent History** | Command history is maintained across sessions |
+| **Persistent History** | Command history is maintained across sessions when private storage is available |
 | **Command Recall** | Access previously-run commands using the up arrow key |
+
+::: warning History and cache privacy
+Shell commands can contain secrets. On POSIX systems, Meteor restricts access to the history file and compilation cache under `.meteor/local/shell` to their owner.
+
+If history cannot be opened privately, the shell continues without persistent history and the app keeps running. If the cache directory cannot be made private, shell commands compile without disk caching. When a permissions warning appears, check the directory's ownership and the file system's support for private permissions.
+:::
 
 ### Example Usage
 

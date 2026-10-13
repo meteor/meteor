@@ -225,6 +225,33 @@ Now you can manage your app with **Android Studio**, including connecting to phy
 
 Now you can manage your app with **XCode**, including connecting to physical devices or emulators, reviewing code, using debugging tools, and more.
 
+### Google sign-in
+
+If your native Google sign-in sends an iOS or Android access token directly, without `serverAuthCode`, the token must belong to one of your application's OAuth clients. Add those client IDs to `additionalClientIds` in the server's Google service configuration, for example in your Meteor settings:
+
+```json
+{
+  "packages": {
+    "service-configuration": {
+      "google": {
+        "clientId": "WEB_CLIENT_ID.apps.googleusercontent.com",
+        "secret": "...",
+        "additionalClientIds": [
+          "IOS_CLIENT_ID.apps.googleusercontent.com",
+          "ANDROID_CLIENT_ID.apps.googleusercontent.com"
+        ]
+      }
+    }
+  }
+}
+```
+
+Only list client IDs from your own Google Cloud project. Alternatively, send an `idToken` that Google can validate, whose audience matches the configured `clientId` or an `additionalClientIds` entry and whose user matches the access token's Google user. Allow outbound access to `oauth2.googleapis.com` when using this ID-token validation.
+
+The flow that sends `serverAuthCode` exchanges that code on the server for tokens before validation. It does not require listing a native client solely because the login starts on a mobile device.
+
+Request the `email` and `profile` scopes if your app needs Google email and profile fields. The login method uses Google's identity response and no longer fills missing identity fields from client-supplied values, including email and picture.
+
 ## Production
 
 ### Build
