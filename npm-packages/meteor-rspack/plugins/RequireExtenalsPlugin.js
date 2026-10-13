@@ -280,7 +280,6 @@ class RequireExternalsPlugin {
       // 3) Collect any new externals from this build and separate into eager, lazy, and last
       const newLazyRequires = [];
       const newEagerRequires = [];
-      const newLastRequires = [];
 
       for (const module of info.modules) {
         const name = module.name;
@@ -293,7 +292,7 @@ class RequireExternalsPlugin {
 
           // Check if this should be a last import
           if (this._lastImports && Array.isArray(this._lastImports) && this._lastImports.includes(pkg)) {
-            newLastRequires.push(`require('${pkg}')`);
+            continue;
           }
           // Check if this should be an eager import
           else if (this._isEagerImport && typeof this._isEagerImport === 'function' && this._isEagerImport(pkg)) {
@@ -337,133 +336,21 @@ class RequireExternalsPlugin {
         }
       }
 
-      // 6) Handle lastImports - these should always be at the end of the file
-      // First, check if lastImports already exist in the file
-      let lastImportsExist = false;
-      let lastImportsAtEnd = false;
-      let content = '';
-
-      if (fs.existsSync(this.filePath)) {
-        content = fs.readFileSync(this.filePath, 'utf-8');
-
-        // Check if lastImports exist in the file
-        const lastImportsRe = /\/\/\s*\(function\s+lastImports(?:\d+)?\s*\(\)\s*{\s*\n([\s\S]*?)\/\/\s*\}\)/g;
-        const match = lastImportsRe.exec(content);
-
-        if (match) {
-          lastImportsExist = true;
-
-          // Check if lastImports are at the end of the file
-          // We'll consider them at the end if there's only whitespace after them
-          const afterLastImports = content.substring(match.index + match[0].length);
-          if (/^\s*$/.test(afterLastImports)) {
-            lastImportsAtEnd = true;
-          }
-        }
-      }
-
-      // If lastImports exist but are not at the end, move them to the end
-      if (lastImportsExist && !lastImportsAtEnd) {
-        // Remove the existing lastImports
-        const lastImportsRe = /\/\/\s*\(function\s+lastImports(?:\d+)?\s*\(\)\s*{\s*\n[\s\S]*?\/\/\s*\}\)\s*(\r?\n)?/g;
-        content = content.replace(lastImportsRe, '');
-
-        // Extract the imports from the existing lastImports
-        const importRe = /import\s+'([^']+)'/g;
-        const existingLastImports = [];
-        let match;
-
-        while ((match = importRe.exec(content)) !== null) {
-          if (this._lastImports && Array.isArray(this._lastImports) && this._lastImports.includes(match[1])) {
-            existingLastImports.push(`import '${match[1]}';`);
-          }
-        }
-
-        // Add any new lastImports
-        if (this._lastImports && Array.isArray(this._lastImports)) {
-          for (const pkg of this._lastImports) {
-            if (!existingLastImports.some(imp => imp === `import '${pkg}';`) && existing.has(pkg)) {
-              existingLastImports.push(`import '${pkg}';`);
-            }
-          }
-        }
-
-        // Add the lastImports to the end of the file
-        if (existingLastImports.length > 0) {
-          const body = existingLastImports.join('\n');
-          const fnCode = `\n// (function lastImports() {\n${body}\n// })\n`;
-          this._safeWrite(content + fnCode);
-        } else {
-          this._safeWrite(content);
-        }
-      }
-      // If lastImports don't exist, add them if needed
-      else if (!lastImportsExist) {
-        // Collect all lastImports
-        const allLastImports = [];
-
-        // Add any new lastImports from this build
-        if (newLastRequires.length) {
-          for (const req of newLastRequires) {
-            const modulePath = req.match(/require\('([^']+)'\)/)[1];
-            allLastImports.push(`import '${modulePath}';`);
-          }
-        }
-
-        // Add any existing lastImports from the configuration
-        if (this._lastImports && Array.isArray(this._lastImports)) {
-          for (const pkg of this._lastImports) {
-            if (!allLastImports.some(imp => imp === `import '${pkg}';`) && !existing.has(pkg)) {
-              allLastImports.push(`import '${pkg}';`);
-            }
-          }
-        }
-
-        // Add the lastImports to the end of the file
-        if (allLastImports.length > 0) {
-          const body = allLastImports.join('\n');
-          const fnCode = `\n// (function lastImports() {\n${body}\n// })\n`;
-          try {
-            fs.appendFileSync(this.filePath, fnCode);
-          } catch (err) {
-            console.error(`Failed to append last imports to ${this.filePath}:`, err);
-          }
-        }
-      }
-      // If lastImports exist and are already at the end, add any new ones
-      else if (lastImportsExist && lastImportsAtEnd && newLastRequires.length) {
-        // Extract the existing lastImports
-        const lastImportsRe = /\/\/\s*\(function\s+lastImports(?:\d+)?\s*\(\)\s*{\s*\n([\s\S]*?)\/\/\s*\}\)/;
-        const match = lastImportsRe.exec(content);
-
-        if (match) {
-          const existingBody = match[1];
-          const existingImports = new Set();
-
-          // Extract the imports from the existing lastImports
-          const importRe = /import\s+'([^']+)'/g;
-          let importMatch;
-
-          while ((importMatch = importRe.exec(existingBody)) !== null) {
-            existingImports.add(importMatch[1]);
-          }
-
-          // Add any new lastImports
-          let newBody = existingBody;
-          for (const req of newLastRequires) {
-            const modulePath = req.match(/require\('([^']+)'\)/)[1];
-            if (!existingImports.has(modulePath)) {
-              newBody += `import '${modulePath}';\n`;
-            }
-          }
-
-          // Replace the existing lastImports with the updated ones
-          const updatedContent = content.replace(
-            lastImportsRe,
-            `// (function lastImports() {\n${newBody}// })`
-          );
-
-          this._safeWrite(updatedContent);
+      // 6) Keep explicit trailing imports in configuration order after every
+      // successful build. This also upgrades an existing entry when a new
+      // bridge is added, and moves the block after newly discovered externals.
+      if (Array.isArray(this._lastImports)) {
+        const content = fs.existsSync(this.filePath)
+          ? fs.readFileSync(this.filePath, 'utf-8')
+          : '';
+        const lastImportsRe = /^\/\/\s*\(function\s+lastImports(?:\d+)?\s*\(\)\s*\{\s*\r?\n[\s\S]*?^\/\/\s*\}\)\s*(?:\r?\n|$)/gm;
+        const imports = [...new Set(this._lastImports)]
+          .map(pkg => `import '${pkg}';`)
+          .join('\n');
+        const block = imports ? `\n// (function lastImports() {\n${imports}\n// })\n` : '';
+        const updated = content.replace(lastImportsRe, '').trimEnd() + '\n' + block;
+        if (updated !== content) {
+          this._safeWrite(updated);
         }
       }
     });
@@ -540,22 +427,23 @@ class RequireExternalsPlugin {
 
   _readExistingRequires() {
     const existing = new Set();
-    // Generated Rspack bridge imports are not managed externals. Relative
-    // imports such as Blaze HTML files still belong to this plugin.
-    const isRspackBridgeImport = (modulePath) =>
+    // Explicit trailing imports and generated Rspack bridges are not managed
+    // externals. Preserve them when removing dependencies from older builds.
+    const isPreservedImport = (modulePath) =>
       typeof modulePath === 'string' &&
-      /(?:^|[/\\])[^/\\]*-rspack\.(?:js|cjs)$/.test(modulePath);
+      (this._lastImports?.includes(modulePath) ||
+        /(?:^|[/\\])[^/\\]*-rspack\.(?:js|cjs)$/.test(modulePath));
     try {
       const content = fs.readFileSync(this.filePath, 'utf-8');
       // Check for require statements
       let match;
       while ((match = STANDALONE_REQUIRE_REGEX.exec(content)) !== null) {
-        if (!isRspackBridgeImport(match[1])) existing.add(match[1]);
+        if (!isPreservedImport(match[1])) existing.add(match[1]);
       }
 
       // Also check for import statements (used in the new format)
       while ((match = STANDALONE_IMPORT_REGEX.exec(content)) !== null) {
-        if (!isRspackBridgeImport(match[1])) existing.add(match[1]);
+        if (!isPreservedImport(match[1])) existing.add(match[1]);
       }
     } catch {
       // ignore if file missing or unreadable
