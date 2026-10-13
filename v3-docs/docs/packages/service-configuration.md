@@ -199,6 +199,35 @@ await ServiceConfiguration.configurations.upsertAsync(
 );
 ```
 
+### Native Google sign-in
+
+When a native app sends an iOS or Android Google access token directly without a `serverAuthCode`, Meteor validates the sign-in against your application's OAuth configuration. To accept tokens issued to your native clients, add their IDs to `additionalClientIds` in the server's Google service configuration:
+
+```json
+{
+  "packages": {
+    "service-configuration": {
+      "google": {
+        "clientId": "WEB_CLIENT_ID.apps.googleusercontent.com",
+        "secret": "YOUR_CLIENT_SECRET",
+        "additionalClientIds": [
+          "IOS_CLIENT_ID.apps.googleusercontent.com",
+          "ANDROID_CLIENT_ID.apps.googleusercontent.com"
+        ]
+      }
+    }
+  }
+}
+```
+
+Only list client IDs belonging to your own Google Cloud project. You can also set `additionalClientIds` through `ServiceConfiguration.configurations.upsertAsync`, using the same pattern as the configuration above.
+
+Alternatively, send the access token with an `idToken` that Google can validate. The ID token must have an audience matching `clientId` or an entry in `additionalClientIds`, and identify the same Google user as the access token. Configure your native SDK with the web client ID to obtain an ID token for that client. If your server restricts outbound connections, allow access to `oauth2.googleapis.com` for ID-token validation, alongside the existing Google API endpoints.
+
+When the sign-in request supplies a `serverAuthCode`, Meteor exchanges that code for tokens using the configured web client before validating the returned access token. Native apps using this flow do not need to list their native client IDs solely for access-token validation.
+
+Request the `email` and `profile` scopes if your app needs Google email or picture fields. Meteor uses identity fields returned by Google and does not fill missing fields from the client's `userId`, `email`, or `imageUrl`. Handle missing fields when the user has not granted the corresponding permissions.
+
 ## GitHub
 
 ### Setting up GitHub OAuth

@@ -9,6 +9,65 @@ This is a complete history of changes for Meteor releases.
 [//]: # (If you want to change something in this file)
 
 [//]: # (go to meteor/v3-docs/docs/generators/changelog/versions)
+## v3.4.2, 2026-10-13
+
+### Highlights
+
+- Validate Google and Facebook direct-login tokens against the application's OAuth configuration, use provider-verified Google identity fields, and keep Facebook verification errors from exposing the app secret.
+- Prevent server crashes caused by invalid DDP protocol-handler names and unhandled asynchronous handler rejections.
+- Include all modified top-level fields in allow/deny checks, closing a field-authorization bypass.
+- Bound dynamic-import request size and complexity, batch large legitimate module graphs, and limit failed module reads and logging.
+- Keep `meteor shell` history and compilation caches private on POSIX systems, and keep the app running when private history persistence is unavailable.
+- Restrict deploy destinations returned by discovery to trusted HTTPS Galaxy servers before sending account credentials, while preserving HTTP discovery for first deploys.
+
+#### Breaking Changes
+
+- `google-oauth`: Native sign-in that directly supplies an iOS or Android access token without `serverAuthCode` must list that client in `additionalClientIds`, or supply a Google-validated `idToken` for an accepted client and the same user. Google email and picture data no longer fall back to client-supplied fields; apps must request the corresponding scopes.
+- `dynamic-import`: Oversized or malformed requests now receive HTTP 413 or 400. The updated client batches large valid graphs, but already-open clients running older code may need a refresh during a rolling deployment. Individual module paths must fit the new enforced limits.
+- `allow-deny`: Update validators now receive `__proto__` in the modified-field list instead of omitting it. Review validators that rely on that list.
+- Deploy discovery now rejects destinations outside Galaxy's HTTPS deploy domain. Custom deploy servers must be selected explicitly through `DEPLOY_HOSTNAME`; that override remains trusted with the account credentials.
+
+#### Internal API changes
+
+- DDP protocol dispatch accepts only string names for handlers defined directly on the handler table. Extensions that inherit protocol handlers must define them directly.
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+meteor update --release 3.4.2
+```
+
+- **Google sign-in:** For native access-token sign-in without `serverAuthCode`, set `additionalClientIds` in the server's Google service configuration to your application's iOS and Android OAuth client IDs, or send a matching `idToken` that Google can validate for an accepted client. Request `email` and `profile` scopes if your app needs those fields. Allow outbound access to `oauth2.googleapis.com` when using ID-token validation, alongside the existing Google API endpoints. The standard server authorization-code flow exchanges the code for tokens before validation.
+- **Dynamic imports:** Deploy the updated client and server together. If older open clients fail to load a large uncached module graph after the server update, refresh them to load the client that batches requests.
+- **Allow/deny:** Check validators that restrict updates by field name, including applications that intentionally use a top-level `__proto__` field.
+- **Meteor shell:** If a permissions warning appears, check ownership and permission support for `.meteor/local/shell`. The shell continues without persistent history when it cannot ensure privacy, and compilation runs without disk caching when the cache cannot be made private.
+- **Deploy:** Review any `DEPLOY_HOSTNAME` override and trust its destination before supplying account credentials. Automatic discovery still tries HTTP when HTTPS discovery fails, including first deploys before a site has a certificate; the discovery-selected deploy server must use trusted Galaxy HTTPS.
+
+#### Bumped Meteor Packages
+
+- allow-deny@2.1.1
+- ddp-server@3.2.1
+- dynamic-import@0.8.0
+- facebook-oauth@1.12.0
+- google-oauth@1.5.0
+- shell-server@0.7.1
+- meteor-tool@3.4.2
+
+#### Bumped NPM Packages
+
+N/A
+
+#### Special thanks to
+
+✨✨✨
+
+- [@italojs](https://github.com/italojs), for implementing and adapting the fixes.
+- [@Grubba27](https://github.com/Grubba27) and [@nachocodoner](https://github.com/nachocodoner), for reviewing dynamic-import.
+- Vext Labs, for the OAuth vulnerability disclosure.
+
+✨✨✨
 ## v3.4.1, 2026-04-28
 
 ### Highlights
@@ -16,11 +75,11 @@ This is a complete history of changes for Meteor releases.
 #### Rspack Improvements
 
 - **Pin `@meteorjs/rspack` to v2.x in Meteor 3.4.1**, [PR#14365](https://github.com/meteor/meteor/pull/14365)
-  - Bumps the minimum `@meteorjs/rspack` requirement from `^1.0.0` to `^2.0.0` across all core packages, skeletons, and docs
-  - v1.1.x introduced significant changes to config defaults. Without this bump, Meteor 3.4 users running `npm install @meteorjs/rspack@^1.0.0` could silently pick up incompatible defaults and hit a broken build
-  - Each Meteor release now pins to a major of `@meteorjs/rspack` (Meteor 3.4 -> v1, Meteor 3.4.1 -> v2). A future release may further restrict to a specific minor (e.g., `2.x.x`) so breaking changes are clearer
-  - `@meteorjs/rspack` semver is independent of `@rspack/core` / `@rspack/cli`; keeping them in sync is not practical because the Meteor integration may have different needs
-  - Existing apps pick up v2 automatically after running `meteor update --release 3.4.1`, followed by `meteor run` or `meteor update --npm`
+  - 📦 Bumps the minimum `@meteorjs/rspack` requirement from `^1.0.0` to `^2.0.0` across all core packages, skeletons, and docs
+  - 🚧 v1.1.x introduced significant changes to config defaults. Without this bump, Meteor 3.4 users running `npm install @meteorjs/rspack@^1.0.0` could silently pick up incompatible defaults and hit a broken build
+  - 🔗 Each Meteor release now pins to a major of `@meteorjs/rspack` (Meteor 3.4 → v1, Meteor 3.4.1 → v2). A future release may further restrict to a specific minor (e.g., `2.x.x`) so breaking changes are clearer
+  - ⚠️ `@meteorjs/rspack` semver is independent of `@rspack/core` / `@rspack/cli`; keeping them in sync is not practical because the Meteor integration may have different needs
+  - 🔄 Existing apps pick up v2 automatically after running `meteor update --release 3.4.1`, followed by `meteor run` or `meteor update --npm`
 - Enable automatic CSS delegation to Rspack, [PR#14257](https://github.com/meteor/meteor/pull/14257)
 - Add support for `swc.config.ts` configuration files, [PR#14150](https://github.com/meteor/meteor/pull/14150), [PR#14233](https://github.com/meteor/meteor/pull/14233)
 - Support running multiple Rspack instances via `METEOR_LOCAL_DIR` to isolate build contexts, [PR#14165](https://github.com/meteor/meteor/pull/14165)
@@ -108,6 +167,10 @@ Please run the following command to update your project:
 meteor update --release 3.4.1
 ```
 
+---
+
+If you find any issues, please report them to the [Meteor issues tracker](https://github.com/meteor/meteor).
+
 #### Bumped Meteor Packages
 
 - meteor-tool@3.4.1
@@ -145,6 +208,40 @@ meteor update --release 3.4.1
 
 - @meteorjs/rspack@2.0.1
 
+#### Special thanks to
+
+✨✨✨
+
+- [@nachocodoner](https://github.com/nachocodoner)
+- [@italojs](https://github.com/italojs)
+- [@Grubba27](https://github.com/Grubba27)
+- [@zarvox](https://github.com/zarvox)
+- [@calm329](https://github.com/calm329)
+- [@StorytellerCZ](https://github.com/StorytellerCZ)
+- [@sanki92](https://github.com/sanki92)
+- [@bratelefant](https://github.com/bratelefant)
+- [@carlosarraes](https://github.com/carlosarraes)
+- [@graemian](https://github.com/graemian)
+- [@9Morello](https://github.com/9Morello)
+- [@ReinaT5678](https://github.com/ReinaT5678)
+- [@zodern](https://github.com/zodern)
+- [@paritoshdey-dev](https://github.com/paritoshdey-dev)
+- [@dolgarev](https://github.com/dolgarev)
+- [@wreiske](https://github.com/wreiske)
+- [@welkinwong](https://github.com/welkinwong)
+- [@shamshad-ansari](https://github.com/shamshad-ansari)
+- [@ebroder](https://github.com/ebroder)
+- [@sblaisot](https://github.com/sblaisot)
+- [@Shresthap21](https://github.com/Shresthap21)
+- [@thenileshmishra](https://github.com/thenileshmishra)
+- [@slegarraga](https://github.com/slegarraga)
+- [@mvogttech](https://github.com/mvogttech)
+- [@dupontbertrand](https://github.com/dupontbertrand)
+- [@fredmaiaarantes](https://github.com/fredmaiaarantes)
+- [@imajus](https://github.com/imajus)
+- [@perbergland](https://github.com/perbergland)
+
+✨✨✨
 ## v3.4.0, 2026-01-30
 
 ### Highlights

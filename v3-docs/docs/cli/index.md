@@ -769,7 +769,7 @@ meteor deploy your-app.meteorapp.com
 
 ### Deploy Region
 
-`meteor deploy` finds the app's region by requesting `https://<site>/.well-known/meteor/deploy-url`, or the same address over HTTP when the site has no certificate yet. It only accepts a deploy server on Galaxy's deploy domain, `galaxy-deploy.meteor.com` (for example `eu-west-1.galaxy-deploy.meteor.com`). If the lookup gets no answer, the `us-east-1` region is used.
+`meteor deploy` finds the app's region by requesting `https://<site>/.well-known/meteor/deploy-url`. If HTTPS discovery fails, it retries the same address over HTTP, including for first deploys before a site has a certificate. The discovered destination must be an HTTPS deploy server on Galaxy's deploy domain, `galaxy-deploy.meteor.com` (for example `eu-west-1.galaxy-deploy.meteor.com`). If neither lookup gets an answer, the `us-east-1` region is used. An untrusted discovery response stops deployment before account credentials are sent.
 
 To choose a region yourself, or to use any other deploy server, set `DEPLOY_HOSTNAME`:
 
@@ -1660,8 +1660,12 @@ The `meteor shell` command connects to a running Meteor server and provides an i
 | Feature | Description |
 |---------|-------------|
 | **Tab Completion** | Built-in tab completion for global variables like `Meteor`, `Mongo`, and `Package` |
-| **Persistent History** | Command history is maintained across sessions |
+| **Persistent History** | Command history is saved across sessions when private storage is available |
 | **Command Recall** | Access previously-run commands using the up arrow key |
+
+::: info Private shell storage
+On POSIX systems, Meteor keeps regular shell history files private with permissions `0600` and the compilation cache directory with `0700`. If a permissions warning appears, check ownership and permission support for `.meteor/local/shell`, especially in shared checkouts or Docker bind mounts. The shell and app keep running without persistent history when private history storage is unavailable. Commands compile without disk caching when the cache directory cannot be made private.
+:::
 
 ### Example Usage
 
