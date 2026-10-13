@@ -71,12 +71,8 @@ class AssetBundleManager {
             if (partialDownloadDirectory.equals(file)) continue;
 
             if (file.isDirectory()) {
-                try {
-                    AssetBundle assetBundle = new AssetBundle(resourceApi, Uri.fromFile(file), null, initialAssetBundle);
-                    downloadedAssetBundlesByVersion.put(assetBundle.getVersion(), assetBundle);
-                } catch (WebAppException e) {
-                    Log.w(LOG_TAG, "Could not load downloaded asset bundle from " + file, e);
-                }
+                AssetBundle assetBundle = new AssetBundle(resourceApi, Uri.fromFile(file), null, initialAssetBundle);
+                downloadedAssetBundlesByVersion.put(assetBundle.getVersion(), assetBundle);
             }
         }
     }
@@ -123,13 +119,6 @@ class AssetBundleManager {
                 }
 
                 final String version = manifest.version;
-
-                // The version is used as the name of the directory the downloaded asset
-                // bundle is stored in, so it must not point outside the versions directory
-                if (!AssetManifest.isValidVersion(version)) {
-                    didFail(new WebAppException("Asset manifest has an invalid version: " + version));
-                    return;
-                }
 
                 Log.d(LOG_TAG, "Downloaded asset manifest for version: " + version);
 
@@ -327,13 +316,8 @@ class AssetBundleManager {
 
             if (version.equals(versionToKeep)) continue;
 
-            // Never delete anything outside of the versions directory
-            if (AssetManifest.isValidVersion(version)) {
-                File versionDirectory = new File(versionsDirectory, version);
-                IOUtils.deleteRecursively(versionDirectory);
-            } else {
-                Log.w(LOG_TAG, "Not removing asset bundle with invalid version: " + version);
-            }
+            File versionDirectory = new File(versionsDirectory, version);
+            IOUtils.deleteRecursively(versionDirectory);
             iterator.remove();
         }
     }
