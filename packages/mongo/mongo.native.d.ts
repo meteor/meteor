@@ -86,11 +86,12 @@ export namespace Mongo {
     transform?: Transform<T> | undefined;
   };
 
-  type DispatchTransform<TransformFn, T, U> = TransformFn extends (
-    ...args: never[]
-  ) => infer R
+  // Tuple-wrapped so a widened `Transform<T> | undefined` falls back to U instead of distributing to `unknown`.
+  type DispatchTransform<TransformFn, T, U> = [TransformFn] extends [
+    (...args: never[]) => infer R
+  ]
     ? R
-    : TransformFn extends null
+    : [TransformFn] extends [null]
     ? T
     : U;
 

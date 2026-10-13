@@ -44,8 +44,8 @@ export namespace EJSON {
   function clone<T>(val: T): T;
 
   function equals(
-    a: EJSON,
-    b: EJSON,
+    a: EJSONableProperty,
+    b: EJSONableProperty,
     options?: { keyOrderSensitive?: boolean | undefined },
   ): boolean;
 
@@ -58,12 +58,12 @@ export namespace EJSON {
   function parse(str: string): EJSON;
 
   function stringify(
-    val: EJSON,
+    val: EJSONableProperty,
     options?: {
       indent?: boolean | number | string | undefined;
       canonical?: boolean | undefined;
     },
   ): string;
 
-  function toJSONValue(val: EJSON): JSONable;
+  function toJSONValue(val: EJSONableProperty): JSONable;
 }

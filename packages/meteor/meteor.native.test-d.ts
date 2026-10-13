@@ -180,3 +180,27 @@ expectTypeOf(Meteor.disconnect).toBeFunction();
 expectTypeOf(Meteor.status).toBeFunction();
 expectTypeOf<Meteor.Connection>().toBeObject();
 expectTypeOf(Meteor.onConnection).toBeFunction();
+// The client's default DDP connection is the object the proxied methods bind to (#14815).
+expectTypeOf(Meteor.connection).toEqualTypeOf<DDP.DDPStatic>();
+expectTypeOf(Meteor.connection.status()).toEqualTypeOf<DDP.DDPStatus>();
+expectTypeOf(Meteor.connection.subscribe("subscription-handle-fixture")).toEqualTypeOf<
+  Meteor.SubscriptionHandleWithId
+>();
+
+// --- Assets (server global, #14815) ---
+expectTypeOf(Assets.getTextAsync("nested/data.txt")).resolves.toBeString();
+expectTypeOf(Assets.getBinaryAsync("nested/data.bin")).resolves.toEqualTypeOf<Uint8Array>();
+expectTypeOf(
+  Assets.getTextAsync("nested/data.txt", (error, text) => {
+    expectTypeOf(error).toEqualTypeOf<Error | null>();
+    expectTypeOf(text).toEqualTypeOf<string | undefined>();
+  }),
+).toBeVoid();
+expectTypeOf(
+  Assets.getBinaryAsync("nested/data.bin", (error, data) => {
+    expectTypeOf(error).toEqualTypeOf<Error | null>();
+    expectTypeOf(data).toEqualTypeOf<Uint8Array | undefined>();
+  }),
+).toBeVoid();
+expectTypeOf(Assets.absoluteFilePath("nested/data.txt")).toBeString();
+expectTypeOf(Assets.getServerDir()).toBeString();

@@ -31,9 +31,10 @@ expectTypeOf(EJSONNs.clone<string>("s")).toBeString();
 expectTypeOf(EJSONNs.clone).toBeFunction();
 
 expectTypeOf(EJSONNs.equals).parameters.toEqualTypeOf<
-  [EJSON, EJSON, { keyOrderSensitive?: boolean | undefined }?]
+  [EJSONableProperty, EJSONableProperty, { keyOrderSensitive?: boolean | undefined }?]
 >();
 expectTypeOf(EJSONNs.equals).returns.toBeBoolean();
+expectTypeOf(EJSONNs.equals(new Date(), [1, 2])).toBeBoolean();
 
 expectTypeOf(EJSONNs.fromJSONValue).toBeFunction();
 expectTypeOf(EJSONNs.fromJSONValue(42)).toEqualTypeOf<42>();
@@ -50,9 +51,19 @@ expectTypeOf(EJSONNs.parse).parameters.toEqualTypeOf<[string]>();
 expectTypeOf(EJSONNs.parse).returns.toEqualTypeOf<EJSON>();
 
 expectTypeOf(EJSONNs.stringify).parameters.toEqualTypeOf<
-  [EJSON, { indent?: boolean | number | string | undefined; canonical?: boolean | undefined }?]
+  [
+    EJSONableProperty,
+    { indent?: boolean | number | string | undefined; canonical?: boolean | undefined }?,
+  ]
 >();
 expectTypeOf(EJSONNs.stringify).returns.toBeString();
+// Any EJSON value is accepted, not only plain objects (#14815).
+expectTypeOf(EJSONNs.stringify("abc")).toBeString();
+expectTypeOf(EJSONNs.stringify(42)).toBeString();
+expectTypeOf(EJSONNs.stringify([1, 2])).toBeString();
+expectTypeOf(EJSONNs.stringify(new Date())).toBeString();
+expectTypeOf(EJSONNs.stringify(null)).toBeString();
 
-expectTypeOf(EJSONNs.toJSONValue).parameters.toEqualTypeOf<[EJSON]>();
+expectTypeOf(EJSONNs.toJSONValue).parameters.toEqualTypeOf<[EJSONableProperty]>();
 expectTypeOf(EJSONNs.toJSONValue).returns.toEqualTypeOf<JSONable>();
+expectTypeOf(EJSONNs.toJSONValue(new Date())).toEqualTypeOf<JSONable>();

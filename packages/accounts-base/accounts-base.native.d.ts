@@ -276,6 +276,17 @@ export namespace Accounts {
     options?: { fields?: Mongo.FieldSpecifier | undefined }
   ): Promise<Meteor.User | null | undefined>;
 
+  /**
+   * (Server) Update the user whose `services.<serviceName>.id` matches
+   * `serviceData.id`, or create one. `options` (for example `profile`) are
+   * applied on creation. Resolves to the shape returned by login handlers.
+   */
+  function updateOrCreateUserFromExternalService(
+    serviceName: string,
+    serviceData: { id: string | number; [key: string]: unknown },
+    options?: { profile?: Meteor.UserProfile | undefined; [key: string]: unknown }
+  ): Promise<{ type: string; userId: string }>;
+
   interface SendEmailOptions {
     from: string;
     to: string;

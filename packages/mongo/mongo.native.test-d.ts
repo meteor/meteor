@@ -117,6 +117,19 @@ expectTypeOf(transformed.findOneAsync("id")).resolves.toEqualTypeOf<
 const queryTransformed = coll.find({}, { transform: (doc) => ({ label: doc.name }) });
 expectTypeOf(queryTransformed.fetch()).toEqualTypeOf<Array<{ label: string }>>();
 
+// Options typed as Mongo.Options<T> fall back to the collection document type (#14815).
+function query(options: Mongo.Options<Doc> = {}) {
+  return coll.find({}, options);
+}
+expectTypeOf(query().fetch()).toEqualTypeOf<Doc[]>();
+expectTypeOf(coll.find({}, undefined).fetch()).toEqualTypeOf<Doc[]>();
+declare const typedOptions: Mongo.Options<Doc>;
+expectTypeOf(coll.findOne({}, typedOptions)).toEqualTypeOf<Doc | undefined>();
+expectTypeOf(coll.findOneAsync({}, typedOptions)).resolves.toEqualTypeOf<Doc | undefined>();
+expectTypeOf(transformed.find({}, typedOptions).fetch()).toEqualTypeOf<Array<{ label: string }>>();
+expectTypeOf(transformed.find({}, { transform: null }).fetch()).toEqualTypeOf<Doc[]>();
+expectTypeOf<Mongo.DispatchTransform<Mongo.Transform<Doc> | undefined, Doc, Doc>>().toEqualTypeOf<Doc>();
+
 // Collection Extensions API
 expectTypeOf(Mongo.Collection.addExtension).toBeFunction();
 expectTypeOf(Mongo.Collection.addPrototypeMethod).parameter(0).toBeString();Mongo.Collection.addStaticMethod<

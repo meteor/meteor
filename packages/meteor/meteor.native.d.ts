@@ -574,6 +574,9 @@ export namespace Meteor {
   /** Login **/
 
   /** Connection **/
+  /** (Client) The default DDP connection; `Meteor.subscribe`, `Meteor.call` and the other proxied methods are bound to it. */
+  var connection: DDP.DDPStatic;
+
   function reconnect(): void;
 
   function disconnect(): void;
@@ -722,4 +725,26 @@ export namespace Meteor {
   var isAppTest: boolean;
   var isPackageTest: boolean;
   /** Global props **/
+}
+
+declare global {
+  /** (Server) Read-only access to the files under the application's `private` directory. Not importable; provided as a global. */
+  namespace Assets {
+    /** Read an asset as a UTF-8 string, resolving a Promise or calling a Node-style `callback` when one is given. */
+    function getTextAsync(assetPath: string): Promise<string>;
+    function getTextAsync(
+      assetPath: string,
+      callback: (error: Error | null, result?: string) => void
+    ): void;
+    /** Read an asset as binary data, resolving a Promise or calling a Node-style `callback` when one is given. */
+    function getBinaryAsync(assetPath: string): Promise<Uint8Array>;
+    function getBinaryAsync(
+      assetPath: string,
+      callback: (error: Error | null, result?: Uint8Array) => void
+    ): void;
+    /** Absolute filesystem path of the asset inside the server bundle. */
+    function absoluteFilePath(assetPath: string): string;
+    /** @internal */
+    function getServerDir(): string;
+  }
 }
