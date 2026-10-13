@@ -1470,6 +1470,13 @@ LocalCollection._modify = (doc, modifier, options = {}) => {
       Object.keys(operand).forEach(keypath => {
         const arg = operand[keypath];
 
+        // The server's Mongo driver runs with `ignoreUndefined: true` and DDP
+        // drops undefined values when serializing, so MongoDB never sees these
+        // fields. Skip them here too (meteor/meteor#14837).
+        if (arg === undefined) {
+          return;
+        }
+
         if (keypath === '') {
           throw MinimongoError('An empty update path is not valid.');
         }
