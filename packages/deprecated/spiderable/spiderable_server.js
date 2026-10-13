@@ -23,97 +23,9 @@ Spiderable.userAgentRegExps = [
 // how long to let phantomjs run before we kill it (and send down the
 // regular page instead). Users may modify this number.
 Spiderable.requestTimeoutMs = 15*1000;
-Spiderable.maxConcurrentRequests = 2;
-Spiderable.maxQueuedRequests = 8;
-Spiderable.queueTimeoutMs = 5*1000;
 // maximum size of result HTML. node's default is 200k which is too
 // small for our docs.
 var MAX_BUFFER = 5*1024*1024; // 5MB
-
-Spiderable._createRendererScheduler = function (config) {
-  var active = 0;
-  var queue = [];
-
-  var readInteger = function (getter, fallback, minimum) {
-    var value = getter();
-    return Number.isInteger(value) && value >= minimum ? value : fallback;
-  };
-
-  var start = function (entry) {
-    entry.state = "started";
-    if (entry.timer) Meteor.clearTimeout(entry.timer);
-    if (entry.onStart) entry.onStart();
-    active += 1;
-    Promise.resolve()
-      .then(entry.task)
-      .catch(function (error) {
-        if (entry.onError) entry.onError(error);
-        else Meteor._debug("spiderable: renderer task failed:", error);
-      })
-      .then(function () {
-        active -= 1;
-        drain();
-      });
-  };
-
-  var drain = function () {
-    var maxConcurrent = readInteger(config.maxConcurrent, 2, 1);
-    while (active < maxConcurrent && queue.length > 0) {
-      start(queue.shift());
-    }
-  };
-
-  return {
-    schedule: function (task, onRejected, onStart, onError) {
-      var maxConcurrent = readInteger(config.maxConcurrent, 2, 1);
-      var maxQueued = readInteger(config.maxQueued, 8, 0);
-      var entry = {
-        task: task,
-        onRejected: onRejected,
-        onStart: onStart,
-        onError: onError,
-        state: "new",
-        timer: null
-      };
-
-      entry.cancel = function () {
-        if (entry.state !== "queued") return false;
-        var index = queue.indexOf(entry);
-        if (index !== -1) queue.splice(index, 1);
-        if (entry.timer) Meteor.clearTimeout(entry.timer);
-        entry.state = "cancelled";
-        return true;
-      };
-
-      if (active < maxConcurrent) {
-        start(entry);
-      } else if (queue.length >= maxQueued) {
-        entry.state = "rejected";
-        onRejected("queue_full");
-      } else {
-        entry.state = "queued";
-        queue.push(entry);
-        var timeout = readInteger(config.queueTimeoutMs, 5000, 1);
-        entry.timer = Meteor.setTimeout(function () {
-          if (!entry.cancel()) return;
-          onRejected("queue_timeout");
-        }, timeout);
-      }
-
-      return entry;
-    },
-    stats: function () {
-      return { active: active, queued: queue.length };
-    }
-  };
-};
-
-var rendererScheduler = Spiderable._createRendererScheduler({
-  maxConcurrent: function () { return Spiderable.maxConcurrentRequests; },
-  maxQueued: function () { return Spiderable.maxQueuedRequests; },
-  queueTimeoutMs: function () { return Spiderable.queueTimeoutMs; }
-});
-var phantomScriptPromise = Assets.getTextAsync("phantom_script.js");
 
 // Exported for tests.
 Spiderable._urlForPhantom = function (siteAbsoluteUrl, requestUrl) {
@@ -145,150 +57,77 @@ Spiderable._urlForPhantom = function (siteAbsoluteUrl, requestUrl) {
 };
 
 WebApp.handlers.use(function (req, res, next) {
+  var PHANTOM_SCRIPT = Assets.getTextAsync("phantom_script.js");
   // _escaped_fragment_ comes from Google's AJAX crawling spec:
   // https://developers.google.com/webmasters/ajax-crawling/docs/specification
   if (/\?.*_escaped_fragment_=/.test(req.url) ||
       _.any(Spiderable.userAgentRegExps, function (re) {
         return re.test(req.headers['user-agent']); })) {
 
-    var removeQueueListeners = function () {
-      req.removeListener("aborted", cancelQueuedRequest);
-      res.removeListener("close", cancelQueuedRequest);
-    };
-    var ticket;
-    var cancelQueuedRequest = function () {
-      if (ticket && ticket.cancel()) removeQueueListeners();
-    };
-    var rejectRequest = function () {
-      removeQueueListeners();
-      if (!res.destroyed && !res.writableEnded) next();
-    };
+    var url = Spiderable._urlForPhantom(Meteor.absoluteUrl(), req.url);
 
-    ticket = rendererScheduler.schedule(async function () {
-      var url = Spiderable._urlForPhantom(Meteor.absoluteUrl(), req.url);
-      var PHANTOM_SCRIPT;
-      try {
-        PHANTOM_SCRIPT = await phantomScriptPromise;
-      } catch (error) {
-        Meteor._debug("spiderable: could not load phantom script:", error);
-        if (!res.destroyed && !res.writableEnded) next();
-        return;
-      }
-      if (req.aborted || res.destroyed || res.writableEnded) return;
+    // This string is going to be put into a bash script, so it's important
+    // that 'url' (which comes from the network) can neither exploit phantomjs
+    // or the bash script. JSON stringification should prevent it from
+    // exploiting phantomjs, and since the output of JSON.stringify shouldn't
+    // be able to contain newlines, it should be unable to exploit bash as
+    // well.
+    var phantomScript = "var url = " + JSON.stringify(url) + ";" +
+          PHANTOM_SCRIPT;
 
-      // This string is going to be put into a bash script, so it's important
-      // that 'url' (which comes from the network) can neither exploit phantomjs
-      // or the bash script. JSON stringification should prevent it from
-      // exploiting phantomjs, and since the output of JSON.stringify shouldn't
-      // be able to contain newlines, it should be unable to exploit bash as
-      // well.
-      var phantomScript = "var url = " + JSON.stringify(url) + ";" +
-            PHANTOM_SCRIPT;
+    // Allow override of phantomjs args via env var
+    // We use one env var to try to keep env-var explosion under control.
+    // We're not going to document this unless it is actually needed;
+    // (if you find yourself needing this please let us know the use case!)
+    var phantomJsArgs = process.env.METEOR_PKG_SPIDERABLE_PHANTOMJS_ARGS || '';
 
-      // Allow override of phantomjs args via env var
-      // We use one env var to try to keep env-var explosion under control.
-      // We're not going to document this unless it is actually needed;
-      // (if you find yourself needing this please let us know the use case!)
-      var phantomJsArgs = process.env.METEOR_PKG_SPIDERABLE_PHANTOMJS_ARGS || '';
+    // Default image loading to off (we don't need images)
+    if (phantomJsArgs.indexOf("--load-images=") === -1) {
+      phantomJsArgs += " --load-images=no";
+    }
 
-      // Default image loading to off (we don't need images)
-      if (phantomJsArgs.indexOf("--load-images=") === -1) {
-        phantomJsArgs += " --load-images=no";
-      }
+    // POODLE means SSLv3 is being turned off everywhere.
+    // phantomjs currently defaults to SSLv3, and won't use TLS.
+    // Use --ssl-protocol to set the default to TLSv1
+    // (another option would be 'any', but really, we want to say >= TLSv1)
+    // More info: https://groups.google.com/forum/#!topic/meteor-core/uZhT3AHwpsI
+    if (phantomJsArgs.indexOf("--ssl-protocol=") === -1) {
+      phantomJsArgs += " --ssl-protocol=TLSv1";
+    }
 
-      // POODLE means SSLv3 is being turned off everywhere.
-      // phantomjs currently defaults to SSLv3, and won't use TLS.
-      // Use --ssl-protocol to set the default to TLSv1
-      // (another option would be 'any', but really, we want to say >= TLSv1)
-      // More info: https://groups.google.com/forum/#!topic/meteor-core/uZhT3AHwpsI
-      if (phantomJsArgs.indexOf("--ssl-protocol=") === -1) {
-        phantomJsArgs += " --ssl-protocol=TLSv1";
-      }
+    // Run phantomjs.
+    //
+    // Use '/dev/stdin' to avoid writing to a temporary file. We can't
+    // just omit the file, as PhantomJS takes that to mean 'use a
+    // REPL' and exits as soon as stdin closes.
+    //
+    // However, Node 0.8 broke the ability to open /dev/stdin in the
+    // subprocess, so we can't just write our string to the process's stdin
+    // directly; see https://gist.github.com/3751746 for the gory details. We
+    // work around this with a bash heredoc. (We previous used a "cat |"
+    // instead, but that meant we couldn't use exec and had to manage several
+    // processes.)
+    child_process.execFile(
+      '/usr/bin/env',
+      ['bash', '-c',
+       ("exec phantomjs " + phantomJsArgs + " /dev/stdin <<'END'\n" +
+        phantomScript + "END\n")],
+      {timeout: Spiderable.requestTimeoutMs, maxBuffer: MAX_BUFFER},
+      function (error, stdout, stderr) {
+        if (!error && /<html/i.test(stdout)) {
+          res.writeHead(200, {'Content-Type': 'text/html; charset=UTF-8'});
+          res.end(stdout);
+        } else {
+          // phantomjs failed. Don't send the error, instead send the
+          // normal page.
+          if (error && error.code === 127)
+            Meteor._debug("spiderable: phantomjs not installed. Download and install from http://phantomjs.org/");
+          else
+            Meteor._debug("spiderable: phantomjs failed at " + url + ":", error, "\nstderr:", stderr, "\nstdout:", stdout);
 
-      await new Promise(function (resolve) {
-        var child;
-        var finished = false;
-        var killTimer;
-        var timeoutKillTimer;
-        var cleanup = function () {
-          req.removeListener("aborted", abort);
-          res.removeListener("close", abort);
-          if (killTimer) Meteor.clearTimeout(killTimer);
-          if (timeoutKillTimer) Meteor.clearTimeout(timeoutKillTimer);
-        };
-        var finish = function () {
-          if (finished) return false;
-          finished = true;
-          cleanup();
-          resolve();
-          return true;
-        };
-        var abort = function () {
-          if (!child) {
-            finish();
-            return;
-          }
-          child.kill();
-          killTimer = Meteor.setTimeout(function () {
-            if (!finished) child.kill("SIGKILL");
-          }, 1000);
-        };
-        req.once("aborted", abort);
-        res.once("close", abort);
-        if (req.aborted || res.destroyed || res.writableEnded) {
-          abort();
-          return;
-        }
-
-        // Run phantomjs. The shell uses exec so killing this child also kills
-        // the renderer rather than leaving a descendant behind.
-        var requestTimeoutMs = Spiderable.requestTimeoutMs;
-        try {
-          child = child_process.execFile(
-            '/usr/bin/env',
-            ['bash', '-c',
-             ("exec phantomjs " + phantomJsArgs + " /dev/stdin <<'END'\n" +
-              phantomScript + "END\n")],
-            {timeout: requestTimeoutMs, maxBuffer: MAX_BUFFER},
-            function (error, stdout, stderr) {
-              if (!finish()) return;
-              if (req.aborted || res.destroyed || res.writableEnded) return;
-              if (!error && /<html/i.test(stdout)) {
-                res.writeHead(200, {'Content-Type': 'text/html; charset=UTF-8'});
-                res.end(stdout);
-              } else {
-                // phantomjs failed. Don't send the error, instead send the
-                // normal page.
-                if (error && error.code === 127)
-                  Meteor._debug("spiderable: phantomjs not installed. Download and install from http://phantomjs.org/");
-                else
-                  Meteor._debug("spiderable: phantomjs failed at " + url + ":", error, "\nstderr:", stderr, "\nstdout:", stdout);
-
-                next();
-              }
-            });
-          // execFile only sends SIGTERM when the timeout expires. Follow up with
-          // SIGKILL so a renderer that ignores it cannot keep its slot forever.
-          if (requestTimeoutMs > 0) {
-            timeoutKillTimer = Meteor.setTimeout(function () {
-              if (!finished) child.kill("SIGKILL");
-            }, requestTimeoutMs + 1000);
-          }
-        } catch (error) {
-          if (!finish()) return;
-          Meteor._debug("spiderable: phantomjs could not start:", error);
           next();
         }
       });
-    }, rejectRequest, removeQueueListeners, function (error) {
-      Meteor._debug("spiderable: renderer task failed:", error);
-      if (!res.destroyed && !res.writableEnded) next();
-    });
-
-    if (ticket.state === "queued") {
-      req.once("aborted", cancelQueuedRequest);
-      res.once("close", cancelQueuedRequest);
-    }
   } else {
     next();
   }
