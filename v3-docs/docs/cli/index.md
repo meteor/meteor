@@ -769,7 +769,7 @@ meteor deploy your-app.meteorapp.com
 
 ### Deploy Region
 
-`meteor deploy` finds the app's region by requesting `https://<site>/.well-known/meteor/deploy-url`, or the same address over HTTP when the site has no certificate yet. It only accepts a deploy server on Galaxy's deploy domain, `galaxy-deploy.meteor.com` (for example `eu-west-1.galaxy-deploy.meteor.com`). If the lookup gets no answer, the `us-east-1` region is used.
+`meteor deploy` finds the app's region by requesting `https://<site>/.well-known/meteor/deploy-url`. If HTTPS discovery fails, it tries the same address over HTTP, which lets first deploys work before a site has a certificate. Automatic discovery accepts only an HTTPS deploy server on Galaxy's deploy domain, `galaxy-deploy.meteor.com` (for example `https://eu-west-1.galaxy-deploy.meteor.com`). If discovery gets no answer, the `us-east-1` region is used. An untrusted discovery response stops deployment before account credentials are sent.
 
 To choose a region yourself, or to use any other deploy server, set `DEPLOY_HOSTNAME`:
 
@@ -1660,8 +1660,12 @@ The `meteor shell` command connects to a running Meteor server and provides an i
 | Feature | Description |
 |---------|-------------|
 | **Tab Completion** | Built-in tab completion for global variables like `Meteor`, `Mongo`, and `Package` |
-| **Persistent History** | Command history is maintained across sessions |
+| **Persistent History** | Command history is maintained across sessions when it can be stored privately |
 | **Command Recall** | Access previously-run commands using the up arrow key |
+
+::: warning History and cache privacy
+On POSIX systems, Meteor uses owner-only permissions for the shell history file and compilation cache directory. If the history file cannot be opened, made private or read, the shell prints a warning and continues without persistent history. If the cache directory cannot be made private, shell commands compile without disk caching. Check ownership and support for permission changes in `.meteor/local/shell` when these features are unavailable.
+:::
 
 ### Example Usage
 

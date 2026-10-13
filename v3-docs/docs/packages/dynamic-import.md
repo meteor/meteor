@@ -97,6 +97,16 @@ if (false) {
 
 Make sure the whitelist is imported from both the client and server entry points.
 
+## Request limits and deployments
+
+The client automatically fetches large valid module graphs in batches that fit the server's request limits, with the same module caching described above.
+
+Each request body, which contains the module identifiers to fetch, is limited to 1 MiB. The server also limits the depth and size of the module tree. An individual module path can contain at most 64 components, with each component no longer than 1 KiB and the full path no longer than 8 KiB, measured as UTF-8 bytes. Oversized bodies receive HTTP 413; malformed or overly complex request trees receive HTTP 400. Each individual path must fit these limits even when the graph is fetched in batches.
+
+::: warning Rolling deployments
+Deploy the updated client and server together. Already-open clients using older code can still send a large graph in one request. If such a client fails to load a large uncached graph after the server update, refresh it to load the client that batches requests.
+:::
+
 ## Difference to other bundling systems
 
 In Meteor's implementation, the client has perfect information about which

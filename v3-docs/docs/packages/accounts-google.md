@@ -93,6 +93,31 @@ On Cordova, `Meteor.loginWithGoogle` uses the native `Google.signIn` flow (web O
 
 Consult the current Google Sign-In Cordova plugin documentation for the exact per-platform values.
 
+When the native SDK returns a valid `serverAuthCode`, Meteor exchanges it for tokens using the configured web `clientId` before validating the login. This flow does not require `additionalClientIds`.
+
+If your integration sends an iOS or Android access token directly, without `serverAuthCode`, list its OAuth client ID in the optional `additionalClientIds` array in your server-side `settings.json`:
+
+```json
+{
+  "packages": {
+    "service-configuration": {
+      "google": {
+        "clientId": "WEB_CLIENT_ID.apps.googleusercontent.com",
+        "secret": "YOUR_CLIENT_SECRET",
+        "additionalClientIds": [
+          "IOS_CLIENT_ID.apps.googleusercontent.com",
+          "ANDROID_CLIENT_ID.apps.googleusercontent.com"
+        ]
+      }
+    }
+  }
+}
+```
+
+Only list client IDs from your application's Google Cloud project.
+
+Alternatively, send an `idToken` with the access token. Google must validate the ID token, its audience must match the web `clientId` or a listed `additionalClientIds` entry, and both tokens must identify the same Google user. Allow outbound HTTPS access from your server to `oauth2.googleapis.com` for ID-token validation, alongside the Google API endpoints already used for sign-in.
+
 ## A complete example
 
 **1. Configure the OAuth credentials** on the server (for example in `server/main.js`). Google uses `clientId`/`secret`:
@@ -157,6 +182,8 @@ On the server, `accounts-google` registers the `google` OAuth service and, when 
 - For other users: the whitelisted profile fields excluding `email` and `verified_email`.
 
 The whitelisted fields are defined by `google-oauth` and include `id`, `email`, `verified_email`, `name`, `given_name`, `family_name`, `picture`, `locale`, `timezone`, and `gender`.
+
+The identity fields supplied by `google-oauth` come from Google's response. If Google does not return an email or picture, Meteor does not use client-supplied values as a fallback. Request `email` and `profile` scopes when your app needs those fields.
 
 ## See also
 
