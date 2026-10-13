@@ -232,6 +232,120 @@ const importedIdentifierVisitor = new (class extends Visitor {
   }
 });
 
+// Parameters of the function that wraps each module in a bundle (see
+// headerParts in ./linker.js).
+const moduleWrapperParams = [
+  "require",
+  "exports",
+  "module",
+  "__filename",
+  "__dirname",
+];
+
+// Cheap check for declarations like `const __dirname`, `import module from`
+// or `import * as require from`, used to avoid parsing most modules.
+const moduleWrapperParamDeclarationPattern = new RegExp(
+  "\\b(?:const|let|class|import|as)\\s+(?:" +
+    moduleWrapperParams.join("|") + ")\\b"
+);
+
+const moduleOnlySyntaxCache = new LRUCache({
+  max: Math.pow(2, 12),
+});
+
+/**
+ * Returns true if the given ECMAScript module cannot be evaluated after it
+ * has been compiled into a bundle module, either because it uses
+ * import.meta, or because it declares a top-level lexical binding with the
+ * same name as a parameter of the module wrapper function (for example
+ * `const __dirname = ...`). Evaluating either kind of module in a bundle
+ * throws a SyntaxError.
+ */
+export function usesModuleOnlySyntax(source, hash) {
+  if (hash && moduleOnlySyntaxCache.has(hash)) {
+    return moduleOnlySyntaxCache.get(hash);
+  }
+
+  const result = Profile.time("jsAnalyze.usesModuleOnlySyntax", () => {
+    const importMetaIndexes = findPossibleIndexes(source, ["meta"]);
+    const mayDeclareModuleWrapperParam =
+      moduleWrapperParamDeclarationPattern.test(source);
+
+    if (importMetaIndexes.length === 0 && ! mayDeclareModuleWrapperParam) {
+      return false;
+    }
+
+    // Callers such as the ImportScanner may cache ASTs of compiled code
+    // using the hash of the original source, so don't share the AST cache.
+    const ast = tryToParse(source);
+    const program = ast.type === "File" ? ast.program : ast;
+
+    if (mayDeclareModuleWrapperParam &&
+        program.body.some(declaresModuleWrapperParam)) {
+      return true;
+    }
+
+    if (importMetaIndexes.length > 0) {
+      importMetaVisitor.visit(ast, source, importMetaIndexes);
+      return importMetaVisitor.found;
+    }
+
+    return false;
+  });
+
+  if (hash) {
+    moduleOnlySyntaxCache.set(hash, result);
+  }
+
+  return result;
+}
+
+function declaresModuleWrapperParam(node) {
+  if (node.type === "ExportNamedDeclaration" ||
+      node.type === "ExportDefaultDeclaration") {
+    node = node.declaration;
+  }
+
+  if (! node) {
+    return false;
+  }
+
+  switch (node.type) {
+  case "ImportDeclaration":
+    return node.specifiers.some(
+      specifier => isModuleWrapperParam(specifier.local)
+    );
+  case "VariableDeclaration":
+    return node.kind !== "var" && node.declarations.some(
+      declarator => isModuleWrapperParam(declarator.id)
+    );
+  case "ClassDeclaration":
+    return isModuleWrapperParam(node.id);
+  default:
+    return false;
+  }
+}
+
+function isModuleWrapperParam(node) {
+  return !! node && node.type === "Identifier" &&
+    moduleWrapperParams.includes(node.name);
+}
+
+const importMetaVisitor = new (class extends Visitor {
+  reset(rootPath, code, possibleIndexes) {
+    this.found = false;
+    this.possibleIndexes = possibleIndexes;
+  }
+
+  visitMetaProperty(path) {
+    const node = path.getValue();
+    if (isIdWithName(node.meta, "import") &&
+        isIdWithName(node.property, "meta")) {
+      this.found = true;
+    }
+  }
+});
+
 function isIdWithName(node, name) {
   if (! node ||
       node.type !== "Identifier") {
