@@ -50,6 +50,22 @@ async function addVendorPackageWithMap(appDir) {
   await runMeteorCommand('add', ['vendor-with-map'], appDir, { checkExitCode: true });
 }
 
+// A local package with a lazy file, which Meteor writes under dynamic/ for dynamic import().
+async function addLazyPackage(appDir) {
+  const packageDir = path.join(appDir, 'packages', 'lazy-module');
+  await fs.outputFile(path.join(packageDir, 'package.js'), [
+    "Package.describe({ name: 'lazy-module', version: '0.0.1' });",
+    "Package.onUse((api) => {",
+    "  api.use(['ecmascript', 'dynamic-import']);",
+    "  api.addFiles('lazy.js', 'client', { lazy: true });",
+    "  api.mainModule('client.js', 'client');",
+    "});",
+  ].join('\n'));
+  await fs.outputFile(path.join(packageDir, 'client.js'), "export const loadLazy = () => import('./lazy.js');\n");
+  await fs.outputFile(path.join(packageDir, 'lazy.js'), 'export const lazyAnswer = 42;\n');
+  await runMeteorCommand('add', ['lazy-module'], appDir, { checkExitCode: true });
+}
+
 async function readClientBundle(buildOutputDir) {
   const clientDir = path.join(buildOutputDir, 'bundle', 'programs', 'web.browser');
   const program = await fs.readJson(path.join(clientDir, 'program.json'));
@@ -73,6 +89,7 @@ describe('Regressions / Minifier production source maps /', () => {
     await runMeteorCommand('add', ['rspack'], tempDir, { checkExitCode: true });
     await linkLocalRspack(tempDir);
     await addVendorPackageWithMap(tempDir);
+    await addLazyPackage(tempDir);
   }, 600000);
 
   afterAll(async () => {
@@ -113,6 +130,14 @@ describe('Regressions / Minifier production source maps /', () => {
     const original = originalPositionFor(new TraceMap(map), { line: line + 1, column });
     expect(original.source).toMatch(/imports\/ui\/Hello\.jsx$/);
     expect(map.sourcesContent[helloIndex].split('\n')[original.line - 1]).toContain('Click Me');
+  });
+
+  test('"hidden" writes no map under dynamic/, which dynamic-import serves', async () => {
+    const { clientDir } = await build({ sourceMap: 'hidden' });
+
+    const dynamicFiles = await fs.readdir(path.join(clientDir, 'dynamic'), { recursive: true });
+    expect(dynamicFiles).toContain('node_modules/meteor/lazy-module/lazy.js');
+    expect(dynamicFiles.filter((file) => file.endsWith('.map'))).toEqual([]);
   });
 
   test('a source path relative to its package file resolves inside that package', async () => {

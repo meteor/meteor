@@ -500,6 +500,6 @@ of Meteor that don't support that format.
 - `prod-only@1.0.0`: Allows use of the `prodOnly` flag in `Package.describe`.
 - `isobuild:cordova@5.4.0`: This package depends on a specific version of Cordova, most likely as a result of the Cordova plugins it depends on.
 
-### Introduced in the next Meteor release {#isobuild-features-next}
+### Introduced in Meteor 3.7 {#isobuild-features-3.7}
 
 - `minifier-plugin@1.1.0`: Allows a minifier to pass `hiddenSourceMap` to `addJavaScript`.

@@ -1808,8 +1808,8 @@ class ClientTarget extends Target {
       });
 
       if (file.sourceMap && file.hiddenSourceMap) {
-        // The Cordova build copies this whole directory into the app, so a hidden map would ship with it.
-        if (! archinfo.matches(this.arch, 'web.cordova')) {
+        // dynamic-import serves any file under dynamic/, and the Cordova build copies this whole directory into the app.
+        if (! isDynamic && ! archinfo.matches(this.arch, 'web.cordova')) {
           await builder.writeToGeneratedFilename(file.targetPath + '.map', {
             data: Buffer.from(JSON.stringify(file.sourceMap), 'utf8'),
           });

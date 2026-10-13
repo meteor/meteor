@@ -197,11 +197,11 @@ MeteorMinifier.prototype.processFilesForBundle = Profile('processFilesForBundle'
   };
 
   const configuredSourceMapMode = getProductionSourceMapMode(getMeteorConfig());
-  // The bundler writes no hidden map for Cordova, so building one would be wasted work.
+  // The bundler writes no hidden map for Cordova or for dynamic modules, so building one would be wasted work.
+  const skipsHiddenMap =
+    files[0]?.getArch?.() === 'web.cordova' || files[0]?.getPathInBundle().startsWith('dynamic/');
   const sourceMapMode =
-    configuredSourceMapMode === 'hidden' && files[0]?.getArch?.() === 'web.cordova'
-      ? false
-      : configuredSourceMapMode;
+    configuredSourceMapMode === 'hidden' && skipsHiddenMap ? false : configuredSourceMapMode;
   const sourceMap = sourceMapMode ? new SourceMapConcatenator() : null;
   const appendCode = (code, map = null) => {
     toBeAdded.data += code;

@@ -470,9 +470,9 @@ The minifier can write a source map for the production client bundle, for exampl
 | `"hidden"` | `meteor build` writes `<hash>.js.map` next to the bundle in `programs/<arch>/`. The server does not serve it, and the bundle does not point to it. Upload it at deploy time. Cordova builds get no hidden map, because the app package would include it. |
 | `true` | Meteor writes the source map and also serves it, with an `X-SourceMap` header on the bundle. Anyone can then read your client source. |
 
-Any object value for `minifier`, such as `{ "sourceMap": "hidden" }`, turns on the SWC minifier. With `"minifier": false`, `"modern": false` or `METEOR_MODERN`, the option has no effect.
+Any object value for `minifier`, such as `{ "sourceMap": "hidden" }`, turns on the SWC minifier. With `"minifier": false` or `"modern": false`, the option has no effect. `METEOR_MODERN` replaces the `modern` config from package.json, including this option.
 
-The map covers the main bundle and leads back to your original files, including through the Rspack bundle. Its source paths start with `meteor://💻app/`. Each module loaded with Meteor's dynamic `import()` gets its own map next to it under `dynamic/`: written only with `"hidden"`, also served with `true`.
+The map covers the main bundle and leads back to your original files, including through the Rspack bundle. Its source paths start with `meteor://💻app/`. With `true`, each module loaded with Meteor's dynamic `import()` gets its own map next to it under `dynamic/`. With `"hidden"`, these modules get no map, because the server serves every file under `dynamic/`.
 
 ## Web Arch
 
