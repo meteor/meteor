@@ -5945,8 +5945,15 @@ exports.slug = function(str){
 exports.clean = function(str) {
   str = str
     .replace(/\r\n?|[\n\u2028\u2029]/g, "\n").replace(/^\uFEFF/, '')
-    .replace(/^function *\(.*\)\s*{|\(.*\) *=> *{?/, '')
-    .replace(/\s+\}$/, '');
+    .replace(/^function *\(.*\)\s*{|\(.*\) *=> *{?/, '');
+
+  // Remove the final brace and its preceding whitespace without retrying a
+  // whitespace regexp at every position when the input has no matching suffix.
+  var end = str.length - 1;
+  if (str.charAt(end) === '}') {
+    while (end > 0 && /\s/.test(str.charAt(end - 1))) --end;
+    if (end < str.length - 1) str = str.slice(0, end);
+  }
 
   var spaces = str.match(/^\n?( *)/)[1].length
     , tabs = str.match(/^\n?(\t*)/)[1].length
@@ -5966,7 +5973,9 @@ exports.clean = function(str) {
  */
 
 exports.trim = function(str){
-  return str.replace(/^\s+|\s+$/g, '');
+  // Native trim strips the same characters as \s, without the regexp's
+  // quadratic backtracking on long inner whitespace runs.
+  return str.trim();
 };
 
 /**
@@ -6002,8 +6011,8 @@ function highlight(js) {
     .replace(/>/g, '&gt;')
     .replace(/\/\/(.*)/gm, '<span class="comment">//$1</span>')
     .replace(/('.*?')/gm, '<span class="string">$1</span>')
-    .replace(/(\d+\.\d+)/gm, '<span class="number">$1</span>')
-    .replace(/(\d+)/gm, '<span class="number">$1</span>')
+    // Consume each digit run once, even when a dot has no fractional digits.
+    .replace(/(\d+(?:\.\d+)?)/g, '<span class="number">$1</span>')
     .replace(/\bnew[ \t]+(\w+)/gm, '<span class="keyword">new</span> <span class="init">$1</span>')
     .replace(/\b(function|new|throw|return|var|if|else)\b/gm, '<span class="keyword">$1</span>')
 }
