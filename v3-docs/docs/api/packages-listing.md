@@ -81,6 +81,7 @@
 ### [hot-module-replacement](https://github.com/meteor/meteor/tree/devel/packages/hot-module-replacement) {#hot-module-replacement}
 ### [id-map](https://github.com/meteor/meteor/tree/devel/packages/id-map) {#id-map}
 ### [insecure](https://github.com/meteor/meteor/tree/devel/packages/insecure) {#insecure}
+### [instrumentation](https://github.com/meteor/meteor/tree/devel/packages/instrumentation) {#instrumentation}
 ### [inter-process-messaging](https://github.com/meteor/meteor/tree/devel/packages/inter-process-messaging) {#inter-process-messaging}
 ### [launch-screen](https://github.com/meteor/meteor/tree/devel/packages/launch-screen) {#launch-screen}
 ### [localstorage](https://github.com/meteor/meteor/tree/devel/packages/localstorage) {#localstorage}
@@ -92,6 +93,7 @@
 ### [meteor-base](https://github.com/meteor/meteor/tree/devel/packages/meteor-base) {#meteor-base}
 ### [meteor-developer-config-ui](https://github.com/meteor/meteor/tree/devel/packages/meteor-developer-config-ui) {#meteor-developer-config-ui}
 ### [meteor-developer-oauth](https://github.com/meteor/meteor/tree/devel/packages/meteor-developer-oauth) {#meteor-developer-oauth}
+### [meteor-otel](https://github.com/meteor/meteor/tree/devel/packages/meteor-otel) {#meteor-otel}
 ### [meteor-tool](https://github.com/meteor/meteor/tree/devel/packages/meteor-tool) {#meteor-tool}
 ### [minifier-css](https://github.com/meteor/meteor/tree/devel/packages/minifier-css) {#minifier-css}
 ### [minifier-js](https://github.com/meteor/meteor/tree/devel/packages/minifier-js) {#minifier-js}
