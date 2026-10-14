@@ -11,9 +11,15 @@ try {
   ].join("\n"));
 }
 
-if (parseInt(babelRuntimeVersion, 10) < 7 ||
-    (babelRuntimeVersion.indexOf("7.0.0-beta.") === 0 &&
-     parseInt(babelRuntimeVersion.split(".").pop(), 10) < 56)) {
+// Code compiled by @meteorjs/babel imports helpers such as
+// @babel/runtime/helpers/regeneratorRuntime, which only exist in
+// @babel/runtime 7.18.0 and later.
+var babelRuntimeParts = babelRuntimeVersion.split(".");
+var babelRuntimeMajor = parseInt(babelRuntimeParts[0], 10);
+var babelRuntimeMinor = parseInt(babelRuntimeParts[1], 10);
+
+if (babelRuntimeMajor < 7 ||
+    (babelRuntimeMajor === 7 && babelRuntimeMinor < 18)) {
   console.error([
     "The version of @babel/runtime installed in your node_modules directory ",
     "(" + babelRuntimeVersion + ") is out of date. Please upgrade it by running ",

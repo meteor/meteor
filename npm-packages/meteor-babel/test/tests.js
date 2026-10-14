@@ -186,8 +186,14 @@ describe("@meteorjs/babel", () => {
       everythingResult.code
     );
 
+    // @babel/runtime >= 7.18 imports the regeneratorRuntime helper instead
+    // of referencing a global, so the call reads regeneratorRuntime().async(
     assert.ok(
-      /regeneratorRuntime.async\(/.test(everythingResult.code),
+      /regeneratorRuntime(\(\))?\.async\(/.test(everythingResult.code),
+      everythingResult.code
+    );
+    assert.ok(
+      /@babel\/runtime\/helpers\/regeneratorRuntime/.test(everythingResult.code),
       everythingResult.code
     );
 
