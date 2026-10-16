@@ -13,6 +13,7 @@ var COLLECTIONS = {};
 // dumb-forcing changeStream tests only into CI
 const DEFAULT_REACTIVITY = process.env.METEOR_REACTIVITY_ORDER ? process.env.METEOR_REACTIVITY_ORDER.split(',') : undefined;
 var IS_OPLOG = DEFAULT_REACTIVITY && DEFAULT_REACTIVITY[0] === 'oplog';
+var IS_CHANGESTREAM = DEFAULT_REACTIVITY && DEFAULT_REACTIVITY[0] === 'changeStreams';
 
 if (Meteor.isServer) {
   Meteor.methods({
@@ -1022,7 +1023,9 @@ const setsEqual = function (a, b) {
   return difference(a, b).length === 0 && difference(b, a).length === 0;
   };
 
-    if (IS_OPLOG) {
+    // The oplog and change-streams drivers both keep a limited cursor's
+    // window in ObserveWindow.
+    if (IS_OPLOG || IS_CHANGESTREAM) {
       // This test mainly checks the correctness of oplog code dealing with limited
       // queries. Compitablity with poll-diff is added as well.
       Tinytest.addAsync(
@@ -1080,7 +1083,7 @@ const setsEqual = function (a, b) {
           };
           // tests '_id' subfields for all documents in oplog buffer
           var testOplogBufferIds = function(ids) {
-            if (!usesOplog) return;
+            if (!o.handle._multiplexer._observeDriver._unpublishedBuffer) return;
             var bufferIds = [];
             o.handle._multiplexer._observeDriver._unpublishedBuffer.forEach(
               function(x, id) {
@@ -1094,7 +1097,7 @@ const setsEqual = function (a, b) {
             );
           };
           const testSafeAppendToBufferFlag = function(expected) {
-            if (!usesOplog) return;
+            if (!o.handle._multiplexer._observeDriver._unpublishedBuffer) return;
             test.equal(
               o.handle._multiplexer._observeDriver._safeAppendToBuffer,
               expected
@@ -1224,8 +1227,9 @@ const setsEqual = function (a, b) {
           // State: [ 17:8 18:7 19:6 | ]!
 
           // Multi-delete order is not guaranteed. If doc 4 is deleted after it
-          // enters the published set, oplog observers emit a transient add/remove
-          // pair. MongoDB 8 can delete it from the unpublished buffer first.
+          // enters the published set, oplog and change-stream observers emit a
+          // transient add/remove pair. MongoDB 8 can delete it from the
+          // unpublished buffer first.
           expectedRemoves = [
             { removed: docId3 },
             { removed: docId1 },
@@ -1243,7 +1247,8 @@ const setsEqual = function (a, b) {
           ]);
           test.isTrue(
             (o.output.length === 6 && setsEqual(o.output, requiredEvents)) ||
-              (usesOplog && o.output.length === 8 &&
+              (o.handle._multiplexer._observeDriver._unpublishedBuffer &&
+                o.output.length === 8 &&
                 setsEqual(o.output, eventsWithTransientDoc)),
             'unexpected multi-delete callbacks: ' + EJSON.stringify(o.output)
           );

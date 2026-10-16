@@ -7,6 +7,7 @@ import { DiffSequence } from 'meteor/diff-sequence';
 import { listenAll } from './mongo_driver';
 import { replaceTypes, replaceMongoAtomWithMeteor, replaceMeteorAtomWithMongo } from './mongo_common';
 import { compareOperationTimes, fenceWriteTsKey } from './mongo_common';
+import { ObserveWindow } from './observe_window';
 
 const SUPPORTED_OPERATIONS = ['insert', 'update', 'replace', 'delete'];
 
@@ -65,9 +66,43 @@ export class ChangeStreamObserveDriver {
       };
     }
 
+    // A sorted, limited cursor keeps its first `limit` documents plus a buffer
+    // of the next ones in an ObserveWindow, as the oplog driver does. Live
+    // events feed the window; when it runs out of buffered documents it asks
+    // for the query to be re-run (_requestRequery).
+    this._window = null;
+    this._requerying = false;
+    this._requeryAgain = false;
+    this._requeryPromise = null;
+    const limit = this._cursorDescription.options.limit;
+    if (limit) {
+      const sorter = options.sorter;
+      const windowProjection = projection || {};
+      // Kept in memory: the published fields plus what the selector and sort read.
+      this._sharedProjection = sorter.combineIntoProjection(
+        this._matcher.combineIntoProjection(windowProjection)
+      );
+      this._window = new ObserveWindow({
+        multiplexer: this._multiplexer,
+        matcher: this._matcher,
+        sorter,
+        limit,
+        cursorDescription: this._cursorDescription,
+        projectionFn: LocalCollection._compileProjection(windowProjection),
+        sharedProjectionFn: LocalCollection._compileProjection(this._sharedProjection),
+        onNeedRequery: () => this._requestRequery(),
+        // Before ready the initial query is still running.
+        isQuerying: () => this._requerying || !this._isReady,
+      });
+    }
+
     this._startListening();
     this._startWatching();
   }
+
+  // A limited cursor's window state, as OplogObserveDriver exposes it (tests).
+  get _unpublishedBuffer() { return this._window && this._window._unpublishedBuffer; }
+  get _safeAppendToBuffer() { return this._window && this._window._safeAppendToBuffer; }
 
   _sendMultiplexerAdded(id, projectedDoc) {
     // projectedDoc is already Meteor-typed — its caller translated the source
@@ -130,6 +165,18 @@ export class ChangeStreamObserveDriver {
             // Process any pending writes immediately
             driver._flushPendingWrites();
 
+            // A limited cursor may be re-running its query, possibly because
+            // of this very write. Like the oplog driver, which commits only
+            // once it is back in its steady phase, wait for the result to
+            // reach the multiplexer before committing.
+            while (driver._requeryPromise) {
+              await driver._requeryPromise;
+            }
+            if (driver._stopped) {
+              await write.committed();
+              continue;
+            }
+
             // If the driver is ready (initial adds complete), ensure all writes are committed
             if (driver._isReady) {
               await driver._multiplexer.onFlush(async () => {
@@ -188,6 +235,9 @@ export class ChangeStreamObserveDriver {
       // multiplexer.changed/removed before ready()).
       this._multiplexer.ready();
       this._isReady = true;
+      if (this._requeryAgain) {
+        this._requestRequery();
+      }
 
       // Replay change events that arrived during _sendInitialAdds BEFORE
       // committing fence writes. _handleInsert dedups against the multiplexer
@@ -228,8 +278,13 @@ export class ChangeStreamObserveDriver {
       if (this._stopped) return;
 
       // Events that arrive during this read stay queued until the driver is
-      // ready, then replay against the completed snapshot.
-      await this._sendInitialAdds(collection, snapshot);
+      // ready (or, for a re-query, until it finishes), then replay against
+      // the completed snapshot.
+      if (this._window) {
+        await this._queryWindow(collection, snapshot);
+      } else {
+        await this._sendInitialAdds(collection, snapshot);
+      }
     } finally {
       await this._closeSnapshotSession(snapshot.session);
     }
@@ -405,6 +460,102 @@ export class ChangeStreamObserveDriver {
     }
   }
 
+  // Reads the first 2 * limit matching documents, publishes the first `limit`
+  // and buffers the rest, as OplogObserveDriver._runQuery does.
+  async _queryWindow(collection, snapshot) {
+    if (this._stopped) return;
+
+    const selector = replaceTypes(
+      this._cursorDescription.selector || {},
+      replaceMeteorAtomWithMongo
+    );
+    const { fields, ...cursorOptions } = this._cursorDescription.options;
+    const limit = this._window._limit;
+    const options = {
+      ...cursorOptions,
+      projection: this._sharedProjection,
+      limit: limit * 2,
+    };
+    if (snapshot.session) {
+      options.session = snapshot.session;
+    }
+    if (snapshot.readConcern) {
+      options.readConcern = snapshot.readConcern;
+    }
+
+    // The initial query holds the fence's write until ready, like
+    // _sendInitialAdds. Re-queries are awaited by onBeforeFire instead.
+    if (!this._isReady) {
+      const fence = DDPServer._getCurrentFence();
+      if (fence) {
+        this._writesToCommitWhenReady.push(fence.beginWrite());
+      }
+    }
+
+    const newResults = new LocalCollection._IdMap;
+    const newBuffer = new LocalCollection._IdMap;
+    for await (const rawDoc of collection.find(selector, options)) {
+      if (this._stopped) return;
+      const doc = replaceTypes(rawDoc, replaceMongoAtomWithMeteor);
+      doc._id = this._deriveMeteorId(doc);
+      if (newResults.size() < limit) {
+        newResults.set(doc._id, doc);
+      } else {
+        newBuffer.set(doc._id, doc);
+      }
+    }
+    if (this._stopped) return;
+
+    this._window._publishNewResults(newResults, newBuffer);
+  }
+
+  // Called by the window when it can no longer tell which documents come next.
+  // Runs synchronously inside the window's update, so it only flags the
+  // re-query (holding further events, see _flushPendingWrites) and starts it.
+  _requestRequery() {
+    if (this._stopped) return;
+    this._requeryAgain = true;
+    // The initial query is still being published; _startWatching runs the
+    // re-query once the driver is ready.
+    if (!this._isReady) return;
+    this._requerying = true;
+    if (!this._requeryPromise) {
+      this._requeryPromise = this._runRequeries().finally(() => {
+        this._requeryPromise = null;
+      });
+    }
+  }
+
+  async _runRequeries() {
+    while (this._requeryAgain && !this._stopped) {
+      this._requeryAgain = false;
+      try {
+        const collection = this._mongoHandle.rawCollection(
+          this._cursorDescription.collectionName
+        );
+        // Same snapshot boundary as the initial query: events at or before
+        // its operationTime are already in the result and are skipped.
+        await this._runInitialSnapshot(collection);
+      } catch (error) {
+        console.error(`[ChangeStream ${this._id}] Re-running limited query failed:`, error);
+      }
+      if (this._stopped) return;
+      this._requerying = false;
+      // Replay the events held during the query. One of them may ask for
+      // another re-query, which sets _requeryAgain and loops.
+      this._flushPendingWrites();
+    }
+  }
+
+  // Applies a change to a limited cursor's window. doc is null when the
+  // document is gone (deleted, or deleted again before updateLookup read it).
+  _handleWindowChange(operationType, id, fullDocument) {
+    const doc = operationType === 'delete' || !fullDocument
+      ? null
+      : { ...fullDocument, _id: id };
+    this._window._handleDoc(id, doc);
+  }
+
   // Called by the shared stream for every raw change. The shared stream owns the
   // resume token, so this just advances our processed time, runs the matcher,
   // and flushes pending writes.
@@ -495,13 +646,21 @@ export class ChangeStreamObserveDriver {
     // during the snapshot are not lost — those events sit here until the
     // driver is ready, and _startWatching's tail flush replays them.
     // ObserveMultiplexer.changed / removed throw if called before ready.
-    if (!this._isReady) return;
+    // A limited cursor also holds events while it re-runs its query; they
+    // replay against the new result (_runRequeries).
+    if (!this._isReady || this._requerying) return;
 
     const callbacksToFlush = this._pendingWrites;
     this._pendingWrites = [];
 
     if (callbacksToFlush.length > 0) {
-      for (const callbackData of callbacksToFlush) {
+      for (let i = 0; i < callbacksToFlush.length; i++) {
+        const callbackData = callbacksToFlush[i];
+        // An event below made the window re-run its query: hold the rest.
+        if (this._requerying) {
+          this._pendingWrites = callbacksToFlush.slice(i).concat(this._pendingWrites);
+          break;
+        }
         try {
           const { operationType, id, fullDocument, fullDocumentBeforeChange, change } = callbackData;
 
@@ -510,6 +669,11 @@ export class ChangeStreamObserveDriver {
             this._snapshotCutoffOperationTime &&
             compareOperationTimes(change.clusterTime, this._snapshotCutoffOperationTime) <= 0
           ) {
+            continue;
+          }
+
+          if (this._window) {
+            this._handleWindowChange(operationType, id, fullDocument);
             continue;
           }
 
@@ -664,6 +828,13 @@ export class ChangeStreamObserveDriver {
   //      the reopened cursor happens to redeliver is reconciled once, not twice.
   async _resyncAfterHistoryLost() {
     if (this._stopped || !this._isReady) return;
+
+    // A limited cursor re-runs its query, which reconciles the whole window.
+    if (this._window) {
+      this._requestRequery();
+      await this._requeryPromise;
+      return;
+    }
 
     const collection = this._mongoHandle.rawCollection(
       this._cursorDescription.collectionName
