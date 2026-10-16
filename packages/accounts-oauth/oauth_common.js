@@ -21,6 +21,19 @@ Accounts.oauth.registerService = name => {
   }
 };
 
+// Recreate OAuth service indexes when the users collection changes.
+if (Meteor.server) {
+  Accounts.onUsersCollectionChanged(users => {
+    Promise.all(
+      Object.keys(services).map(name =>
+        users.createIndexAsync(`services.${name}.id`, {unique: true, sparse: true})
+      )
+    ).catch(err => {
+      console.error('Failed to create OAuth service indexes:', err);
+    });
+  });
+}
+
 // Removes a previously registered service.
 // This will disable logging in with this service, and serviceNames() will not
 // contain it.

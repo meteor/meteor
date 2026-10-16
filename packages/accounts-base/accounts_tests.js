@@ -3,6 +3,7 @@ import { URL } from 'meteor/url';
 import { Meteor } from 'meteor/meteor';
 import { Accounts } from 'meteor/accounts-base';
 import { Random } from 'meteor/random';
+import { waitForCollectionIndexes } from './accounts_collection_test_helpers.js';
 
 Meteor.methods({
   getCurrentLoginToken: async function () {
@@ -461,6 +462,40 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
+  'accounts - _reportLoginFailure resolves attempt.user before failure callbacks',
+  async test => {
+    const username = Random.id();
+    const userId = await Accounts.insertUserDoc({}, { username });
+
+    let seenUser;
+    const onLoginFailureStopper =
+      Accounts.onLoginFailure(attempt => { seenUser = attempt.user; });
+
+    try {
+      // _reportLoginFailure passes the looked-up user to onLoginFailure. It must
+      // be the resolved document, not an unresolved Promise (a Promise reaches
+      // the callbacks as an empty object, so every user property reads as
+      // undefined).
+      await Accounts._reportLoginFailure(
+        { connection: {} },
+        'test-report-login-failure',
+        [{}],
+        { type: 'test', error: new Meteor.Error(403, 'nope'), userId }
+      );
+
+      test.equal(
+        seenUser && seenUser._id,
+        userId,
+        'attempt.user is the resolved user document, not an unresolved Promise'
+      );
+    } finally {
+      onLoginFailureStopper.stop();
+      await Meteor.users.removeAsync(userId);
+    }
+  }
+);
+
+Tinytest.addAsync(
   'accounts - Meteor.user() obeys options.defaultFieldSelector',
   async test => {
     const ignoreFieldName = "bigArray";
@@ -775,6 +810,66 @@ if (Meteor.isServer) {
     });
   });
 
+  // Tests for #12610: Accounts.config({ collection }) should update
+  // Meteor.users and recreate indexes on the new collection.
+
+  Tinytest.addAsync('accounts - config - collection - custom name updates Meteor.users', async test => {
+    const origCollection = Accounts.users;
+
+    Accounts.config({ collection: `custom_users_${Random.id()}` });
+
+    test.equal(Meteor.users, Accounts.users,
+      'Meteor.users should match Accounts.users after config()');
+
+    Accounts.config({ collection: origCollection });
+  });
+
+  Tinytest.addAsync('accounts - config - collection - different instance replaces collection', async test => {
+    const origCollection = Accounts.users;
+    const remoteUsers = new Mongo.Collection(`users_remote_${Random.id()}`);
+
+    Accounts.config({ collection: remoteUsers });
+
+    test.equal(Accounts.users, remoteUsers,
+      'Accounts.users should be the custom collection');
+    test.equal(Meteor.users, remoteUsers,
+      'Meteor.users should be updated to custom collection');
+
+    Accounts.config({ collection: origCollection });
+  });
+
+  Tinytest.addAsync('accounts - config - collection - indexes created on custom collection', async test => {
+    const origCollection = Accounts.users;
+    const previousOption = Accounts._options.collection;
+    const customCollection = new Mongo.Collection(`custom_idx_${Random.id()}`);
+    const expectedIndexKeys = [
+      'username',
+      'emails.address',
+      'services.password.reset.token',
+      'services.email.verificationTokens.token',
+    ];
+
+    try {
+      Accounts.config({ collection: customCollection });
+      const indexKeys = await waitForCollectionIndexes(customCollection, expectedIndexKeys);
+
+      // accounts-base indexes
+      test.isTrue(indexKeys.includes('username'),
+        'Custom collection should have username index');
+      test.isTrue(indexKeys.includes('emails.address'),
+        'Custom collection should have emails.address index');
+
+      // accounts-password indexes (via onUsersCollectionChanged)
+      test.isTrue(indexKeys.includes('services.password.reset.token'),
+        'Custom collection should have password reset token index');
+      test.isTrue(indexKeys.includes('services.email.verificationTokens.token'),
+        'Custom collection should have email verification token index');
+    } finally {
+      Accounts.config({ collection: origCollection });
+      Accounts._options.collection = previousOption;
+    }
+  });
+
   Tinytest.addAsync(
     'accounts - urls work with sync resolution',
     async test => {
@@ -957,3 +1052,177 @@ Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Twitter', 
   // cleanup
   await Meteor.users.removeAsync(u1.id);
 });
+
+Tinytest.add('accounts - default rate limit covers passwordless token requests', test => {
+  const hadDefaultRateLimit = !!Accounts.defaultRateLimiterRuleId;
+  Accounts.addDefaultRateLimit();
+  try {
+    const rule = DDPRateLimiter.printRules()[Accounts.defaultRateLimiterRuleId];
+    test.isTrue(!!rule, 'default rate limit rule is registered');
+    const matchesName = rule._matchers.name;
+    test.isTrue(matchesName('requestLoginTokenForUser'), 'requestLoginTokenForUser is rate limited');
+    test.isTrue(matchesName('login'), 'login is still rate limited');
+    test.isFalse(matchesName('someUnrelatedMethod'), 'unrelated methods are not matched');
+  } finally {
+    if (!hadDefaultRateLimit) Accounts.removeDefaultRateLimit();
+  }
+});
+
+
+// Any valid email in the list is enough to pass validation
+Tinytest.addAsync(
+  'accounts - restrictCreationByEmailDomain - services - valid email not last',
+  async (test) => {
+    const { restrictCreationByEmailDomain } = Accounts._options;
+    Accounts._options.restrictCreationByEmailDomain = 'example.com';
+
+    try {
+      // Valid service appears BEFORE a service with no email.
+      const userId = await Accounts.insertUserDoc(
+        {},
+        {
+          services: {
+            google: { id: 'g1', email: 'user@example.com' },
+            github: { id: 'gh1' },
+          },
+        }
+      );
+
+      test.isTrue(userId, 'user should have been created');
+      await Meteor.users.removeAsync(userId);
+    } finally {
+      Accounts._options.restrictCreationByEmailDomain = restrictCreationByEmailDomain;
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'accounts - restrictCreationByEmailDomain - services - valid email last',
+  async (test) => {
+    const { restrictCreationByEmailDomain } = Accounts._options;
+    Accounts._options.restrictCreationByEmailDomain = 'example.com';
+
+    try {
+      // Valid service appears AFTER a service with no email — should
+      // also pass (sanity check that ordering doesn't matter either way).
+      const userId = await Accounts.insertUserDoc(
+        {},
+        {
+          services: {
+            github: { id: 'gh2' },
+            google: { id: 'g2', email: 'user@example.com' },
+          },
+        }
+      );
+
+      test.isTrue(userId, 'user should have been created');
+      await Meteor.users.removeAsync(userId);
+    } finally {
+      Accounts._options.restrictCreationByEmailDomain = restrictCreationByEmailDomain;
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'accounts - restrictCreationByEmailDomain - services - all invalid rejects',
+  async (test) => {
+    const { restrictCreationByEmailDomain } = Accounts._options;
+    Accounts._options.restrictCreationByEmailDomain = 'example.com';
+
+    try {
+      await test.throwsAsync(async () => {
+        await Accounts.insertUserDoc(
+          {},
+          {
+            services: {
+              google: { id: 'g3', email: 'user@other.com' },
+              github: { id: 'gh3', email: 'user@nope.org' },
+            },
+          }
+        );
+      }, '@example.com email required');
+    } finally {
+      Accounts._options.restrictCreationByEmailDomain = restrictCreationByEmailDomain;
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'accounts - restrictCreationByEmailDomain - emails - valid email not last',
+  async (test) => {
+    const { restrictCreationByEmailDomain } = Accounts._options;
+    Accounts._options.restrictCreationByEmailDomain = 'example.com';
+
+    try {
+      // Valid email is first, invalid email is last.
+      const userId = await Accounts.insertUserDoc(
+        {},
+        {
+          username: Random.id(),
+          emails: [
+            { address: 'good@example.com', verified: true },
+            { address: 'bad@other.com', verified: false },
+          ],
+        }
+      );
+
+      test.isTrue(userId, 'user should have been created');
+      await Meteor.users.removeAsync(userId);
+    } finally {
+      Accounts._options.restrictCreationByEmailDomain = restrictCreationByEmailDomain;
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'accounts - restrictCreationByEmailDomain - function - services accumulator',
+  async (test) => {
+    const { restrictCreationByEmailDomain } = Accounts._options;
+    Accounts._options.restrictCreationByEmailDomain = (email) =>
+      email.endsWith('@allowed.io');
+
+    try {
+      const userId = await Accounts.insertUserDoc(
+        {},
+        {
+          services: {
+            google: { id: 'g4', email: 'yes@allowed.io' },
+            github: { id: 'gh4' },
+          },
+        }
+      );
+
+      test.isTrue(userId, 'user should have been created');
+      await Meteor.users.removeAsync(userId);
+    } finally {
+      Accounts._options.restrictCreationByEmailDomain = restrictCreationByEmailDomain;
+    }
+  }
+);
+
+// When user.emails is present it is authoritative: a valid service email does
+// not rescue a user whose emails array contains only non-matching addresses.
+Tinytest.addAsync(
+  'accounts - restrictCreationByEmailDomain - emails take precedence over services',
+  async (test) => {
+    const { restrictCreationByEmailDomain } = Accounts._options;
+    Accounts._options.restrictCreationByEmailDomain = 'example.com';
+
+    try {
+      await test.throwsAsync(async () => {
+        await Accounts.insertUserDoc(
+          {},
+          {
+            username: Random.id(),
+            emails: [{ address: 'bad@other.com', verified: false }],
+            services: {
+              google: { id: 'g5', email: 'user@example.com' },
+            },
+          }
+        );
+      }, '@example.com email required');
+    } finally {
+      Accounts._options.restrictCreationByEmailDomain = restrictCreationByEmailDomain;
+    }
+  }
+);

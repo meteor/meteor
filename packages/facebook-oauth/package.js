@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Facebook OAuth flow",
-  version: '1.11.6',
+  version: '1.11.7-rc360.0',
 });
 
 Package.onUse(api => {
@@ -14,10 +14,12 @@ Package.onUse(api => {
   api.addFiles('facebook_server.js', 'server');
 
   api.export('Facebook');
+  api.types('facebook-oauth.d.ts');
 });
 
 Package.onTest(function(api) {
   api.use('facebook-oauth');
-  api.use(['tinytest', 'ecmascript', 'test-helpers', 'oauth', 'oauth2', 'service-configuration']);
+  api.use(['tinytest', 'ecmascript', 'test-helpers', 'oauth', 'oauth2', 'service-configuration', 'random']);
+  api.use('accounts-base', 'server');
   api.addFiles('facebook-oauth_tests.js');
 });

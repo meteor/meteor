@@ -1,3 +1,4 @@
+import { connectInspector, getInspectorWebSocketUrl } from './inspector';
 import fs from 'fs-extra';
 import os from 'os';
 import path from 'path';
@@ -19,140 +20,30 @@ const DELAYED_IMPORT_PORTS = [3131, 18131];
 const ES_MODULE_APP_PORTS = [3132, 18132];
 const DEBUGGING_PORTS = [3133, 18133, 9233];
 const ASSETS_GLOBAL_PORTS = [3134, 18134];
+const IN_MEMORY_INVALIDATION_PORTS = [3135, 18135, 19135];
 
-async function getInspectorWebSocketUrl(port, timeout = 90000) {
+async function waitForResponseText(url, expected, timeout = 30000) {
   const deadline = Date.now() + timeout;
+  let lastValue;
 
   while (Date.now() < deadline) {
     try {
-      const response = await fetch(`http://127.0.0.1:${port}/json/list`);
-      if (response.ok) {
-        const targets = await response.json();
-        const target = targets.find(entry => entry.webSocketDebuggerUrl);
-        if (target) {
-          return target.webSocketDebuggerUrl;
-        }
+      const response = await fetch(url);
+      lastValue = await response.text();
+      if (response.ok && lastValue === expected) {
+        return;
       }
     } catch {
-      // The inspector endpoint is unavailable until the server child starts.
+      // The server is briefly unavailable while Meteor restarts it.
     }
 
     await new Promise(resolve => setTimeout(resolve, 100));
   }
 
-  throw new Error(`Node Inspector did not start on port ${port}`);
-}
-
-async function connectInspector(webSocketUrl) {
-  const socket = new WebSocket(webSocketUrl);
-  const pendingCommands = new Map();
-  const queuedEvents = new Map();
-  const eventWaiters = [];
-  let nextCommandId = 1;
-
-  await new Promise((resolve, reject) => {
-    const timeout = setTimeout(
-      () => reject(new Error('Timed out connecting to Node Inspector')),
-      15000
-    );
-
-    socket.addEventListener('open', () => {
-      clearTimeout(timeout);
-      resolve();
-    }, { once: true });
-    socket.addEventListener('error', () => {
-      clearTimeout(timeout);
-      reject(new Error('Failed to connect to Node Inspector'));
-    }, { once: true });
-  });
-
-  socket.addEventListener('message', event => {
-    const message = JSON.parse(event.data);
-
-    if (message.id) {
-      const pending = pendingCommands.get(message.id);
-      if (!pending) return;
-      pendingCommands.delete(message.id);
-      clearTimeout(pending.timeout);
-      if (message.error) {
-        pending.reject(new Error(message.error.message));
-      } else {
-        pending.resolve(message.result || {});
-      }
-      return;
-    }
-
-    if (!message.method) return;
-    const waiterIndex = eventWaiters.findIndex(
-      waiter =>
-        waiter.method === message.method && waiter.predicate(message.params)
-    );
-    if (waiterIndex !== -1) {
-      const [waiter] = eventWaiters.splice(waiterIndex, 1);
-      clearTimeout(waiter.timeout);
-      waiter.resolve(message.params);
-      return;
-    }
-
-    const queue = queuedEvents.get(message.method) || [];
-    queue.push(message.params);
-    queuedEvents.set(message.method, queue);
-  });
-
-  function send(method, params = {}, timeout = 15000) {
-    const id = nextCommandId++;
-    return new Promise((resolve, reject) => {
-      const commandTimeout = setTimeout(() => {
-        pendingCommands.delete(id);
-        reject(new Error(`Timed out sending Inspector command ${method}`));
-      }, timeout);
-      pendingCommands.set(id, {
-        resolve,
-        reject,
-        timeout: commandTimeout,
-      });
-      socket.send(JSON.stringify({ id, method, params }));
-    });
-  }
-
-  function waitForEvent(method, predicate = () => true, timeout = 15000) {
-    const queue = queuedEvents.get(method) || [];
-    const eventIndex = queue.findIndex(predicate);
-    if (eventIndex !== -1) {
-      const [event] = queue.splice(eventIndex, 1);
-      return Promise.resolve(event);
-    }
-
-    return new Promise((resolve, reject) => {
-      const eventTimeout = setTimeout(() => {
-        const waiterIndex = eventWaiters.findIndex(
-          waiter => waiter.resolve === resolve
-        );
-        if (waiterIndex !== -1) {
-          eventWaiters.splice(waiterIndex, 1);
-        }
-        reject(new Error(`Timed out waiting for Inspector event ${method}`));
-      }, timeout);
-      eventWaiters.push({
-        method,
-        predicate,
-        resolve,
-        reject,
-        timeout: eventTimeout,
-      });
-    });
-  }
-
-  function close() {
-    if (
-      socket.readyState === WebSocket.OPEN ||
-      socket.readyState === WebSocket.CONNECTING
-    ) {
-      socket.close();
-    }
-  }
-
-  return { close, send, waitForEvent };
+  throw new Error(
+    `Timed out waiting for ${url} to return ${JSON.stringify(expected)}; ` +
+      `last response was ${JSON.stringify(lastValue)}`
+  );
 }
 
 function resolveInspectorSourceMapPath(script) {
@@ -310,6 +201,99 @@ Assets.getTextAsync('assets-fixture.txt')
         tempDir,
         meteorProcess,
         ports: ASSETS_GLOBAL_PORTS,
+      });
+    }
+  });
+
+  test('restarts after an in-memory plugin changes the server bundle', async () => {
+    const [appPort, devServerPort, invalidationPort] =
+      IN_MEMORY_INVALIDATION_PORTS;
+    let tempDir;
+    let meteorProcess;
+
+    try {
+      tempDir = await prepareServerOnlyApp(IN_MEMORY_INVALIDATION_PORTS);
+
+      await fs.writeFile(
+        path.join(tempDir, 'rspack.config.js'),
+        `const http = require('node:http');
+const { BannerPlugin } = require('@rspack/core');
+const { defineConfig } = require('@meteorjs/rspack');
+
+let value = 'first';
+
+class InMemoryInvalidationPlugin {
+  apply(compiler) {
+    const server = http.createServer((request, response) => {
+      if (request.url !== '/invalidate') {
+        response.writeHead(404).end();
+        return;
+      }
+
+      if (!compiler.watching) {
+        response.writeHead(503).end('not watching');
+        return;
+      }
+
+      value = 'second';
+      compiler.watching.invalidate();
+      response.end('invalidated');
+    });
+
+    server.listen(Number(process.env.RSPACK_INVALIDATION_PORT), '127.0.0.1');
+    compiler.hooks.watchClose.tap('InMemoryInvalidationPlugin', () => {
+      server.close();
+    });
+  }
+}
+
+module.exports = defineConfig(Meteor => ({
+  plugins: Meteor.isServer
+    ? [
+        new BannerPlugin({
+          raw: true,
+          entryOnly: true,
+          banner: () =>
+            \`globalThis.reviewSetting = \${JSON.stringify(value)};\`,
+        }),
+        new InMemoryInvalidationPlugin(),
+      ]
+    : [],
+}));
+`
+      );
+      await fs.writeFile(
+        path.join(tempDir, 'server', 'main.js'),
+        `import { WebApp } from 'meteor/webapp';
+
+WebApp.connectHandlers.use('/value', (_request, response) => {
+  response.end(globalThis.reviewSetting);
+});
+`
+      );
+
+      const result = await runMeteorApp(tempDir, appPort, {
+        waitForOutput: '=> App running at',
+        env: {
+          RSPACK_DEVSERVER_PORT: String(devServerPort),
+          RSPACK_INVALIDATION_PORT: String(invalidationPort),
+        },
+      });
+      meteorProcess = result.meteorProcess;
+
+      const valueUrl = `http://127.0.0.1:${appPort}/value`;
+      await waitForResponseText(valueUrl, 'first');
+
+      const invalidationResponse = await fetch(
+        `http://127.0.0.1:${invalidationPort}/invalidate`
+      );
+      expect(await invalidationResponse.text()).toBe('invalidated');
+      await waitForResponseText(valueUrl, 'second');
+    } finally {
+      await cleanupRegressionApp({
+        tempDir,
+        meteorProcess,
+        ports: IN_MEMORY_INVALIDATION_PORTS,
       });
     }
   });

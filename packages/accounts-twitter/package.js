@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Login service for Twitter accounts",
-  version: "1.5.2",
+  version: "1.5.3-rc360.0",
 });
 
 Package.onUse((api) => {
@@ -18,4 +18,6 @@ Package.onUse((api) => {
   api.addFiles("notice.js");
 
   api.addFiles("twitter.js");
+
+  api.types('accounts-twitter.d.ts');
 });

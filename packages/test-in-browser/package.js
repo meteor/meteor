@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Run tests interactively in the browser",
-  version: '1.6.0',
+  version: '1.6.1-rc360.0',
   documentation: null
 });
 
@@ -20,9 +20,10 @@ Package.onUse(function (api) {
 
   api.use([
     'webapp',
-    'blaze',
-    'templating',
-    'spacebars',
+    'blaze@3.0.3',
+    'templating@1.4.5',
+    'spacebars@2.0.1',
+    'jquery@3.0.0',
     'ddp',
     'tracker',
   ], 'client');
