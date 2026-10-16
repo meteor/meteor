@@ -17,15 +17,20 @@ Package.onUse(function (api) {
 
   api.use("ecmascript");
   api.use("check", "server");
+  api.use("email", "server");
 
   api.addFiles(["2fa-client.js"], "client");
-  api.addFiles(["2fa-server.js"], "server");
+  api.addFiles(["2fa-email.js", "2fa-methods.js", "2fa-server.js"], "server");
 });
 
 Package.onTest(function (api) {
   api.use([
     "accounts-base",
     "accounts-password",
+    "email",
+    "ddp-client",
+    "ddp-common",
+    "check",
     "ecmascript",
     "tinytest",
     "random",
