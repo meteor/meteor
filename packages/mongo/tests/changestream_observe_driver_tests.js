@@ -2644,7 +2644,7 @@ Tinytest.addAsync(
         { code: 286, codeName: 'ChangeStreamHistoryLost' }
       );
       historyLost.errorLabels = ['NonResumableChangeStreamError'];
-      streamBefore.emit('error', historyLost);
+      shared._onStreamError(streamBefore, historyLost);
 
       // The token must be dropped so the pending restart falls back to
       // startAtOperationTime instead of re-sending the dead token forever.
@@ -2807,13 +2807,19 @@ Tinytest.addAsync(
       // carries NO ResumableChangeStreamError label and is not code 286/280. It
       // must NOT clear the still-valid token or force a full-collection resync —
       // resuming via startAfter will succeed once the topology recovers. Token
-      // handling runs synchronously in the 'error' handler, so assert immediately.
+      // handling runs synchronously in _onStreamError, so assert immediately.
       const networkErr = Object.assign(new Error('connection reset by peer'), {
         hasErrorLabel: () => false,
       });
-      streamBefore.emit('error', networkErr);
+      shared._onStreamError(streamBefore, networkErr);
 
-      test.equal(shared._resumeToken, token, 'resume token preserved on a resumable network error');
+      // Kept, and taken from the driver's spec-cached token when it has one.
+      test.isTrue(!!shared._resumeToken, 'resume token kept on a resumable network error');
+      test.equal(
+        shared._resumeToken,
+        streamBefore.resumeToken ?? token,
+        'restart resumes from the driver\'s cached resume token'
+      );
       test.isFalse(shared._historyLost, 'history-lost not flagged for a resumable error');
     } finally {
       // Stop before the restart timer reopens with the preserved token.
@@ -2840,11 +2846,93 @@ Tinytest.addAsync(
       const fatal = Object.assign(new Error('change stream fatal'), {
         code: 280, codeName: 'ChangeStreamFatalError',
       });
-      streamBefore.emit('error', fatal);
+      shared._onStreamError(streamBefore, fatal);
 
       test.equal(shared._resumeToken, null, 'token cleared on a fatal (280) error');
       test.isTrue(shared._historyLost, 'history-lost flagged on a fatal (280) error');
     } finally {
+      handle.stop();
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - a quiet collection resumes from the driver\'s cached token, past its last event',
+  async function (test) {
+    const c = makeCollection();
+    const other = makeCollection();
+    const handle = await c.find({}).observeChanges({ added: function () { } });
+    test.isTrue(isChangeStreamDriver(handle));
+    const shared = handle._multiplexer._observeDriver._sharedStream;
+    const stream = shared._changeStream;
+
+    try {
+      await c.insertAsync({ name: 'last event on this collection' });
+      await waitFor(() => !!shared._resumeToken, 3000);
+      const afterLastEvent = shared._resumeToken;
+
+      // Writes elsewhere advance the oplog. The driver caches each empty
+      // batch's postBatchResumeToken (change streams spec), so its token moves
+      // past this collection's last event; a token kept from that event would
+      // age out of the oplog first and force a full resync on restart.
+      for (let i = 0; i < 3; i++) await other.insertAsync({ i });
+      const advanced = await waitFor(
+        () => stream.resumeToken?._data !== afterLastEvent?._data,
+        5000
+      );
+      test.isTrue(advanced, 'the cached token advances while this collection is quiet');
+
+      shared._onStreamError(
+        stream,
+        Object.assign(new Error('connection reset by peer'), { hasErrorLabel: () => false })
+      );
+      test.equal(shared._resumeToken, stream.resumeToken, 'a restart resumes from the advanced token');
+
+      // The restarted stream still delivers new events.
+      const results = [];
+      const handle2 = await c.find({}).observeChanges({ added: (id, fields) => results.push(fields.name) });
+      await waitFor(() => shared._changeStream && shared._changeStream !== stream, 3000);
+      await c.insertAsync({ name: 'after restart' });
+      await waitFor(() => results.includes('after restart'), 3000);
+      test.isTrue(results.includes('after restart'), 'events flow after the restart');
+      handle2.stop();
+    } finally {
+      handle.stop();
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - the cached resume token is never ahead of an undelivered event',
+  async function (test) {
+    const c = makeCollection();
+    const handle = await c.find({}).observeChanges({ added: function () { } });
+    test.isTrue(isChangeStreamDriver(handle));
+    const shared = handle._multiplexer._observeDriver._sharedStream;
+    const stream = shared._changeStream;
+
+    // Record, as each event is dispatched, the token a restart would resume
+    // from. Per the change streams spec it is the event's own _id, except for
+    // the last event of a batch (which may carry the postBatchResumeToken). A
+    // token past an undelivered event would skip that event on restart.
+    const seen = [];
+    const dispatch = shared._onChange.bind(shared);
+    shared._onChange = (change) => {
+      seen.push({ id: change._id?._data, cached: stream.resumeToken?._data });
+      return dispatch(change);
+    };
+
+    try {
+      // One insertMany is applied as one batch: its events share a clusterTime
+      // and arrive in one getMore batch.
+      await c.rawCollection().insertMany([1, 2, 3, 4, 5].map((i) => ({ _id: `batch-${i}`, i })));
+      await waitFor(() => seen.length >= 5, 3000);
+      test.equal(seen.length, 5, 'every event of the batch is delivered');
+      seen.slice(0, -1).forEach((event, i) => {
+        test.equal(event.cached, event.id, `cached token is event ${i}'s own _id, not a later position`);
+      });
+    } finally {
+      shared._onChange = dispatch;
       handle.stop();
     }
   }
@@ -2931,13 +3019,12 @@ Tinytest.addAsync(
       shared._restartFailures = 4; test.equal(shared._restartDelay(100), 800);
       shared._restartFailures = 99; test.equal(shared._restartDelay(100), 5000);
 
-      // The driver emits both 'error' and 'close' for one failure; _noteFailure
-      // must count that single cursor failure once, not twice.
+      // One cursor failure reported twice must count once.
       shared._restartFailures = 0;
       shared._failureCounted = false;
       shared._noteFailure();
       shared._noteFailure();
-      test.equal(shared._restartFailures, 1, 'error+close for one cursor counts a single failure');
+      test.equal(shared._restartFailures, 1, 'a cursor failure reported twice counts once');
 
       // A delivered event means the reopened stream is healthy: reset the count.
       shared._onChange({ _id: { _data: 'tok' } });
