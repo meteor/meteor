@@ -26,7 +26,9 @@ export class SharedChangeStream {
     this._drivers = new Set();
     this._changeStream = null;
     this._stopped = false;
-    // Last seen resume token; a restart replays from here (startAfter).
+    // Where a restart reopens the stream (startAfter): the resume token the
+    // node driver caches per the change streams spec, which advances past the
+    // last event while other collections write (postBatchResumeToken).
     this._resumeToken = null;
     // In-flight open, so concurrent callers share one watch() instead of
     // racing a second cursor.
@@ -125,49 +127,67 @@ export class SharedChangeStream {
     // Fresh cursor: its failure (if any) has not been counted yet.
     this._failureCounted = false;
 
-    changeStream.on('change', Meteor.bindEnvironment((change) => {
-      this._onChange(change);
-    }));
+    this._pump(changeStream);
+  }
 
-    changeStream.on('error', Meteor.bindEnvironment((error) => {
-      // Only the active stream restarts; ignore a superseded one.
-      if (this._stopped || this._changeStream !== changeStream) return;
-      console.error('ChangeStream error:', {
-        collectionName: this._collectionName,
-        driverCount: this._drivers.size,
-        resumeTokenPresent: !!this._resumeToken,
-        error,
-      });
-      // A non-resumable error means the resume token is no longer in the oplog,
-      // so watch() reopens but every getMore fails with the same error again —
-      // an endless error→restart loop that re-sends the dead token. Drop the
-      // token so the restart falls back to startAtOperationTime (now), and flag
-      // the stream so the reopened cursor reconciles its drivers: events in the
-      // lost window were never delivered.
-      if (this._isNonResumableError(error)) {
-        this._resumeToken = null;
-        this._historyLost = true;
+  // Pulls events with next() rather than listening for 'change'. In listener
+  // mode the driver reads one event ahead, so its cached resume token can
+  // already point past an event Meteor has not received; pulling keeps the
+  // token exactly at the last event returned, as the change streams spec
+  // describes. Resumable errors are retried inside next() (the spec's single
+  // resume attempt); anything it gives up on lands in _onStreamError.
+  _pump(changeStream) {
+    const dispatch = Meteor.bindEnvironment((change) => this._onChange(change));
+    const fail = Meteor.bindEnvironment((error) => this._onStreamError(changeStream, error));
+    (async () => {
+      while (!this._stopped && this._changeStream === changeStream) {
+        let change;
+        try {
+          change = await changeStream.next();
+        } catch (error) {
+          fail(error);
+          return;
+        }
+        if (this._stopped || this._changeStream !== changeStream) return;
+        this._resumeToken = changeStream.resumeToken;
+        dispatch(change);
       }
-      this._noteFailure();
-      this._scheduleRestart(this._restartDelay(
-        Meteor?.settings?.packages?.mongo?.changeStream?.delay?.error || 100
-      ));
-    }));
+    })();
+  }
 
-    changeStream.on('close', Meteor.bindEnvironment(() => {
-      // _closeStream() replaces this._changeStream before closing, so a
-      // deliberate close fails this check and won't loop into a restart.
-      if (this._stopped || this._changeStream !== changeStream) return;
-      console.error('ChangeStream closed unexpectedly, scheduling restart:', {
-        collectionName: this._collectionName,
-        driverCount: this._drivers.size,
-        resumeTokenPresent: !!this._resumeToken,
-      });
-      this._noteFailure();
-      this._scheduleRestart(this._restartDelay(
-        Meteor?.settings?.packages?.mongo?.changeStream?.delay?.close || 100
-      ));
-    }));
+  // The driver gave up on the stream: its single resume attempt failed, the
+  // error is not resumable, or the stream closed (e.g. after an invalidate).
+  _onStreamError(changeStream, error) {
+    // _closeStream() replaces this._changeStream before closing, so a
+    // deliberate close (and a superseded stream) won't loop into a restart.
+    if (this._stopped || this._changeStream !== changeStream) return;
+    console.error('ChangeStream error, scheduling restart:', {
+      collectionName: this._collectionName,
+      driverCount: this._drivers.size,
+      resumeTokenPresent: !!this._resumeToken,
+      error,
+    });
+    if (this._isNonResumableError(error)) {
+      // The resume point itself is gone, so reopening with it would fail on
+      // every getMore again: an endless error→restart loop. Drop the token so
+      // the restart falls back to startAtOperationTime (now), and flag the
+      // stream so the reopened cursor reconciles its drivers: events in the
+      // lost window were never delivered.
+      this._resumeToken = null;
+      this._historyLost = true;
+    } else {
+      // The driver's cached token keeps advancing on empty batches while this
+      // collection is quiet, so it is never older than the last event's.
+      this._resumeToken = changeStream.resumeToken ?? this._resumeToken;
+    }
+    this._noteFailure();
+    // next() reports a stream that closed under us (e.g. after an invalidate)
+    // as "ChangeStream is closed".
+    const closed = error?.name === 'MongoAPIError' && /closed/i.test(error.message || '');
+    const delays = Meteor?.settings?.packages?.mongo?.changeStream?.delay;
+    this._scheduleRestart(this._restartDelay(
+      (closed ? delays?.close : delays?.error) || 100
+    ));
   }
 
   _onChange(change) {
@@ -176,11 +196,6 @@ export class SharedChangeStream {
     // A delivered event means the reopened stream is healthy again; clear the
     // consecutive-failure count that drives restart backoff (see _restartDelay).
     this._restartFailures = 0;
-
-    // Remember the resume token so a restart picks up here (see _open).
-    if (change && change._id) {
-      this._resumeToken = change._id;
-    }
 
     // Multicast to every driver; each runs its own matcher/projection, advances
     // its lastProcessedOperationTime, and flushes pending writes.
@@ -228,8 +243,8 @@ export class SharedChangeStream {
     }, delayMs);
   }
 
-  // Count a failure of the current cursor at most once, even though the driver
-  // emits both 'error' and 'close' for a single failure. Reset per cursor in
+  // Count a failure of the current cursor at most once, even if that failure
+  // is reported more than once. Reset per cursor in
   // _open. (A failed REOPEN is counted directly in _restart's catch — no cursor
   // was created there, so this flag doesn't apply.)
   _noteFailure() {
