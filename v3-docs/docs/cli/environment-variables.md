@@ -244,10 +244,30 @@ TOOL_NODE_FLAGS_INHERIT=0 TOOL_NODE_FLAGS="--max-old-space-size=4096" meteor run
 
 This overrides the default UNIX group of the socket file configured in `UNIX_SOCKET_PATH`. It can be set to a group name or a numerical gid.
 
+## UNIX_SOCKET_NO_WORKER_SUFFIX
+(_production_)
+
+When running under the Node.js `cluster` module, each worker process normally has a worker-specific suffix appended to its socket file name (see [`UNIX_SOCKET_PATH`](#unix-socket-path)). Set `UNIX_SOCKET_NO_WORKER_SUFFIX=1` to disable this and have a worker use `UNIX_SOCKET_PATH` exactly as given. Use this when the forking process assigns each worker its own unique socket path directly, via the environment object passed to `cluster.fork()`:
+
+```js
+if (cluster.isPrimary) {
+  ['worker1', 'worker2'].forEach((name) => {
+    cluster.fork({
+      UNIX_SOCKET_PATH: `/tmp/meteor.${name}.sock`,
+      UNIX_SOCKET_NO_WORKER_SUFFIX: '1',
+    });
+  });
+}
+```
+
+When enabling this, make sure each worker really does receive a unique path: workers sharing one socket path will delete and recreate each other's socket file.
+
 ## UNIX_SOCKET_PATH
 (_production_)
 
-Configure Meteor's HTTP server to listen on a UNIX socket file path (e.g. `UNIX_SOCKET_PATH=/tmp/meteor.sock`) instead of a TCP port. This is useful when running a local reverse proxy server like Nginx to handle client HTTP requests and direct them to your Meteor application. Leveraging UNIX domain sockets for local communication on the same host avoids the Operating System overhead required by TCP based communication and can also improve security. This UNIX socket file is created when Meteor starts and removed when Meteor exits.
+Configure Meteor's HTTP server to listen on a UNIX socket file path (e.g. `UNIX_SOCKET_PATH=/tmp/meteor.sock`) instead of a TCP port. This is useful when running a local reverse proxy server like Nginx to handle client HTTP requests and direct them to your Meteor application. Leveraging UNIX domain sockets for local communication on the same host avoids the Operating System overhead required by TCP-based communication and can also improve security. This UNIX socket file is created when Meteor starts and removed when Meteor exits.
+
+When the server is a [Node.js `cluster`](https://nodejs.org/api/cluster.html) worker process, a worker-specific suffix is appended to the socket file name so that each worker (each of which is an independent Meteor server with its own in-memory session state) listens on its own socket file. The suffix is taken from the worker's `name` environment variable if set (e.g. `cluster.fork({ name: 'worker1' })` produces `/tmp/meteor.sock.worker1.sock`), otherwise from the worker's cluster id (e.g. `/tmp/meteor.sock.1.sock`). Note that cluster ids increment every time a worker is respawned, so set `name` if an external process such as a reverse proxy needs a stable socket file name. To disable the suffix entirely, see [`UNIX_SOCKET_NO_WORKER_SUFFIX`](#unix-socket-no-worker-suffix).
 
 ## UNIX_SOCKET_PERMISSIONS
 (_production_)
