@@ -19,9 +19,10 @@ Meteor.methods({
     return primeOAuthCredential({ serviceName, serviceData, options });
   },
 
-  async '_e2e.generateTotp'(secret) {
+  async '_e2e.generateTotp'(secret, stepOffset = 0) {
     check(secret, String);
-    return Accounts._generate2faToken(secret).token;
+    check(stepOffset, Match.Integer);
+    return Accounts._generate2faToken(secret, Date.now() + stepOffset * 30_000).token;
   },
 
   async '_e2e.requestLoginToken'({ email }) {

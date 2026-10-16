@@ -1,5 +1,5 @@
 Package.describe({
-  version: "3.1.0",
+  version: "3.2.0",
   summary:
     "Package used to enable two factor authentication through OTP protocol",
 });
@@ -26,6 +26,7 @@ Package.onTest(function (api) {
   api.use([
     "accounts-base",
     "accounts-password",
+    "ddp-client",
     "ecmascript",
     "tinytest",
     "random",
