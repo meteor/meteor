@@ -2903,6 +2903,42 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
+  'changestream - the cached resume token is never ahead of an undelivered event',
+  async function (test) {
+    const c = makeCollection();
+    const handle = await c.find({}).observeChanges({ added: function () { } });
+    test.isTrue(isChangeStreamDriver(handle));
+    const shared = handle._multiplexer._observeDriver._sharedStream;
+    const stream = shared._changeStream;
+
+    // Record, as each event is dispatched, the token a restart would resume
+    // from. Per the change streams spec it is the event's own _id, except for
+    // the last event of a batch (which may carry the postBatchResumeToken). A
+    // token past an undelivered event would skip that event on restart.
+    const seen = [];
+    const dispatch = shared._onChange.bind(shared);
+    shared._onChange = (change) => {
+      seen.push({ id: change._id?._data, cached: stream.resumeToken?._data });
+      return dispatch(change);
+    };
+
+    try {
+      // One insertMany is applied as one batch: its events share a clusterTime
+      // and arrive in one getMore batch.
+      await c.rawCollection().insertMany([1, 2, 3, 4, 5].map((i) => ({ _id: `batch-${i}`, i })));
+      await waitFor(() => seen.length >= 5, 3000);
+      test.equal(seen.length, 5, 'every event of the batch is delivered');
+      seen.slice(0, -1).forEach((event, i) => {
+        test.equal(event.cached, event.id, `cached token is event ${i}'s own _id, not a later position`);
+      });
+    } finally {
+      shared._onChange = dispatch;
+      handle.stop();
+    }
+  }
+);
+
+Tinytest.addAsync(
   'changestream - a live event applied during a resync is recorded so the resync leaves that id alone (#14604)',
   async function (test) {
     const c = makeCollection();
