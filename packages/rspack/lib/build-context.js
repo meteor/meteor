@@ -689,13 +689,21 @@ const __rspackModule = Npm['require']('module');
 const __rspackServerRequire = __rspackModule.createRequire(__rspackServerBundlePath);
 const __rspackMeteorRequire = require;
 const __rspackServerModule = new __rspackModule(__rspackServerBundlePath);
-const __rspackNodeRequire = __rspackServerModule.require.bind(__rspackServerModule);
-__rspackServerModule.require = function(request) {
+const __rspackNodeRequire = typeof __rspackServerModule.require === 'function'
+  ? __rspackServerModule.require.bind(__rspackServerModule)
+  : __rspackServerRequire;
+const __rspackCustomRequire = function(request) {
   if (typeof request === 'string' && request.startsWith('meteor/')) {
-    return __rspackMeteorRequire(request);
+    const mod = __rspackMeteorRequire(request);
+    if (typeof globalThis.__meteorWrapPackageModule === 'function') {
+      return globalThis.__meteorWrapPackageModule(request.slice(7), mod);
+    }
+    return mod;
   }
   return __rspackNodeRequire(request);
 };
+Object.assign(__rspackCustomRequire, __rspackServerRequire);
+__rspackServerModule.require = __rspackCustomRequire;
 delete __rspackServerRequire.cache[__rspackServerBundlePath];
 __rspackServerRequire.cache[__rspackServerBundlePath] = __rspackServerModule;
 /* Node compiles the bundle outside Meteor's boot wrapper, so the
@@ -703,7 +711,26 @@ __rspackServerRequire.cache[__rspackServerBundlePath] = __rspackServerModule;
 globalThis.Npm = Npm;
 globalThis.Assets = Assets;
 try {
-  __rspackServerModule.load(__rspackServerBundlePath);
+  if (typeof __rspackServerModule.load === 'function') {
+    __rspackServerModule.load(__rspackServerBundlePath);
+  } else {
+    const __rspackFs = Npm['require']('fs');
+    const __rspackPath = Npm['require']('path');
+    const __rspackVm = Npm['require']('vm');
+    const __rspackCode = __rspackFs.readFileSync(__rspackServerBundlePath, 'utf8');
+    const __rspackFn = __rspackVm.runInThisContext(
+      '(function (exports, require, module, __filename, __dirname) {\\n' + __rspackCode + '\\n})',
+      { filename: __rspackServerBundlePath }
+    );
+    __rspackFn(
+      __rspackServerModule.exports,
+      __rspackCustomRequire,
+      __rspackServerModule,
+      __rspackServerBundlePath,
+      __rspackPath.dirname(__rspackServerBundlePath)
+    );
+    __rspackServerModule.loaded = true;
+  }
 } catch (error) {
   delete __rspackServerRequire.cache[__rspackServerBundlePath];
   throw error;

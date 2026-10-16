@@ -1006,7 +1006,7 @@ function getFooter ({
   hasRuntime
 }) {
   if (!hasRuntime) {
-    return '\n})();\n';
+    return '\n}).apply(typeof globalThis !== "undefined" ? globalThis : this);\n';
   }
 
   let chunks = [];

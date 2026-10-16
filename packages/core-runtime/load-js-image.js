@@ -26,7 +26,7 @@ function processNext() {
 
   isProcessing = true;
 
-  var config = next.runImage.call(this);
+  var config = next.runImage.call(typeof globalThis !== 'undefined' ? globalThis : this);
   runEagerModules(config, function (mainModuleExports) {
     // Get the exports after the eager code has been run
     var exports = config.export ? config.export() : {};
