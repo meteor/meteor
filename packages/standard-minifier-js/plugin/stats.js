@@ -1,119 +1,154 @@
-import Visitor from "@meteorjs/reify/lib/visitor.js";
-import { findPossibleIndexes } from "@meteorjs/reify/lib/utils.js";
-import { Babel } from "meteor/babel-compiler";
-import acorn from"acorn";
+import acorn from "acorn";
 
-
-// This RegExp will be used to scan the source for calls to meteorInstall,
-// taking into consideration that the function name may have been mangled
-// to something other than "meteorInstall" by the minifier.
+// The minifier can rename meteorInstall. Keep the same name discovery used by
+// the original stats extractor so existing bundles retain their tree keys.
 const meteorInstallRegExp = new RegExp([
-  // If meteorInstall is called by its unminified name, then that's what
-  // we should be looking for in the AST.
   /\b(meteorInstall)\(\{/,
-  // If the meteorInstall function name has been minified, we can figure
-  // out its mangled name by examining the import assignment.
   /\b(\w+)=Package\.modules\.meteorInstall\b/,
   /\b(\w+)=Package\["modules-runtime"\].meteorInstall\b/,
-  // Sometimes uglify-es will inline (0,Package.modules.meteorInstall) as
-  // a call expression.
   /\(0,Package\.modules\.(meteorInstall)\)\(/,
   /\(0,Package\["modules-runtime"\]\.(meteorInstall)\)\(/,
-].map(exp => exp.source).join("|"));
+].map(expression => expression.source).join("|"));
 
+const BYTE_COUNT_CHUNK_SIZE = 256 * 1024;
+const tokenizerOptions = {
+  ecmaVersion: "latest",
+  sourceType: "script",
+  allowAwaitOutsideFunction: true,
+  allowImportExportEverywhere: true,
+  allowReturnOutsideFunction: true,
+  allowHashBang: true,
+  checkPrivateFields: false,
+};
+
+/**
+ * Count UTF-8 bytes without allocating a copy of a potentially enormous
+ * module body. Keep surrogate pairs together at chunk boundaries.
+ */
+function byteLength(source, start, end) {
+  let bytes = 0;
+
+  while (start < end) {
+    let next = Math.min(start + BYTE_COUNT_CHUNK_SIZE, end);
+    const lastCodeUnit = source.charCodeAt(next - 1);
+
+    if (next < end && lastCodeUnit >= 0xd800 && lastCodeUnit <= 0xdbff) {
+      next++;
+    }
+
+    bytes += Buffer.byteLength(source.slice(start, next));
+    start = next;
+  }
+
+  return bytes;
+}
+
+/**
+ * Extract the module tree from minified JavaScript with memory proportional
+ * to the nesting depth and the result. Acorn tokenizes the bundle but never
+ * constructs an AST for the whole file.
+ */
 export function extractModuleSizesTree(source) {
   const match = meteorInstallRegExp.exec(source);
-  if (match) {
-    try {
-      ast = acorn.parse(source, {
-        ecmaVersion: 'latest',
-        sourceType: 'script',
-        allowAwaitOutsideFunction: true,
-        allowImportExportEverywhere: true,
-        allowReturnOutsideFunction: true,
-        allowHashBang: true,
-        checkPrivateFields: false
-      });
-    }
-    catch(e){
-      console.log(`Error while parsing with acorn. Falling back to babel minifier. ${e}`);
-      ast = Babel.parse(source);
-    }
-    
-    let meteorInstallName = "meteorInstall";
-    // The minifier may have renamed meteorInstall to something shorter.
-    match.some((name, i) => (i > 0 && (meteorInstallName = name)));
-    meteorInstallVisitor.visit(ast, meteorInstallName, source);
-    return meteorInstallVisitor.tree;
-  }
-}
+  if (!match) return;
 
-const meteorInstallVisitor = new (class extends Visitor {
-  reset(root, meteorInstallName, source) {
-    this.name = meteorInstallName;
-    this.source = source;
-    this.tree = Object.create(null);
-    // Optimization to abandon entire subtrees of the AST that contain
-    // nothing like the meteorInstall identifier we're looking for.
-    this.possibleIndexes = findPossibleIndexes(source, [
-      meteorInstallName,
-    ]);
+  let meteorInstallName = "meteorInstall";
+  match.some((name, index) => index > 0 && (meteorInstallName = name));
+
+  const tokenizer = acorn.tokenizer(source, tokenizerOptions);
+  const tree = Object.create(null);
+  let token = tokenizer.getToken();
+
+  function advance() {
+    token = tokenizer.getToken();
   }
 
-  visitCallExpression(path) {
-    const node = path.getValue();
+  function readValue(previousValue) {
+    if (token.type.label === "{") {
+      return readObject(previousValue);
+    }
 
-    if (hasIdWithName(node.callee, this.name)) {
-      const source = this.source;
+    const start = token.start;
+    const delimiters = [];
+    let end = start;
 
-      function walk(tree, expr) {
-        if (expr.type !== "ObjectExpression") {
-          return Buffer.byteLength(source.slice(expr.start, expr.end));
-        }
+    while (token.type.label !== "eof") {
+      const label = token.type.label;
 
-        tree = tree || Object.create(null);
-
-        expr.properties.forEach(prop => {
-          const keyName = getKeyName(prop.key);
-          if (typeof keyName === "string") {
-            tree[keyName] = walk(tree[keyName], prop.value);
-          }
-        });
-
-        return tree;
+      if (delimiters.length === 0 && (label === "," || label === "}")) {
+        return byteLength(source, start, end);
       }
 
-      walk(this.tree, node.arguments[0]);
+      if (label === "(" || label === "[" || label === "{" || label === "${") {
+        delimiters.push(label);
+      } else if (label === ")" || label === "]" || label === "}") {
+        delimiters.pop();
+      }
 
-    } else {
-      this.visitChildren(path);
+      end = token.end;
+      advance();
     }
-  }
-});
 
-function hasIdWithName(node, name) {
-  switch (node && node.type) {
-  case "SequenceExpression":
-    const last = node.expressions[node.expressions.length - 1];
-    return hasIdWithName(last, name);
-  case "MemberExpression":
-    return hasIdWithName(node.property, name);
-  case "Identifier":
-    return node.name === name;
-  default:
-    return false;
-  }
-}
-
-function getKeyName(key) {
-  if (key.type === "Identifier") {
-    return key.name;
+    throw new SyntaxError("Unterminated meteorInstall module value");
   }
 
-  if (key.type === "StringLiteral" ||
-      key.type === "Literal") {
-    return key.value;
+  function readObject(previousValue) {
+    const object = previousValue || Object.create(null);
+    advance();
+
+    while (token.type.label !== "}" && token.type.label !== "eof") {
+      let key;
+
+      if (token.type.label === "[") {
+        advance();
+        if (token.type.label === "string") key = token.value;
+        advance();
+        if (token.type.label !== "]") {
+          throw new SyntaxError("Unsupported computed meteorInstall key");
+        }
+        advance();
+      } else {
+        if (token.type.label === "name" || token.type.label === "string" ||
+            token.type.keyword) {
+          key = token.value;
+        }
+        advance();
+      }
+
+      if (token.type.label !== ":") {
+        throw new SyntaxError("Unsupported meteorInstall module property");
+      }
+      advance();
+
+      const value = readValue(object[key]);
+      if (typeof key === "string") object[key] = value;
+
+      if (token.type.label === ",") advance();
+    }
+
+    if (token.type.label !== "}") {
+      throw new SyntaxError("Unterminated meteorInstall module tree");
+    }
+    advance();
+
+    return object;
   }
 
-  return null;
+  while (token.type.label !== "eof") {
+    if (token.value !== meteorInstallName) {
+      advance();
+      continue;
+    }
+
+    advance();
+    // Minifiers can express the callee as (0,Package.modules.meteorInstall).
+    if (token.type.label === ")") advance();
+    if (token.type.label !== "(") continue;
+    advance();
+    if (token.type.label !== "{") continue;
+
+    readObject(tree);
+  }
+
+  return tree;
 }

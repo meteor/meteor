@@ -8,6 +8,7 @@ When Meteor runs with the Rspack bundler enabled, this package is what generates
 
 - **Dual client/server builds** with the correct targets, externals, and output paths
 - **SWC-based transpilation** for JS/TS/JSX/TSX with automatic framework detection
+- **ES5 syntax in build output** shared by modern and legacy browsers in production and test builds; development keeps its existing target
 - **React Fast Refresh** in development when React is enabled
 - **Blaze template handling** via ignore-loader when Blaze is enabled
 - **Persistent filesystem caching** for fast rebuilds
@@ -25,6 +26,14 @@ meteor add rspack
 ```
 
 By doing this, your Meteor app will automatically serve `@meteorjs/rspack` and the required `@rspack/cli`, `@rspack/core`, among others.
+
+Meteor skips its whole-file legacy transpilation only when this adapter marks
+the client output as ES5-compatible. Custom target or SWC loader overrides that
+remove that guarantee retain Meteor's legacy transpilation path.
+SWC detects each file's module type so compiling CommonJS dependencies to ES5
+preserves their exports and uses CommonJS helper imports.
+External SWC helpers resolve from the host app, including when compiled
+dependencies live outside it through an npm link or workspace symlink.
 
 ## Usage
 

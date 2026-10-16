@@ -4337,34 +4337,61 @@ if (Meteor.isServer) {
 Tinytest.addAsync(
   'mongo-livedata - maintained isomorphism on collection operations for both client and server',
   async function (test) {
-    const Collection = new Mongo.Collection(
-      `maintained_col_op_iso${test.runId()}`,
-      { resolverType: 'stub' }
-    );
+    const collectionName = `maintained_col_op_iso${test.runId()}`;
+    let subscription;
 
-    await Collection.insertAsync({ _id: 'a' });
-    await Collection.insertAsync({ _id: 'b' });
+    // Optimistic documents otherwise disappear when the server rejects writes
+    // to a collection that only exists on the client.
+    if (Meteor.isClient) {
+      await Meteor.callAsync('createInsecureCollection', collectionName);
+      subscription = Meteor.subscribe('c-' + collectionName);
+    }
 
-    let items = await Collection.find().fetchAsync();
-    let itemIds = items.map(_item => _item._id);
+    const collection = new Mongo.Collection(collectionName, { resolverType: 'stub' });
 
-    test.equal(itemIds, ['a', 'b']);
+    const awaitMutation = async (mutation) => {
+      await mutation;
 
-    await Collection.updateAsync({ _id: 'a' }, { $set: { num: 1 } });
-    await Collection.updateAsync({ _id: 'b' }, { $set: { num: 2 } });
+      // Awaiting a stub does not wait for its server acknowledgement.
+      if (Meteor.isClient) {
+        await mutation.serverPromise;
+      }
+    };
 
-    if(Meteor.isClient) Meteor._sleepForMs(100); // wait for async operations to complete 
-    items = await Collection.find().fetchAsync();
-    itemIds = items.map(_item => _item.num);
-    
-    test.equal(itemIds, [1, 2]);
+    try {
+      if (subscription) {
+        await waitUntil(() => subscription.ready(), {
+          description: 'isomorphism test collection subscription',
+        });
+      }
 
-    await Collection.removeAsync({ _id: 'a' });
-    await Collection.removeAsync({ _id: 'b' });
+      await awaitMutation(collection.insertAsync({ _id: 'a' }));
+      await awaitMutation(collection.insertAsync({ _id: 'b' }));
 
-    items = await Collection.find().fetchAsync();
+      const cursor = collection.find({}, { sort: { _id: 1 } });
+      let items = await cursor.fetchAsync();
 
-    test.equal(items, []);
+      test.equal(items.map(item => item._id), ['a', 'b']);
+
+      await awaitMutation(collection.updateAsync({ _id: 'a' }, { $set: { num: 1 } }));
+      await awaitMutation(collection.updateAsync({ _id: 'b' }, { $set: { num: 2 } }));
+
+      items = await cursor.fetchAsync();
+
+      test.equal(items.map(item => item.num), [1, 2]);
+
+      await awaitMutation(collection.removeAsync({ _id: 'a' }));
+      await awaitMutation(collection.removeAsync({ _id: 'b' }));
+
+      test.equal(await cursor.fetchAsync(), []);
+    } finally {
+      if (subscription) {
+        subscription.stop();
+        await Meteor.callAsync('dropInsecureCollection', collectionName);
+      } else {
+        await collection.dropCollectionAsync();
+      }
+    }
   },
 );
 

@@ -482,7 +482,7 @@ Package.onUse(function (api) {
 
   // Restart meteor to test disk cache
   await run.stop();
-  run = await startRun(s);
+  run = s.run();
 
   // Disk cache gets us up to 3 for SwcJsCompiler
   await run.match("SwcJsCompiler invocation 3", false, true);
