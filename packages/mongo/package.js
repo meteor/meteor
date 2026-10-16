@@ -91,6 +91,7 @@ Package.onUse(function (api) {
       "observe_multiplex.ts",
       "doc_fetcher.js",
       "polling_observe_driver.ts",
+      "observe_window.js",
       "oplog_observe_driver.js",
       "oplog_v2_converter.ts",
       "cursor_description.ts",
