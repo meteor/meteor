@@ -4833,3 +4833,42 @@ Tinytest.addAsync('mongo-livedata - publish with $geoIntersects returns correct 
     }
   );
 });
+
+// A sorted, limited cursor must see a write made by another server (another
+// process writing straight to MongoDB) without waiting for a poll. The oplog
+// driver tails such writes; a cursor that falls back to the polling driver only
+// notices them at the next pollingIntervalMs (10 s by default).
+Meteor.isServer && DEFAULT_REACTIVITY?.[0] !== 'polling' &&
+  Tinytest.addAsync(
+    'mongo-livedata - observe sorted, limited - sees writes from another process',
+    async function (test) {
+      const coll = new Mongo.Collection('limitedExternal' + Random.id());
+      await coll.insertAsync({ _id: 'r10', rank: 10 });
+      await coll.insertAsync({ _id: 'r20', rank: 20 });
+      await coll.insertAsync({ _id: 'r30', rank: 30 });
+
+      const events = [];
+      const handle = await coll
+        .find({}, { sort: { rank: 1 }, limit: 2 })
+        .observeChanges({
+          added: (id) => events.push(`added ${id}`),
+          removed: (id) => events.push(`removed ${id}`),
+        });
+      const driver = handle._multiplexer._observeDriver.constructor.name;
+      test.equal(events.sort(), ['added r10', 'added r20']);
+      events.length = 0;
+
+      try {
+        // Bypass Meteor's write path, as a write from another server does: no
+        // write fence and no local invalidation.
+        await coll.rawCollection().insertOne({ _id: 'r5', rank: 5 });
+        const deadline = Date.now() + 3000;
+        while (events.length < 2 && Date.now() < deadline) {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+        test.equal(events.sort(), ['added r5', 'removed r20'], `observed by ${driver}`);
+      } finally {
+        await handle.stop();
+      }
+    }
+  );
