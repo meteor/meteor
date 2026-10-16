@@ -75,6 +75,8 @@ BCp.isVerbose = function(config = getMeteorConfig()) {
 };
 
 var enableClientTLA = process.env.METEOR_ENABLE_CLIENT_TOP_LEVEL_AWAIT === 'true';
+var useLegacySourceMapEngine =
+  process.env.METEOR_USE_LEGACY_SOURCE_MAP_ENGINE === 'true';
 
 function compileWithBabel(source, babelOptions, cacheOptions) {
   return profile('Babel.compile', function () {
@@ -275,8 +277,12 @@ BCp.processOneFileForTarget = function (inputFile, source) {
       // Try to read the corresponding map file
       const mapPath = fullPath + '.map';
       if (fs.existsSync(mapPath)) {
-        const mapContent = fs.readFileSync(mapPath, 'utf8');
-        toBeAdded.sourceMap = JSON.parse(mapContent);
+        if (arch.startsWith('web.') && !useLegacySourceMapEngine) {
+          toBeAdded.sourceMap =
+            Plugin.rspackHelpers.createFileBackedSourceMap(mapPath);
+        } else {
+          toBeAdded.sourceMap = JSON.parse(fs.readFileSync(mapPath, 'utf8'));
+        }
       }
 
       if (this.isVerbose()) {
