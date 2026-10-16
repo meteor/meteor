@@ -9,6 +9,7 @@ Load these for detailed context on specific topics:
 | [codebase](.github/skills/codebase/SKILL.md) | Build system, CLI, isobuild, tools/ directory |
 | [conventions](.github/skills/conventions/SKILL.md) | Writing packages, CLI commands, code patterns |
 | [testing](.github/skills/testing/SKILL.md) | Writing tests, debugging failures, test infrastructure |
+| [test-runners](.github/skills/test-runners/SKILL.md) | Creating or maintaining test-runner providers, runtime drivers, and compiler adapters |
 | [packages](.github/skills/packages/SKILL.md) | Finding packages by feature, understanding dependencies |
 | [modern-tools](.github/skills/modern-tools/SKILL.md) | tools-core utilities, rspack, modern integrations |
 | [sync-modern-tool-versions](.github/skills/sync-modern-tool-versions/SKILL.md) | Synchronizing modern-tool npm packages, dependency floors, constants, templates, and fixtures |

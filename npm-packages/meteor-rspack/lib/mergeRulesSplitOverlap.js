@@ -3,7 +3,7 @@
  * overlapping file extensions in module rules.
  */
 
-const { mergeWithCustomize } = require('webpack-merge');
+const { mergeWithCustomize } = require('rspack-merge');
 const isEqual = require('fast-deep-equal');
 
 /**

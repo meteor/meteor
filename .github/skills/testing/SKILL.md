@@ -7,6 +7,9 @@ description: Use when writing tests, debugging test failures, running the test s
 
 Test patterns, commands, and utilities for the Meteor codebase.
 
+For changes to provider selection, test-runner lifecycle, runtime drivers, or
+compiler adapters, use [test-runners](../test-runners/SKILL.md).
+
 ## Test Commands
 
 ```bash

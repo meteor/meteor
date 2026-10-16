@@ -1,0 +1,5 @@
+import { rs, test } from '@rstest/core';
+
+rs.mock('meteor/mongo', () => ({ Mongo: {} }));
+
+test('never replaces Meteor-owned modules', () => {});

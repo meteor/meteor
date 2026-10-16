@@ -17,6 +17,7 @@ import {
 var colonConverter = require('../utils/colon-converter.js');
 var utils = require('../utils/utils.js');
 var buildPluginModule = require('./build-plugin.js');
+var testRunnerPlugin = require('./test-runner-plugin.js');
 var Console = require('../console/console.js').Console;
 var Profile = require('../tool-env/profile').Profile;
 import { requestGarbageCollection } from "../utils/gc.js";
@@ -24,6 +25,7 @@ import { Unibuild } from "./unibuild.js";
 import rspackHelpers from "../tool-env/rspack";
 import { getCurrentNodeBinDir, getDevBundle } from "../fs/files";
 import { runLogInstance } from "../runners/run-log";
+var testRunnerContext = require('../tool-env/test-runner-context.js');
 
 var rejectBadPath = function (p) {
   if (p.match(/\.\./)) {
@@ -69,6 +71,11 @@ var Isopack = function () {
   // build process: introduce a new source processor (compiler, minifier,
   // linter)
   self.plugins = {};
+
+  // Test-runner providers registered by build plugins defined in this package.
+  // Factories stay lazy until command-level provider selection completes.
+  self.testRunnerProviders = [];
+  self.testRunnerBuildOptionsFingerprint = null;
 
   self.cordovaDependencies = {};
 
@@ -513,6 +520,21 @@ Object.assign(Isopack.prototype, {
   _makePluginApi: function (pluginName) {
     var isopack = this;
 
+    const registerTestRunner = testRunnerPlugin.createRegisterTestRunner({
+      isopack,
+      buildmessage,
+    });
+
+    // Build plugins remain forbidden in testOnly packages. Any plugin present
+    // there was registered through Package.registerTestRunnerPlugin, so expose
+    // only provider registration and prevent accidental compiler/minifier use.
+    if (isopack.testOnly) {
+      return {
+        name: pluginName,
+        registerTestRunner,
+      };
+    }
+
     /**
      * @global
      * @namespace Plugin
@@ -520,6 +542,12 @@ Object.assign(Isopack.prototype, {
      */
     var Plugin = {
       name: pluginName,
+
+      registerTestRunner,
+
+      getTestRunnerBuildOptions(buildPluginName = isopack.name) {
+        return testRunnerContext.getTestRunnerBuildOptions(buildPluginName);
+      },
 
       // Share the meteorConfig object as part of plugin API
       getMeteorConfig: getMeteorConfig,
@@ -910,6 +938,8 @@ Object.assign(Isopack.prototype, {
       // isopackBuildInfoJson), so no need to merge.)
       self.pluginWatchSet = watch.WatchSet.fromJSON(
         options.isopackBuildInfoJson.pluginDependencies);
+      self.testRunnerBuildOptionsFingerprint =
+        options.isopackBuildInfoJson.testRunnerBuildOptionsFingerprint;
     }
 
     // If we are loading multiple isopacks, only take this stuff from the
@@ -1091,6 +1121,8 @@ Object.assign(Isopack.prototype, {
       if (includeIsopackBuildInfo) {
         isopackBuildInfoJson = {
           builtBy: compiler.BUILT_BY,
+          testRunnerBuildOptionsFingerprint:
+            self.testRunnerBuildOptionsFingerprint,
           unibuildDependencies: {},
           // pluginDependencies defines a WatchSet that any package that could
           // use this package as a plugin needs to watch. So it always contains

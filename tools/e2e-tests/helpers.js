@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs-extra');
 const os = require('os');
 const rimraf = require('rimraf');
+const { stripVTControlCharacters } = require('node:util');
 
 // Get the absolute path to the meteor executable
 const REPO_ROOT = path.resolve(__dirname, '../..');
@@ -442,9 +443,6 @@ async function killSingleProcessByPort(port) {
         await execa.command(`kill -9 ${pid} 2>/dev/null`, { shell: true, reject: false });
       }
 
-      // fuser fallback for when lsof/ss miss the socket owner.
-      await execa.command(`fuser -k ${port}/tcp 2>/dev/null`, { shell: true, reject: false });
-
       // Let the OS release the socket before re-checking.
       await new Promise(r => setTimeout(r, 400));
 
@@ -496,8 +494,12 @@ function getOwnProcessGroupId() {
 async function findPidsOnPort(port) {
   const pids = new Set();
 
+  // -sTCP:LISTEN restricts matches to processes listening on the port, so we
+  // don't return clients holding open connections (e.g. the Playwright browser
+  // talking to the Rspack HMR socket on 18080). Killing those by mistake takes
+  // the browser down mid-suite.
   const lsof = await execa.command(
-    `lsof -i :${port} -t 2>/dev/null`,
+    `lsof -i :${port} -sTCP:LISTEN -t 2>/dev/null`,
     { shell: true, reject: false }
   );
   for (const line of (lsof.stdout || '').split('\n')) {
@@ -591,14 +593,17 @@ export async function runMeteorCommand(command, args = [], cwd, options = {}) {
   let processResult;
   if (checkExitCode) {
     processResult = await new Promise((resolve) => {
-      meteorProcess.on('exit', (code) => {
-        resolve({ code, outputLines });
+      meteorProcess.on('exit', (code, signal) => {
+        resolve({ code, signal, outputLines });
       });
     });
 
     // Check if the command was successful
     if (processResult.code !== 0) {
-      throw new Error(`Meteor command '${command}' failed with code ${processResult.code}${captureOutput ? `:\n${processResult.outputLines.join('\n')}` : ''}`);
+      const exitReason = processResult.code === null
+        ? `signal ${processResult.signal || 'unknown'}`
+        : `code ${processResult.code}`;
+      throw new Error(`Meteor command '${command}' failed with ${exitReason}${captureOutput ? `:\n${processResult.outputLines.join('\n')}` : ''}`);
     }
   }
 
@@ -744,9 +749,13 @@ export async function waitForMeteorOutput(outputLines, pattern, options = {}) {
       });
     }
 
-    const lineMatches = (line) =>
-      (typeof pattern === 'string' && line.includes(pattern)) ||
-      (pattern instanceof RegExp && pattern.test(line));
+    const lineMatches = (line) => {
+      // Reporters can insert color resets between a status symbol and its text.
+      // Match visible text while preserving the captured line for diagnostics.
+      const text = stripVTControlCharacters(line);
+      return (typeof pattern === 'string' && text.includes(pattern)) ||
+        (pattern instanceof RegExp && pattern.test(text));
+    };
 
     // Function to check for the pattern in the output lines
     const checkForPattern = () => {
@@ -779,14 +788,10 @@ export async function waitForMeteorOutput(outputLines, pattern, options = {}) {
           }
         }
       } else {
-        // Check each line for the pattern (original behavior)
+        // Check each line for the pattern, returning the original captured text.
         for (const line of relevantOutputLines) {
-          if (typeof pattern === 'string' && line.includes(pattern)) {
-            console.log(`Found output matching string: ${pattern}`);
-            resolve(line);
-            return;
-          } else if (pattern instanceof RegExp && pattern.test(line)) {
-            console.log(`Found output matching regex: ${pattern}`);
+          if (lineMatches(line)) {
+            console.log(`Found output matching: ${pattern}`);
             resolve(line);
             return;
           }

@@ -13,7 +13,7 @@ examples/
 guide/
 scripts/
 tools/
-npm-packages/
+npm-packages/*
 v3-docs/
 node_modules/
 .meteor/
@@ -23,6 +23,10 @@ node_modules/
 # Ignore node_modules/npm inside packages
 packages/**/node_modules/
 packages/**/.npm/
+npm-packages/**/node_modules/
+npm-packages/**/.npm/
+
+!npm-packages/meteor-rstest/
 
 # All packages ignored by default
 # Only those listed below are formatted
@@ -43,6 +47,7 @@ packages/*
 !packages/ordered-dict/
 !packages/rate-limit/
 !packages/retry/
+!packages/rstest/
 !packages/logging/
 !packages/session/
 !packages/test-in-console/

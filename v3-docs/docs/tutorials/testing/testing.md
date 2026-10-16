@@ -4,6 +4,10 @@ Testing allows you to ensure your application works the way you think it does, e
 
 Automated testing is critical because it allows you to run a far greater set of tests much more often than you could manually, allowing you to catch regression errors immediately.
 
+:::info Testing workflows
+This tutorial follows Meteor's established driver-package workflow with Mocha. For the Rstest integration, including its own discovery rules, native tests, real Meteor runtime, and full-app E2E, see [Test Stack](/about/test-stack.md). Existing driver-based applications can continue following this tutorial.
+:::
+
 ## Types of tests
 
 Entire books have been written on the subject of testing, so we will touch on some basics of testing here. The important thing to consider when writing a test is what part of the application you are trying to test, and how you are verifying the behavior works.
@@ -60,7 +64,7 @@ There is another test command in the Meteor tool; `meteor test-packages` is a wa
 
 ### Driver packages
 
-When you run a `meteor test` command, you must provide a `--driver-package` argument. A test driver is a mini-application that runs in place of your app and runs each of your defined tests, whilst reporting the results in some kind of user interface.
+When using the driver-based workflow described here, provide a `--driver-package` argument to `meteor test`. A test driver is a mini-application that runs in place of your app and runs each of your defined tests, whilst reporting the results in some kind of user interface.
 
 There are two main kinds of test driver packages:
 
