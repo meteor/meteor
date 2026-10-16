@@ -536,6 +536,8 @@ export class ChangeStreamObserveDriver {
         // Same snapshot boundary as the initial query: events at or before
         // its operationTime are already in the result and are skipped.
         await this._runInitialSnapshot(collection);
+        Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
+          "mongo-livedata", "changestream-window-requeries", 1);
       } catch (error) {
         console.error(`[ChangeStream ${this._id}] Re-running limited query failed:`, error);
       }
