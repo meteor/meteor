@@ -62,7 +62,7 @@ Npm.depends({
 });
 ```
 
-`api.mainModule` is documented in the [modules](http://docs.meteor.com/packages/modules.html#Modular-package-structure) section.
+`api.mainModule` and `api.mainModules` are documented in the [modules](http://docs.meteor.com/packages/modules.html#Modular-package-structure) section.
 
 Build plugins are created with
 [`Package.registerBuildPlugin`](#PackageNamespace-registerBuildPlugin). See the
