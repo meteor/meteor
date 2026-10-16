@@ -170,6 +170,19 @@ export class SharedChangeStream {
     }));
   }
 
+  // True while the driver holds change events it has fetched but not yet
+  // emitted. The driver emits buffered events one per tick, so this is how a
+  // driver learns that more events at the current clusterTime are on their way
+  // (see ChangeStreamObserveDriver._setLastProcessedOperationTime). Reads the
+  // node driver's internal cursor and stream buffers; false if they move.
+  hasUndeliveredChanges() {
+    const changeStream = this._changeStream;
+    if (!changeStream) return false;
+    const streamed = changeStream.cursorStream?.readableLength ?? 0;
+    const fetched = changeStream.cursor?.bufferedCount?.() ?? 0;
+    return streamed > 0 || fetched > 0;
+  }
+
   _onChange(change) {
     if (this._stopped) return;
 

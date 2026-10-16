@@ -13,6 +13,7 @@ var COLLECTIONS = {};
 // dumb-forcing changeStream tests only into CI
 const DEFAULT_REACTIVITY = process.env.METEOR_REACTIVITY_ORDER ? process.env.METEOR_REACTIVITY_ORDER.split(',') : undefined;
 var IS_OPLOG = DEFAULT_REACTIVITY && DEFAULT_REACTIVITY[0] === 'oplog';
+var IS_CHANGESTREAM = DEFAULT_REACTIVITY && DEFAULT_REACTIVITY[0] === 'changeStreams';
 
 if (Meteor.isServer) {
   Meteor.methods({
@@ -1022,7 +1023,9 @@ const setsEqual = function (a, b) {
   return difference(a, b).length === 0 && difference(b, a).length === 0;
   };
 
-    if (IS_OPLOG) {
+    // The oplog and change-streams drivers both keep a limited cursor's
+    // window in ObserveWindow.
+    if (IS_OPLOG || IS_CHANGESTREAM) {
       // This test mainly checks the correctness of oplog code dealing with limited
       // queries. Compitablity with poll-diff is added as well.
       Tinytest.addAsync(
@@ -1080,7 +1083,7 @@ const setsEqual = function (a, b) {
           };
           // tests '_id' subfields for all documents in oplog buffer
           var testOplogBufferIds = function(ids) {
-            if (!usesOplog) return;
+            if (!o.handle._multiplexer._observeDriver._unpublishedBuffer) return;
             var bufferIds = [];
             o.handle._multiplexer._observeDriver._unpublishedBuffer.forEach(
               function(x, id) {
@@ -1094,7 +1097,7 @@ const setsEqual = function (a, b) {
             );
           };
           const testSafeAppendToBufferFlag = function(expected) {
-            if (!usesOplog) return;
+            if (!o.handle._multiplexer._observeDriver._unpublishedBuffer) return;
             test.equal(
               o.handle._multiplexer._observeDriver._safeAppendToBuffer,
               expected
@@ -1224,8 +1227,9 @@ const setsEqual = function (a, b) {
           // State: [ 17:8 18:7 19:6 | ]!
 
           // Multi-delete order is not guaranteed. If doc 4 is deleted after it
-          // enters the published set, oplog observers emit a transient add/remove
-          // pair. MongoDB 8 can delete it from the unpublished buffer first.
+          // enters the published set, oplog and change-stream observers emit a
+          // transient add/remove pair. MongoDB 8 can delete it from the
+          // unpublished buffer first.
           expectedRemoves = [
             { removed: docId3 },
             { removed: docId1 },
@@ -1243,7 +1247,8 @@ const setsEqual = function (a, b) {
           ]);
           test.isTrue(
             (o.output.length === 6 && setsEqual(o.output, requiredEvents)) ||
-              (usesOplog && o.output.length === 8 &&
+              (o.handle._multiplexer._observeDriver._unpublishedBuffer &&
+                o.output.length === 8 &&
                 setsEqual(o.output, eventsWithTransientDoc)),
             'unexpected multi-delete callbacks: ' + EJSON.stringify(o.output)
           );
@@ -4833,3 +4838,141 @@ Tinytest.addAsync('mongo-livedata - publish with $geoIntersects returns correct 
     }
   );
 });
+
+// A sorted, limited cursor must see a write made by another server (another
+// process writing straight to MongoDB) without waiting for a poll. The oplog
+// driver tails such writes; a cursor that falls back to the polling driver only
+// notices them at the next pollingIntervalMs (10 s by default).
+Meteor.isServer && DEFAULT_REACTIVITY?.[0] !== 'polling' &&
+  Tinytest.addAsync(
+    'mongo-livedata - observe sorted, limited - sees writes from another process',
+    async function (test) {
+      const coll = new Mongo.Collection('limitedExternal' + Random.id());
+      await coll.insertAsync({ _id: 'r10', rank: 10 });
+      await coll.insertAsync({ _id: 'r20', rank: 20 });
+      await coll.insertAsync({ _id: 'r30', rank: 30 });
+
+      const events = [];
+      const handle = await coll
+        .find({}, { sort: { rank: 1 }, limit: 2 })
+        .observeChanges({
+          added: (id) => events.push(`added ${id}`),
+          removed: (id) => events.push(`removed ${id}`),
+        });
+      const driver = handle._multiplexer._observeDriver.constructor.name;
+      test.equal(events.sort(), ['added r10', 'added r20']);
+      events.length = 0;
+
+      try {
+        // Bypass Meteor's write path, as a write from another server does: no
+        // write fence and no local invalidation.
+        await coll.rawCollection().insertOne({ _id: 'r5', rank: 5 });
+        const deadline = Date.now() + 3000;
+        while (events.length < 2 && Date.now() < deadline) {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+        // Let anything else arrive: exactly these two callbacks, nothing more.
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        test.equal(events.sort(), ['added r5', 'removed r20'], `observed by ${driver}`);
+      } finally {
+        await handle.stop();
+      }
+    }
+  );
+
+const waitUntilTrue = async (condition, timeoutMs = 3000) => {
+  const deadline = Date.now() + timeoutMs;
+  while (!(await condition()) && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+};
+
+// Another process deletes the listed documents until the buffer runs dry. The
+// window re-runs its query with no write fence involved (the common case
+// across servers) and ends on the right documents.
+Meteor.isServer && DEFAULT_REACTIVITY?.[0] !== 'polling' &&
+  Tinytest.addAsync(
+    'mongo-livedata - observe sorted, limited - refills after another process empties the buffer',
+    async function (test) {
+      const coll = new Mongo.Collection('limitedDrain' + Random.id());
+      for (let i = 0; i < 10; i++) await coll.insertAsync({ _id: `r${i}`, rank: i });
+
+      const published = new Set();
+      const handle = await coll
+        .find({}, { sort: { rank: 1 }, limit: 3 })
+        .observeChanges({
+          added: (id) => published.add(id),
+          removed: (id) => published.delete(id),
+        });
+      const driver = handle._multiplexer._observeDriver;
+      let requeries = 0;
+      if (driver._requestRequery) {
+        const request = driver._requestRequery.bind(driver);
+        driver._requestRequery = () => { requeries += 1; request(); };
+      }
+
+      try {
+        test.equal([...published].sort(), ['r0', 'r1', 'r2']);
+        // limit 3 publishes r0-r2 and buffers r3-r5: deleting r0-r5 one at a
+        // time drains the buffer twice.
+        for (let i = 0; i < 6; i++) {
+          await coll.rawCollection().deleteOne({ _id: `r${i}` });
+        }
+        await waitUntilTrue(() => published.has('r6') && published.has('r7') && published.has('r8'));
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        test.equal([...published].sort(), ['r6', 'r7', 'r8'], `observed by ${driver.constructor.name}`);
+        if (driver._usesChangeStreams) {
+          test.isTrue(requeries >= 1, 'the window re-ran its query when the buffer ran dry');
+        }
+      } finally {
+        await handle.stop();
+      }
+    }
+  );
+
+// The window's edge cuts through equal sort keys. MongoDB may return equal
+// keys in any order, so any choice among them is valid; the window must stay
+// a valid first `limit` documents as another process deletes the shown ones.
+Meteor.isServer && DEFAULT_REACTIVITY?.[0] !== 'polling' &&
+  Tinytest.addAsync(
+    'mongo-livedata - observe sorted, limited - equal sort keys at the window edge',
+    async function (test) {
+      const coll = new Mongo.Collection('limitedTies' + Random.id());
+      for (let i = 0; i < 10; i++) await coll.insertAsync({ _id: `t${i}`, rank: i < 5 ? 1 : 2 });
+
+      const published = new Set();
+      const handle = await coll
+        .find({}, { sort: { rank: 1 }, limit: 3 })
+        .observeChanges({
+          added: (id) => published.add(id),
+          removed: (id) => published.delete(id),
+        });
+      const driver = handle._multiplexer._observeDriver.constructor.name;
+
+      const remaining = async () => coll.find({}, { fields: { rank: 1 } }).fetchAsync();
+      const isValidWindow = async () => {
+        const docs = await remaining();
+        const rank = Object.fromEntries(docs.map((doc) => [doc._id, doc.rank]));
+        const shown = [...published];
+        const outside = docs.filter((doc) => !published.has(doc._id));
+        return shown.length === Math.min(3, docs.length) &&
+          shown.every((id) => id in rank) &&
+          outside.every((doc) => shown.every((id) => rank[id] <= doc.rank));
+      };
+
+      try {
+        test.isTrue(await isValidWindow(), `initial window (${driver})`);
+        for (let step = 0; step < 8; step++) {
+          const victim = [...published][0];
+          await coll.rawCollection().deleteOne({ _id: victim });
+          await waitUntilTrue(async () => !published.has(victim) && (await isValidWindow()));
+          test.isTrue(
+            await isValidWindow(),
+            `after deleting ${victim}: shown ${[...published].sort()} (${driver})`
+          );
+        }
+      } finally {
+        await handle.stop();
+      }
+    }
+  );
