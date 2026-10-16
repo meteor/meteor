@@ -90,6 +90,12 @@ When debugging an integration issue, it is usually one of: a missing externals b
 
 The Rspack integration is exercised by the Jest + Playwright suite in `tools/e2e-tests/`. Each app fixture under `tools/e2e-tests/apps/<name>/` has a matching `<name>.test.js` that runs init/dev/prod/test/build/reset phases against a real Meteor + Rspack project. The full matrix lives in [`E2E_COVERAGE.md`](E2E_COVERAGE.md); maintain that file via the [`e2e-coverage`](../../../.github/skills/e2e-coverage/SKILL.md) skill when adding or modifying apps.
 
+Run `npm run test:e2e:groups` from the repository root to list the available
+groups, then `npm run test:e2e:group -- monorepo` (or another group) to reproduce
+CI's test selection. The definitions live in `tools/e2e-tests/test-groups.js`,
+and CI generates its matrix from them. See the [E2E README](../../../tools/e2e-tests/README.md)
+for all commands and the dedicated Accounts group.
+
 ### Strategy
 
 - **Real projects, not mocks.** Each test copies an app fixture, installs deps, adds the `rspack` package, and runs the Meteor CLI. This catches integration bugs that unit tests miss (HMR wiring, externals, asset paths, Windows quirks).
@@ -103,7 +109,9 @@ The Rspack integration is exercised by the Jest + Playwright suite in `tools/e2e
 3. Update `jest.config.js` if the new file is not picked up by the default `testMatch`.
 4. Install deps once with `npm run install:e2e` (run from repo root).
 5. Run the new file alone: `npm run test:e2e -- --testPathPattern <name>`. That is also the fastest way to debug a single regression.
-6. Update [`E2E_COVERAGE.md`](E2E_COVERAGE.md) per the e2e-coverage skill so the matrix stays accurate.
+6. Assign the suite in `tools/e2e-tests/test-groups.js` and run `npm run test:e2e:groups:audit`. Unassigned tests run in CI's fallback group; overlaps and empty named groups fail the audit.
+7. Run its group with `npm run test:e2e:group -- <group>`.
+8. Update [`E2E_COVERAGE.md`](E2E_COVERAGE.md) per the e2e-coverage skill so the matrix stays accurate.
 
 ### What to verify when touching Rspack
 
@@ -146,7 +154,10 @@ npm run test:e2e
 
 ### Upgrading Rspack Core Dependencies
 
-When a new version of Rspack is released, you must bump the core dependencies: `@rspack/core`, `@rspack/plugin-react-refresh`, `swc-loader`, and `@rsdoctor/rspack-plugin`.
+When a new version of Rspack is released, review and synchronize the core
+dependencies: `@rspack/core`, `@rspack/cli`, `@rspack/dev-server`,
+`@rspack/plugin-react-refresh`, `@swc/core`, `swc-loader`, and
+`@rsdoctor/rspack-plugin`.
 
 **1. Update the Constants (Atmosphere Package)**
 Modify the default versions in `packages/rspack/lib/constants.js`. For example, change `DEFAULT_RSPACK_VERSION` to the new target version:
