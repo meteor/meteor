@@ -23,7 +23,7 @@ It is installed by default for all new apps and packages. Nevertheless, the `mod
 
 If you want to add it to existent apps or packages:
 
-For apps, this is as easy as `meteor add modules`, or (even better) `meteor add ecmascript`, since the `ecmascript` package *implies* the `modules` package.
+For apps, this is as easy as `meteor add modules`, or (even better) `meteor add ecmascript`, since the `ecmascript` package _implies_ the `modules` package.
 
 For packages, you can enable `modules` by adding `api.use('modules')` to the `Package.onUse` or `Package.onTest` sections of your `package.js` file.
 
@@ -62,11 +62,11 @@ let h = g();
 export { g, h };
 ```
 
-All of these exports are *named*, which means other modules can import them using those names:
+All of these exports are _named_, which means other modules can import them using those names:
 
 ```js
 // importer.js
-import { a, c, F, h } from './exporter';
+import { a, c, F, h } from "./exporter";
 new F(a, c).method(h);
 ```
 
@@ -80,11 +80,11 @@ g(); // Same as calling `y()` in importer.js
 
 ```js
 // importer.js
-import { x as y } from './exporter';
+import { x as y } from "./exporter";
 y(); // Same as calling `g()` in exporter.js
 ```
 
-As with CommonJS `module.exports`, it is possible to define a single *default* export:
+As with CommonJS `module.exports`, it is possible to define a single _default_ export:
 
 ```js
 // exporter.js
@@ -95,7 +95,7 @@ This default export may then be imported without curly braces, using any name th
 
 ```js
 // importer.js
-import Value from './exporter';
+import Value from "./exporter";
 // Value is identical to the exported expression
 ```
 
@@ -103,14 +103,14 @@ Unlike CommonJS `module.exports`, the use of default exports does not prevent th
 
 ```js
 // importer.js
-import Value, { a, F } from './exporter';
+import Value, { a, F } from "./exporter";
 ```
 
 In fact, the default export is conceptually just another named export whose name happens to be "default":
 
 ```js
 // importer.js
-import { default as Value, a, F } from './exporter';
+import { default as Value, a, F } from "./exporter";
 ```
 
 These examples should get you started with `import` and `export` syntax. For further reading, here is a very detailed [explanation](http://www.2ality.com/2014/09/es6-modules-final.html) by [Axel Rauschmayer](https://twitter.com/rauschma) of every variation of `import` and `export` syntax.
@@ -122,15 +122,15 @@ You don’t need to use the `ecmascript` package or ES2015 syntax in order to us
 ES2015 `import` lines like these:
 
 ```js
-import { AccountsTemplates } from 'meteor/useraccounts:core';
-import '../imports/startup/client/routes.js';
+import { AccountsTemplates } from "meteor/useraccounts:core";
+import "../imports/startup/client/routes.js";
 ```
 
 can be written with CommonJS like this:
 
 ```js
-var UserAccountsCore = require('meteor/useraccounts:core');
-require('../imports/startup/client/routes.js');
+var UserAccountsCore = require("meteor/useraccounts:core");
+require("../imports/startup/client/routes.js");
 ```
 
 and you can access `AccountsTemplates` via `UserAccountsCore.AccountsTemplates`.
@@ -153,11 +153,11 @@ module.exports.default = incompleteCountDenormalizer;
 
 You can also simply write `exports` instead of `module.exports` if you prefer. If you need to `require` from an ES2015 module with a `default` export, you can access the export with `require('package').default`.
 
-There is a case where you might *need* to use CommonJS, even if your project has the `ecmascript` package: if you want to conditionally include a module. `import` statements must be at top-level scope, so they cannot be within an `if` block. If you’re writing a common file, loaded on both client and server, you might want to import a module in only one or the other environment:
+There is a case where you might _need_ to use CommonJS, even if your project has the `ecmascript` package: if you want to conditionally include a module. `import` statements must be at top-level scope, so they cannot be within an `if` block. If you’re writing a common file, loaded on both client and server, you might want to import a module in only one or the other environment:
 
 ```js
 if (Meteor.isClient) {
-  require('./client-only-file.js');
+  require("./client-only-file.js");
 }
 ```
 
@@ -252,6 +252,60 @@ To disable eager loading of modules on a given architecture, simply provide a ma
 }
 ```
 
+### meteor.settings
+
+The `meteor` section of `package.json` can include a `settings` property that defines **default settings** for your application. These defaults are merged with — and can be overridden by — a `--settings` file or `METEOR_SETTINGS_*` environment variables.
+
+```json
+{
+  "meteor": {
+    "mainModule": {
+      "client": "client/main.jsx",
+      "server": "server/main.js"
+    },
+    "settings": {
+      "packages": {
+        "mongo": { "reactivity": ["changeStreams", "oplog", "polling"] }
+      },
+      "public": {
+        "theme": "dark"
+      }
+    }
+  }
+}
+```
+
+Just like with a settings file, any keys under `public` are forwarded to the client and accessible via `Meteor.settings.public`. All other keys are server-only.
+
+#### Settings precedence
+
+Settings are resolved with the following precedence (lowest → highest):
+
+| Priority    | Source                                                   | Notes                                              |
+| ----------- | -------------------------------------------------------- | -------------------------------------------------- |
+| 1 (lowest)  | `meteor.settings` in `package.json`                      | Defines defaults; committed to version control     |
+| 2           | `--settings <file>` (or `METEOR_SETTINGS` in production) | Per-environment overrides; can be git-ignored      |
+| 3 (highest) | `METEOR_SETTINGS_*` environment variables                | Individual key overrides; ideal for secrets and CI |
+
+All three sources are **deep-merged**, so you only need to specify the keys you want to override — the rest come from lower-priority sources.
+
+**Example** — override a nested public setting from the shell:
+
+```bash
+METEOR_SETTINGS_PUBLIC_THEME=light meteor run
+# Meteor.settings.public.theme === "light"  (overrides the "dark" default above)
+```
+
+See [`METEOR_SETTINGS_*`](/cli/environment-variables#meteor-settings-path) in the environment variables reference for the full specification of the env-var override mechanism.
+
+::: tip Reactive updates
+While in development mode, changes to `meteor.settings` in `package.json` will be detected and the server will automatically restart — the same behaviour as editing a `--settings` file.
+:::
+
+::: warning Keys with underscores
+Because `_` is used as the path separator in `METEOR_SETTINGS_*` env vars, flat setting keys that themselves contain underscores (e.g. `"my_setting"`) cannot be individually targeted by an env var — the underscore would be interpreted as a nested path separator. Use camelCase or dot-notation-style keys if you need env-var overrides for those settings.
+:::
+
 ### Historic behind Modular application structure
 
 If you want to understand how Meteor works without `meteor.mainModule` on `package.json` keep reading this section, but we don't recommend this approach anymore.
@@ -260,7 +314,7 @@ Before the release of Meteor 1.3, the only way to share values between files in 
 
 If you are familiar with modules in Node, you might expect modules not to be evaluated until the first time you import them. However, because earlier versions of Meteor evaluated all of your code when the application started, and we care about backwards compatibility, eager evaluation is still the default behavior.
 
-If you would like a module to be evaluated *lazily* (in other words: on demand, the first time you import it, just like Node does it), then you should put that module in an `imports/` directory (anywhere in your app, not just the root directory), and include that directory when you import the module: `import {stuff} from './imports/lazy'`. Note: files contained by `node_modules/` directories will also be evaluated lazily (more on that below).
+If you would like a module to be evaluated _lazily_ (in other words: on demand, the first time you import it, just like Node does it), then you should put that module in an `imports/` directory (anywhere in your app, not just the root directory), and include that directory when you import the module: `import {stuff} from './imports/lazy'`. Note: files contained by `node_modules/` directories will also be evaluated lazily (more on that below).
 
 ## Modular package structure
 
@@ -268,18 +322,18 @@ If you are a package author, in addition to putting `api.use('modules')` or `api
 
 ```js
 Package.describe({
-  name: 'my-modular-package'
+  name: "my-modular-package",
 });
 
 Npm.depends({
-  moment: '2.10.6'
+  moment: "2.10.6",
 });
 
 Package.onUse((api) => {
-  api.use('modules');
-  api.mainModule('server.js', 'server');
-  api.mainModule('client.js', 'client');
-  api.export('Foo');
+  api.use("modules");
+  api.mainModule("server.js", "server");
+  api.mainModule("client.js", "client");
+  api.export("Foo");
 });
 ```
 
@@ -289,7 +343,7 @@ When you use `api.mainModule`, the exports of the main module are exposed global
 
 ```js
 // In an application that uses 'my-modular-package':
-import { Foo as ExplicitFoo, bar } from 'meteor/my-modular-package';
+import { Foo as ExplicitFoo, bar } from "meteor/my-modular-package";
 console.log(Foo); // Auto-imported because of `api.export`.
 console.log(ExplicitFoo); // Explicitly imported, but identical to `Foo`.
 console.log(bar); // Exported by server.js or client.js, but not auto-imported.
@@ -301,7 +355,7 @@ Finally, since this package is using the new `modules` package, and the package 
 
 ### Lazy loading modules from a package
 
-Packages can also specify a *lazy* main module:
+Packages can also specify a _lazy_ main module:
 
 ```js
 Package.onUse(function (api) {
@@ -320,8 +374,7 @@ import { exportedPackageMethod } from "meteor/<package name>";
 ```
 
 > Note: Packages with `lazy` main modules cannot use `api.export` to export global
-symbols to other packages/apps.  Also, prior to Meteor 1.4.4.2 it is necessary to explicitly name the file containing the module: `import "meteor/<package name>/client.js"`.
-
+> symbols to other packages/apps. Also, prior to Meteor 1.4.4.2 it is necessary to explicitly name the file containing the module: `import "meteor/<package name>/client.js"`.
 
 ## Local `node_modules`
 
@@ -349,28 +402,28 @@ Thanks to modules, any load-order dependency you might imagine can be resolved b
 
 ```js
 // a.js
-import { bThing } from './b';
-console.log(bThing, 'in a.js');
+import { bThing } from "./b";
+console.log(bThing, "in a.js");
 ```
 
 ```js
 // b.js
-export var bThing = 'a thing defined in b.js';
-console.log(bThing, 'in b.js');
+export var bThing = "a thing defined in b.js";
+console.log(bThing, "in b.js");
 ```
 
 Sometimes a module doesn’t actually need to import anything from another module, but you still want to be sure the other module gets evaluated first. In such situations, you can use an even simpler `import` syntax:
 
 ```js
 // c.js
-import './a';
-console.log('in c.js');
+import "./a";
+console.log("in c.js");
 ```
 
 No matter which of these modules is imported first, the order of the `console.log` calls will always be:
 
 ```js
-console.log(bThing, 'in b.js');
-console.log(bThing, 'in a.js');
-console.log('in c.js');
+console.log(bThing, "in b.js");
+console.log(bThing, "in a.js");
+console.log("in c.js");
 ```
