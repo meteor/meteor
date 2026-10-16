@@ -44,6 +44,8 @@ var packageJson = {
     // TODO: maybe replace with https://www.npmjs.com/package/better-sqlite3
     sqlite3: "5.1.7",
     inquirer: "8.2.6",
+    // Live-search multi-select prompt used by `meteor add` interactive mode.
+    "inquirer-checkbox-plus-prompt": "1.4.2",
     "http-proxy-3": "1.22.0",
     "is-reachable": "3.1.0",
     "wordwrap": "1.0.0",

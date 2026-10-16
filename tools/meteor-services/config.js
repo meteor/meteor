@@ -50,6 +50,13 @@ export function getPackageServerDomain() {
   return new URL(getPackageServerUrl()).host;
 }
 
+// URL for the DDP interface to Atmosphere (the community package
+// directory), typically "https://atmospherejs.com". Used for the
+// interactive package search in `meteor add`.
+export function getAtmosphereUrl() {
+  return process.env.METEOR_ATMOSPHERE_URL || "https://atmospherejs.com";
+}
+
 export function getPackageStatsServerUrl() {
   return process.env.METEOR_PACKAGE_STATS_SERVER_URL ||
     "https://activity.meteor.com";

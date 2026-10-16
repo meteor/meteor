@@ -169,6 +169,7 @@ It is necessary to configure the TypeScript compiler with a `tsconfig.json` file
 ```json
 {
   "compilerOptions": {
+    /* Basic Options */
     "target": "es2018",
     "module": "esNext",
     "lib": ["esnext", "dom"],
@@ -177,26 +178,38 @@ It is necessary to configure the TypeScript compiler with a `tsconfig.json` file
     "jsx": "preserve",
     "incremental": true,
     "noEmit": true,
+
+    /* Strict Type-Checking Options */
     "strict": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
+
+    /* Additional Checks */
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": false,
     "noFallthroughCasesInSwitch": false,
-    "baseUrl": ".",
+
+    /* Module Resolution Options */
     "paths": {
-      "/*": ["*"]
+      /* Support absolute /imports/* with a leading '/' */
+      "/*": ["./*"],
+      /* Pull in type declarations for Meteor packages from either zodern:types or @types/meteor packages */
+      "meteor/*": ["./node_modules/@types/meteor/*", "./.meteor/local/types/packages.d.ts"]
     },
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "types": ["node", "mocha"],
     "esModuleInterop": true,
-    "preserveSymlinks": true
+    "preserveSymlinks": true,
+    "skipLibCheck": true
   },
   "exclude": [
     "./.meteor/**",
-    "./packages/**"
+    "./packages/**",
+    "./_build/**",
+    "./public/build-chunks/**",
+    "./public/build-assets/**"
   ]
 }
 ```

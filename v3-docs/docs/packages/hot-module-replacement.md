@@ -32,7 +32,7 @@ if (module.hot) {
 
 In a future Meteor version, using the if statement will allow minifiers to remove this block when minifying for production.
 
-Packages that use the `module.hot` api should use the `hot-module-reload` package to ensure access to the API.
+Packages that use the `module.hot` api should use the `hot-module-replacement` package to ensure access to the API.
 
 <ApiBox name="module.hot#accept" hasCustomExample instanceName="module.hot"/>
 

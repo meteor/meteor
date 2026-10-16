@@ -133,7 +133,7 @@ Here's a basic Dockerfile example for a Meteor 3 application:
 
 ```dockerfile
 # Build stage
-FROM node:20-alpine AS builder
+FROM node:24-alpine AS builder
 
 RUN apk add --no-cache python3 make g++ git
 
@@ -148,7 +148,7 @@ RUN meteor npm install --production
 RUN meteor build --directory /build --server-only
 
 # Production stage
-FROM node:20-alpine
+FROM node:24-alpine
 
 WORKDIR /app
 
@@ -183,7 +183,7 @@ meteor build /path/to/build --architecture os.linux.x86_64
 
 This will provide you with a bundled application `.tar.gz` which you can extract and run without the `meteor` tool. The environment you choose will need the correct version of Node.js and connectivity to a MongoDB server.
 
-To find out which version of Node you should use, run `meteor node -v` in the development environment, or check the `.node_version.txt` file within the bundle. For Meteor 3.x, you'll need Node.js 20.x.
+To find out which version of Node you should use, run `meteor node -v` in the development environment, or check the `.node_version.txt` file within the bundle. The required Node.js major version depends on your Meteor release: Meteor 3.5+ needs Node.js 24.x (Meteor 3.2–3.4 used Node.js 22.x, and 3.0–3.1 used Node.js 20.x).
 
 ::: warning
 If you use a mis-matched version of Node when deploying your application, you will encounter errors!
@@ -279,7 +279,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22.x
+          node-version: 24.x
 
       - name: Install Meteor
         run: curl https://install.meteor.com/ | sh

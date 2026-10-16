@@ -38,10 +38,3 @@ For more details, see [Using npm Packages](/packages/4.using-npm-packages) and [
 Two public repositories of Meteor packages exist:
 - [Atmosphere](https://atmospherejs.com/): The original repository for Meteor packages, which hosts a wide variety of community-contributed packages.
 - [Packosphere](https://packosphere.com/): A newer repository and community-maintained alternative to Atmosphere. Packosphere has more information about package quality and maintenance status.
-
-# Table of Contents
-
-[[toc]]
-
-<!-- @include: ./2.using-atmosphere-packages.md-->
-<!-- @include: ./3.writing-atmosphere-packages.md-->

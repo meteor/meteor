@@ -5,7 +5,6 @@ Here is the list of removed functions:
 
   - `Promise.await`
   - `Fibers`
-  - `Meteor.wrapAsync`
 
 
 ::: tip
@@ -77,7 +76,9 @@ async function someFunction() {
 
 ## Meteor.wrapAsync
 
-It is no longer necessary, you can use `async/await` directly in your code.
+`Meteor.wrapAsync` was not removed: it still exists in Meteor 3 and still works when you pass a callback to the wrapped function. What is gone is the Fibers-based synchronous mode: on the server, calling the wrapped function without a callback no longer blocks and returns the result — it now returns `undefined`, and errors are only logged via `Meteor._debug` instead of being thrown, so old synchronous call sites fail silently rather than erroring.
+
+Replace synchronous usage with `async/await`. To wrap callback APIs, use `util.promisify` (server) or `Meteor.promisify` (client and server).
 
 ```javascript
 

@@ -14,6 +14,7 @@
 import {
   DEFAULT_METEOR_RSPACK_REACT_REFRESH_VERSION,
   DEFAULT_METEOR_RSPACK_SWC_HELPERS_VERSION,
+  DEFAULT_METEOR_RSPACK_SWC_CORE_VERSION,
   DEFAULT_RSDOCTOR_RSPACK_PLUGIN_VERSION,
 } from './constants';
 
@@ -26,6 +27,7 @@ const {
 } = require('meteor/tools-core/lib/meteor');
 const {
   checkNpmDependencyExists,
+  checkNpmDependencyVersion,
 } = require('meteor/tools-core/lib/npm');
 const {
   ensurePackageDependencies,
@@ -33,6 +35,7 @@ const {
 
 const {
   DEFAULT_RSPACK_VERSION,
+  DEFAULT_RSPACK_DEV_SERVER_VERSION,
   DEFAULT_METEOR_RSPACK_VERSION,
   DEFAULT_METEOR_RSPACK_REACT_HMR_VERSION,
   GLOBAL_STATE_KEYS,
@@ -40,6 +43,20 @@ const {
 
 const RSPACK_DOCS_URL =
   'https://docs.meteor.com/about/modern-build-stack/rspack-bundler-integration#required-npm-dependencies';
+
+function requiresRspack2NpmPeerMigration() {
+  const appDir = getMeteorAppDir();
+  return [
+    '@rspack/cli',
+    '@rspack/core',
+    '@rspack/plugin-react-refresh',
+  ].some((name) => checkNpmDependencyVersion(name, {
+    cwd: appDir,
+    versionRequirement: '2.0.0',
+    semverCondition: 'lt',
+    checkNodeModules: true,
+  }));
+}
 
 /**
  * Ensures the core Rspack dependencies meet the minimum supported versions.
@@ -49,7 +66,9 @@ export async function ensureRspackInstalled() {
   const dependencies = [
     { name: '@rspack/cli', version: DEFAULT_RSPACK_VERSION, semverCondition: 'gte', dev: true },
     { name: '@rspack/core', version: DEFAULT_RSPACK_VERSION, semverCondition: 'gte', dev: true },
+    { name: '@rspack/dev-server', version: DEFAULT_RSPACK_DEV_SERVER_VERSION, semverCondition: 'gte', dev: true },
     { name: '@meteorjs/rspack', version: DEFAULT_METEOR_RSPACK_VERSION, semverCondition: 'gte', dev: true },
+    { name: '@swc/core', version: DEFAULT_METEOR_RSPACK_SWC_CORE_VERSION, semverCondition: 'gte', dev: true },
     { name: '@swc/helpers', version: DEFAULT_METEOR_RSPACK_SWC_HELPERS_VERSION, semverCondition: 'gte', dev: false },
     { name: '@rsdoctor/rspack-plugin', version: DEFAULT_RSDOCTOR_RSPACK_PLUGIN_VERSION, semverCondition: 'gte', dev: true },
   ];
@@ -59,6 +78,10 @@ export async function ensureRspackInstalled() {
     packageLabel: 'Rspack',
     dependencies,
     docUrl: RSPACK_DOCS_URL,
+    // npm otherwise retains Rspack 1.x peers from an existing lockfile and
+    // rejects the coordinated, valid Rspack 2 upgrade. Fresh installs and
+    // already-upgraded apps continue with normal peer validation.
+    legacyPeerDeps: requiresRspack2NpmPeerMigration(),
   });
 }
 

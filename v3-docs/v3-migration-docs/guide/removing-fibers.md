@@ -6,13 +6,13 @@ For background on why Fibers was removed, see the [FAQ](../frequently-asked-ques
 
 ## `Meteor.wrapAsync` → Promises
 
-`Meteor.wrapAsync` no longer exists. Replace it with `util.promisify` or manual Promise wrapping.
+`Meteor.wrapAsync` still exists and works with an explicit callback, but it can no longer be used synchronously: calling the wrapped function without a callback no longer returns the result — it returns `undefined` and errors are only logged. Replace synchronous usage with `util.promisify`, `Meteor.promisify`, or manual Promise wrapping.
 
 ```js
 // Before
 import { Meteor } from 'meteor/meteor';
 
-const syncFunction = Meteor.wrapAsync(someCallbackFunction); // [!code error]
+const syncFunction = Meteor.wrapAsync(someCallbackFunction);
 const result = syncFunction(arg1, arg2); // [!code error]
 
 // After — using util.promisify

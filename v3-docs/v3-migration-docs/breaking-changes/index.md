@@ -40,21 +40,17 @@ The `meteor reset` command clears only the local cache by default. Using the `--
 
 This command is often recommended to fix your development project by clearing the cache. Previously, it also cleared the local MongoDB, which could accidentally delete important data.
 
-## Node v22
+## Node.js upgrade
 
-Meteor 3.0 is now using Node v22. This means that if you have any dependencies or usages
-of Node v14, you will need to update them to be compatible with Node v22.
+Meteor 3.0 moved from Node v14 to Node v20 (20.15.1). Later 3.x releases upgraded further:
+Node v22 in Meteor 3.1 through 3.4, and Node v24 since Meteor 3.5. This means that if you have
+any dependencies or usages of Node v14, you will need to update them to be compatible with the
+Node version of the Meteor release you target.
 
 
 ## NPM Installer Update
 
-The npm installer for Meteor has been changed. For the official release, you can install Meteor with this command:
-
-```bash
-npx meteor
-```
-
-While we’re in the Release Candidate phase, use:
+The npm installer for Meteor has been changed. You can install Meteor with this command:
 
 ```bash
 npx meteor
