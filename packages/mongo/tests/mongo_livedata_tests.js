@@ -4871,7 +4871,106 @@ Meteor.isServer && DEFAULT_REACTIVITY?.[0] !== 'polling' &&
         while (events.length < 2 && Date.now() < deadline) {
           await new Promise((resolve) => setTimeout(resolve, 50));
         }
+        // Let anything else arrive: exactly these two callbacks, nothing more.
+        await new Promise((resolve) => setTimeout(resolve, 300));
         test.equal(events.sort(), ['added r5', 'removed r20'], `observed by ${driver}`);
+      } finally {
+        await handle.stop();
+      }
+    }
+  );
+
+const waitUntilTrue = async (condition, timeoutMs = 3000) => {
+  const deadline = Date.now() + timeoutMs;
+  while (!(await condition()) && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+};
+
+// Another process deletes the listed documents until the buffer runs dry. The
+// window re-runs its query with no write fence involved (the common case
+// across servers) and ends on the right documents.
+Meteor.isServer && DEFAULT_REACTIVITY?.[0] !== 'polling' &&
+  Tinytest.addAsync(
+    'mongo-livedata - observe sorted, limited - refills after another process empties the buffer',
+    async function (test) {
+      const coll = new Mongo.Collection('limitedDrain' + Random.id());
+      for (let i = 0; i < 10; i++) await coll.insertAsync({ _id: `r${i}`, rank: i });
+
+      const published = new Set();
+      const handle = await coll
+        .find({}, { sort: { rank: 1 }, limit: 3 })
+        .observeChanges({
+          added: (id) => published.add(id),
+          removed: (id) => published.delete(id),
+        });
+      const driver = handle._multiplexer._observeDriver;
+      let requeries = 0;
+      if (driver._requestRequery) {
+        const request = driver._requestRequery.bind(driver);
+        driver._requestRequery = () => { requeries += 1; request(); };
+      }
+
+      try {
+        test.equal([...published].sort(), ['r0', 'r1', 'r2']);
+        // limit 3 publishes r0-r2 and buffers r3-r5: deleting r0-r5 one at a
+        // time drains the buffer twice.
+        for (let i = 0; i < 6; i++) {
+          await coll.rawCollection().deleteOne({ _id: `r${i}` });
+        }
+        await waitUntilTrue(() => published.has('r6') && published.has('r7') && published.has('r8'));
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        test.equal([...published].sort(), ['r6', 'r7', 'r8'], `observed by ${driver.constructor.name}`);
+        if (driver._usesChangeStreams) {
+          test.isTrue(requeries >= 1, 'the window re-ran its query when the buffer ran dry');
+        }
+      } finally {
+        await handle.stop();
+      }
+    }
+  );
+
+// The window's edge cuts through equal sort keys. MongoDB may return equal
+// keys in any order, so any choice among them is valid; the window must stay
+// a valid first `limit` documents as another process deletes the shown ones.
+Meteor.isServer && DEFAULT_REACTIVITY?.[0] !== 'polling' &&
+  Tinytest.addAsync(
+    'mongo-livedata - observe sorted, limited - equal sort keys at the window edge',
+    async function (test) {
+      const coll = new Mongo.Collection('limitedTies' + Random.id());
+      for (let i = 0; i < 10; i++) await coll.insertAsync({ _id: `t${i}`, rank: i < 5 ? 1 : 2 });
+
+      const published = new Set();
+      const handle = await coll
+        .find({}, { sort: { rank: 1 }, limit: 3 })
+        .observeChanges({
+          added: (id) => published.add(id),
+          removed: (id) => published.delete(id),
+        });
+      const driver = handle._multiplexer._observeDriver.constructor.name;
+
+      const remaining = async () => coll.find({}, { fields: { rank: 1 } }).fetchAsync();
+      const isValidWindow = async () => {
+        const docs = await remaining();
+        const rank = Object.fromEntries(docs.map((doc) => [doc._id, doc.rank]));
+        const shown = [...published];
+        const outside = docs.filter((doc) => !published.has(doc._id));
+        return shown.length === Math.min(3, docs.length) &&
+          shown.every((id) => id in rank) &&
+          outside.every((doc) => shown.every((id) => rank[id] <= doc.rank));
+      };
+
+      try {
+        test.isTrue(await isValidWindow(), `initial window (${driver})`);
+        for (let step = 0; step < 8; step++) {
+          const victim = [...published][0];
+          await coll.rawCollection().deleteOne({ _id: victim });
+          await waitUntilTrue(async () => !published.has(victim) && (await isValidWindow()));
+          test.isTrue(
+            await isValidWindow(),
+            `after deleting ${victim}: shown ${[...published].sort()} (${driver})`
+          );
+        }
       } finally {
         await handle.stop();
       }
