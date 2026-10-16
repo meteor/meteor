@@ -469,10 +469,18 @@ export class ChangeStreamObserveDriver {
 
   _setLastProcessedOperationTime(ts) {
     this._lastProcessedOperationTime = ts;
-    // Resolve any waiters whose target is <= current processed time
+    // Resolve any waiters whose target is <= current processed time.
+    //
+    // A write that MongoDB applies as one batch (a multi-document delete, a
+    // transaction) emits several events with the same clusterTime. Reaching a
+    // waiter's ts exactly is only caught up once every event of that batch is
+    // delivered, so wait while the stream still holds undelivered events: the
+    // next one re-runs this check.
+    const batchPending = () => this._sharedStream?.hasUndeliveredChanges?.() === true;
     while (this._catchingUpResolvers.length > 0) {
       const first = this._catchingUpResolvers[0];
-      if (compareOperationTimes(ts, first.ts) >= 0) {
+      const cmp = compareOperationTimes(ts, first.ts);
+      if (cmp > 0 || (cmp === 0 && !batchPending())) {
         this._catchingUpResolvers.shift();
         try { first.resolver(); } catch (e) { /* ignore resolver errors */ }
       } else {
@@ -768,8 +776,13 @@ export class ChangeStreamObserveDriver {
       return;
     }
 
-    if (this._lastProcessedOperationTime && compareOperationTimes(this._lastProcessedOperationTime, targetTs) >= 0) {
-      return;
+    if (this._lastProcessedOperationTime) {
+      const cmp = compareOperationTimes(this._lastProcessedOperationTime, targetTs);
+      // Equal is only caught up once the rest of a batched write is delivered
+      // (see _setLastProcessedOperationTime).
+      if (cmp > 0 || (cmp === 0 && !this._sharedStream?.hasUndeliveredChanges?.())) {
+        return;
+      }
     }
 
     // Insert in order so we can resolve from the front efficiently
