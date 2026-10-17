@@ -84,12 +84,14 @@ Ctrl-C) exits immediately.
 In a built or deployed application, this timeout is the only Meteor deadline,
 but the hosting platform may enforce an earlier one: Galaxy, Kubernetes and
 systemd send `SIGKILL` once their own grace period expires, so keep
-`METEOR_SHUTDOWN_TIMEOUT_MS` below it. During development, `meteor run` applies
-its own deadline regardless of `METEOR_SHUTDOWN_TIMEOUT_MS`: when it restarts
-the app, it sends `SIGKILL` about 3 seconds after `SIGTERM` if the old process
-is still running, and when `meteor run` itself exits, the app stops within about
-3 seconds. A hook that needs 5 seconds can therefore complete in production
-under the default timeout but be interrupted in development.
+`METEOR_SHUTDOWN_TIMEOUT_MS` below it.
+
+During development, a `meteor run` restart waits for the old app to exit
+before starting the new one, and sends `SIGKILL` only once
+`METEOR_SHUTDOWN_TIMEOUT_MS` plus one second has elapsed (at least 3 seconds).
+With `0`, a restart still bounds the hooks by the 10-second default. When
+`meteor run` itself stops, the app exits within about 3 seconds, so it never
+outlives the tool.
 
 Meteor listens for `SIGTERM` and `SIGINT` only once the first hook is
 registered, so an application that registers no hook keeps its existing signal

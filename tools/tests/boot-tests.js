@@ -205,3 +205,79 @@ selftest.define("meteor onShutdown", ["yet-unsolved-windows-failure"], async fun
   await run.matchErr("received SIGTERM during shutdown, forcing exit");
   await run.expectExit(143);
 });
+
+selftest.define("meteor onShutdown dev restart", ["yet-unsolved-windows-failure"], async function () {
+  var s = new Sandbox({ fakeMongo: true });
+  await s.init();
+
+  await s.createApp("myapp", "app-prints-pid");
+  s.cd("myapp");
+
+  // Each server-file change restarts the app; the version tells the old app's
+  // output apart from its replacement's.
+  function writeApp(version, shutdownSource) {
+    s.write("print.js", `
+      if (Meteor.isServer) {
+        ${shutdownSource}
+        Meteor.startup(function () {
+          console.log("restart-ready:${version}");
+        });
+      }
+    `);
+  }
+  var benignHook = "Meteor.onShutdown(function () {});";
+
+  // A restart waits for a hook that outlasts the 3-second grace before it
+  // starts the replacement app on the same port.
+  writeApp(1, `
+    Meteor.onShutdown(async function () {
+      await new Promise(function (resolve) { setTimeout(resolve, 5000); });
+      console.log("slow-cleanup-complete");
+    });
+  `);
+  var run = s.run("--port", getAppPort());
+  await run.tellMongo(MONGO_LISTENING);
+  run.waitSecs(60);
+  await run.match("restart-ready:1");
+  writeApp(2, `process.on("SIGTERM", function () {});`);
+  run.waitSecs(60);
+  await run.match("slow-cleanup-complete");
+  run.waitSecs(60);
+  await run.match("restart-ready:2");
+
+  // An app without hooks keeps the 3-second grace before SIGKILL.
+  writeApp(3, benignHook);
+  run.waitSecs(60);
+  await run.match("App didn't exit 3000ms after SIGTERM; sending SIGKILL.");
+  run.waitSecs(60);
+  await run.match("restart-ready:3");
+  await run.stop();
+
+  // A stuck app is killed once its reported timeout plus the margin elapses.
+  s.set("METEOR_SHUTDOWN_TIMEOUT_MS", "4000");
+  writeApp(4, `Meteor.onShutdown(function () { while (true) {} });`);
+  run = s.run("--port", getAppPort());
+  await run.tellMongo(MONGO_LISTENING);
+  run.waitSecs(60);
+  await run.match("restart-ready:4");
+  writeApp(5, benignHook);
+  run.waitSecs(60);
+  await run.match("App didn't exit 5000ms after SIGTERM; sending SIGKILL.");
+  run.waitSecs(60);
+  await run.match("restart-ready:5");
+  await run.stop();
+
+  // Uncapped hooks are still bounded by the default timeout during a restart.
+  s.set("METEOR_SHUTDOWN_TIMEOUT_MS", "0");
+  writeApp(6, `Meteor.onShutdown(function () { return new Promise(function () {}); });`);
+  run = s.run("--port", getAppPort());
+  await run.tellMongo(MONGO_LISTENING);
+  run.waitSecs(60);
+  await run.match("restart-ready:6");
+  writeApp(7, benignHook);
+  run.waitSecs(60);
+  await run.match("App didn't exit 11000ms after SIGTERM; sending SIGKILL.");
+  run.waitSecs(60);
+  await run.match("restart-ready:7");
+  await run.stop();
+});
