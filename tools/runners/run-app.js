@@ -125,6 +125,13 @@ var getNodeOptionsFromEnvironment = function () {
 // port; the escalation guarantees the process is gone.
 const APP_STOP_SIGKILL_GRACE_MS = 3000;
 
+// An app that registers Meteor.onShutdown hooks reports its shutdown timeout;
+// wait that long plus this margin before escalating, so a restart doesn't cut
+// the hooks. METEOR_SHUTDOWN_TIMEOUT_MS=0 leaves the hooks uncapped, so a
+// restart still bounds them by the default timeout.
+const APP_STOP_SHUTDOWN_MARGIN_MS = 1000;
+const APP_STOP_UNCAPPED_SHUTDOWN_MS = 10000;
+
 var AppProcess = function (options) {
   var self = this;
 
@@ -149,6 +156,7 @@ var AppProcess = function (options) {
 
   self.proc = null;
   self.madeExitCallback = false;
+  self.shutdownTimeoutMs = null;
 };
 
 Object.assign(AppProcess.prototype, {
@@ -162,6 +170,10 @@ Object.assign(AppProcess.prototype, {
 
     // Start the app!
     self.proc = await self._spawn();
+
+    self.proc.onMessage("shutdown-timeout", function ({ timeoutMs }) {
+      self.shutdownTimeoutMs = timeoutMs;
+    });
 
     eachline(self.proc.stdout, async function (line) {
       if (line.match(/^LISTENING\s*$/)) {
@@ -210,15 +222,23 @@ Object.assign(AppProcess.prototype, {
   },
 
   // Idempotent. Once stop() returns it is guaranteed that you will
-  // receive no more callbacks from this AppProcess.
+  // receive no more callbacks from this AppProcess. The returned Promise
+  // resolves once the process has exited.
   stop: function () {
     var self = this;
+    let exited = Promise.resolve();
 
     if (self.proc && self.proc.pid) {
       const proc = self.proc;
       proc.removeAllListeners('close');
       proc.removeAllListeners('error');
       proc.kill();
+
+      let graceMs = APP_STOP_SIGKILL_GRACE_MS;
+      if (self.shutdownTimeoutMs !== null) {
+        graceMs = Math.max(graceMs, APP_STOP_SHUTDOWN_MARGIN_MS +
+          (self.shutdownTimeoutMs || APP_STOP_UNCAPPED_SHUTDOWN_MS));
+      }
 
       // The kill() above only sends SIGTERM, which an app can ignore via its
       // own handler. Escalate to SIGKILL after a short grace period so a
@@ -228,24 +248,30 @@ Object.assign(AppProcess.prototype, {
         // period, so surface it — this is exactly the symptom of an app that
         // keeps running and holds the port across restarts.
         runLog.log(
-          "App didn't exit " + APP_STOP_SIGKILL_GRACE_MS +
+          "App didn't exit " + graceMs +
             "ms after SIGTERM; sending SIGKILL.",
           { arrow: true });
         // Use the child handle rather than process.kill(pid): once the child
         // has exited and been reaped, proc.kill() is a no-op, so there is no
         // chance of signalling an unrelated process that reused the pid.
         proc.kill('SIGKILL');
-      }, APP_STOP_SIGKILL_GRACE_MS);
+      }, graceMs);
       // Don't let this timer keep the tool's event loop alive. Because it's
       // unref'd, the escalation only fires while the tool itself keeps running
-      // — e.g. across a dev restart, where the newly spawned AppProcess keeps
-      // the event loop alive. On a full tool shutdown the tool may exit before
-      // the grace period elapses; that path is unchanged from before this fix.
+      // — e.g. across a dev restart, where the tool waits for this process to
+      // exit before spawning the next one. On a full tool shutdown the tool
+      // may exit before the grace period elapses; that path is unchanged from
+      // before this fix.
       if (sigkillTimer.unref) {
         sigkillTimer.unref();
       }
       // If the process exits on its own first, cancel the pending SIGKILL.
-      proc.once('exit', function () {
+      if (proc.exitCode === null && proc.signalCode === null) {
+        exited = new Promise(function (resolve) {
+          proc.once('exit', resolve);
+        });
+      }
+      exited.then(function () {
         clearTimeout(sigkillTimer);
       });
     }
@@ -253,6 +279,7 @@ Object.assign(AppProcess.prototype, {
 
     self.onListen = null;
     self.onExit = null;
+    return exited;
   },
 
   _computeEnvironment: function () {
@@ -1048,7 +1075,12 @@ Object.assign(AppRunner.prototype, {
       if (self.hmrServer) {
         self.hmrServer.setAppState("okay");
       }
-      await appProcess.stop();
+      const appExited = appProcess.stop();
+      if (ret.outcome === 'changed') {
+        // The replacement app binds the same port, so let this one finish its
+        // shutdown hooks and exit first.
+        await appExited;
+      }
 
       serverWatcher && serverWatcher.stop();
       clientWatcher && clientWatcher.stop();
