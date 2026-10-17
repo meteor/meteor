@@ -2490,8 +2490,11 @@ class JsImage {
         throw new Error("No targetPath?");
       }
 
-      // Skip dev-only packages on build for production
-      if (devOnlySkipPackages.some(_package => item?.targetPath?.includes(`${_package}.js`))) {
+      // Skip dev-only packages on build for production. A package's server file
+      // is packages/<name>.js, with the colon of an author:name package converted
+      // like in its combinedServePath. Compare the whole path, so that a package
+      // whose name only ends like a dev-only one is kept.
+      if (devOnlySkipPackages.some(_package => item?.targetPath === `packages/${colonConverter.convert(_package)}.js`)) {
         continue;
       }
 
