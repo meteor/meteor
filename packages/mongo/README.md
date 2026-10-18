@@ -30,7 +30,9 @@ direct access to this module, you can find it at
 Additionally, you can call `c.rawCollection()` or `c.rawDatabase()` on any
 `Mongo.Collection` to get the object from the npm `mongodb` module corresponding
 to the collection or database.  This is documented at
-http://mongodb.github.io/node-mongodb-native/
+http://mongodb.github.io/node-mongodb-native/. Direct access bypasses
+collection-level mutator overrides, Collection Extensions, and collection
+hooks.
 
 The version of `mongo` used may change incompatibly from version to version of
 Meteor (or we may even replace it with an entirely different implementation);

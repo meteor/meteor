@@ -1,3 +1,10 @@
+import {
+  hasActiveHooks,
+  runFindHooks,
+  runFindOneHooksSync,
+  warnIfSyncMutatorSkipsHooks,
+} from './collection_hooks';
+
 export const SyncMethods = {
   /**
    * @summary Find the documents in a collection that match the selector.
@@ -26,10 +33,16 @@ export const SyncMethods = {
     // Collection.find() (return all docs) behaves differently
     // from Collection.find(undefined) (return 0 docs).  so be
     // careful about the length of arguments.
-    return this._collection.find(
-      this._getFindSelector(args),
-      this._getFindOptions(args)
-    );
+    const selector = this._getFindSelector(args);
+    const options = this._getFindOptions(args);
+
+    if (hasActiveHooks(this, 'find')) {
+      return runFindHooks(this, selector, options, (hookSelector) =>
+        this._collection.find(hookSelector, options)
+      );
+    }
+
+    return this._collection.find(selector, options);
   },
 
   /**
@@ -50,10 +63,16 @@ export const SyncMethods = {
    * @returns {Object}
    */
   findOne(...args) {
-    return this._collection.findOne(
-      this._getFindSelector(args),
-      this._getFindOptions(args)
-    );
+    const selector = this._getFindSelector(args);
+    const options = this._getFindOptions(args);
+
+    if (hasActiveHooks(this, 'findOne')) {
+      return runFindOneHooksSync(this, selector, options, (hookSelector) =>
+        this._collection.findOne(hookSelector, options)
+      );
+    }
+
+    return this._collection.findOne(selector, options);
   },
 
 
@@ -190,6 +209,7 @@ export const SyncMethods = {
    * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the _id as the second.
    */
   insert(doc, callback) {
+    warnIfSyncMutatorSkipsHooks(this, 'insert');
     return this._insert(doc, callback);
   },
 
@@ -208,6 +228,7 @@ export const SyncMethods = {
    * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
    */
   update(selector, modifier, ...optionsAndCallback) {
+    warnIfSyncMutatorSkipsHooks(this, 'update');
     const callback = popCallbackFromArgs(optionsAndCallback);
 
     // We've already popped off the callback, so we are left with an array
@@ -278,6 +299,7 @@ export const SyncMethods = {
    * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
    */
   remove(selector, callback) {
+    warnIfSyncMutatorSkipsHooks(this, 'remove');
     selector = Mongo.Collection._rewriteSelector(selector);
 
     if (this._isRemoteCollection()) {
@@ -308,6 +330,7 @@ export const SyncMethods = {
       options = {};
     }
 
+    warnIfSyncMutatorSkipsHooks(this, 'upsert');
     return this.update(
       selector,
       modifier,

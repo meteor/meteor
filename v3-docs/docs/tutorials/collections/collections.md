@@ -250,6 +250,12 @@ This technique has a few disadvantages:
 2. Sometimes a single piece of functionality can be spread over multiple mutators.
 3. It can be a challenge to write a hook in a completely general way (that covers every possible selector and modifier), and it may not be necessary for your application (because perhaps you only ever call that mutator in one way).
 
+Overridden mutators only run for calls made through them. Writes that clients
+send through `allow`/`deny` rules or in `insecure` mode don't call them, and
+neither does [`rawCollection()`](/api/collections#Mongo-Collection-rawCollection).
+[Collection hooks](/api/collections#collection-hooks) run for those client
+writes as well.
+
 A way to deal with points 1. and 2. is to separate out the set of hooks into their own module, and use the mutator as a point to call out to that module in a sensible way. We'll see an example of that [below](#abstracting-denormalizers).
 
 Point 3. can usually be resolved by placing the hook in the *Method* that calls the mutator, rather than the hook itself. Although this is an imperfect compromise (as we need to be careful if we ever add another Method that calls that mutator in the future), it is better than writing a bunch of code that is never actually called (which is guaranteed to not work!), or giving the impression that your hook is more general that it actually is.

@@ -712,11 +712,160 @@ it checks the collection's `allow` rules. Meteor allows the write only
 if no `deny` rules return `true` and at least one `allow` rule returns
 `true`.
 
+Once Meteor has accepted a client write, through `allow`/`deny` rules or the
+`insecure` package, it runs the [collection hooks](#collection-hooks)
+registered on the server around the write. This applies whether the client
+called `insertAsync` or the sync `insert` (and likewise for update and remove).
+
 <ApiBox name="Mongo.Collection#rawCollection" instanceName="Collection"/>
 
 The methods (like `update` or `insert`) you call on the resulting _raw_ collection return promises.
 
+`rawCollection()` talks directly to the MongoDB driver. It bypasses
+collection-level behavior such as mutator overrides, Collection Extensions and
+[collection hooks](#collection-hooks). Use it when you explicitly want direct
+driver access.
+
 <ApiBox name="Mongo.Collection#rawDatabase" instanceName="Collection"/>
+
+## Collection Hooks
+
+Meteor exports `CollectionHooks` from `meteor/mongo`, and every
+`Mongo.Collection` instance includes hook registration helpers and direct
+bypass helpers.
+
+Mutation hooks run for the async collection mutators: `insertAsync`,
+`updateAsync`, `removeAsync`, and `upsertAsync`, and on the server for writes
+sent by clients. The sync mutation methods `insert`, `update`, `remove`, and
+`upsert` do not run hooks on the side they are called from, and log a warning
+once per collection and method when hooks are registered for them. Query hooks
+run for `find`, `findOne`, and `findOneAsync` as described below.
+
+```js
+import { Mongo, CollectionHooks } from 'meteor/mongo';
+
+const Posts = new Mongo.Collection('posts');
+
+Posts.before.insert((userId, doc) => {
+  doc.createdAt = new Date();
+});
+
+Posts.after.update(function (userId, doc, fields, modifier, options) {
+  console.log('updated document', doc._id);
+  console.log('previous value', this.previous);
+});
+```
+
+Supported hook registration methods:
+
+- `collection.before.insert(fn, options)`
+- `collection.after.insert(fn, options)`
+- `collection.before.update(fn, options)`
+- `collection.after.update(fn, options)`
+- `collection.before.remove(fn, options)`
+- `collection.after.remove(fn, options)`
+- `collection.before.find(fn, options)`
+- `collection.after.find(fn, options)`
+- `collection.before.findOne(fn, options)`
+- `collection.after.findOne(fn, options)`
+- `collection.before.upsert(fn, options)`
+
+Each registration returns a controller with:
+
+- `remove()` to unregister the hook
+- `replace(fn, options)` to swap the hook in place
+
+### Hook callback signatures
+
+- `before.insert(userId, doc)`
+- `after.insert(userId, doc)`
+- `before.update(userId, doc, fields, modifier, options)`
+- `after.update(userId, doc, fields, modifier, options)`
+- `before.remove(userId, doc)`
+- `after.remove(userId, doc)`
+- `before.find(userId, selector, options)`
+- `after.find(userId, selector, options, cursor)`
+- `before.findOne(userId, selector, options)`
+- `after.findOne(userId, selector, options, doc)`
+- `before.upsert(userId, selector, modifier, options)`
+
+Notes:
+
+- Returning `false` from a `before.*` hook aborts that operation. An aborted `find()` returns an empty cursor.
+- Mutation hooks are async-mutator hooks. Use `insertAsync`, `updateAsync`, `removeAsync`, or `upsertAsync` when hook execution is required.
+- `before.find` hooks must be synchronous, as `find()` returns a cursor synchronously. The same applies to `findOne` hooks used with the sync `findOne()`.
+- `after.find` hooks run each time an async cursor method such as `fetchAsync()` or `countAsync()` is consumed.
+- `findOne()` and `findOneAsync()` run `findOne` hooks only, not `find` hooks.
+- There is no `after.upsert`. Upserts fire `after.insert` when they insert and `after.update` when they update.
+- Hooks are only awaited when they return a promise. With synchronous `before` hooks, the write is sent in the same tick as the call.
+
+### Hook context
+
+Inside hook callbacks, `this` may expose extra information:
+
+- `this.context` is the collection and `this.args` the arguments of the operation (except in `after.find`).
+- `this.transform(doc)` returns the collection transform for a document.
+- `after.insert` exposes `this._id`.
+- `after.update` exposes `this.previous` and `this.affected`.
+- `after.find` runs with `this` bound to the cursor.
+
+`userId` behavior depends on context:
+
+- On the client, it is the logged-in user when `accounts-base` is installed.
+- Otherwise it reflects the current method or publication invocation.
+- When none of these apply, it is `CollectionHooks.defaultUserId` (`undefined` by default).
+
+### Hook options and defaults
+
+Hook options control document fetching for update hooks:
+
+- `fetch: ['fieldA', 'fieldB']` requests specific fields.
+- `fetchFields: { fieldA: 1 }` provides a projection object.
+- `fetchPrevious: false` disables `this.previous` for `after.update`.
+
+Global defaults are available on `CollectionHooks.defaults`:
+
+```js
+CollectionHooks.defaults.after.update = { fetchPrevious: false };
+```
+
+Defaults can be set per timing and per method through:
+
+- `CollectionHooks.defaults.before`
+- `CollectionHooks.defaults.after`
+- `CollectionHooks.defaults.all`
+
+### Bypassing hooks
+
+Every collection also includes direct helpers that bypass hooks:
+
+- `collection.direct.insertAsync(...)`
+- `collection.direct.updateAsync(...)`
+- `collection.direct.removeAsync(...)`
+- `collection.direct.upsertAsync(...)`
+- `collection.direct.findOneAsync(...)`
+
+Sync counterparts are available where the sync API exists. For sync mutation
+methods this is mostly a consistency helper: sync mutation methods do not run
+mutation hooks in the first place.
+
+You can also bypass hooks for a block of work:
+
+```js
+CollectionHooks.directOp(() => Posts.updateAsync(postId, { $set: { flagged: true } }));
+```
+
+`CollectionHooks.hookedOp(fn)` forces hook-aware execution again, and
+`CollectionHooks.isWithinPublish()` reports whether the current hook is running
+inside a publication.
+
+### Migrating from `matb33:collection-hooks`
+
+The built-in hooks keep the API of the community package. Remove
+`matb33:collection-hooks` from your app and import `CollectionHooks` from
+`meteor/mongo` if you use it directly. While the community package is still
+installed, the built-in hooks are disabled and a warning is logged, so hooks
+don't run twice.
 
 ## Collection Extensions
 
@@ -1341,4 +1490,3 @@ You can also call `Mongo.setConnectionOptions` to set the connection options but
 you need to call it before any other package using Mongo connections is
 initialized so you need to add this code in a package and add it above the other
 packages, like accounts-base in your `.meteor/packages` file.
-

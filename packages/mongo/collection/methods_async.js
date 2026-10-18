@@ -1,3 +1,10 @@
+import {
+  CollectionHooks,
+  hasActiveHooks,
+  runFindOneHooks,
+  withMutationHooks,
+} from './collection_hooks';
+
 export const AsyncMethods = {
   /**
    * @summary Finds the first document that matches the selector, as ordered by sort and skip options. Returns `undefined` if no matching document is found.
@@ -17,10 +24,16 @@ export const AsyncMethods = {
    * @returns {Object}
    */
   findOneAsync(...args) {
-    return this._collection.findOneAsync(
-      this._getFindSelector(args),
-      this._getFindOptions(args)
-    );
+    const selector = this._getFindSelector(args);
+    const options = this._getFindOptions(args);
+
+    if (hasActiveHooks(this, 'findOne')) {
+      return runFindOneHooks(this, selector, options, (hookSelector) =>
+        this._collection.findOneAsync(hookSelector, options)
+      );
+    }
+
+    return this._collection.findOneAsync(selector, options);
   },
 
   _insertAsync(doc, options = {}) {
@@ -79,18 +92,22 @@ export const AsyncMethods = {
       return result;
     };
 
-    if (this._isRemoteCollection()) {
-      const promise = this._callMutatorMethodAsync('insertAsync', [doc], options);
-      promise.then(chooseReturnValueFromCollectionResult);
-      promise.stubPromise = promise.stubPromise.then(chooseReturnValueFromCollectionResult);
-      promise.serverPromise = promise.serverPromise.then(chooseReturnValueFromCollectionResult);
-      return promise;
-    }
+    const dispatch = () => {
+      if (this._isRemoteCollection()) {
+        const promise = this._callMutatorMethodAsync('insertAsync', [doc], options);
+        promise.then(chooseReturnValueFromCollectionResult);
+        promise.stubPromise = promise.stubPromise.then(chooseReturnValueFromCollectionResult);
+        promise.serverPromise = promise.serverPromise.then(chooseReturnValueFromCollectionResult);
+        return promise;
+      }
 
-    // it's my collection.  descend into the collection object
-    // and propagate any exception.
-    return this._collection.insertAsync(doc)
-      .then(chooseReturnValueFromCollectionResult);
+      // it's my collection.  descend into the collection object
+      // and propagate any exception.
+      return this._collection.insertAsync(doc)
+        .then(chooseReturnValueFromCollectionResult);
+    };
+
+    return this._withMutationHooks('insert', [doc], dispatch);
   },
 
   /**
@@ -147,23 +164,26 @@ export const AsyncMethods = {
       fallbackId: insertedId,
     });
 
-    if (this._isRemoteCollection()) {
-      const args = [selector, modifier, options];
+    const dispatch = () => {
+      if (this._isRemoteCollection()) {
+        const args = [selector, modifier, options];
 
-      return this._callMutatorMethodAsync('updateAsync', args, options);
-    }
+        return this._callMutatorMethodAsync('updateAsync', args, options);
+      }
 
-    // it's my collection.  descend into the collection object
-    // and propagate any exception.
-    // If the user provided a callback and the collection implements this
-    // operation asynchronously, then queryRet will be undefined, and the
-    // result will be returned through the callback instead.
+      // it's my collection.  descend into the collection object
+      // and propagate any exception.
+      // If the user provided a callback and the collection implements this
+      // operation asynchronously, then queryRet will be undefined, and the
+      // result will be returned through the callback instead.
+      return this._collection.updateAsync(
+        selector,
+        modifier,
+        options
+      );
+    };
 
-    return this._collection.updateAsync(
-      selector,
-      modifier,
-      options
-    );
+    return this._withMutationHooks('update', [selector, modifier, options], dispatch);
   },
 
   /**
@@ -177,13 +197,17 @@ export const AsyncMethods = {
   removeAsync(selector, options = {}) {
     selector = Mongo.Collection._rewriteSelector(selector);
 
-    if (this._isRemoteCollection()) {
-      return this._callMutatorMethodAsync('removeAsync', [selector], options);
-    }
+    const dispatch = () => {
+      if (this._isRemoteCollection()) {
+        return this._callMutatorMethodAsync('removeAsync', [selector], options);
+      }
 
-    // it's my collection.  descend into the collection1 object
-    // and propagate any exception.
-    return this._collection.removeAsync(selector);
+      // it's my collection.  descend into the collection1 object
+      // and propagate any exception.
+      return this._collection.removeAsync(selector);
+    };
+
+    return this._withMutationHooks('remove', [selector], dispatch);
   },
 
   /**
@@ -198,7 +222,7 @@ export const AsyncMethods = {
    * @param {Boolean} options.multi True to modify all matching documents; false to only modify one of the matching documents (the default).
    */
   async upsertAsync(selector, modifier, options) {
-    return this.updateAsync(
+    const upsert = () => this.updateAsync(
       selector,
       modifier,
       {
@@ -206,6 +230,26 @@ export const AsyncMethods = {
         _returnObject: true,
         upsert: true,
       });
+
+    if (!hasActiveHooks(this, 'upsert')) {
+      return upsert();
+    }
+
+    // Upsert hooks replace the update hooks for this write: run the update
+    // itself without hooks.
+    selector = CollectionHooks.normalizeSelector(selector);
+    return this._withMutationHooks(
+      'upsert',
+      [selector, modifier, options || {}],
+      () => CollectionHooks.directOp(upsert)
+    );
+  },
+
+  // Runs `dispatch`, the actual write, wrapped in the collection hooks
+  // registered for `method` (insert, update, remove or upsert). Also used by
+  // allow-deny for writes coming from clients.
+  _withMutationHooks(method, args, dispatch) {
+    return withMutationHooks(this, method, args, dispatch);
   },
 
   /**
