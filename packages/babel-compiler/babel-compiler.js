@@ -1,7 +1,39 @@
 var JSON5 = Npm.require("json5");
-var SWC = Npm.require("@meteorjs/swc-core");
-const reifyCompile = Npm.require("@meteorjs/reify/lib/compiler").compile;
-const reifyAcornParse = Npm.require("@meteorjs/reify/lib/parsers/acorn").parse;
+
+// Loaded lazily on first use: the SWC native binding takes hundreds of
+// milliseconds to load, and every build-plugin image that includes
+// babel-compiler would otherwise pay that cost at plugin initialization
+// even if it never transpiles anything (e.g. minifier plugins).
+// A failure to load one of these dependencies is an installation problem,
+// not a compilation problem, so it must not be swallowed by the
+// SWC-to-Babel fallback in processOneFileForTarget.
+function requireCompilerDependency(name) {
+  try {
+    return Npm.require(name);
+  } catch (error) {
+    error.compilerDependencyLoadFailure = true;
+    throw error;
+  }
+}
+
+let SWC = null;
+function getSWC() {
+  return SWC || (SWC = requireCompilerDependency("@meteorjs/swc-core"));
+}
+
+let reifyCompile = null;
+function getReifyCompile() {
+  return reifyCompile ||
+    (reifyCompile =
+      requireCompilerDependency("@meteorjs/reify/lib/compiler").compile);
+}
+
+let reifyAcornParse = null;
+function getReifyAcornParse() {
+  return reifyAcornParse ||
+    (reifyAcornParse =
+      requireCompilerDependency("@meteorjs/reify/lib/parsers/acorn").parse);
+}
 var fs = Npm.require('fs');
 var path = Npm.require('path');
 var vm = Npm.require('vm');
@@ -53,13 +85,13 @@ function compileWithBabel(source, babelOptions, cacheOptions) {
 function compileWithSwc(source, swcOptions = {}, { features }) {
   return profile('SWC.compile', function () {
     // Perform SWC transformation.
-    const transformed = SWC.transformSync(source, swcOptions);
+    const transformed = getSWC().transformSync(source, swcOptions);
 
     let content = transformed.code;
 
     // Preserve Meteor-specific features: reify modules, nested imports, and top-level await support.
-    const result = reifyCompile(content, {
-      parse: reifyAcornParse,
+    const result = getReifyCompile()(content, {
+      parse: getReifyAcornParse(),
       generateLetDeclarations: false,
       ast: false,
       // Enforce reify options for proper compatibility.
@@ -512,6 +544,11 @@ BCp.processOneFileForTarget = function (inputFile, source) {
             });
           }
         } catch (e) {
+          if (e.compilerDependencyLoadFailure) {
+            // A broken SWC/reify installation should fail loudly rather
+            // than silently falling back to Babel for every file.
+            throw e;
+          }
           this._swcIncompatible[cacheKey] = true;
           // If SWC fails, fall back to Babel
 
@@ -1012,6 +1049,13 @@ function packageNameFromTopLevelModuleId(id) {
 
 const SwcCacheContext = '.swc-cache';
 
+function isIgnorableSwcCacheWriteError(error) {
+  return error && (
+    error.code === 'ENOENT' ||
+    error.code === 'ENOTDIR'
+  );
+}
+
 BCp.readFromSwcCache = function({ cacheKey }) {
   // Check in-memory cache.
   let compilation = this._swcCache[cacheKey];
@@ -1037,16 +1081,20 @@ BCp.writeToSwcCache = function({ cacheKey, compilation }) {
   // If file system caching is enabled, write asynchronously.
   if (this.cacheDirectory) {
     const cacheFilePath = path.join(this.cacheDirectory, SwcCacheContext, `${cacheKey}.json`);
-    try {
-      const writeFileCache = async () => {
-        await fs.promises.mkdir(path.dirname(cacheFilePath), { recursive: true });
-        await fs.promises.writeFile(cacheFilePath, JSON.stringify(compilation), 'utf8');
-      };
-      // Invoke without blocking the main flow.
-      writeFileCache();
-    } catch (err) {
-      // If writing fails, ignore the error.
-    }
+    const writeFileCache = async () => {
+      await fs.promises.mkdir(path.dirname(cacheFilePath), { recursive: true });
+      await fs.promises.writeFile(cacheFilePath, JSON.stringify(compilation), 'utf8');
+    };
+    // This cache is best-effort, some test flows remove temp app directories
+    // before the async write finishes.
+    writeFileCache().catch((error) => {
+      if (isIgnorableSwcCacheWriteError(error)) {
+        return;
+      }
+      if (this.isVerbose()) {
+        console.warn('SWC cache write failed:', error);
+      }
+    });
   }
 };
 

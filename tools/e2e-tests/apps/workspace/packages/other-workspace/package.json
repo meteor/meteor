@@ -1,0 +1,5 @@
+{
+  "name": "@example/other-workspace",
+  "version": "1.0.0",
+  "main": "bin/run.js"
+}

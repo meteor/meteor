@@ -19,6 +19,31 @@ const DELAYED_IMPORT_PORTS = [3131, 18131];
 const ES_MODULE_APP_PORTS = [3132, 18132];
 const DEBUGGING_PORTS = [3133, 18133, 9233];
 const ASSETS_GLOBAL_PORTS = [3134, 18134];
+const IN_MEMORY_INVALIDATION_PORTS = [3135, 18135, 19135];
+
+async function waitForResponseText(url, expected, timeout = 30000) {
+  const deadline = Date.now() + timeout;
+  let lastValue;
+
+  while (Date.now() < deadline) {
+    try {
+      const response = await fetch(url);
+      lastValue = await response.text();
+      if (response.ok && lastValue === expected) {
+        return;
+      }
+    } catch {
+      // The server is briefly unavailable while Meteor restarts it.
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+
+  throw new Error(
+    `Timed out waiting for ${url} to return ${JSON.stringify(expected)}; ` +
+      `last response was ${JSON.stringify(lastValue)}`
+  );
+}
 
 async function getInspectorWebSocketUrl(port, timeout = 90000) {
   const deadline = Date.now() + timeout;
@@ -310,6 +335,99 @@ Assets.getTextAsync('assets-fixture.txt')
         tempDir,
         meteorProcess,
         ports: ASSETS_GLOBAL_PORTS,
+      });
+    }
+  });
+
+  test('restarts after an in-memory plugin changes the server bundle', async () => {
+    const [appPort, devServerPort, invalidationPort] =
+      IN_MEMORY_INVALIDATION_PORTS;
+    let tempDir;
+    let meteorProcess;
+
+    try {
+      tempDir = await prepareServerOnlyApp(IN_MEMORY_INVALIDATION_PORTS);
+
+      await fs.writeFile(
+        path.join(tempDir, 'rspack.config.js'),
+        `const http = require('node:http');
+const { BannerPlugin } = require('@rspack/core');
+const { defineConfig } = require('@meteorjs/rspack');
+
+let value = 'first';
+
+class InMemoryInvalidationPlugin {
+  apply(compiler) {
+    const server = http.createServer((request, response) => {
+      if (request.url !== '/invalidate') {
+        response.writeHead(404).end();
+        return;
+      }
+
+      if (!compiler.watching) {
+        response.writeHead(503).end('not watching');
+        return;
+      }
+
+      value = 'second';
+      compiler.watching.invalidate();
+      response.end('invalidated');
+    });
+
+    server.listen(Number(process.env.RSPACK_INVALIDATION_PORT), '127.0.0.1');
+    compiler.hooks.watchClose.tap('InMemoryInvalidationPlugin', () => {
+      server.close();
+    });
+  }
+}
+
+module.exports = defineConfig(Meteor => ({
+  plugins: Meteor.isServer
+    ? [
+        new BannerPlugin({
+          raw: true,
+          entryOnly: true,
+          banner: () =>
+            \`globalThis.reviewSetting = \${JSON.stringify(value)};\`,
+        }),
+        new InMemoryInvalidationPlugin(),
+      ]
+    : [],
+}));
+`
+      );
+      await fs.writeFile(
+        path.join(tempDir, 'server', 'main.js'),
+        `import { WebApp } from 'meteor/webapp';
+
+WebApp.connectHandlers.use('/value', (_request, response) => {
+  response.end(globalThis.reviewSetting);
+});
+`
+      );
+
+      const result = await runMeteorApp(tempDir, appPort, {
+        waitForOutput: '=> App running at',
+        env: {
+          RSPACK_DEVSERVER_PORT: String(devServerPort),
+          RSPACK_INVALIDATION_PORT: String(invalidationPort),
+        },
+      });
+      meteorProcess = result.meteorProcess;
+
+      const valueUrl = `http://127.0.0.1:${appPort}/value`;
+      await waitForResponseText(valueUrl, 'first');
+
+      const invalidationResponse = await fetch(
+        `http://127.0.0.1:${invalidationPort}/invalidate`
+      );
+      expect(await invalidationResponse.text()).toBe('invalidated');
+      await waitForResponseText(valueUrl, 'second');
+    } finally {
+      await cleanupRegressionApp({
+        tempDir,
+        meteorProcess,
+        ports: IN_MEMORY_INVALIDATION_PORTS,
       });
     }
   });

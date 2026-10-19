@@ -25,19 +25,19 @@ const {
   isMeteorScssProject,
   getMeteorEnvPackageDirs,
   getMeteorAppConfig,
+  getMeteorAppEntrypoints,
   getMeteorAppDir,
 } = require('meteor/tools-core/lib/meteor');
 const { buildUnignorePatterns } = require('meteor/tools-core/lib/ignore');
 
 import { getInitialEntrypoints } from './build-context';
-import { discoverRspackFileExtensions } from './file-extensions';
+import { getRspackFileExtensionsToIgnore } from './file-extensions';
+import { getClientArchitectureEntries, getDefaultClientScriptArchitectures } from './architectures';
 
 const { ensureModuleFilesExist, getBuildFilePath } = require('./build-context');
 const {
   RSPACK_BUILD_CONTEXT,
-  RSPACK_ASSETS_CONTEXT,
-  RSPACK_CHUNKS_CONTEXT,
-  RSPACK_DOCTOR_CONTEXT,
+  getRspackChunksContext,
   FILE_ROLE,
 } = require('./constants');
 
@@ -89,34 +89,22 @@ function checkMeteorIgnoreExactEntries(entries) {
 }
 
 /**
- * Gets the list of file extensions to ignore based on project type
- * For Blaze projects, it excludes .html as used by Blaze
- * For Less projects, it excludes .less files
- * For SCSS projects, it excludes .scss and .sass files
+ * Gets the bounded list of extensions owned by the default Rspack integration.
+ * This path is needed when Meteor compiler inputs prevent ignoring entire app
+ * directories. Optional loader formats stay visible to Meteor and can be
+ * delegated after Rspack's first compilation.
  * @returns {string[]} Array of file extensions to ignore
  */
 function getFileExtensionsToIgnore() {
-  const compilerExtensions = [
-    ...(isMeteorBlazeProject() ? ['.html'] : []),
-    ...(isMeteorLessProject() ? ['.less'] : []),
-    ...(isMeteorScssProject() ? ['.scss', '.sass'] : []),
-  ];
-  const isAnyCompilerProject = compilerExtensions.length > 0;
-  if (!isAnyCompilerProject) {
+  if (
+    !isMeteorBlazeProject() &&
+    !isMeteorLessProject() &&
+    !isMeteorScssProject()
+  ) {
     return [];
   }
 
-  return discoverRspackFileExtensions({
-    globSync,
-    cwd: getMeteorAppDir(),
-    generatedContexts: [
-      RSPACK_BUILD_CONTEXT,
-      RSPACK_ASSETS_CONTEXT,
-      RSPACK_CHUNKS_CONTEXT,
-      RSPACK_DOCTOR_CONTEXT,
-    ],
-    compilerExtensions,
-  });
+  return getRspackFileExtensionsToIgnore();
 }
 
 /**
@@ -128,6 +116,8 @@ function getFileExtensionsToIgnore() {
 export function configureMeteorForRspack() {
   const meteorAppConfig = getMeteorAppConfig();
   const initialEntrypoints = getInitialEntrypoints();
+  const isTest = isMeteorAppTest();
+  const isTestFullApp = isMeteorAppTestFullApp();
 
   // Ignore node_modules to prevent Meteor from processing them
   const projectRootFilesAndFolders = getMeteorAppFilesAndFolders({
@@ -137,6 +127,7 @@ export function configureMeteorForRspack() {
   const initialEntrypointContexts = [
     initialEntrypoints.mainClient,
     initialEntrypoints.mainServer,
+    ...getClientArchitectureEntries().map(entry => entry.entryFile),
   ]
     .filter(Boolean)
     .map(entrypoint => path.dirname(entrypoint));
@@ -230,11 +221,20 @@ export function configureMeteorForRspack() {
     }),
   ];
 
-  const testIgnorePath = `${RSPACK_BUILD_CONTEXT}/${path.dirname(
+  const normalTestIgnorePath = `${RSPACK_BUILD_CONTEXT}/${path.dirname(
     getBuildFilePath({
       isTest: true,
     }),
-  )}/**`;
+  )}*/**`;
+  const fullAppTestIgnorePath = `${RSPACK_BUILD_CONTEXT}/${path.dirname(
+    getBuildFilePath({
+      isTest: true,
+      isTestFullApp: true,
+    }),
+  )}*/**`;
+  const testIgnorePaths = isTest
+    ? [isTestFullApp ? normalTestIgnorePath : fullAppTestIgnorePath]
+    : [normalTestIgnorePath, fullAppTestIgnorePath];
   const otherMainIgnorePath =
     (isMeteorAppDevelopment() &&
       `${RSPACK_BUILD_CONTEXT}/${path.dirname(
@@ -242,19 +242,28 @@ export function configureMeteorForRspack() {
           isMain: true,
           isProduction: true,
         }),
-      )}/**`) ||
+      )}*/**`) ||
     `${RSPACK_BUILD_CONTEXT}/${path.dirname(
       getBuildFilePath({
         isMain: true,
         isDevelopment: true,
       }),
-    )}/**`;
+    )}*/**`;
   const foldersToIgnore = [
-    ...((isMeteorAppTest() && [otherMainIgnorePath]) || [
-      testIgnorePath,
-      otherMainIgnorePath,
-    ]),
-    'node_modules/**',
+    // Cross-process isolation: a single app directory can host several Meteor
+    // instances at once (a dev server, a `meteor test` daemon, an E2E run),
+    // each with its own RSPACK_BUILD_CONTEXT (_build, _build-daemon,
+    // _build-local-upstream-3.5.2, ...). Ignore every build context here, then
+    // re-include only our own below; otherwise each instance watches the
+    // others' output writes and treats them as source edits, looping on
+    // spurious "Client modified -- refreshing" rebuilds.
+    '/_build',
+    '/_build-*',
+    `!/${RSPACK_BUILD_CONTEXT}`,
+    `!/${RSPACK_BUILD_CONTEXT}/**`,
+    ...testIgnorePaths,
+    otherMainIgnorePath,
+    '**/node_modules/**',
     ...extraFoldersToIgnore,
   ].filter(Boolean);
   const rootFilesToIgnore = [
@@ -290,7 +299,6 @@ export function configureMeteorForRspack() {
   const meteorAppIgnores = `${foldersToIgnore.join(' ')} ${filesToIgnore.join(
     ' ',
   )} ${unignoredFilesAndFolders.join(' ')}`.trim();
-  setMeteorAppIgnore(meteorAppIgnores);
 
   if (isMeteorAppDebug() || isMeteorAppConfigModernVerbose()) {
     logInfo(`[i] Meteor app ignores: ${meteorAppIgnores}`);
@@ -323,6 +331,7 @@ export function configureMeteorForRspack() {
   const isTestModule = initialEntrypoints.testModule != null || isTestEager;
   const testClientModule = getBuildFilePath({
     isTest: true,
+    isTestFullApp,
     ...env,
     ...commandRole,
     isTestModule,
@@ -330,6 +339,7 @@ export function configureMeteorForRspack() {
   });
   const testServerModule = getBuildFilePath({
     isTest: true,
+    isTestFullApp,
     ...env,
     ...commandRole,
     isTestModule,
@@ -347,15 +357,66 @@ export function configureMeteorForRspack() {
       testServer: `${RSPACK_BUILD_CONTEXT}/${testServerModule}`,
     }),
   };
-  if (isMeteorAppTestFullApp()) {
+  if (isTestFullApp) {
     appEntrypoints = {
       ...appEntrypoints,
       mainClient: `${RSPACK_BUILD_CONTEXT}/${testClientModule}`,
       mainServer: `${RSPACK_BUILD_CONTEXT}/${testServerModule}`,
     };
   }
+  const architectureEntries = getClientArchitectureEntries();
+  const architectureModules = Object.fromEntries(architectureEntries.map(entry => [
+    entry.arch,
+    `${RSPACK_BUILD_CONTEXT}/${getBuildFilePath({ ...env, ...entry, ...commandRole })}`,
+  ]));
+  const replacements = {
+    ...appEntrypoints,
+    ...(isTest
+      ? {
+        testModule: architectureModules,
+        // Meteor validates mainModule even for standalone tests, which exclude
+        // the app's original sources. Disable those main entries; full-app
+        // tests instead use wrappers containing both application and test code.
+        mainModule: isTestFullApp ? architectureModules : Object.fromEntries([
+          ...getClientArchitectureEntries({ isTest: false }),
+          ...architectureEntries,
+        ].map(({ arch }) => [arch, false])),
+      }
+      : { mainModule: architectureModules }),
+  };
+  // Generated files must stay out of architectures with their own entrypoint.
+  // Only the architectures using our replacement entries re-include them and
+  // exclude the sources compiled by Rspack.
+  setMeteorAppIgnore(`/_build /_build-* /${RSPACK_BUILD_CONTEXT}`, { root: true });
+  setMeteorAppIgnore(meteorAppIgnores, {
+    root: true,
+    entrypoints: Object.values(appEntrypoints),
+  });
+
+  // Only expose the selected architecture's generated files to Meteor. Exclude
+  // every mode so stale HTML from a previous run cannot add another arch's CSS.
+  const architectureDirectories = architectureEntries.map(entry =>
+    `${RSPACK_BUILD_CONTEXT}/*-${entry.arch.replaceAll('.', '-')}`
+  );
+  if (architectureDirectories.length) {
+    setMeteorAppIgnore(architectureDirectories.map(dir => `/${dir}`).join(' '), {
+      root: true,
+      entrypoints: Object.values(appEntrypoints),
+    });
+  }
+  for (const entry of architectureEntries) {
+    const modulePath = architectureModules[entry.arch];
+    const directory = path.dirname(modulePath);
+    setMeteorAppIgnore([
+      meteorAppIgnores,
+      `/${RSPACK_BUILD_CONTEXT}/**`,
+      `!/${directory}`,
+      `!/${directory}/**`,
+    ].join(' '), { root: true, entrypoints: [modulePath] });
+  }
+
   // Set entry points in environment variables if they exist
-  setMeteorAppEntrypoints(appEntrypoints);
+  setMeteorAppEntrypoints(replacements);
 
   if (isMeteorAppDebug() || isMeteorAppConfigModernVerbose()) {
     logInfo(`[i] App entrypoints: ${JSON.stringify(appEntrypoints, null, 2)}`);
@@ -366,14 +427,18 @@ export function configureMeteorForRspack() {
 
   // Write content to module files
   if (isMeteorAppRun() && isMeteorAppDevelopment() && !isMeteorAppNative()) {
-    const customScriptUrl = `/__rspack__/${getBuildFilePath({
+    const clientOutputPrefix = architectureEntries.length
+      ? `${getRspackChunksContext(false, false, 'client')}/` : '';
+    const customScriptUrl = `/__rspack__/${clientOutputPrefix}${getBuildFilePath({
       ...env,
       isMain: true,
       isClient: true,
       role: FILE_ROLE.output,
       onlyFilename: true,
     })}`;
-    setMeteorAppCustomScriptUrl(customScriptUrl);
+    setMeteorAppCustomScriptUrl(customScriptUrl, {
+      archs: getDefaultClientScriptArchitectures(),
+    });
 
     if (isMeteorAppDebug() || isMeteorAppConfigModernVerbose()) {
       logInfo(`[i] App custom script: ${customScriptUrl}`);
@@ -392,13 +457,15 @@ export function configureMeteorForRspack() {
  *
  * @param {string[]} extensions - Array of extensions like ['.css', '.less']
  */
-export function applyDelegatedExtensions(extensions) {
+export function applyDelegatedExtensions(extensions, { arch } = {}) {
   if (!extensions || extensions.length === 0) return;
 
   const initialEntrypoints = getInitialEntrypoints();
   const entrypointContexts = [
     initialEntrypoints.mainClient,
     initialEntrypoints.mainServer,
+    ...getClientArchitectureEntries().filter(entry => entry.arch === arch)
+      .map(entry => entry.entryFile),
   ]
     .filter(Boolean)
     .map(entrypoint => path.dirname(entrypoint));
@@ -420,12 +487,16 @@ export function applyDelegatedExtensions(extensions) {
       { skipLevel: 1 },
     );
 
+    const entrypoints = arch
+      ? [meteorAppConfig[isMeteorAppTest() ? 'testModule' : 'mainModule']?.[arch]]
+      : Object.values(getMeteorAppEntrypoints());
     setMeteorAppIgnore(
-      [...ignorePatterns, ...unignoredFilesAndFolders].join(' ')
+      [...ignorePatterns, ...unignoredFilesAndFolders].join(' '),
+      { root: true, entrypoints: entrypoints.filter(value => typeof value === 'string') },
     );
 
     if (isMeteorAppDebug() || isMeteorAppConfigModernVerbose()) {
-      logInfo(`[i] Rspack delegated extensions: ${extensions.join(', ')} (ignored in entry folders)\n    ${process.env.METEOR_IGNORE}`);
+      logInfo(`[i] Rspack delegated extensions: ${extensions.join(', ')} (ignored in entry folders)\n    ${process.env.METEOR_IGNORE_ROOT_BY_ENTRYPOINT}`);
     }
   }
 }

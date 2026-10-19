@@ -1,6 +1,10 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { resolveLanIp } = require("./server");
+const {
+  buildServerArgs,
+  buildServerEnv,
+  resolveLanIp,
+} = require("./server");
 
 test("returns a non-loopback IPv4 address", () => {
   const ip = resolveLanIp();
@@ -30,4 +34,24 @@ test("falls back to first non-loopback IPv4 when prefer is missing", () => {
   };
   const ip = resolveLanIp({ interfaces: fakeInterfaces, prefer: "en0" });
   assert.equal(ip, "172.20.0.4");
+});
+
+test("passes the LAN URL explicitly as Meteor's mobile server", () => {
+  assert.deepEqual(
+    buildServerArgs({ lanIp: "192.0.2.10", port: 3100 }),
+    [
+      "run",
+      "--port",
+      "192.0.2.10:3100",
+      "--mobile-server",
+      "http://192.0.2.10:3100",
+    ]
+  );
+});
+
+test("forces the Cordova web architecture for the HCP server", () => {
+  assert.deepEqual(buildServerEnv({ PATH: "/bin" }), {
+    PATH: "/bin",
+    METEOR_FORCE_INCLUDE_ARCHS: "web.cordova",
+  });
 });

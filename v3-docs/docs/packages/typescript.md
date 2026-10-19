@@ -1,19 +1,18 @@
 # TypeScript
 
 The `typescript` package lets you write [TypeScript](https://www.typescriptlang.org)
-modules with `.ts` and `.tsx` file extensions in your Meteor apps and
-packages, alongside regular `.js` files. It registers a compiler plugin in
-Meteor's classic build stack and is what compiles TypeScript in
-TypeScript-enabled Atmosphere packages and in apps built with that stack. By
-default, it is listed in the `.meteor/packages` file of new apps, so most
-projects can start writing TypeScript with no extra setup.
+modules with `.ts` and `.tsx` file extensions alongside regular `.js` files.
+It transpiles TypeScript syntax in Meteor's classic build stack; type-checking
+and Meteor package declarations are separate concerns. By default, the package
+is listed in `.meteor/packages` for new apps.
 
 > [!NOTE]
 > This page describes the classic (isobuild) build stack. Apps using the
-> modern build stack transpile `.ts`/`.tsx` with SWC via
-> [Rspack](https://rspack.dev) instead, and this package's compiler plugin is
-> bypassed for app source. The type-checking notes below still apply, since
-> neither stack type-checks at build time.
+> [modern build stack](/about/modern-build-stack/rspack-bundler-integration)
+> transpile application `.ts` and `.tsx` files with SWC through Rspack, so this
+> package's compiler plugin is bypassed for application source. Atmosphere
+> packages can still use the compiler plugin. Neither stack type-checks your
+> application as part of transpilation.
 
 ## Usage
 
@@ -58,18 +57,14 @@ it. Your build (and your app) will succeed even if there are type errors —
 TypeScript types are stripped, not verified, during the build.
 :::
 
-Run type checking as a separate step. Most editors (such as VS Code)
-report type errors as you work, and you can check the whole project from
-the command line with the TypeScript compiler in `--noEmit` mode:
+Run type checking as a separate step with the application's local TypeScript
+compiler. New TypeScript templates already include `typescript` in
+`devDependencies`. For an existing app, install and pin a version compatible
+with the project instead of changing compiler versions as part of a declaration
+provider migration.
 
-```bash
-meteor npm install --save-dev typescript
-meteor npx tsc --noEmit
-```
-
-::: tip
-Add a script to your `package.json` so type checking is easy to run in CI
-or locally:
+Add a script to `package.json` so local and CI checks resolve `tsc` from the
+application's `node_modules`:
 
 ```json [package.json]
 {
@@ -79,43 +74,54 @@ or locally:
   }
 }
 ```
-:::
-
-To get types for Meteor core packages (`meteor/meteor`, `meteor/mongo`, …)
-working in your editor, add the community [`zodern:types`](https://github.com/zodern/meteor-types)
-package:
 
 ```bash
-meteor add zodern:types
+meteor npm run check-types
 ```
 
+Before running `tsc`, configure a declaration provider for imports such as
+`meteor/meteor` and `meteor/mongo`. Meteor 3.6 preserves existing
+`@types/meteor` and `zodern:types` configurations. To use the native provider,
+configure it explicitly and run `meteor types` before `tsc`; ordinary build
+commands do not write `.meteor/types/`.
+
 For a full walkthrough of enabling core-package types — including the
-`tsconfig.json` `paths` setup and running `meteor lint` to generate the
-type definitions — see the [Using core types](/cli/using-core-types) guide.
+`tsconfig.json` `paths` setup and the `meteor types` command — see the
+[Using core types](/cli/using-core-types) guide.
 
 ## `tsconfig.json`
 
-The plugin **ignores `tsconfig.json`** when compiling — compilation
-options are kept intentionally simple. You should still keep a
-`tsconfig.json` in your project root to configure your editor and the
-standalone `tsc` type checker. A typical starting point that also wires up
-Meteor core-package types (via `zodern:types`) looks like:
+The classic compiler plugin **ignores `tsconfig.json`** when transpiling files;
+its compilation options are intentionally limited. You should still keep a
+`tsconfig.json` in the project root to configure your editor and standalone
+`tsc` checks.
+
+For an app that has explicitly selected Meteor's native declaration provider,
+the relevant part of the configuration looks like this:
 
 ```json [tsconfig.json]
 {
+  "files": ["./.meteor/types/packages.d.ts"],
+  "include": ["**/*.ts", "**/*.tsx"],
   "compilerOptions": {
     "target": "esnext",
     "module": "esnext",
     "moduleResolution": "node",
     "strict": true,
     "esModuleInterop": true,
-    "preserveSymlinks": true,
+    "baseUrl": ".",
+    "skipLibCheck": true,
     "paths": {
-      "meteor/*": [".meteor/local/types/packages.d.ts"]
+      "meteor/*": ["./.meteor/types/packages/*"]
     }
   }
 }
 ```
+
+Run `meteor types` before `tsc`. If the project already defines `files` or
+`include`, append the generated barrel and keep the existing source patterns.
+See [TypeScript Types for Meteor Packages](/cli/using-core-types) before
+changing providers in an existing Meteor 3.6 application.
 
 ## Supported features and limitations
 

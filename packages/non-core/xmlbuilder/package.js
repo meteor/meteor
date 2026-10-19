@@ -13,6 +13,8 @@ Package.onUse(function (api) {
   api.addFiles(['xmlbuilder.js'], 'server');
 
   api.export('XmlBuilder', 'server');
+
+  api.types('xmlbuilder.d.ts');
 });
 
 Package.onTest(function (api) {

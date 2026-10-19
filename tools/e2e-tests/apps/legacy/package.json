@@ -1,0 +1,27 @@
+{
+  "name": "legacy",
+  "private": true,
+  "dependencies": {
+    "@babel/runtime": "^7.23.5",
+    "meteor-node-stubs": "^1.2.12"
+  },
+  "devDependencies": {
+    "playwright": "1.59.0"
+  },
+  "meteor": {
+    "mainModule": {
+      "client": "client/modern.ts",
+      "server": "server/main.js",
+      "legacy": "client/legacy.ts",
+      "web.cordova": "client/cordova.ts"
+    },
+    "modern": {
+      "webArchOnly": false
+    },
+    "testModule": {
+      "client": "tests/client.ts",
+      "server": "tests/server.ts",
+      "legacy": "tests/legacy.ts"
+    }
+  }
+}

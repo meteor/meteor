@@ -1,3 +1,5 @@
+import { createServer } from 'http';
+
 import {
   startAccountsApp,
   stopAccountsApp,
@@ -314,8 +316,93 @@ function defineAccountsScenarios(storageMode, getCtx) {
         expect(cookie).toBeTruthy();
         expect(cookie.httpOnly).toBe(true);
         expect(cookie.path).toBe('/');
-        // SameSite=Lax is the package default.
-        expect((cookie.sameSite || '').toLowerCase()).toBe('lax');
+        // SameSite=Strict keeps the ambient credential off cross-site requests.
+        expect((cookie.sameSite || '').toLowerCase()).toBe('strict');
+      });
+
+      it('an explicitly allowed same-site Origin can set and clear the cookie', async () => {
+        const { page, port } = getCtx();
+        const originServer = createServer((_req, res) => {
+          res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+          res.end('<!doctype html><title>Allowed origin</title>');
+        });
+        await new Promise((resolve, reject) => {
+          originServer.once('error', reject);
+          originServer.listen(0, 'localhost', resolve);
+        });
+        const originPort = originServer.address().port;
+        const allowedOrigin = `http://localhost:${originPort}`;
+        const endpointOrigin = `http://localhost:${port}`;
+
+        try {
+          await applyConfig(page, { httpOnlyCookieAllowedOrigins: [allowedOrigin] });
+          await seedUser(page, { email: 'cors@example.com', password: 'pw12345' });
+          await login(page, { email: 'cors@example.com' }, 'pw12345');
+          const token = await page.evaluate(
+            () => window.__accountsE2E.Accounts._storedLoginToken(),
+          );
+          expect(token).toBeTruthy();
+
+          await page.context().clearCookies();
+          await page.goto(allowedOrigin);
+          const setResponse = await page.evaluate(async ({ endpointOrigin, token }) => {
+            const response = await fetch(`${endpointOrigin}/_accounts/cookie/set`, {
+              method: 'POST',
+              mode: 'cors',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ token }),
+            });
+            return { status: response.status, body: await response.json() };
+          }, { endpointOrigin, token });
+          expect(setResponse).toEqual({ status: 200, body: { ok: true } });
+
+          const cookiesAfterSet = await page.context().cookies(endpointOrigin);
+          expect(cookiesAfterSet.some((cookie) => cookie.name === 'meteor_login_token')).toBe(true);
+
+          const clearResponse = await page.evaluate(async (endpointOrigin) => {
+            const response = await fetch(`${endpointOrigin}/_accounts/cookie/clear`, {
+              method: 'POST',
+              mode: 'cors',
+              credentials: 'include',
+            });
+            return { status: response.status, body: await response.json() };
+          }, endpointOrigin);
+          expect(clearResponse).toEqual({ status: 200, body: { ok: true } });
+
+          const cookiesAfterClear = await page.context().cookies(endpointOrigin);
+          expect(cookiesAfterClear.some((cookie) => cookie.name === 'meteor_login_token')).toBe(false);
+        } finally {
+          await new Promise((resolve, reject) => {
+            originServer.close((error) => (error ? reject(error) : resolve()));
+          });
+        }
+      });
+
+      it('treats X-Forwarded-Proto case-insensitively when setting the cookie', async () => {
+        const { page } = getCtx();
+        await page.context().clearCookies();
+        const routePattern = '**/_accounts/cookie/set';
+        let intercepted = false;
+        const addForwardedProto = route => {
+          intercepted = true;
+          return route.continue({
+            headers: {
+              ...route.request().headers(),
+              'x-forwarded-proto': 'HTTPS',
+            },
+          });
+        };
+        await page.route(routePattern, addForwardedProto);
+        try {
+          await seedUser(page, { email: 'secure-cookie@example.com', password: 'pw12345' });
+          await login(page, { email: 'secure-cookie@example.com' }, 'pw12345');
+        } finally {
+          await page.unroute(routePattern, addForwardedProto);
+        }
+
+        expect(intercepted).toBe(true);
+        expect((await readCookie(page))?.secure).toBe(true);
       });
 
       it('document.cookie does NOT expose meteor_login_token (HttpOnly)', async () => {
