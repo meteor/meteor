@@ -724,9 +724,12 @@ const SKELETON_INFO = {
 };
 
 // Most skeletons are Meteor apps rooted at the created directory and use npm.
-// Entries here only describe skeletons that need a different project or install
-// root, keeping nested workspace support additive for future skeletons.
+// Per-skeleton setup; omitted options use these standard app defaults.
 const SKELETON_CONFIG = {
+  typescript: { generatePackageTypes: true },
+  "typescript-tailwind": { generatePackageTypes: true },
+  svelte: { generatePackageTypes: true },
+  angular: { generatePackageTypes: true },
   pnpm: {
     appPath: "apps/app",
     installAtRoot: true,
@@ -1133,6 +1136,7 @@ main.registerCommand({
     runCommand = "meteor",
     runPathAsEntered = appPathAsEntered,
     projectKind = "app",
+    generatePackageTypes = false,
   } = {}) {
     // We are actually working with a new meteor project at this point, so
     // set up its context.
@@ -1143,9 +1147,11 @@ main.registerCommand({
       // examples come with a .meteor/versions file, but we shouldn't take it
       // too seriously
       allowIncompatibleUpdate: true,
+      generatePackageTypes,
     });
     await main.captureAndExit(
       "=> Errors while creating your project",
+      "preparing the new project",
       async function () {
         await projectContext.readProjectMetadata();
         if (buildmessage.jobHasMessages()) {
@@ -1177,6 +1183,9 @@ main.registerCommand({
         );
 
         await projectContext.prepareProjectForBuild();
+        if (projectContext.typesGenerationFailed) {
+          buildmessage.error("Could not generate package type declarations.");
+        }
       }
     );
     // No need to display the PackageMapDelta here, since it would include all of
@@ -1407,6 +1416,7 @@ main.registerCommand({
     packageManager: skeletonConfig.packageManager,
     runCommand: skeletonConfig.runCommand,
     projectKind: skeletonConfig.projectKind,
+    generatePackageTypes: skeletonConfig.generatePackageTypes,
   });
 
   Console.info("");

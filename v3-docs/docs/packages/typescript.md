@@ -81,9 +81,11 @@ meteor npm run check-types
 
 Before running `tsc`, configure a declaration provider for imports such as
 `meteor/meteor` and `meteor/mongo`. Meteor 3.6 preserves existing
-`@types/meteor` and `zodern:types` configurations. To use the native provider,
-configure it explicitly and run `meteor types` before `tsc`; ordinary build
-commands do not write `.meteor/types/`.
+`@types/meteor` and `zodern:types` configurations in existing apps. New
+TypeScript-based templates select the native provider and `meteor create`
+generates its declarations automatically. For existing apps, configure it
+explicitly and run `meteor types` before `tsc`; ordinary build commands do not
+write `.meteor/types/`.
 
 For a full walkthrough of enabling core-package types — including the
 `tsconfig.json` `paths` setup and the `meteor types` command — see the

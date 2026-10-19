@@ -2,6 +2,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const ts = require("typescript");
 
 const repoRoot = path.resolve(__dirname, "../..");
 
@@ -26,30 +27,42 @@ function assetPath(template, file) {
   return path.join(repoRoot, "tools", "static-assets", template, file);
 }
 
-describe("Meteor 3.6 template type-provider compatibility", () => {
+describe("Meteor template type providers", () => {
   test.each(typedTemplates)(
-    "%s preserves zodern precedence while allowing native opt-in",
+    "%s selects native declarations, including scoped modules",
     (template) => {
-      const config = fs.readFileSync(assetPath(template, "tsconfig.json"), "utf8");
-      const nativePackages = config.indexOf(".meteor/types/packages/*");
-      const externalTypes = config.indexOf("node_modules/@types/meteor/*");
-      const zodernTypes = config.indexOf(".meteor/local/types/packages.d.ts");
-      const nativeBarrel = config.lastIndexOf(".meteor/types/packages.d.ts");
+      const { config, error } = ts.readConfigFile(
+        assetPath(template, "tsconfig.json"),
+        ts.sys.readFile
+      );
+      expect(error).toBeUndefined();
+      expect(config.compilerOptions.paths["meteor/*"]).toEqual([
+        "./.meteor/types/packages/*",
+      ]);
+      expect(config.files).toContain("./.meteor/types/packages.d.ts");
+      expect(config.compilerOptions.types || []).not.toContain("meteor");
 
-      expect(nativePackages).toBeGreaterThanOrEqual(0);
-      expect(externalTypes).toBeGreaterThanOrEqual(0);
-      expect(zodernTypes).toBeGreaterThan(externalTypes);
-      expect(nativePackages).toBeGreaterThan(zodernTypes);
-      expect(nativeBarrel).toBe(-1);
+      if (template === "skel-angular") {
+        const { config: appConfig } = ts.readConfigFile(
+          assetPath(template, "tsconfig.app.json"),
+          ts.sys.readFile
+        );
+        expect(appConfig.compilerOptions.types).not.toContain("meteor");
+      }
     }
   );
 
-  test.each(typedTemplates)("%s installs zodern:types directly", (template) => {
+  test.each(typedTemplates)("%s does not install legacy type providers", (template) => {
     const packages = fs.readFileSync(
       assetPath(template, path.join(".meteor", "packages")),
       "utf8"
     );
-    expect(packages).toMatch(/^zodern:types(?:\s|$)/m);
+    expect(packages).not.toMatch(/^zodern:types(?:@|\s|$)/m);
+    const packageJson = JSON.parse(
+      fs.readFileSync(assetPath(template, "package.json"), "utf8")
+    );
+    expect(packageJson.dependencies || {}).not.toHaveProperty("@types/meteor");
+    expect(packageJson.devDependencies || {}).not.toHaveProperty("@types/meteor");
   });
 
   test.each(javascriptTemplates)(

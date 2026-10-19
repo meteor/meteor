@@ -25,7 +25,6 @@
     "@swc/core": "^1.16.2",
     "@rspack/plugin-react-refresh": "^2.0.2",
     "@tailwindcss/postcss": "^4.1.12",
-    "@types/meteor": "^2.9.9",
     "@types/mocha": "^8.2.3",
     "@types/node": "^22.10.6",
     "@types/react": "^19.2.0",
