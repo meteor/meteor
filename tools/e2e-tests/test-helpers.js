@@ -40,7 +40,7 @@ import execa from "execa";
 import waitOn from "wait-on";
 
 const isCI = process.env.GITHUB_ACTIONS === "true";
-// Link local npm-packages/meteor-rspack so tests run against the latest dev version.
+// Install packed local npm-packages/meteor-rspack to test the latest dev version.
 // Set NPM_LINK_RSPACK=false to disable.
 const npmLinkLocalRspack = process.env.NPM_LINK_RSPACK !== 'false';
 if (!npmLinkLocalRspack) {
@@ -121,7 +121,7 @@ export function testMeteorBundler(options) {
         throw new Error(`setupMeteorApp("${appName}") did not return an app directory`);
       }
 
-      // Link local meteor-rspack so the app picks up the latest dev version
+      // Install packed local meteor-rspack so the app picks up the latest dev version
       await linkLocalRspack(tempDir);
     }, SETUP_HOOK_TIMEOUT_MS);
 
@@ -339,7 +339,7 @@ export function testMeteorRspackBundler(options) {
         checkExitCode: true,
       });
 
-      // Link local meteor-rspack so the app picks up the latest dev version
+      // Install packed local meteor-rspack so the app picks up the latest dev version
       await linkLocalRspack(appDir, { packageManager });
 
       // Set meteor.modern.verbose to true
@@ -1214,7 +1214,7 @@ export function testMeteorSkeleton(options) {
       const packageJsonExists = await fs.pathExists(packageJsonPath);
       expect(packageJsonExists).toBe(true);
 
-      // Link local meteor-rspack so the app picks up the latest dev version
+      // Install packed local meteor-rspack so the app picks up the latest dev version
       await linkLocalRspack(appDir, { packageManager });
 
       // Run custom assertions if provided
