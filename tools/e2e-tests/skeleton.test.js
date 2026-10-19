@@ -5,6 +5,7 @@
  */
 
 import {
+  assertConsoleEval,
   assertRspackWorkspaceInstall,
   assertServiceWorkerFile,
   assertStyles,
@@ -70,7 +71,15 @@ async function assertTsgoClientHmr({ tempDir, meteorProcess, result }) {
       'e2e: native checker server edit applied',
       { meteorProcess, startIndex: serverEditStart },
     );
-    expect(await serverPid()).not.toBe(pidBefore);
+    // Server startup output can arrive while the browser is reloading. Wait
+    // for its DDP connection to reach the new process before checking the PID.
+    await assertConsoleEval(`
+      (async () => {
+        if (!globalThis.Meteor?.status().connected) return false;
+        const pid = await Meteor.callAsync('e2e.serverPid');
+        return Number.isInteger(pid) && pid !== ${pidBefore};
+      })()
+    `, true, { timeout: 30_000 });
     expect(result.outputLines.slice(serverEditStart).filter(line =>
       line.includes('Server modified -- restarting')
     )).toHaveLength(1);
