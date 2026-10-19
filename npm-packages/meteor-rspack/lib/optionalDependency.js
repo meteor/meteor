@@ -10,12 +10,18 @@ function loadOptionalDependency(moduleName, projectDir) {
     try {
       resolved = requireFrom.resolve(moduleName);
     } catch (error) {
-      if (error.code === 'MODULE_NOT_FOUND') continue;
+      // A missing main/exports target also uses MODULE_NOT_FOUND, but names
+      // the broken entry path. Only an absent requested module is optional.
+      if (
+        error.code === 'MODULE_NOT_FOUND' &&
+        error.message.startsWith(`Cannot find module '${moduleName}'`)
+      ) {
+        continue;
+      }
       throw error;
     }
 
-    // Only resolution is optional. A broken installed plugin (including a
-    // missing transitive dependency) must fail instead of silently disabling it.
+    // Load outside the catch so errors inside installed plugins propagate.
     return requireFrom(resolved);
   }
   return null;

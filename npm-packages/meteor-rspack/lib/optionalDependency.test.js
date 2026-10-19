@@ -67,6 +67,23 @@ describe('optional app dependencies with a linked meteor-rspack', () => {
     expect(loadPlugin()).toEqual({ value: null });
   });
 
+  test.each(['main', 'exports'])('surfaces a missing plugin entry declared by %s', field => {
+    const pluginDir = path.join(appDir, 'node_modules', pluginName);
+    fs.mkdirSync(pluginDir, { recursive: true });
+    fs.writeFileSync(path.join(pluginDir, 'package.json'), JSON.stringify({
+      name: pluginName,
+      [field]: './missing-entry.js',
+    }));
+    installPlugin(packageDir, "module.exports = 'package plugin';");
+
+    expect(loadPlugin()).toEqual({
+      error: {
+        code: 'MODULE_NOT_FOUND',
+        message: expect.stringContaining('missing-entry.js'),
+      },
+    });
+  });
+
   test('surfaces a missing dependency inside an installed plugin', () => {
     installPlugin(appDir, "require('missing-refresh-plugin-dependency');");
     installPlugin(packageDir, "module.exports = 'package plugin';");
