@@ -23,21 +23,15 @@ function redactMongoUrl(mongoUrl) {
   );
 }
 
-if (process.env.MONGO_URL && (/^mongodb(\+srv)?:\/\//.test(process.env.MONGO_URL))) {
+if (
+  process.env.MONGO_URL &&
+  /^mongodb(\+srv)?:\/\//.test(process.env.MONGO_URL)
+) {
   try {
-    // No TLS overrides here: the connection string carries its own TLS
-    // semantics (mongodb+srv implies TLS), and forcing tls with
-    // tlsAllowInvalidCertificates would both break plaintext deployments
-    // and skip certificate validation.
-    connect(new MongoClient(process.env.MONGO_URL)).then(client => {
-      if (client) client.close();
-    });
+    // Validate the URL without opening a second credential-bearing connection.
+    new MongoClient(process.env.MONGO_URL);
   } catch (e) {
-    // The URL may embed credentials (user:password@), so never log it raw.
-    // Redacts everything up to the final "@" — over-redacting a credential-less
-    // URL is fine here, leaking a password is not.
-    const redactedUrl = redactMongoUrl(process.env.MONGO_URL);
-    console.warn('Invalid MongoDB connection string in MONGO_URL:', redactedUrl);
+    console.warn('Invalid MongoDB connection string in MONGO_URL');
   }
 }
 

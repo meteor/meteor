@@ -17,6 +17,21 @@ import canonicalStringify from "./stringify";
  */
 const EJSON = {};
 
+// JSON object keys are data, including __proto__. Assignment to a new ordinary
+// object would otherwise invoke Object.prototype's legacy prototype setter.
+const setOwn = (object, key, value) => {
+  if (key === "__proto__") {
+    Object.defineProperty(object, key, {
+      value,
+      enumerable: true,
+      writable: true,
+      configurable: true,
+    });
+  } else {
+    object[key] = value;
+  }
+};
+
 // Custom type interface definition
 /**
  * @class CustomType
@@ -195,14 +210,14 @@ const builtinConverters = [
     toJSONValue(obj) {
       const newObj = {};
       keysOf(obj).forEach((key) => {
-        newObj[key] = EJSON.toJSONValue(obj[key]);
+        setOwn(newObj, key, EJSON.toJSONValue(obj[key]));
       });
       return { $escape: newObj };
     },
     fromJSONValue(obj) {
       const newObj = {};
       keysOf(obj.$escape).forEach((key) => {
-        newObj[key] = EJSON.fromJSONValue(obj.$escape[key]);
+        setOwn(newObj, key, EJSON.fromJSONValue(obj.$escape[key]));
       });
       return newObj;
     },
@@ -337,12 +352,12 @@ const toJSONValueDeep = (value) => {
         result = {};
         // backfill preceding keys
         for (let j = 0; j < i; j++) {
-          result[keys[j]] = value[keys[j]];
+          setOwn(result, keys[j], value[keys[j]]);
         }
       }
-      result[key] = converted;
+      setOwn(result, key, converted);
     } else if (result !== null) {
-      result[key] = child;
+      setOwn(result, key, child);
     }
   }
 
@@ -451,12 +466,12 @@ const fromJSONValueDeep = (value) => {
       if (result === null) {
         result = {};
         for (let j = 0; j < i; j++) {
-          result[keys[j]] = value[keys[j]];
+          setOwn(result, keys[j], value[keys[j]]);
         }
       }
-      result[key] = converted;
+      setOwn(result, key, converted);
     } else if (result !== null) {
-      result[key] = child;
+      setOwn(result, key, child);
     }
   }
 
@@ -705,7 +720,7 @@ EJSON.clone = (v) => {
   // handle other objects
   ret = {};
   keysOf(v).forEach((key) => {
-    ret[key] = EJSON.clone(v[key]);
+    setOwn(ret, key, EJSON.clone(v[key]));
   });
   return ret;
 };
