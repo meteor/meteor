@@ -17,12 +17,68 @@ import {
   killProcessByPort,
   resetPlaywrightPage,
   runMeteorApp,
+  wait,
   waitForMeteorOutput,
 } from './helpers';
 import { linkLocalRspack, testMeteorSkeleton } from './test-helpers';
 import fs from 'fs-extra';
 import path from 'path';
 import waitOn from 'wait-on';
+
+async function assertTsgoClientHmr({ tempDir, meteorProcess, result }) {
+  const componentPath = path.join(tempDir, 'imports/ui/Hello.tsx');
+  const serverPath = path.join(tempDir, 'server/main.ts');
+  const componentSource = await fs.readFile(componentPath, 'utf8');
+  const serverSource = await fs.readFile(serverPath, 'utf8');
+  const serverPid = () => page.evaluate(() => Meteor.callAsync('e2e.serverPid'));
+  const countText = "You've pressed the button 2 times.";
+
+  try {
+    await page.getByRole('button', { name: 'Click Me', exact: true }).click();
+    await page.getByRole('button', { name: 'Click Me', exact: true }).click();
+    await page.getByText(countText, { exact: true }).waitFor();
+    const documentBefore = await page.evaluate(() => performance.timeOrigin);
+    const pidBefore = await serverPid();
+    const clientEditStart = result.outputLines.length;
+
+    // The native checker also watches this client component in the server
+    // compilation. Rechecking it must preserve the running app and React state.
+    await fs.writeFile(
+      componentPath,
+      componentSource.replace('Click Me', 'Click Me (updated)'),
+    );
+    await page.getByRole('button', { name: 'Click Me (updated)', exact: true }).waitFor();
+    await waitForMeteorOutput(
+      result.outputLines,
+      /Compiled Rspack server app no errors found/,
+      { meteorProcess, startIndex: clientEditStart },
+    );
+    // Allow a delayed Meteor restart/reload to arrive after Rspack finishes.
+    await wait(2_000);
+    expect(await page.evaluate(() => performance.timeOrigin)).toBe(documentBefore);
+    expect(await page.getByText(countText, { exact: true }).count()).toBe(1);
+    expect(await serverPid()).toBe(pidBefore);
+    expect(result.outputLines.slice(clientEditStart).join('\n')).not.toContain(
+      'Server modified -- restarting',
+    );
+
+    // A real server output change must still be applied by restarting.
+    const serverEditStart = result.outputLines.length;
+    await fs.appendFile(serverPath, '\nconsole.log("e2e: native checker server edit applied");\n');
+    await waitForMeteorOutput(
+      result.outputLines,
+      'e2e: native checker server edit applied',
+      { meteorProcess, startIndex: serverEditStart },
+    );
+    expect(await serverPid()).not.toBe(pidBefore);
+    expect(result.outputLines.slice(serverEditStart).filter(line =>
+      line.includes('Server modified -- restarting')
+    )).toHaveLength(1);
+  } finally {
+    await fs.writeFile(componentPath, componentSource);
+    await fs.writeFile(serverPath, serverSource);
+  }
+}
 
 async function assertTsgoTypeChecker({ tempDir, meteorProcess, result }) {
   const probePath = path.join(tempDir, 'imports/ts-checker-e2e-probe.ts');
@@ -654,8 +710,15 @@ describe('Meteor Skeletons /', () => {
       customAssertions: {
         async afterCreate({ tempDir }) {
           await assertReact19Dependencies({ tempDir }, true);
+          await fs.appendFile(
+            path.join(tempDir, 'server/main.ts'),
+            "\nMeteor.methods({ 'e2e.serverPid'() { return process.pid; } });\n",
+          );
         },
-        afterRun: assertTsgoTypeChecker,
+        async afterRun(context) {
+          await assertTsgoClientHmr(context);
+          await assertTsgoTypeChecker(context);
+        },
       },
     }),
   );
