@@ -170,8 +170,8 @@ describe('Regressions / Rspack concurrent modes /', () => {
       '',
     );
     // Keep both Meteor processes on one package solution. If the driver is
-    // transient, run and test repeatedly rewrite .meteor/versions and obscure
-    // the Rspack watcher behavior this suite is meant to exercise.
+    // transient, run and test can repeatedly rewrite .meteor/versions and
+    // obscure the scaffold checks. The transient-driver cases remove it.
     await fs.writeFile(
       packagesPath,
       `${packagesWithoutMongo.trimEnd()}\nmeteortesting:mocha\n`,
@@ -339,6 +339,125 @@ describe('concurrent modes', () => {
       appProcess = null;
       await restoreFiles(snapshot);
       await fs.remove(lazyPackageDir);
+    }
+  });
+
+  test.each([
+    ['once', true],
+    ['watch', false],
+  ])('keeps transient test dependencies out of the app versions in %s mode', async (_mode, once) => {
+    const sharedPath = 'imports/concurrent-version.js';
+    const testPath = 'server/concurrent-versions.test.js';
+    const snapshot = await snapshotFiles(appDir, [
+      '.meteor/packages',
+      '.meteor/versions',
+      'server/main.js',
+      sharedPath,
+      testPath,
+    ]);
+
+    try {
+      // Unlike the scaffold cases, leave the driver transient. Adding it to
+      // .meteor/packages hides the competing package solutions in the report.
+      const packagesPath = path.join(appDir, '.meteor', 'packages');
+      const packages = await fs.readFile(packagesPath, 'utf8');
+      expect(packages).toMatch(/^meteortesting:mocha$/m);
+      await fs.writeFile(
+        packagesPath,
+        packages.replace(/^meteortesting:mocha\r?\n/m, ''),
+      );
+
+      const packageConfig = structuredClone(basePackageConfig);
+      delete packageConfig.meteor.testModule;
+      await fs.writeJson(
+        path.join(appDir, 'package.json'), packageConfig, { spaces: 2 },
+      );
+      await fs.outputFile(
+        path.join(appDir, sharedPath), "export const value = 'initial';\n",
+      );
+      await fs.writeFile(path.join(appDir, 'server/main.js'), `
+import { WebApp } from 'meteor/webapp';
+import { value } from '../${sharedPath}';
+WebApp.handlers.use('/concurrent-version', (req, res) => res.end(value));
+`);
+      await fs.outputFile(path.join(appDir, testPath), `
+import assert from 'assert';
+import { value } from '../${sharedPath}';
+describe('concurrent versions', () => {
+  it('reads ' + value, () => assert.match(value, /^(initial|updated)$/));
+});
+`);
+
+      const readValue = async () => {
+        const response = await fetch(`http://localhost:${APP_PORT}/concurrent-version`, {
+          signal: AbortSignal.timeout(5000),
+        });
+        expect(response.status).toBe(200);
+        return response.text();
+      };
+      const appResult = await runMeteorApp(appDir, APP_PORT, {
+        waitForOutput: '=> App running at',
+        env: getSeparateContextEnv(PRIMARY_LOCAL_DIR, APP_RSPACK_PORT),
+      });
+      appProcess = appResult.meteorProcess;
+      expect(await readValue()).toBe('initial');
+
+      const versionsPath = path.join(appDir, '.meteor', 'versions');
+      const versions = await fs.readFile(versionsPath, 'utf8');
+      const versionsMtime = (await fs.stat(versionsPath)).mtimeMs;
+      expect(versions).not.toMatch(/^meteortesting:/m);
+
+      const testResult = await runMeteorTests(appDir, TEST_PORT, {
+        commandOptions: once ? ['--once'] : [],
+        checkTestResults: once,
+        waitForOutput: once ? undefined : /1 passing/,
+        env: getSeparateContextEnv(SECONDARY_LOCAL_DIR, TEST_RSPACK_PORT),
+      });
+      testProcess = testResult.meteorProcess;
+      expect(testResult.outputLines.join('\n')).toContain('reads initial');
+      expect(testResult.outputLines.join('\n')).toMatch(/\b1 passing\b/);
+
+      await Promise.all([
+        waitForOutputToSettle(appResult.outputLines),
+        waitForOutputToSettle(testResult.outputLines),
+      ]);
+      expect(await fs.readFile(versionsPath, 'utf8')).toBe(versions);
+      expect((await fs.stat(versionsPath)).mtimeMs).toBe(versionsMtime);
+      expect(await readValue()).toBe('initial');
+
+      if (!once) {
+        const startIndex = testResult.outputLines.length;
+        await fs.writeFile(
+          path.join(appDir, sharedPath), "export const value = 'updated';\n",
+        );
+        const waitOptions = { startIndex, meteorProcess: testProcess };
+        const updatedTestLine = await waitForMeteorOutput(
+          testResult.outputLines, /reads updated/, waitOptions,
+        );
+        await waitForMeteorOutput(
+          testResult.outputLines, /1 passing/, {
+            ...waitOptions,
+            startIndex: testResult.outputLines.indexOf(updatedTestLine, startIndex),
+          },
+        );
+        await waitFor(
+          async () => (await readValue()) === 'updated', 'the edited app response',
+        );
+        await Promise.all([
+          waitForOutputToSettle(appResult.outputLines),
+          waitForOutputToSettle(testResult.outputLines),
+        ]);
+        expect(await fs.readFile(versionsPath, 'utf8')).toBe(versions);
+        expect((await fs.stat(versionsPath)).mtimeMs).toBe(versionsMtime);
+        expect(testProcess.exitCode).toBeNull();
+      }
+      expect(appProcess.exitCode).toBeNull();
+    } finally {
+      await killMeteorProcess(testProcess);
+      await killMeteorProcess(appProcess);
+      testProcess = null;
+      appProcess = null;
+      await restoreFiles(snapshot);
     }
   });
 
