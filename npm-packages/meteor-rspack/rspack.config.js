@@ -31,21 +31,7 @@ const { prepareMeteorRspackConfig } = require("./lib/meteorRspackConfigFactory")
 const { extractLocalDependencies } = require('./lib/localDependenciesHelpers.js');
 const { createTestClientNodePolyfillConfig } = require("./lib/testClientNodePolyfills.js");
 const { createOutputTracker } = require('./lib/compilationOutput.js');
-
-// Safe require that doesn't throw if the module isn't found
-function safeRequire(moduleName) {
-  try {
-    return require(moduleName);
-  } catch (error) {
-    if (
-      error.code === 'MODULE_NOT_FOUND' &&
-      error.message.includes(moduleName)
-    ) {
-      return null;
-    }
-    throw error; // rethrow if it's a different error
-  }
-}
+const { loadOptionalDependency } = require('./lib/optionalDependency.js');
 
 // Persistent filesystem cache strategy
 function createCacheStrategy(
@@ -493,7 +479,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   const extraRules = [];
 
   const reactRefreshModule = isReactEnabled
-    ? safeRequire("@rspack/plugin-react-refresh")
+    ? loadOptionalDependency("@rspack/plugin-react-refresh", projectDir)
     : null;
   const ReactRefreshRspackPlugin =
     reactRefreshModule?.ReactRefreshRspackPlugin || reactRefreshModule;
@@ -520,7 +506,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   };
 
   const rsdoctorModule = isBundleVisualizerEnabled
-    ? safeRequire("@rsdoctor/rspack-plugin")
+    ? loadOptionalDependency("@rsdoctor/rspack-plugin", projectDir)
     : null;
   const doctorPluginConfig =
     isRun && isBundleVisualizerEnabled && rsdoctorModule?.RsdoctorRspackPlugin
