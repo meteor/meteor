@@ -133,7 +133,7 @@ Here's a basic Dockerfile example for a Meteor 3 application:
 
 ```dockerfile
 # Use the version reported by `meteor node -v` for the release you build with.
-ARG NODE_VERSION=26.8.2
+ARG NODE_VERSION=26.10.0
 
 # Build stage
 FROM node:${NODE_VERSION}-alpine AS builder
@@ -189,7 +189,7 @@ This will provide you with a bundled application `.tar.gz` which you can extract
 To find out which version of Node you should use, run `meteor node -v` in the
 development environment, or check the `.node_version.txt` file within the
 bundle. The build and production stages must use that version. Meteor 3.6 uses
-Node.js 26.8.2; earlier Meteor 3 releases use different Node.js versions.
+Node.js 26.10.0; earlier Meteor 3 releases use different Node.js versions.
 
 ::: warning
 If you use a mis-matched version of Node when deploying your application, you will encounter errors!
@@ -286,7 +286,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           # Match the version reported by `meteor node -v` for your release.
-          node-version: 26.8.2
+          node-version: 26.10.0
 
       - name: Install Meteor
         run: curl https://install.meteor.com/ | sh

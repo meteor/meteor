@@ -2,7 +2,11 @@ import assert from "assert";
 import { join as pathJoin } from "path";
 import { PassThrough } from "stream";
 import {
+  chmodSync,
   closeSync,
+  fchmodSync,
+  fstatSync,
+  mkdirSync,
   openSync,
   readFileSync,
   unlink,
@@ -213,6 +217,7 @@ class Server {
 
     const repl = this.repl = replStart(options);
     const { shellDir } = this;
+    const cacheOptions = getCacheOptions(shellDir);
 
     // This is technique of setting `repl.context` is similar to how the
     // `useGlobal` option would work during a normal `repl.start()` and
@@ -237,9 +242,7 @@ class Server {
     function wrappedDefaultEval(code, context, file, callback) {
       if (Package['babel-compiler']) {
         try {
-          code = Package['babel-compiler'].Babel.compileForShell(code, {
-            cacheDirectory: getCacheDirectory(shellDir)
-          });
+          code = Package['babel-compiler'].Babel.compileForShell(code, cacheOptions);
         } catch (err) {
           // Any Babel error here might be just fine since it's
           // possible the code was incomplete (multi-line code on the REPL).
@@ -343,8 +346,27 @@ class Server {
   initializeHistory() {
     const repl = this.repl;
     const historyFile = getHistoryFile(this.shellDir);
-    let historyFd = openSync(historyFile, "a+");
-    const historyLines = readFileSync(historyFile, "utf8").split("\n");
+    let historyFd = -1;
+    let historyLines;
+    try {
+      historyFd = openSync(historyFile, "a+", 0o600);
+      // Use the opened descriptor to avoid a path race; /dev/null may disable history.
+      if (fstatSync(historyFd).isFile()) {
+        fchmodSync(historyFd, 0o600);
+      }
+      historyLines = readFileSync(historyFd, "utf8").split("\n");
+    } catch (error) {
+      if (historyFd >= 0) {
+        closeSync(historyFd);
+      }
+      // The shell works without persistent history; throwing here would
+      // crash the app server, since this runs in a socket data handler.
+      console.warn(
+        "meteor shell: command history is not saved because " +
+          historyFile + " could not be opened privately: " + error.message
+      );
+      return;
+    }
     const seenLines = Object.create(null);
 
     if (! repl.history) {
@@ -434,6 +456,19 @@ function getHistoryFile(shellDir) {
 
 function getCacheDirectory(shellDir) {
   return pathJoin(shellDir, "cache");
+}
+
+// Babel caches compiled shell commands, which can contain the same secrets as
+// the history file, so only use the cache directory if it can be made private.
+function getCacheOptions(shellDir) {
+  const cacheDirectory = getCacheDirectory(shellDir);
+  try {
+    mkdirSync(cacheDirectory, { recursive: true, mode: 0o700 });
+    chmodSync(cacheDirectory, 0o700);
+  } catch (ignored) {
+    return false;
+  }
+  return { cacheDirectory };
 }
 
 function setRequireAndModule(context) {
