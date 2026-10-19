@@ -42,6 +42,7 @@ Package.onTest((api) => {
     "email",
     "check",
     "ddp",
+    "mongo",
     "ecmascript"
   ]);
   api.addFiles("password_tests_setup.js", "server");
