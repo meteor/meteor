@@ -16,6 +16,8 @@ import canonicalStringify from './stringify';
  * @summary Namespace for EJSON functions
  */
 const EJSON = {};
+const setOwn = (object,key,value) => {if(key==='__proto__')Object.defineProperty(object,key,{value,enumerable:true,writable:true,configurable:true});else object[key]=value;};
+
 
 // Custom type interface definition
 /**
@@ -191,14 +193,14 @@ const builtinConverters = [
     toJSONValue(obj) {
       const newObj = {};
       keysOf(obj).forEach(key => {
-        newObj[key] = EJSON.toJSONValue(obj[key]);
+        setOwn(newObj,key,EJSON.toJSONValue(obj[key]));
       });
       return {$escape: newObj};
     },
     fromJSONValue(obj) {
       const newObj = {};
       keysOf(obj.$escape).forEach(key => {
-        newObj[key] = EJSON.fromJSONValue(obj.$escape[key]);
+        setOwn(newObj,key,EJSON.fromJSONValue(obj.$escape[key]));
       });
       return newObj;
     },
@@ -276,7 +278,7 @@ const adjustTypesToJSONValue = obj => {
 
     const changed = toJSONValueHelper(value);
     if (changed) {
-      obj[key] = changed;
+      setOwn(obj,key,changed);
       return; // on to the next key
     }
     // if we get here, value is an object but not adjustable
@@ -351,7 +353,7 @@ const adjustTypesFromJSONValue = obj => {
     if (isObject(value)) {
       const changed = fromJSONValueHelper(value);
       if (value !== changed) {
-        obj[key] = changed;
+        setOwn(obj,key,changed);
         return;
       }
       // if we get here, value is an object but not adjustable
@@ -603,7 +605,7 @@ EJSON.clone = v => {
   // handle other objects
   ret = {};
   keysOf(v).forEach((key) => {
-    ret[key] = EJSON.clone(v[key]);
+    setOwn(ret,key,EJSON.clone(v[key]));
   });
   return ret;
 };
