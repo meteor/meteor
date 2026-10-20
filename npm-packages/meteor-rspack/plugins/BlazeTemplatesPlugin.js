@@ -23,6 +23,8 @@ class BlazeTemplatesPlugin {
 
       generate() {
         return `${RuntimeGlobals.ensureChunkHandlers}.blaze = function(chunkId, promises) {
+  // Worker runtimes load chunks without Meteor's module system.
+  if (typeof require !== 'function') return;
   var pending = require(${JSON.stringify(bridgeModuleId)}).load(chunkId);
   if (pending) promises.push(pending);
 };`;
