@@ -210,9 +210,12 @@ selftest.define("ordinary builds do not generate native declarations", async fun
   // Creation opts in; a later ordinary build must not regenerate deleted types.
   await files.rm_recursive(files.pathJoin(s.cwd, ".meteor", "types"));
 
+  // Exercise the colored diagnostics emitted by Rspack in CI.
+  s.set("FORCE_COLOR", "1");
   run = s.run("build", "--directory", "../types-opt-in-build");
   run.waitSecs(180);
-  await run.match(/TS6053: File .*packages\.d\.ts' not found/);
+  // Rspack can insert ANSI color codes between the diagnostic code and message.
+  await run.match(/TS6053:[^\n]*packages\.d\.ts[^\n]*not found/);
   await run.expectExit(1);
   selftest.expectTrue(s.read(".meteor/types/packages.d.ts") === null);
 });
