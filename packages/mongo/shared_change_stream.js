@@ -29,6 +29,10 @@ export class SharedChangeStream {
     this._stopped = false;
     // Last seen resume token; a restart replays from here (startAfter).
     this._resumeToken = null;
+    // A split event is delivered only after every fragment arrives. Keep both
+    // this assembly and the last fragment's token across resumable restarts:
+    // MongoDB resumes at the NEXT fragment, not at the start of the event.
+    this._pendingSplitEvent = null;
     // In-flight open, so concurrent callers share one watch() instead of
     // racing a second cursor.
     this._startPromise = null;
@@ -120,7 +124,7 @@ export class SharedChangeStream {
 
     if (this._stopped) return;
 
-    // Empty pipeline so mongo delivers EVERY event: a server-side filter would
+    // Do not filter events: a server-side filter would
     // skip events, so _setLastProcessedOperationTime wouldn't advance for their
     // clusterTime while the fence still targets it — wedging _waitUntilCaughtUp.
     // Per-document filtering happens in each driver's matcher instead.
@@ -134,12 +138,15 @@ export class SharedChangeStream {
       changeStreamOptions.startAtOperationTime = startAtOperationTime;
     }
 
-    const changeStream = collection.watch([], changeStreamOptions);
+    const changeStream = collection.watch([
+      { $changeStreamSplitLargeEvent: {} },
+    ], changeStreamOptions);
     this._changeStream = changeStream;
     // Fresh cursor: its failure (if any) has not been counted yet.
     this._failureCounted = false;
 
     changeStream.on('change', Meteor.bindEnvironment((change) => {
+      if (this._stopped || this._changeStream !== changeStream) return;
       this._onChange(change);
     }));
 
@@ -161,6 +168,7 @@ export class SharedChangeStream {
       // lost window were never delivered.
       if (this._isNonResumableError(error)) {
         this._resumeToken = null;
+        this._pendingSplitEvent = null;
         this._historyLost = true;
       }
       this._noteFailure();
@@ -186,7 +194,39 @@ export class SharedChangeStream {
   }
 
   _onChange(change) {
-    if (this._stopped) return;
+    // Once a cursor needs resync, none of its remaining events can release a
+    // fence or repopulate the discarded token while the restart is scheduled.
+    // _restart clears _historyLost only after opening the replacement cursor,
+    // with every driver's fence hold already in place.
+    if (this._stopped || this._historyLost) return;
+
+    if (change?.splitEvent) {
+      const { fragment, of } = change.splitEvent;
+      const pending = this._pendingSplitEvent;
+      if (!change._id || !Number.isInteger(fragment) || !Number.isInteger(of) ||
+          fragment < 1 || fragment > of ||
+          (pending ? fragment !== pending.fragment + 1 || of !== pending.of : fragment !== 1)) {
+        this._recoverFromIncompleteEvent();
+        return;
+      }
+
+      const { splitEvent, ...fields } = change;
+      if (pending) {
+        Object.assign(pending.change, fields);
+        pending.fragment = fragment;
+      } else {
+        this._pendingSplitEvent = { change: fields, fragment, of };
+      }
+      this._resumeToken = change._id;
+      if (fragment < of) return;
+      change = this._pendingSplitEvent.change;
+      this._pendingSplitEvent = null;
+    } else if (this._pendingSplitEvent) {
+      // An interrupted sequence cannot be published or silently skipped. The
+      // same resync used for history loss recovers the collection's state.
+      this._recoverFromIncompleteEvent();
+      return;
+    }
 
     // A delivered event means the reopened stream is healthy again; clear the
     // consecutive-failure count that drives restart backoff (see _restartDelay).
@@ -213,13 +253,24 @@ export class SharedChangeStream {
     }
   }
 
+  _recoverFromIncompleteEvent() {
+    console.error('ChangeStream received an incomplete split event:', {
+      collectionName: this._collectionName,
+    });
+    this._pendingSplitEvent = null;
+    this._resumeToken = null;
+    this._historyLost = true;
+    this._noteFailure();
+    this._scheduleRestart(this._restartDelay(100));
+  }
+
   // Non-resumable == resuming from the stored token can never succeed, so we must
   // restart from a fresh start time:
   //   - ChangeStreamHistoryLost (286): the token aged out of the oplog.
   //   - ChangeStreamFatalError (280): the server declared the stream unusable.
-  //   - BSONObjectTooLarge (10334): the next event exceeds 16MB (e.g. a large
-  //     doc's post-image + pre-image). startAfter lands on that same event and
-  //     fails again forever, so skip it and let the resync reconcile it.
+  //   - BSONObjectTooLarge (10334): a field cannot be split small enough by
+  //     $changeStreamSplitLargeEvent. Retain recovery for this residual case;
+  //     retrying the same token would still fail forever.
   // Everything else is treated as RESUMABLE and keeps the token. This matters:
   // the mongo driver retries resumable errors internally and only emits an
   // 'error' event after its own retry gives up, re-emitting the ORIGINAL error —
@@ -370,6 +421,7 @@ export class SharedChangeStream {
   async _stop() {
     if (this._stopped) return;
     this._stopped = true;
+    this._pendingSplitEvent = null;
     if (this._restartTimer) {
       clearTimeout(this._restartTimer);
       this._restartTimer = null;
