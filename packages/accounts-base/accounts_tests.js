@@ -3,6 +3,7 @@ import { URL } from 'meteor/url';
 import { Meteor } from 'meteor/meteor';
 import { Accounts } from 'meteor/accounts-base';
 import { Random } from 'meteor/random';
+import { waitForCollectionIndexes } from './accounts_collection_test_helpers.js';
 
 Meteor.methods({
   getCurrentLoginToken: async function () {
@@ -807,6 +808,66 @@ if (Meteor.isServer) {
     Accounts.config({
       collection: origCollection,
     });
+  });
+
+  // Tests for #12610: Accounts.config({ collection }) should update
+  // Meteor.users and recreate indexes on the new collection.
+
+  Tinytest.addAsync('accounts - config - collection - custom name updates Meteor.users', async test => {
+    const origCollection = Accounts.users;
+
+    Accounts.config({ collection: `custom_users_${Random.id()}` });
+
+    test.equal(Meteor.users, Accounts.users,
+      'Meteor.users should match Accounts.users after config()');
+
+    Accounts.config({ collection: origCollection });
+  });
+
+  Tinytest.addAsync('accounts - config - collection - different instance replaces collection', async test => {
+    const origCollection = Accounts.users;
+    const remoteUsers = new Mongo.Collection(`users_remote_${Random.id()}`);
+
+    Accounts.config({ collection: remoteUsers });
+
+    test.equal(Accounts.users, remoteUsers,
+      'Accounts.users should be the custom collection');
+    test.equal(Meteor.users, remoteUsers,
+      'Meteor.users should be updated to custom collection');
+
+    Accounts.config({ collection: origCollection });
+  });
+
+  Tinytest.addAsync('accounts - config - collection - indexes created on custom collection', async test => {
+    const origCollection = Accounts.users;
+    const previousOption = Accounts._options.collection;
+    const customCollection = new Mongo.Collection(`custom_idx_${Random.id()}`);
+    const expectedIndexKeys = [
+      'username',
+      'emails.address',
+      'services.password.reset.token',
+      'services.email.verificationTokens.token',
+    ];
+
+    try {
+      Accounts.config({ collection: customCollection });
+      const indexKeys = await waitForCollectionIndexes(customCollection, expectedIndexKeys);
+
+      // accounts-base indexes
+      test.isTrue(indexKeys.includes('username'),
+        'Custom collection should have username index');
+      test.isTrue(indexKeys.includes('emails.address'),
+        'Custom collection should have emails.address index');
+
+      // accounts-password indexes (via onUsersCollectionChanged)
+      test.isTrue(indexKeys.includes('services.password.reset.token'),
+        'Custom collection should have password reset token index');
+      test.isTrue(indexKeys.includes('services.email.verificationTokens.token'),
+        'Custom collection should have email verification token index');
+    } finally {
+      Accounts.config({ collection: origCollection });
+      Accounts._options.collection = previousOption;
+    }
   });
 
   Tinytest.addAsync(

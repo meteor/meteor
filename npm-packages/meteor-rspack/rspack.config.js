@@ -137,7 +137,7 @@ function createSwcConfig({
         ...(isJsxEnabled && { jsx: true }),
         ...(isAngularEnabled && { decorators: true }),
       },
-      target: isLegacy ? 'es5' : isClient ? 'es2015' : 'es2022',
+      target: isLegacy ? 'es5' : isClient ? 'es2015' : 'es2024',
       ...(isReactEnabled && {
         transform: {
           react: {

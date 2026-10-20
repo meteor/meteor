@@ -172,6 +172,118 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
+  "livedata server - rejects inherited protocol handler names without stalling message queue",
+  async function (test) {
+    const invalidMessageTypes = [
+      "__proto__",
+      "constructor",
+      ["method"],
+      [["__proto__"]],
+      { toString: null, valueOf: null },
+    ];
+
+    for (const messageType of invalidMessageTypes) {
+      const { clientConn, serverConn } = await getTestConnections(test);
+
+      try {
+        const session = Meteor.server.sessions.get(serverConn.id);
+        clientConn._stream.send(JSON.stringify({ msg: messageType }));
+
+        const connectionId = await Promise.race([
+          clientConn.callAsync("livedata_server_test_inner"),
+          sleep(2000).then(() => {
+            throw new Error(
+              `message queue stalled after message type ${JSON.stringify(messageType)}`
+            );
+          }),
+        ]);
+
+        test.equal(connectionId, serverConn.id);
+        await sleep(50);
+        test.isTrue(session.inQueue.isEmpty());
+        test.isFalse(session.workerRunning);
+      } finally {
+        clientConn.disconnect();
+      }
+    }
+  }
+);
+
+Tinytest.addAsync(
+  "livedata server - inherited protocol handler names cannot throw outside the message queue",
+  async function (test) {
+    const { clientConn, serverConn } = await getTestConnections(test);
+
+    try {
+      const session = Meteor.server.sessions.get(serverConn.id);
+      // The second message runs in the scheduled queue turn.
+      session.processMessage({ msg: "toString" });
+      session.processMessage({ msg: "__proto__" });
+
+      const connectionId = await Promise.race([
+        clientConn.callAsync("livedata_server_test_inner"),
+        sleep(2000).then(() => {
+          throw new Error("message queue stalled after inherited message types");
+        }),
+      ]);
+
+      test.equal(connectionId, serverConn.id);
+      await sleep(50);
+      test.isTrue(session.inQueue.isEmpty());
+      test.isFalse(session.workerRunning);
+    } finally {
+      clientConn.disconnect();
+    }
+  }
+);
+
+Tinytest.addAsync(
+  "livedata server - rejected protocol handler does not escape the message queue",
+  async function (test) {
+    const publicationName = `livedata_server_test_bad_cursors_${Random.id()}`;
+    // A cursor-like result reaches async handling, then rejects.
+    Meteor.publish(publicationName, function () {
+      return [{ _publishCursor: true }];
+    });
+
+    const subscriptions = [
+      { name: publicationName, params: [] },
+      // Inherited constructor returns the supplied cursor-like value.
+      { name: "constructor", params: [[{ _publishCursor: 1 }]] },
+    ];
+
+    try {
+      for (const { name, params } of subscriptions) {
+        const { clientConn, serverConn } = await getTestConnections(test);
+
+        try {
+          const session = Meteor.server.sessions.get(serverConn.id);
+          clientConn._stream.send(
+            JSON.stringify({ msg: "sub", id: Random.id(), name, params })
+          );
+
+          const connectionId = await Promise.race([
+            clientConn.callAsync("livedata_server_test_inner"),
+            sleep(2000).then(() => {
+              throw new Error(`message queue stalled after subscribing to ${name}`);
+            }),
+          ]);
+
+          test.equal(connectionId, serverConn.id);
+          await sleep(50);
+          test.isTrue(session.inQueue.isEmpty());
+          test.isFalse(session.workerRunning);
+        } finally {
+          clientConn.disconnect();
+        }
+      }
+    } finally {
+      delete Meteor.server.publish_handlers[publicationName];
+    }
+  }
+);
+
+Tinytest.addAsync(
   "livedata server - connection in method invocation",
   function (test, onComplete) {
     makeTestConnection(
