@@ -11,6 +11,8 @@ on:
       - "packages/rspack/**"
       - "packages/tools-core/**"
       - "packages/babel-compiler/**"
+      - "packages/standard-minifier-js/**"
+      - "packages/ejson/**"
       - "packages/meteor-tool/**"
       - "packages/test-in-browser/**"
       - "npm-packages/meteor-rspack/**"
