@@ -85,6 +85,23 @@ const RSPACK_UNSET_ENV = [
   'METEOR_IGNORE_ROOT_BY_ENTRYPOINT',
 ];
 
+// Renders the rebuild's source files for the "Client modified -- refreshing"
+// line. Rspack reports absolute paths; show them app-relative so they read the
+// same as the classic watcher's. Returns undefined when rspack sent nothing,
+// which keeps the message bare rather than printing an empty bracket.
+function formatChangedFiles(modifiedFiles) {
+  if (!Array.isArray(modifiedFiles) || modifiedFiles.length === 0) {
+    return undefined;
+  }
+  const appDir = getMeteorAppDir();
+  const relative = modifiedFiles.map((filePath) =>
+    appDir && filePath.startsWith(appDir)
+      ? filePath.slice(appDir.length).replace(/^[\\/]+/, "")
+      : filePath
+  );
+  return relative.join(", ");
+}
+
 /**
  * Builds the environment passed to Rspack child processes.
  *
@@ -595,7 +612,11 @@ export function startRspackClientServe(options = {}) {
             !config?.hasErrors &&
             config?.isRebuild
           ) {
-            getRunLog()?.logClientRestart();
+            getRunLog()?.logClientRestart(
+              shouldLogVerbose()
+                ? formatChangedFiles(config?.modifiedFiles)
+                : undefined
+            );
           }
         }
         if (!cleanedData) return;
