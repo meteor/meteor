@@ -131,6 +131,8 @@ const APP_STOP_SIGKILL_GRACE_MS = 3000;
 // restart still bounds them by the default timeout.
 const APP_STOP_SHUTDOWN_MARGIN_MS = 1000;
 const APP_STOP_UNCAPPED_SHUTDOWN_MS = 10000;
+// setTimeout fires after 1 ms for delays above this value.
+const MAX_TIMER_DELAY_MS = 2147483647;
 
 var AppProcess = function (options) {
   var self = this;
@@ -236,8 +238,8 @@ Object.assign(AppProcess.prototype, {
 
       let graceMs = APP_STOP_SIGKILL_GRACE_MS;
       if (self.shutdownTimeoutMs !== null) {
-        graceMs = Math.max(graceMs, APP_STOP_SHUTDOWN_MARGIN_MS +
-          (self.shutdownTimeoutMs || APP_STOP_UNCAPPED_SHUTDOWN_MS));
+        graceMs = Math.min(MAX_TIMER_DELAY_MS, Math.max(graceMs, APP_STOP_SHUTDOWN_MARGIN_MS +
+          (self.shutdownTimeoutMs || APP_STOP_UNCAPPED_SHUTDOWN_MS)));
       }
 
       // The kill() above only sends SIGTERM, which an app can ignore via its

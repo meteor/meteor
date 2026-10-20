@@ -219,7 +219,7 @@ selftest.define("meteor onShutdown dev restart", ["yet-unsolved-windows-failure"
     s.write("print.js", `
       if (Meteor.isServer) {
         ${shutdownSource}
-        Meteor.startup(function () {
+        WebApp.onListening(function () {
           console.log("restart-ready:${version}");
         });
       }
