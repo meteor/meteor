@@ -42,6 +42,37 @@ export class AccountsClient {
 export namespace Accounts {
   var urls: URLS;
 
+  interface CreateApiTokenOptions {
+    name: string;
+    /** Explicit expiry independent of loginExpirationInDays; null never expires. */
+    expiresAt: Date | null;
+    /** Omitted or null grants unrestricted API access; [] grants no scopes. */
+    scopes?: string[] | null;
+  }
+
+  /** API credential metadata. Neither the secret nor its hash is listed. */
+  interface ApiToken {
+    id: string;
+    name: string;
+    createdAt: Date;
+    expiresAt: Date | null;
+    scopes: string[] | null;
+  }
+
+  interface CreatedApiToken extends ApiToken {
+    /** Returned only at creation. Store this value securely. */
+    token: string;
+  }
+
+  /** Server only. The caller must authorize issuing credentials for userId. */
+  function createApiTokenAsync(userId: string, options: CreateApiTokenOptions): Promise<CreatedApiToken>;
+  /** Server only. Lists metadata, including expired credentials, for management. */
+  function listApiTokensAsync(userId: string): Promise<ApiToken[]>;
+  /** Server only. Returns whether the specified user's credential was revoked. */
+  function revokeApiTokenAsync(userId: string, tokenId: string): Promise<boolean>;
+  /** Server only. Revokes API credentials without changing login sessions. */
+  function revokeAllApiTokensAsync(userId: string): Promise<void>;
+
   /**
    * Payload delivered to login hooks. Client hooks receive login method
    * details (or just an error), while server hooks receive a validated login

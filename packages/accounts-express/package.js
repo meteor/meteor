@@ -6,6 +6,7 @@ Package.describe({
 Package.onUse((api) => {
   api.use("ecmascript", ["client", "server"]);
   api.use("accounts-base", ["client", "server"]);
+  api.use("check", "server");
   api.use("webapp", "server");
 
   api.imply("accounts-base", ["client", "server"]);
@@ -23,6 +24,7 @@ Package.onTest((api) => {
     "accounts-express",
     "accounts-base",
     "accounts-password",
+    "accounts-2fa",
     "ecmascript",
     "fetch",
     "tinytest",
