@@ -1,3 +1,18 @@
+Tinytest.add('minimongo - combined projections retain own prototype fields', test => {
+  for (const field of ['__proto__', '__proto__.secret', 'constructor', 'ordinary']) {
+    const matcher = new Minimongo.Matcher({public: 'visible'});
+    const projection = matcher.combineIntoProjection({[field]: 0});
+    test.isTrue(Object.prototype.hasOwnProperty.call(projection, field), field);
+    test.equal(projection[field], false);
+    test.equal(Object.getPrototypeOf(projection), Object.prototype);
+    const inclusive = new Minimongo.Matcher({[field]: 1}).combineIntoProjection({public: 1});
+    test.isTrue(Object.prototype.hasOwnProperty.call(inclusive, field), field);
+    test.equal(inclusive[field], true);
+    test.equal(inclusive.public, true);
+    test.equal(Object.getPrototypeOf(inclusive), Object.prototype);
+  }
+});
+
 Tinytest.add('minimongo - modifier affects selector', test => {
   function testSelectorPaths(sel, paths, desc) {
     const matcher = new Minimongo.Matcher(sel);

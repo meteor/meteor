@@ -1,3 +1,34 @@
+Tinytest.add("diff-sequence - own prototype field changes remain data", function (test) {
+  for (const name of ["__proto__", "constructor", "toString", "ordinary"]) {
+    for (const [before, after] of [
+      [{}, { [name]: { value: 1 } }],
+      [{ [name]: { value: 1 } }, { [name]: { value: 2 } }],
+      [{ [name]: { value: 1 } }, {}],
+    ]) {
+      const changes = DiffSequence.makeChangedFields(after, before);
+      test.isTrue(Object.prototype.hasOwnProperty.call(changes, name), name);
+      test.equal(
+        changes[name],
+        Object.prototype.hasOwnProperty.call(after, name) ? after[name] : undefined,
+      );
+      test.equal(Object.getPrototypeOf(changes), Object.prototype);
+      const target = EJSON.clone(before);
+      const prototype = Object.getPrototypeOf(target);
+      // Independently construct the update so applyChanges is tested even if
+      // makeChangedFields drops the field.
+      DiffSequence.applyChanges(target, {
+        [name]: Object.prototype.hasOwnProperty.call(after, name) ? after[name] : undefined,
+      });
+      test.equal(Object.getPrototypeOf(target), prototype);
+      test.equal(Object.keys(target), Object.keys(after));
+      if (Object.prototype.hasOwnProperty.call(after, name)) {
+        test.isTrue(Object.prototype.hasOwnProperty.call(target, name));
+        test.equal(target[name], after[name]);
+      }
+    }
+  }
+});
+
 Tinytest.add("diff-sequence - diff changes ordering", function (test) {
   const makeDocs = function (ids) {
     return ids.map(function (id) {

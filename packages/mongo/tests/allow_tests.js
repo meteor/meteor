@@ -1,6 +1,100 @@
 import has from 'lodash.has';
 
 if (Meteor.isServer) {
+  Tinytest.add('collection - BSON prototype field conversion preserves ordinary values and identity', test => {
+    const {replaceTypes, replaceMeteorAtomWithMongo, replaceMongoAtomWithMeteor} = require('meteor/mongo/mongo_common');
+    for (const value of [null, 'text', [], {safe: true}]) {
+      const unchanged = {['__proto__']: value, public: 'visible'};
+      for (const convert of [replaceMeteorAtomWithMongo, replaceMongoAtomWithMeteor]) {
+        test.isTrue(replaceTypes(unchanged, convert) === unchanged);
+        const input = {['__proto__']: value, token: convert === replaceMeteorAtomWithMongo
+          ? new Mongo.ObjectID() : new NpmModuleMongodb.ObjectId()};
+        const result = replaceTypes(input, convert);
+        test.isTrue(Object.prototype.hasOwnProperty.call(result, '__proto__'));
+        test.equal(result.__proto__, value);
+        test.equal(Object.getPrototypeOf(result), Object.prototype);
+        test.equal(Object.getPrototypeOf(input), Object.prototype);
+      }
+    }
+  });
+
+  Tinytest.addAsync("collection - BSON conversion preserves own prototype fields and custom values", async test => {
+    const collection = new Mongo.Collection('bson_data_boundary_' + Random.id());
+    const typeName = 'prototype_data_' + Random.id();
+    class CustomValue {
+      constructor(value) { this.value = value; }
+      typeName() { return typeName; }
+      toJSONValue() { return this.value; }
+    }
+    EJSON.addType(typeName, value => new CustomValue(value));
+    try {
+      const objectId = new Mongo.ObjectID();
+      const id = await collection.insertAsync({['__proto__']: objectId, nested: {['__proto__']: objectId}});
+      const doc = await collection.findOneAsync(id);
+      for (const value of [doc, doc.nested]) {
+        test.isTrue(Object.prototype.hasOwnProperty.call(value, '__proto__'));
+        test.equal(Object.getPrototypeOf(value), Object.prototype);
+        test.isTrue(value.__proto__ instanceof Mongo.ObjectID);
+        test.equal(value.__proto__.toHexString(), objectId.toHexString());
+      }
+      const customId = await collection.insertAsync({custom: new CustomValue(JSON.parse('{"__proto__":{"safe":true},"public":"visible"}'))});
+      const custom = (await collection.findOneAsync(customId)).custom;
+      test.isTrue(custom instanceof CustomValue);
+      test.isTrue(Object.prototype.hasOwnProperty.call(custom.value, '__proto__'));
+      test.equal(Object.getPrototypeOf(custom.value), Object.prototype);
+      test.equal(custom.value.__proto__, {safe: true});
+      test.equal(custom.value.public, 'visible');
+    } finally {
+      await collection.removeAsync({});
+    }
+  });
+
+  Tinytest.addAsync("collection - BSON prototype fields cannot introduce inherited authorization", async test => {
+    const name = "stored_ownership_boundary_" + Random.id();
+    const collection = new Mongo.Collection(name);
+    const seen = [];
+    const owns = (userId, doc) => {
+      seen.push(doc);
+      return doc.owner === userId;
+    };
+    collection.allow({update: owns, remove: owns});
+    const invoke = (method, id) => Meteor.server.method_handlers['/' + name + '/' + method].apply(
+      {userId: 'actor', isSimulation: false},
+      method.startsWith('update') ? [{_id: id}, {$set: {changed: true}}, {}] : [{_id: id}]
+    );
+    try {
+      for (const suffix of ['', 'Async']) {
+        const id = new Mongo.ObjectID();
+        const raw = JSON.parse('{"__proto__":{"owner":"actor"},"public":"visible"}');
+        // Insert directly through the driver to test decoding of stored BSON,
+        // with an ObjectId that forces replaceTypes to clone the document.
+        raw._id = new NpmModuleMongodb.ObjectId(id.toHexString());
+        await collection.rawCollection().insertOne(raw);
+        const stored = await collection.findOneAsync(id);
+        test.isTrue(Object.prototype.hasOwnProperty.call(stored, '__proto__'));
+        test.equal(Object.getPrototypeOf(stored), Object.prototype);
+        test.isUndefined(stored.owner);
+        for (const method of ['update', 'remove']) {
+          let error;
+          try { await invoke(method + suffix, id); } catch (caught) { error = caught; }
+          test.equal(error && error.error, 403, method + suffix);
+          const remaining = await collection.findOneAsync(id);
+          test.isTrue(!!remaining);
+          if (remaining) test.isUndefined(remaining.changed);
+        }
+      }
+      test.equal(seen.length, 4);
+      for (const suffix of ['', 'Async']) {
+        const id = await collection.insertAsync({owner: 'actor', public: 'visible', token: new Mongo.ObjectID()});
+        test.equal(await invoke('update' + suffix, id), 1);
+        test.isTrue((await collection.findOneAsync(id)).changed);
+        test.equal(await invoke('remove' + suffix, id), 1);
+      }
+    } finally {
+      await collection.removeAsync({});
+    }
+  });
+
   Tinytest.addAsync("collection - EJSON cannot introduce inherited authorization fields", async test => {
     const name = "ownership_boundary_" + Random.id();
     const collection = new Mongo.Collection(name);
