@@ -116,9 +116,19 @@ export const replaceTypes = function (document, atomTransformer) {
     var valReplaced = replaceTypes(val, atomTransformer);
     if (val !== valReplaced) {
       // Lazy clone. Shallow copy.
-      if (ret === document)
+      if (ret === document) {
         ret = clone(document);
-      ret[key] = valReplaced;
+        // A shallow clone must not turn an own data field into a prototype.
+        Object.setPrototypeOf(ret, Object.getPrototypeOf(document));
+        if (Object.prototype.hasOwnProperty.call(document, '__proto__')) {
+          Object.defineProperty(ret, '__proto__', {
+            value: document.__proto__, enumerable: true, configurable: true, writable: true
+          });
+        }
+      }
+      Object.defineProperty(ret, key, {
+        value: valReplaced, enumerable: true, configurable: true, writable: true
+      });
     }
   });
   return ret;
@@ -162,7 +172,9 @@ export function replaceNames(filter, thing) {
     }
     var ret = {};
     Object.entries(thing).forEach(function ([key, value]) {
-      ret[filter(key)] = replaceNames(filter, value);
+      Object.defineProperty(ret, filter(key), {
+        value: replaceNames(filter, value), enumerable: true, configurable: true, writable: true
+      });
     });
     return ret;
   }

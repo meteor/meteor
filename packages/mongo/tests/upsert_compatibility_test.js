@@ -1,3 +1,38 @@
+import { replaceTypes, replaceNames, replaceMeteorAtomWithMongo, replaceMongoAtomWithMeteor } from '../mongo_common';
+
+Tinytest.add('mongo - review atom conversion preserves data and prototypes', test => {
+  for (const prototype of [Object.prototype, null, Array.prototype]) {
+    for (const value of [{owner: 'nested'}, null, 'ordinary']) {
+      const document = prototype === Array.prototype ? [] : Object.create(prototype);
+      Object.defineProperty(document, '__proto__', {value, enumerable: true, writable: true, configurable: true});
+      document.reference = new Mongo.ObjectID();
+      if (!Array.isArray(document)) document.constructor = 'ordinary constructor';
+      const bson = replaceTypes(document, replaceMeteorAtomWithMongo);
+      test.equal(Object.getPrototypeOf(bson), prototype);
+      test.isTrue(Object.prototype.hasOwnProperty.call(bson, '__proto__'));
+      test.equal(bson.__proto__, value);
+      test.isUndefined(bson.owner);
+      test.isTrue(bson.reference instanceof NpmModuleMongodb.ObjectId);
+      const restored = replaceTypes(bson, replaceMongoAtomWithMeteor);
+      test.equal(Object.getPrototypeOf(restored), prototype);
+      test.isTrue(Object.prototype.hasOwnProperty.call(restored, '__proto__'));
+      test.equal(restored.__proto__, value);
+      test.isUndefined(restored.owner);
+      test.isTrue(restored.reference instanceof Mongo.ObjectID);
+      test.equal(restored.reference, document.reference);
+      if (!Array.isArray(document)) test.equal(restored.constructor, 'ordinary constructor');
+    }
+  }
+  const unchanged = JSON.parse('{"ordinary":1,"__proto__":{"owner":"nested"}}');
+  test.isTrue(replaceTypes(unchanged, replaceMeteorAtomWithMongo) === unchanged);
+  const restoredName = replaceNames(name => name.substring(5), JSON.parse('{"EJSON__proto__":{"EJSONowner":"nested"},"EJSONpublic":1}'));
+  test.isTrue(Object.prototype.hasOwnProperty.call(restoredName, '__proto__'));
+  test.equal(Object.getPrototypeOf(restoredName), Object.prototype);
+  test.equal(restoredName.__proto__.owner, 'nested');
+  test.isUndefined(restoredName.owner);
+  test.equal(restoredName.public, 1);
+});
+
 Tinytest.addAsync(
   'mongo livedata - native upsert - id type MONGO with MODIFIERS update',
   async function(test) {
