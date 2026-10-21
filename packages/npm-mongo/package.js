@@ -16,3 +16,9 @@ Package.onUse(function (api) {
   api.export(["NpmModuleMongodb", "NpmModuleMongodbVersion"], "server");
   api.addAssets("index.d.ts", "server");
 });
+
+Package.onTest(function (api) {
+  api.use(["npm-mongo", "tinytest"], "server");
+  api.addAssets("wrapper.js", "server");
+  api.addFiles("wrapper-tests.js", "server");
+});

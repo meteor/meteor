@@ -5,6 +5,7 @@ import {
   isOperatorObject,
   pathsToTree,
   projectionDetails,
+  setOwnProperty,
 } from './common.js';
 
 Minimongo._pathsElidingNumericKeys = paths => paths.map(path =>
@@ -290,7 +291,7 @@ function combineImportantPathsIntoProjection(paths, projection) {
 
   Object.keys(mergedProjection).forEach(path => {
     if (!mergedProjection[path]) {
-      mergedExclProjection[path] = false;
+      setOwnProperty(mergedExclProjection, path, false);
     }
   });
 
@@ -338,7 +339,7 @@ function treeToPaths(tree, prefix = '') {
     if (value === Object(value)) {
       Object.assign(result, treeToPaths(value, `${prefix + key}.`));
     } else {
-      result[prefix + key] = value;
+      setOwnProperty(result, prefix + key, value);
     }
   });
 

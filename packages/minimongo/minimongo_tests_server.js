@@ -1,3 +1,24 @@
+Tinytest.add('minimongo - review combined projection retains prototype rules', test => {
+  const matcher = new Minimongo.Matcher({['__proto__']: 1});
+  test.equal(matcher._getPaths(), ['__proto__']);
+  const required = matcher.combineIntoProjection({public: 1});
+  test.isTrue(Object.prototype.hasOwnProperty.call(required, '__proto__'));
+  test.equal(required.__proto__, true);
+  test.equal(required.public, true);
+  test.equal(Object.getPrototypeOf(required), Object.prototype);
+  for (const source of [new Minimongo.Matcher({public: 1}), new Minimongo.Sorter({public: 1})]) {
+    const excluded = source.combineIntoProjection({['__proto__']: 0});
+    test.isTrue(Object.prototype.hasOwnProperty.call(excluded, '__proto__'));
+    test.equal(excluded.__proto__, false);
+    test.equal(Object.getPrototypeOf(excluded), Object.prototype);
+    const included = source.combineIntoProjection({['__proto__']: 1});
+    test.isTrue(Object.prototype.hasOwnProperty.call(included, '__proto__'));
+    test.equal(included.__proto__, true);
+    test.equal(included.public, true);
+    test.equal(Object.getPrototypeOf(included), Object.prototype);
+  }
+});
+
 Tinytest.add('minimongo - modifier affects selector', test => {
   function testSelectorPaths(sel, paths, desc) {
     const matcher = new Minimongo.Matcher(sel);

@@ -1,3 +1,43 @@
+Tinytest.add('minimongo - review projection preserves own-field rules', test => {
+  const doc = JSON.parse('{"_id":"preview","profile":{"__proto__":{"secret":"private-marker"},"public":1},"__proto__":{"secret":"private-marker"},"public":2}');
+  for (const fields of [
+    {'profile.__proto__': 0, ['__proto__']: 0},
+    {'profile.public': 1, public: 1},
+  ]) {
+    const result = LocalCollection._compileProjection(fields)(doc);
+    const serialized = EJSON.stringify(result);
+    test.isFalse(serialized.includes('private-marker'));
+    test.equal(result.profile.public, 1);
+    test.equal(result.public, 2);
+    test.isFalse(Object.prototype.hasOwnProperty.call(result, '__proto__'));
+    test.isFalse(Object.prototype.hasOwnProperty.call(result.profile, '__proto__'));
+    test.equal(Object.getPrototypeOf(result), Object.prototype);
+    test.equal(Object.getPrototypeOf(result.profile), Object.prototype);
+  }
+  const included = LocalCollection._compileProjection({['__proto__']: 1, 'profile.__proto__': 1})(doc);
+  test.isTrue(Object.prototype.hasOwnProperty.call(included, '__proto__'));
+  test.isTrue(Object.prototype.hasOwnProperty.call(included.profile, '__proto__'));
+  test.equal(included.__proto__.secret, 'private-marker');
+  test.equal(Object.getPrototypeOf(included), Object.prototype);
+  test.equal(Object.getPrototypeOf(included.profile), Object.prototype);
+  test.isUndefined(included.secret);
+  test.throws(() => LocalCollection._compileProjection({profile: 0, 'profile.public': 0}));
+});
+
+Tinytest.add('minimongo - review upsert keeps prototype-named data', test => {
+  const replacement = JSON.parse('{"__proto__":{"owner":"nested"},"public":1}');
+  for (const doc of [
+    LocalCollection._createUpsertDocument({_id: 'replacement'}, replacement),
+    LocalCollection._createUpsertDocument({['__proto__']: {owner: 'nested'}}, {$set: {public: 1}}),
+  ]) {
+    test.equal(Object.getPrototypeOf(doc), Object.prototype);
+    test.isTrue(Object.prototype.hasOwnProperty.call(doc, '__proto__'));
+    test.isUndefined(doc.owner);
+    test.equal(doc.__proto__.owner, 'nested');
+    test.equal(doc.public, 1);
+  }
+});
+
 Tinytest.add('minimongo - modifiers only traverse own document fields', test => {
   const marker = 'meteorModifierPrototypeMarker';
   try {

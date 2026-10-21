@@ -7,6 +7,7 @@ import {
   isOperatorObject,
   populateDocumentWithQueryFields,
   projectionDetails,
+  setOwnProperty,
 } from './common.js';
 
 import { getAsyncMethodName } from './constants';
@@ -1182,11 +1183,11 @@ LocalCollection._compileProjection = fields => {
       if (rule === Object(rule)) {
         // For sub-objects/subsets we branch
         if (doc[key] === Object(doc[key])) {
-          result[key] = transform(doc[key], rule);
+          setOwnProperty(result, key, transform(doc[key], rule));
         }
       } else if (details.including) {
         // Otherwise we don't even touch this subfield
-        result[key] = EJSON.clone(doc[key]);
+        setOwnProperty(result, key, EJSON.clone(doc[key]));
       } else {
         delete result[key];
       }
@@ -1234,7 +1235,7 @@ LocalCollection._createUpsertDocument = (selector, modifier) => {
   }
 
   // Replacement can take _id from query document
-  const replacement = Object.assign({}, modifier);
+  const replacement = {...modifier};
   if (newDoc._id) {
     replacement._id = newDoc._id;
   }
@@ -1855,17 +1856,6 @@ LocalCollection._updateInResultsAsync = async (query, doc, old_doc) => {
     query.movedBefore && await query.movedBefore(doc._id, next);
   }
 };
-
-// Mongo field names are data, including the legacy prototype setter name.
-function setOwnProperty(target, field, value) {
-  if (field === '__proto__') {
-    Object.defineProperty(target, field, {
-      value, enumerable: true, configurable: true, writable: true
-    });
-  } else {
-    target[field] = value;
-  }
-}
 
 const MODIFIERS = {
   $currentDate(target, field, arg) {

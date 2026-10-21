@@ -1,6 +1,52 @@
 import has from 'lodash.has';
 
 if (Meteor.isServer) {
+  Tinytest.addAsync('collection - review stored prototype data cannot grant ownership', async test => {
+    const name = 'stored_ownership_' + Random.id();
+    const collection = new Mongo.Collection(name);
+    collection.allow({
+      update: (userId, doc) => doc.owner === userId,
+      remove: (userId, doc) => doc.owner === userId,
+    });
+    const raw = collection.rawCollection();
+    const invoke = (method, ...args) => Meteor.server.method_handlers['/' + name + '/' + method]
+      .apply({userId: 'actor', isSimulation: false}, args);
+    try {
+      for (const suffix of ['', 'Async']) {
+        for (const method of ['update', 'remove']) {
+          const id = method + suffix;
+          const stored = JSON.parse('{"__proto__":{"owner":"actor"},"public":1}');
+          stored._id = id;
+          stored.reference = new NpmModuleMongodb.ObjectId();
+          await raw.insertOne(stored);
+          const read = await collection.findOneAsync(id);
+          test.equal(Object.getPrototypeOf(read), Object.prototype);
+          test.isTrue(Object.prototype.hasOwnProperty.call(read, '__proto__'));
+          test.isUndefined(read.owner);
+          test.equal(read.__proto__.owner, 'actor');
+          test.isTrue(read.reference instanceof Mongo.ObjectID);
+          let error;
+          try {
+            if (method === 'update') await invoke(method + suffix, {_id: id}, {$set: {changed: true}}, {});
+            else await invoke(method + suffix, {_id: id});
+          } catch (caught) { error = caught; }
+          test.equal(error && error.error, 403, method + suffix);
+          const after = await raw.findOne({_id: id});
+          test.isTrue(!!after, 'unauthorized removal must not remove stored data');
+          if (after) test.isUndefined(after.changed);
+        }
+      }
+      const own = JSON.parse('{"_id":"owned","owner":"actor","__proto__":{"owner":"other"}}');
+      own.reference = new NpmModuleMongodb.ObjectId();
+      await raw.insertOne(own);
+      test.equal(await invoke('updateAsync', {_id: 'owned'}, {$set: {changed: true}}, {}), 1);
+      test.equal((await collection.findOneAsync('owned')).owner, 'actor');
+      test.equal(await invoke('removeAsync', {_id: 'owned'}), 1);
+    } finally {
+      await raw.deleteMany({});
+    }
+  });
+
   Tinytest.addAsync("collection - EJSON cannot introduce inherited authorization fields", async test => {
     const name = "ownership_boundary_" + Random.id();
     const collection = new Mongo.Collection(name);

@@ -8,14 +8,10 @@ on:
 
 jobs:
   test-packages:
-    runs-on: ubuntu-22.04
+    runs-on: oss-vm
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: true
-
-jobs:
-  test-packages:
-    runs-on: oss-vm
     timeout-minutes: 90
     env:
       CXX: g++-12
@@ -28,11 +24,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
-        with:
-          submodules: recursive
 
       - name: Expose globally-installed puppeteer to Node.js
         # puppeteer@23.6.0 is pre-installed on oss-vm via `npm install -g`.
