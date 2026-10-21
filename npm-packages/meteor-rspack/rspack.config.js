@@ -30,6 +30,7 @@ const { loadUserAndOverrideConfig } = require('./lib/meteorRspackConfigHelpers.j
 const { prepareMeteorRspackConfig } = require("./lib/meteorRspackConfigFactory");
 const { extractLocalDependencies } = require('./lib/localDependenciesHelpers.js');
 const { createTestClientNodePolyfillConfig } = require("./lib/testClientNodePolyfills.js");
+const { createOutputTracker } = require('./lib/compilationOutput.js');
 
 // Safe require that doesn't throw if the module isn't found
 function safeRequire(moduleName) {
@@ -961,6 +962,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   }
 
   // Add MeteorRspackOutputPlugin as the last plugin to output compilation info
+  const trackServerOutput = createOutputTracker();
   const meteorRspackOutputPlugin = new MeteorRspackOutputPlugin({
     getData: (stats, { isRebuild, compilationCount, compiler }) => {
       const generatedAppPaths = [
@@ -988,7 +990,13 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         hasErrors: stats.hasErrors(),
         hasWarnings: stats.hasWarnings(),
         hasAppSourceChanges,
-        hash: stats.hash,
+        // Use output changes to decide development server restarts. Production,
+        // test, native, and client compilations keep Rspack's original hash.
+        // Include failed emissions in the version so recovery still restarts
+        // if the output changed before the errors were cleared.
+        hash: isServer && isDevEnvironment
+          ? trackServerOutput(stats)
+          : stats.hash,
         timestamp: Date.now(),
         statsOverrided,
         compilationCount,

@@ -391,13 +391,13 @@ Tested via `skeleton.test.js` using `meteor create --<skeleton>`. Each skeleton 
 | chakra-ui | 3203 | JSX | React 19.2 dependencies; no body style checks (custom UI library) |
 | coffeescript | 3211 | CoffeeScript | React 19.2 dependencies |
 | full | 3204 | JS | `imports/api/` test structure; wildcard 404 route renders with no deprecation notice in the console (Run) |
-| pnpm | 3222 | JS + TypeScript workspace package | pnpm workspace root with Meteor at `apps/app`; default auto-install behavior with no explicit `autoInstallDeps`; root install via Corepack/bundled npx fallback; automatic pnpm bump of an outdated Rspack dependency; `workspace:*` linking; transitive pnpm-store resolution; local `link:` dependency validation without false warnings; nested app lifecycle; built-app boot; workspace dependencies preserved by reset |
+| pnpm | 3222 | JS + TypeScript workspace package | pnpm workspace root with Meteor at `apps/app`; default auto-install behavior with no explicit `autoInstallDeps`; root install via Corepack/bundled npx fallback; automatic pnpm bump of an outdated Rspack dependency; `workspace:*` linking; transitive pnpm-store resolution; local tarball dependency validation without false warnings; nested app lifecycle; built-app boot; workspace dependencies preserved by reset |
 | pwa | 3214, 3215 | JS | Manifest link + templated `manifest.webmanifest`; skeleton's own service worker controlling the page across reload (dev `/sw.js?dev=1`, prod `/sw.js`); prod app shell loads with the server down; a data fetch to a navigation-cached URL reaches the network instead of the cached page (PRECACHE-only fallback); manifest, worker and offline checks repeated under a path-prefixed `ROOT_URL` (`/app`, port 3215, production only: the dev boilerplate injects the Rspack client script unprefixed) |
 | react | 3205 | JSX | React 19.2 dependencies, automatic JSX runtime via `.swcrc`, custom body styles |
 | solid | 3206 | JS | |
 | svelte | 3207 | JS | |
 | tailwind | 3208 | JSX | React 19.2 dependencies; Tailwind `bg-gray-100` styles (dev + prod color formats) |
-| typescript | 3209 | TypeScript | React 19.2 dependencies and type definitions; TypeScript 7 native `tsgo` checker loading, diagnostic, and watch behavior |
+| typescript | 3209 | TypeScript | React 19.2 dependencies and type definitions; TypeScript 7 native `tsgo` diagnostics; TSX edits preserve React state, the browser document, and server PID while server edits restart and execute new code (Run) |
 | typescript-tailwind | 3221 | TypeScript | React 19.2 dependencies and type definitions; TypeScript 7, native `tsgo`, Tailwind 4, and PostCSS |
 | vue | 3210 | JS | |
 
@@ -478,7 +478,7 @@ Where each feature is tested across apps and skeletons.
 
 | Feature | Apps | Skeletons |
 |---------|------|-----------|
-| HMR (dev) | react, react-router, babel, coffeescript, vue, solid, svelte, monorepo, pnpm-monorepo, typescript | |
+| HMR (dev) | react, react-router, babel, coffeescript, vue, solid, svelte, monorepo, pnpm-monorepo, typescript | typescript |
 | HMR disabled (prod) | all apps with HMR | |
 | HMR incompatible | blaze, full-blaze | |
 | Custom rspack config | react (.cjs), react-router, babel (.mjs), monorepo (.cjs), typescript (.ts) | |
