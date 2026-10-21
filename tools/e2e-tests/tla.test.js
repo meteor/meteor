@@ -38,7 +38,7 @@ describe('Regressions / tla /', () => {
 
   test('"meteor run" waits for server TLA dependencies', async () => {
     const result = await runMeteorApp(tempDir, port, {
-      waitForOutput: '[tla] server main loaded: ready',
+      waitForOutput: '[tla] startup hook ran',
       skipWaitOn: true,
     });
     meteorProcess = result.meteorProcess;
@@ -46,9 +46,11 @@ describe('Regressions / tla /', () => {
     const output = result.outputLines.join('\n');
     const settledIndex = output.indexOf('[tla] async-dep settled');
     const mainIndex = output.indexOf('[tla] server main loaded: ready');
+    const startupIndex = output.indexOf('[tla] startup hook ran');
 
     expect(settledIndex).toBeGreaterThanOrEqual(0);
     expect(mainIndex).toBeGreaterThan(settledIndex);
+    expect(startupIndex).toBeGreaterThan(mainIndex);
   });
 
   test('"meteor test --full-app --once" runs tests below a private path segment', async () => {

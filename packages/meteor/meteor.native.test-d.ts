@@ -49,7 +49,10 @@ expectTypeOf<Meteor.UserEmail>().toBeObject();
 expectTypeOf<Meteor.UserProfile>().toBeObject();
 expectTypeOf<Meteor.User>().toBeObject();
 declare const legacyUser: Meteor.User;
-expectTypeOf(legacyUser.services).toEqualTypeOf<Record<string, unknown> | undefined>();
+expectTypeOf(legacyUser.services).toEqualTypeOf<Meteor.UserServices | undefined>();
+// Without augmentation, services stays assignable to Record<string, unknown>.
+expectTypeOf<Meteor.UserServices>().toMatchTypeOf<Record<string, unknown>>();
+expectTypeOf<Meteor.UserServices>().toHaveProperty("anyService").toBeUnknown();
 expectTypeOf(Meteor.user).toBeFunction();
 expectTypeOf(Meteor.user()).toEqualTypeOf<
   Meteor.User | null | undefined | Promise<Meteor.User | undefined>
@@ -180,3 +183,14 @@ expectTypeOf(Meteor.disconnect).toBeFunction();
 expectTypeOf(Meteor.status).toBeFunction();
 expectTypeOf<Meteor.Connection>().toBeObject();
 expectTypeOf(Meteor.onConnection).toBeFunction();
+
+// --- User services augmentation ---
+// REGRESSION: apps must be able to declare their login services (#14812).
+declare module "meteor/meteor" {
+  namespace Meteor {
+    interface UserServices {
+      google?: { accessToken?: string };
+    }
+  }
+}
+expectTypeOf(legacyUser.services?.google?.accessToken).toEqualTypeOf<string | undefined>();
