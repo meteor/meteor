@@ -22,7 +22,6 @@
     "@rspack/dev-server": "^2.2.1",
     "@swc/core": "^1.16.2",
     "@rspack/plugin-react-refresh": "^2.0.2",
-    "@types/meteor": "^2.9.9",
     "@types/mocha": "^8.2.3",
     "@types/node": "^22.10.6",
     "@types/react": "^19.2.0",

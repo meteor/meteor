@@ -32,7 +32,6 @@
     "@rspack/cli": "^2.2.7",
     "@rspack/core": "^2.2.7",
     "@rspack/dev-server": "^2.2.1",
-    "@types/meteor": "^2.9.9",
     "typescript": "~5.8.2",
     "@swc/core": "^1.16.2"
   },

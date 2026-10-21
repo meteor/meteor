@@ -388,6 +388,10 @@ If you run `meteor create` without arguments, Meteor will launch an interactive 
  | `--babel`        | React with Babel support | - |
 | `--angular`      | Angular + Typescript    | - |
 
+The TypeScript, TypeScript + Tailwind, Svelte, and Angular templates use
+[native Meteor package declarations](/cli/using-core-types) by default.
+`meteor create` generates `.meteor/types/` so editor types are ready immediately.
+
 ### Project Structure Options
 
 | Option | Description |

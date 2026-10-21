@@ -1063,9 +1063,9 @@ Object.assign(ProjectContext.prototype, {
       return;
     }
 
-    // `meteor types` opts into generation for projects with a tsconfig.json
-    // or jsconfig.json. Ordinary project preparation never reaches this
-    // filesystem-mutating path.
+    // `meteor types` and creation of a typed skeleton opt into generation for
+    // projects with a tsconfig.json or jsconfig.json. Ordinary builds never
+    // reach this filesystem-mutating path.
     const hasTsConfig = files.exists(files.pathJoin(self.projectDir, 'tsconfig.json'));
     const hasJsConfig = files.exists(files.pathJoin(self.projectDir, 'jsconfig.json'));
 
