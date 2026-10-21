@@ -1,5 +1,15 @@
 import clone from 'lodash.clone'
 
+function setOwnProperty(target, key, value) {
+  if (key === '__proto__') {
+    Object.defineProperty(target, key, {
+      value, enumerable: true, configurable: true, writable: true
+    });
+  } else {
+    target[key] = value;
+  }
+}
+
 /** @type {import('mongodb')} */
 export const MongoDB = Object.assign(NpmModuleMongodb, {
   ObjectID: NpmModuleMongodb.ObjectId,
@@ -116,9 +126,15 @@ export const replaceTypes = function (document, atomTransformer) {
     var valReplaced = replaceTypes(val, atomTransformer);
     if (val !== valReplaced) {
       // Lazy clone. Shallow copy.
-      if (ret === document)
+      if (ret === document) {
         ret = clone(document);
-      ret[key] = valReplaced;
+        // lodash.clone uses assignment for __proto__, which must remain data.
+        if (Object.prototype.hasOwnProperty.call(document, '__proto__')) {
+          Object.setPrototypeOf(ret, Object.getPrototypeOf(document));
+          setOwnProperty(ret, '__proto__', document.__proto__);
+        }
+      }
+      setOwnProperty(ret, key, valReplaced);
     }
   });
   return ret;
@@ -162,7 +178,7 @@ export function replaceNames(filter, thing) {
     }
     var ret = {};
     Object.entries(thing).forEach(function ([key, value]) {
-      ret[filter(key)] = replaceNames(filter, value);
+      setOwnProperty(ret, filter(key), replaceNames(filter, value));
     });
     return ret;
   }

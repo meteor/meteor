@@ -37,12 +37,13 @@ jobs:
 
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 24.15.0
-          submodules: recursive
 
       - name: Expose globally-installed puppeteer to Node.js
         # puppeteer@23.6.0 is pre-installed on oss-vm via `npm install -g`.
