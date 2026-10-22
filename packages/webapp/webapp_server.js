@@ -219,7 +219,7 @@ var getHtmlAttributes = function(request) {
   var combinedAttributes = {};
   for (const hook of htmlAttributeHooks || []) {
     var attributes = hook(request);
-    if (attributes === null) return;
+    if (attributes === null) continue;
     if (typeof attributes !== 'object')
       throw Error('HTML attribute hook must return null or object');
     Object.assign(combinedAttributes, attributes);

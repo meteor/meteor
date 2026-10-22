@@ -240,10 +240,11 @@ const middleware = async (req, res, next) => {
 const OAuthRouter = WebApp.express.Router();
 OAuthRouter.use(WebApp.express.json());
 OAuthRouter.use(WebApp.express.urlencoded({ extended: false }));
-OAuthRouter.route('/:service').all(middleware);
+OAuthRouter.use('/:service', middleware);
 WebApp.handlers.use('/_oauth', OAuthRouter);
 
 OAuthTest.middleware = middleware;
+OAuthTest.router = OAuthRouter;
 
 OAuthTest.registeredServices = registeredServices;
 

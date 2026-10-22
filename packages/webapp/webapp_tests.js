@@ -685,3 +685,17 @@ Tinytest.addAsync(
     }
   }
 );
+Tinytest.addAsync('webapp - null HTML hook preserves earlier and later attributes', async test => {
+  const applies = request => request.headers?.['x-meteor-html-hook-test'] === 'yes';
+  WebApp.addHtmlAttributeHook(request => applies(request) ? { 'data-before-null': 'first' } : null);
+  WebApp.addHtmlAttributeHook(() => null);
+  WebApp.addHtmlAttributeHook(request => applies(request) ? { 'data-after-null': 'last' } : null);
+  const request = new http.IncomingMessage();
+  request.url = 'http://example.com';
+  request.browser = { name: 'headless' };
+  request.headers['x-meteor-html-hook-test'] = 'yes';
+  const boilerplate = await WebAppInternals.getBoilerplate(request, 'web.browser');
+  const html = await streamToString(boilerplate.stream);
+  test.isTrue(html.includes('data-before-null="first"'));
+  test.isTrue(html.includes('data-after-null="last"'));
+});
