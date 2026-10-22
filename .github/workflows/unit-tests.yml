@@ -1,6 +1,7 @@
 name: Unit Tests
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - 'tools/**'
@@ -27,7 +28,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22.x
+          node-version: 22.22.1
 
       - name: Install unit test deps
         run: npm run install:unit
