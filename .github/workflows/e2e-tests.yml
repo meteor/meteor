@@ -139,6 +139,7 @@ jobs:
         run: npm run install:e2e
 
       - name: Set NPM_LINK_RSPACK=false for release branches
+        shell: bash
         env:
           BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
