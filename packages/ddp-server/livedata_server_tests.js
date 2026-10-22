@@ -706,3 +706,110 @@ function getTestConnections(test) {
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
+Tinytest.addAsync(
+  "livedata server - method registry excludes inherited methods",
+  function (test, onComplete) {
+    makeTestConnection(test, async (clientConn) => {
+      const names = ["valueOf", "toString", "constructor", "hasOwnProperty", "__proto__"];
+      try {
+        for (const name of names) {
+          for (const invoke of [
+            () => clientConn.callAsync(name),
+            () => Meteor.server.applyAsync(name, []),
+          ]) {
+            let error;
+            try {
+              await invoke();
+            } catch (caught) {
+              error = caught;
+            }
+            test.equal(error && error.error, 404, name);
+          }
+        }
+
+        for (const name of names) {
+          const methods = Object.create(null);
+          methods[name] = function () { return "registered method"; };
+          Meteor.methods(methods);
+          try {
+            test.equal(await clientConn.callAsync(name), "registered method");
+            test.equal(await Meteor.server.applyAsync(name, []), "registered method");
+            test.throws(() => Meteor.methods(methods), /already defined/);
+          } finally {
+            delete Meteor.server.method_handlers[name];
+          }
+        }
+        test.equal(await clientConn.callAsync("livedata_server_test_inner"),
+          clientConn._lastSessionId);
+      } catch (error) {
+        test.exception(error);
+      } finally {
+        clientConn.disconnect();
+        onComplete();
+      }
+    }, onComplete);
+  }
+);
+
+// Resolves with "ready", the nosub error code, or "no response".
+function subscribeOutcome(clientConn, name, ...params) {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve("no response"), 2000);
+    clientConn.subscribe(name, ...params, {
+      onReady() {
+        clearTimeout(timer);
+        resolve("ready");
+      },
+      onStop(error) {
+        clearTimeout(timer);
+        resolve(error ? error.error : "stopped");
+      },
+    });
+  });
+}
+
+Tinytest.addAsync(
+  "livedata server - publish registry excludes inherited names",
+  async function (test) {
+    const names = ["valueOf", "toString", "constructor", "hasOwnProperty", "__proto__"];
+    const { clientConn } = await getTestConnections(test);
+
+    try {
+      for (const name of names) {
+        test.equal(await subscribeOutcome(clientConn, name), 404, name);
+      }
+
+      for (const name of names) {
+        Meteor.publish(name, function () {
+          this.ready();
+        });
+        try {
+          test.equal(await subscribeOutcome(clientConn, name), "ready", name);
+        } finally {
+          delete Meteor.server.publish_handlers[name];
+        }
+      }
+    } finally {
+      clientConn.disconnect();
+    }
+  }
+);
+
+Tinytest.addAsync(
+  "livedata server - inherited publication names cannot run with client params",
+  async function (test) {
+    const { clientConn } = await getTestConnections(test);
+
+    try {
+      // Reject inherited names before interpreting client-supplied results.
+      test.equal(
+        await subscribeOutcome(clientConn, "constructor", [{ _publishCursor: 1 }]),
+        404
+      );
+      test.equal(await clientConn.callAsync("livedata_server_test_inner"),
+        clientConn._lastSessionId);
+    } finally {
+      clientConn.disconnect();
+    }
+  }
+);

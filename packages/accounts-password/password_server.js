@@ -952,29 +952,39 @@ Meteor.methods(
               error: new Meteor.Error(403, "Verify email link expired")
             };
 
-          const emailsRecord =
-            user.emails.find(e => e.address == tokenRecord.address);
+          const emailIndex =
+            user.emails.findIndex(e => e.address == tokenRecord.address);
 
-          if (!emailsRecord)
+          if (emailIndex === -1)
             return {
               userId: user._id,
               error: new Meteor.Error(403, "Verify email link is for unknown address")
             };
 
-          // By including the address in the query, we can use 'emails.$' in the
-          // modifier to get a reference to the specific object in the emails
-          // array. See
-          // http://www.mongodb.org/display/DOCS/Updating/#Updating-The%24positionaloperator)
-          // http://www.mongodb.org/display/DOCS/Updating#Updating-%24pull
-          await Meteor.users.updateAsync(
+          // Consume the token and verify its address in one conditional write.
+          // The query matches two arrays, which makes 'emails.$' ambiguous, so
+          // address the email by the index read above. The selector re-checks
+          // that index, and a plain index (unlike arrayFilters) also works with
+          // minimongo and with schema validators attached to Meteor.users.
+          const affectedRecords = await Meteor.users.updateAsync(
             {
               _id: user._id,
-              'emails.address': tokenRecord.address
+              [`emails.${emailIndex}.address`]: tokenRecord.address,
+              'services.email.verificationTokens': {
+                $elemMatch: {token, address: tokenRecord.address}
+              }
             },
             {
-              $set: { 'emails.$.verified': true },
+              $set: { [`emails.${emailIndex}.verified`]: true },
               $pull: { 'services.email.verificationTokens': { address: tokenRecord.address } }
             });
+
+          if (affectedRecords !== 1) {
+            return {
+              userId: user._id,
+              error: new Meteor.Error(403, "Verify email link expired")
+            };
+          }
 
           if (Accounts._check2faEnabled?.(user)) {
         return {

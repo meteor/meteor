@@ -1276,10 +1276,10 @@ Server = function (options = {}) {
     debugPrintExceptions: "onMessage callback"
   });
 
-  self.publish_handlers = {};
+  self.publish_handlers = Object.create(null);
   self.universal_publish_handlers = [];
 
-  self.method_handlers = {};
+  self.method_handlers = Object.create(null);
 
   self._publicationStrategies = {};
 

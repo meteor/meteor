@@ -1,3 +1,37 @@
+Tinytest.add("diff-sequence - review own prototype change notifications", function (test) {
+  var original = JSON.parse('{"__proto__":{"value":1},"ordinary":1}');
+  var updated = JSON.parse('{"__proto__":{"value":42},"ordinary":1}');
+  [
+    [{ordinary: 1}, original, {value: 1}],
+    [original, updated, {value: 42}],
+    [updated, {ordinary: 1}, undefined]
+  ].forEach(function (entry) {
+    var changes = DiffSequence.makeChangedFields(entry[1], entry[0]);
+    test.isTrue(Object.prototype.hasOwnProperty.call(changes, '__proto__'));
+    test.equal(changes.__proto__, entry[2]);
+    test.equal(Object.getPrototypeOf(changes), Object.prototype);
+    test.isFalse(Object.prototype.hasOwnProperty.call(changes, 'ordinary'));
+  });
+});
+
+Tinytest.add("diff-sequence - review apply keeps prototype unchanged", function (test) {
+  [{}, Object.create(null)].forEach(function (doc) {
+    var prototype = Object.getPrototypeOf(doc);
+    DiffSequence.applyChanges(doc, JSON.parse('{"__proto__":{"owner":"nested"},"ordinary":2}'));
+    test.equal(Object.getPrototypeOf(doc), prototype);
+    test.isTrue(Object.prototype.hasOwnProperty.call(doc, '__proto__'));
+    test.equal(doc.__proto__.owner, 'nested');
+    test.isUndefined(doc.owner);
+    test.equal(doc.ordinary, 2);
+    var cleared = {};
+    Object.defineProperty(cleared, '__proto__', {value: undefined, enumerable: true});
+    DiffSequence.applyChanges(doc, cleared);
+    test.isFalse(Object.prototype.hasOwnProperty.call(doc, '__proto__'));
+    test.equal(Object.getPrototypeOf(doc), prototype);
+    test.equal(doc.ordinary, 2);
+  });
+});
+
 Tinytest.add("diff-sequence - diff changes ordering", function (test) {
   var makeDocs = function (ids) {
     return ids.map(function (id) { return {_id: id};});

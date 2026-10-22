@@ -1,6 +1,74 @@
 import isObject from 'lodash.isobject';
 import times from 'lodash.times';
 import { ObserveMultiplexer } from '../observe_multiplex';
+import { ReplicationMethods } from '../collection/methods_replication';
+
+Tinytest.addAsync('collection - review observer receives prototype field edits', async test => {
+  const collection = new Mongo.Collection(null);
+  await collection.insertAsync(JSON.parse('{"_id":"draft","__proto__":{"value":1},"public":1}'));
+  const changes = [];
+  const handle = await collection.find().observeChangesAsync({
+    changed(id, fields) {
+      changes.push({id, fields});
+    },
+  });
+  try {
+    await collection.updateAsync('draft', {$set: {['__proto__']: {value: 42}}});
+    test.equal((await collection.findOneAsync('draft')).__proto__.value, 42);
+    test.equal(changes.length, 1);
+    if (changes[0]) {
+      test.equal(changes[0].id, 'draft');
+      test.isTrue(Object.prototype.hasOwnProperty.call(changes[0].fields, '__proto__'));
+      test.equal(changes[0].fields.__proto__, {value: 42});
+      test.equal(Object.getPrototypeOf(changes[0].fields), Object.prototype);
+    }
+    await collection.updateAsync('draft', {$unset: {['__proto__']: 1}});
+    test.equal(changes.length, 2);
+    if (changes[1]) {
+      test.isTrue(Object.prototype.hasOwnProperty.call(changes[1].fields, '__proto__'));
+      test.isUndefined(changes[1].fields.__proto__);
+    }
+    await collection.updateAsync('draft', {$set: {public: 2}});
+    test.equal(changes.length, 3);
+    if (changes[2]) test.equal(changes[2].fields, {public: 2});
+    const doc = await collection.findOneAsync('draft');
+    test.isFalse(Object.prototype.hasOwnProperty.call(doc, '__proto__'));
+    test.equal(doc.public, 2);
+    test.equal(Object.getPrototypeOf(doc), Object.prototype);
+  } finally {
+    await handle.stop();
+    await collection.removeAsync({});
+  }
+});
+
+Tinytest.addAsync('collection - replication keeps prototype fields as data', async test => {
+  const collection = new Mongo.Collection(null);
+  let store;
+  const register = (name, value) => { store = value; return true; };
+  collection._connection = {registerStoreClient: register, registerStoreServer: register};
+  await ReplicationMethods._maybeSetUpReplication.call(collection, 'local-security-test');
+  const marker = 'meteorReplicationPrototypeMarker';
+  try {
+    await store.update({msg: 'added', id: 'safe', fields: {ordinary: 1}});
+    await store.update({msg: 'changed', id: 'safe', fields: JSON.parse('{"__proto__":{}}')});
+    test.isTrue(Object.prototype.hasOwnProperty.call(await collection.findOneAsync('safe'), '__proto__'));
+    await store.update({msg: 'changed', id: 'safe', fields: {[`__proto__.${marker}`]: 2}});
+    test.isFalse(Object.prototype.hasOwnProperty.call(Object.prototype, marker));
+    let doc = await collection.findOneAsync('safe');
+    test.equal(doc.__proto__[marker], 2);
+    await store.update({msg: 'changed', id: 'safe', fields: JSON.parse('{"__proto__":{"kept":true}}')});
+    doc = await collection.findOneAsync('safe');
+    test.equal(Object.getPrototypeOf(doc), Object.prototype);
+    test.isTrue(Object.prototype.hasOwnProperty.call(doc, '__proto__'));
+    test.equal(doc.__proto__, {kept: true});
+    await store.update({msg: 'changed', id: 'safe', fields: {['__proto__']: undefined, ordinary: 3}});
+    doc = await collection.findOneAsync('safe');
+    test.isFalse(Object.prototype.hasOwnProperty.call(doc, '__proto__'));
+    test.equal(doc.ordinary, 3);
+  } finally {
+    delete Object.prototype[marker];
+  }
+});
 
 // This is a magic collection that fails its writes on the server when
 // the selector (or inserted document) contains fail: true.
