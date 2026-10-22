@@ -5,7 +5,14 @@ export default defineConfig({
   title: "Meteor 3.0 Migration Guide",
   description: "Guide on migrating from Meteor 2.x to Meteor 3.0",
   lang: 'en-US',
-  head: [["link", { rel: "icon", href: "/logo.png" }]],
+  head: [
+    ["link", { rel: "icon", href: "/logo.png" }],
+    ["script", {
+      defer: "",
+      "data-domain": "meteor.com",
+      src: "https://plausible.io/js/script.js"
+    }]
+  ],
   lastUpdated: true,
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
@@ -17,10 +24,13 @@ export default defineConfig({
         text: "Guide",
         items: [
           {text: "Overview", link: "/"},
+          {text: "Migration Strategy", link: "/guide/migration-strategy"},
           {text: "Frequently Asked Questions", link: "/frequently-asked-questions/"},
           {text: "Breaking Changes", link: "/breaking-changes/"},
           {text: "Meteor.call x Meteor.callAsync", link: "/breaking-changes/call-x-callAsync"},
           {text: "Upgrading packages", link: "/breaking-changes/upgrading-packages"},
+          {text: "Package Replacements", link: "/guide/package-replacements"},
+          {text: "Removing Fibers Patterns", link: "/guide/removing-fibers"},
           {text: "Publishing Packages", link: "/guide/publishing-packages"},
           {text: "Common Errors", link: "/guide/common-errors"},
         ]

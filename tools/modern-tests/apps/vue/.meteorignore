@@ -1,2 +1,0 @@
-# Ignore client/main.css file so that is processed by Rspack import
-client/main.css

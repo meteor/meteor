@@ -1335,6 +1335,18 @@ const green =
 const blue =
   (text, ...values) =>
     `\x1b[34m${ String.raw({ raw: text }, ...values) }\x1b[0m`;
+const cyan =
+  (text, ...values) =>
+    `\x1b[36m${ String.raw({ raw: text }, ...values) }\x1b[0m`;
+const dim =
+  (text, ...values) =>
+    `\x1b[2m${ String.raw({ raw: text }, ...values) }\x1b[0m`;
+const bold =
+  (text, ...values) =>
+    `\x1b[1m${ String.raw({ raw: text }, ...values) }\x1b[0m`;
+
+const link = (url, text) =>
+  `\x1b]8;;${url}\x07${text}\x1b]8;;\x07`;
 
 const colors = {
   yellow,
@@ -1342,6 +1354,10 @@ const colors = {
   purple,
   green,
   blue,
+  cyan,
+  dim,
+  bold,
+  link,
 };
 
 exports.colors = colors;

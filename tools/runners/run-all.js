@@ -118,6 +118,18 @@ class Runner {
       mongoUrl = 'no-mongo-server';
     }
 
+    // Note: the HMR server is started here whenever the app uses
+    // `hot-module-replacement`, regardless of build mode. That includes
+    // `meteor test` and `meteor test --full-app`, even though HMR is
+    // effectively a no-op in those runs. The compile layer
+    // (`tools/isobuild/compiler-plugin.js`, `hmrAvailable`) gates HMR on
+    // `buildMode === 'development'`, and test runs build with
+    // `buildMode: 'test'` (set in `tools/cli/commands.js` and preserved
+    // above in the NODE_ENV/buildMode block, which explicitly notes
+    // "We *never* override buildMode (it can be 'test')"). The client side
+    // of the `hot-module-replacement` package is responsible for bailing
+    // out of its WebSocket connection when `Meteor.isTest` or
+    // `Meteor.isAppTest` is set, so we don't need an extra guard here.
     const hasHotModuleReplacementPackage = packageMap &&
         packageMap.getInfo('hot-module-replacement') != null;
     self.hmrServer = null;
@@ -218,7 +230,7 @@ class Runner {
           { arrow: true }
         );
       } else {
-        runLog.log("App running at: " + self.rootUrl,  { arrow: true });
+        runLog.log("App running at " + self.rootUrl,  { arrow: true });
       }
 
       if (process.platform === "win32") {

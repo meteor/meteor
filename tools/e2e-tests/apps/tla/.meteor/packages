@@ -1,0 +1,8 @@
+# Meteor packages used by this project, one per line.
+
+meteor-base
+ecmascript
+typescript
+shell-server
+rspack
+meteortesting:mocha@3.4.0

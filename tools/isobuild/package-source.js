@@ -500,6 +500,9 @@ Object.assign(PackageSource.prototype, {
   // - name: override the name of this package with a different name.
   // - buildingIsopackets: true if this is being scanned in the process
   //   of building isopackets
+  // - buildingSelfTestCatalog: true if this is being scanned by
+  //   newSelfTestCatalog. Causes versionsFrom() to no-op so the scan
+  //   does not depend on catalog.official being warm.
   initFromPackageDir: Profile((dir, options) => {
     return `PackageSource#initFromPackageDir for ${
       options?.name || dir.split(files.pathSep).pop()
@@ -664,7 +667,8 @@ Object.assign(PackageSource.prototype, {
     // exist in the field, if not every single one. #OldStylePackageSupport
 
     var api = new PackageAPI({
-      buildingIsopackets: !! initFromPackageDirOptions.buildingIsopackets
+      buildingIsopackets: !! initFromPackageDirOptions.buildingIsopackets,
+      buildingSelfTestCatalog: !! initFromPackageDirOptions.buildingSelfTestCatalog,
     });
 
     if (Package._fileAndDepLoader) {
@@ -831,6 +835,18 @@ Object.assign(PackageSource.prototype, {
             relPathToSourceObj[source.relPath] = source;
           });
 
+          // Files explicitly declared as assets (api.addAssets) must not be
+          // re-discovered as compilable sources by _findSources below. Assets are
+          // tracked per-arch, but an asset declared on ANY arch (e.g. a `.html`
+          // fixture added for 'server') must never be scanned back in as a source
+          // on a DIFFERENT arch where its extension is claimed by a compiler (e.g.
+          // the web/templating html compiler) — that hands a raw asset to the
+          // wrong compiler and aborts the build with a spurious compile error
+          // (see spacebars-tests' assets/markdown_basic.html). Gather asset paths
+          // across all arches; an explicit asset declaration always wins.
+          const assets = Object.values(api.files).flatMap(files => (files.assets || []).map(asset => asset.relPath));
+          const assetRelPaths = new Set(assets);
+
           self._findSources({
             sourceProcessorSet,
             watchSet,
@@ -850,7 +866,7 @@ Object.assign(PackageSource.prototype, {
                 fileOptions.lazy = false;
               }
 
-            } else {
+            } else if (!assetRelPaths.has(relPath)) {
               const fileOptions = Object.create(null);
 
               // Since this file was not explicitly added with
