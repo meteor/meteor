@@ -1,6 +1,7 @@
 name: E2E Accounts
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - 'packages/accounts-*/**'
