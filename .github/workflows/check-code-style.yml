@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22.x
+          node-version: 22.23.4
       - run: npm ci
       - name: Check formatting with oxfmt
         run: npx oxfmt --ignore-path .fmtignore --check .

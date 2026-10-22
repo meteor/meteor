@@ -69,6 +69,10 @@ jobs:
             ${{ runner.os }}-meteor-tools-
             ${{ runner.os }}-meteor-
 
+      - name: Verify Meteor Node runtime
+        run: |
+          ./meteor node -e "if (process.version !== 'v22.23.4') throw new Error('Unexpected Meteor runtime: ' + process.version); console.log(process.version)"
+
       - name: Prepare Meteor
         if: steps.meteor-cache.outputs.cache-hit != 'true'
         timeout-minutes: 65
