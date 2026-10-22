@@ -100,6 +100,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      - name: Prepare SWC native binding cache
+        run: |
+          # GitHub's shared HOME mount has a writable parent that SWC's native
+          # loader rejects. Keep its security checks and use a private directory
+          # below /tmp, whose sticky bit protects the parent.
+          swc_binding_cache=$(mktemp -d /tmp/meteor-swc-native.XXXXXX)
+          echo "SWC_NATIVE_BINDING_CACHE=$swc_binding_cache" >> "$GITHUB_ENV"
+
       - name: Cache dependencies
         id: deps-cache
         uses: actions/cache@v4
@@ -139,6 +147,10 @@ jobs:
 
       - name: Prepare Meteor
         if: steps.deps-cache.outputs.cache-hit != 'true'
+        env:
+          # --get-ready replaces package npm trees while it builds them. Polling
+          # avoids native subscriptions racing those transient directories.
+          METEOR_WATCH_FORCE_POLLING: "true"
         run: ./meteor --get-ready --allow-superuser
 
       - name: Run tests for ${{ matrix.category }}
