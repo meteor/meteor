@@ -13,8 +13,13 @@ const { linkLocalRspack: _linkLocalRspack } = require('../scripts/link-rspack');
 const npmLinkLocalRspack = process.env.NPM_LINK_RSPACK !== 'false';
 
 async function linkLocalRspack(appDir) {
-  if (!npmLinkLocalRspack) return;
-  await _linkLocalRspack(appDir);
+  if (npmLinkLocalRspack) {
+    await _linkLocalRspack(appDir);
+  } else {
+    // Install the published Rspack dependencies before this build-only test.
+    await runMeteorCommand("update", ["--npm"], appDir, { checkExitCode: true });
+    await runMeteorCommand("npm", ["install"], appDir, { checkExitCode: true });
+  }
 }
 
 describe("Regressions / CordovaModernDefault /", () => {
