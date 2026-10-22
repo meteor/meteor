@@ -4,6 +4,9 @@ import os from 'os';
 
 import { runMeteorCommand, cleanupTempDir } from './helpers';
 
+// Keep checkout tests on fixtures whose package constraints support Meteor 3.4.
+const EXAMPLES_REF = '51987235640a212e64d6c01518703cf197ae8530';
+
 function tempApp(prefix) {
   const suffix = Math.random().toString(36).substring(2, 10);
   const appName = `meteortest-${prefix}-${suffix}`;
@@ -23,7 +26,7 @@ describe('Examples /', () => {
     const { appName, tempDir } = tempApp('example');
     try {
       await runMeteorCommand(
-        'create', ['--example', 'tic-tac-toe', appName], os.tmpdir(),
+        'create', ['--example', 'simple-tasks', appName], os.tmpdir(),
         { checkExitCode: true }
       );
       expect(fs.existsSync(path.join(tempDir, '.meteor'))).toBe(true);
@@ -51,7 +54,7 @@ describe('Examples /', () => {
       await runMeteorCommand(
         'create', [
           '--from', 'https://github.com/meteor/examples',
-          '--from-branch', 'main',
+          '--from-branch', EXAMPLES_REF,
           '--from-dir', 'parties',
           appName
         ], os.tmpdir(),
@@ -69,7 +72,7 @@ describe('Examples /', () => {
       await expect(runMeteorCommand(
         'create', [
           '--from', 'https://github.com/meteor/examples',
-          '--from-branch', 'main',
+          '--from-branch', EXAMPLES_REF,
           '--from-dir', 'this-dir-does-not-exist',
           appName
         ], os.tmpdir(),
@@ -101,7 +104,7 @@ describe('Examples /', () => {
     try {
       await runMeteorCommand(
         'create', [
-          '--from', 'https://github.com/meteor/examples/tree/main/parties',
+          '--from', `https://github.com/meteor/examples/tree/${EXAMPLES_REF}/parties`,
           appName
         ], os.tmpdir(),
         { checkExitCode: true }
