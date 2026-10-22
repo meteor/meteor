@@ -112,6 +112,13 @@ jobs:
             ${{ runner.os }}-meteor-tools-
             ${{ runner.os }}-meteor-
 
+      - name: Prepare non-root self-test user
+        run: |
+          id circleci
+          # Match the original CircleCI user; root emits CLI warnings that
+          # invalidate exact-output self-tests in Meteor 3.3.
+          chown -R circleci:circleci "$GITHUB_WORKSPACE" "$HOME"
+
       - name: Log environment
         run: |
           lsb_release -a
@@ -122,6 +129,7 @@ jobs:
           echo "Meteor NPM: $(./meteor npm --version)"
 
       - name: Running self-test (add debugOnly and prodOnly packages)
+        shell: runuser -u circleci --preserve-environment -- sh -e {0}
         timeout-minutes: 20
         run: |
           ulimit -c unlimited
@@ -131,6 +139,7 @@ jobs:
             --headless
 
       - name: Running self-test (Custom Warehouse Tests)
+        shell: runuser -u circleci --preserve-environment -- sh -e {0}
         timeout-minutes: 20
         run: |
           ulimit -c unlimited
@@ -183,6 +192,13 @@ jobs:
             ${{ runner.os }}-meteor-tools-
             ${{ runner.os }}-meteor-
 
+      - name: Prepare non-root self-test user
+        run: |
+          id circleci
+          # Match the original CircleCI user; root emits CLI warnings that
+          # invalidate exact-output self-tests in Meteor 3.3.
+          chown -R circleci:circleci "$GITHUB_WORKSPACE" "$HOME"
+
       - name: Log environment
         run: |
           lsb_release -a
@@ -193,6 +209,7 @@ jobs:
           echo "Meteor NPM: $(./meteor npm --version)"
 
       - name: Running self-test (Test Group 0)
+        shell: runuser -u circleci --preserve-environment -- sh -e {0}
         timeout-minutes: 35
         run: |
           mkdir -p tmp/results/junit
@@ -248,6 +265,13 @@ jobs:
             ${{ runner.os }}-meteor-tools-
             ${{ runner.os }}-meteor-
 
+      - name: Prepare non-root self-test user
+        run: |
+          id circleci
+          # Match the original CircleCI user; root emits CLI warnings that
+          # invalidate exact-output self-tests in Meteor 3.3.
+          chown -R circleci:circleci "$GITHUB_WORKSPACE" "$HOME"
+
       - name: Log environment
         run: |
           lsb_release -a
@@ -258,6 +282,7 @@ jobs:
           echo "Meteor NPM: $(./meteor npm --version)"
 
       - name: Running self-test (Test Group 1)
+        shell: runuser -u circleci --preserve-environment -- sh -e {0}
         timeout-minutes: 25
         run: |
           mkdir -p tmp/results/junit
@@ -319,6 +344,13 @@ jobs:
             ${{ runner.os }}-meteor-tools-
             ${{ runner.os }}-meteor-
 
+      - name: Prepare non-root self-test user
+        run: |
+          id circleci
+          # Match the original CircleCI user; root emits CLI warnings that
+          # invalidate exact-output self-tests in Meteor 3.3.
+          chown -R circleci:circleci "$GITHUB_WORKSPACE" "$HOME"
+
       - name: Log environment
         run: |
           lsb_release -a
@@ -331,6 +363,7 @@ jobs:
           gradle --version
 
       - name: Running self-test (Test Group 2)
+        shell: runuser -u circleci --preserve-environment -- sh -e {0}
         timeout-minutes: 25
         run: |
           mkdir -p tmp/results/junit
@@ -386,6 +419,13 @@ jobs:
             ${{ runner.os }}-meteor-tools-
             ${{ runner.os }}-meteor-
 
+      - name: Prepare non-root self-test user
+        run: |
+          id circleci
+          # Match the original CircleCI user; root emits CLI warnings that
+          # invalidate exact-output self-tests in Meteor 3.3.
+          chown -R circleci:circleci "$GITHUB_WORKSPACE" "$HOME"
+
       - name: Log environment
         run: |
           lsb_release -a
@@ -396,6 +436,7 @@ jobs:
           echo "Meteor NPM: $(./meteor npm --version)"
 
       - name: Running self-test (Test Group 3)
+        shell: runuser -u circleci --preserve-environment -- sh -e {0}
         timeout-minutes: 35
         run: |
           mkdir -p tmp/results/junit
@@ -451,6 +492,13 @@ jobs:
             ${{ runner.os }}-meteor-tools-
             ${{ runner.os }}-meteor-
 
+      - name: Prepare non-root self-test user
+        run: |
+          id circleci
+          # Match the original CircleCI user; root emits CLI warnings that
+          # invalidate exact-output self-tests in Meteor 3.3.
+          chown -R circleci:circleci "$GITHUB_WORKSPACE" "$HOME"
+
       - name: Log environment
         run: |
           lsb_release -a
@@ -461,6 +509,7 @@ jobs:
           echo "Meteor NPM: $(./meteor npm --version)"
 
       - name: Running self-test (Test Group 4)
+        shell: runuser -u circleci --preserve-environment -- sh -e {0}
         timeout-minutes: 25
         run: |
           mkdir -p tmp/results/junit
@@ -517,6 +566,13 @@ jobs:
             ${{ runner.os }}-meteor-tools-
             ${{ runner.os }}-meteor-
 
+      - name: Prepare non-root self-test user
+        run: |
+          id circleci
+          # Match the original CircleCI user; root emits CLI warnings that
+          # invalidate exact-output self-tests in Meteor 3.3.
+          chown -R circleci:circleci "$GITHUB_WORKSPACE" "$HOME"
+
       - name: Log environment
         run: |
           lsb_release -a
@@ -527,6 +583,7 @@ jobs:
           echo "Meteor NPM: $(./meteor npm --version)"
 
       - name: Running self-test (Test Group 5)
+        shell: runuser -u circleci --preserve-environment -- sh -e {0}
         timeout-minutes: 25
         run: |
           mkdir -p tmp/results/junit
@@ -582,6 +639,13 @@ jobs:
             ${{ runner.os }}-meteor-tools-
             ${{ runner.os }}-meteor-
 
+      - name: Prepare non-root self-test user
+        run: |
+          id circleci
+          # Match the original CircleCI user; root emits CLI warnings that
+          # invalidate exact-output self-tests in Meteor 3.3.
+          chown -R circleci:circleci "$GITHUB_WORKSPACE" "$HOME"
+
       - name: Log environment
         run: |
           lsb_release -a
@@ -592,6 +656,7 @@ jobs:
           echo "Meteor NPM: $(./meteor npm --version)"
 
       - name: Running self-test (Test Group 6)
+        shell: runuser -u circleci --preserve-environment -- sh -e {0}
         timeout-minutes: 25
         run: |
           mkdir -p tmp/results/junit
@@ -647,6 +712,13 @@ jobs:
             ${{ runner.os }}-meteor-tools-
             ${{ runner.os }}-meteor-
 
+      - name: Prepare non-root self-test user
+        run: |
+          id circleci
+          # Match the original CircleCI user; root emits CLI warnings that
+          # invalidate exact-output self-tests in Meteor 3.3.
+          chown -R circleci:circleci "$GITHUB_WORKSPACE" "$HOME"
+
       - name: Log environment
         run: |
           lsb_release -a
@@ -657,6 +729,7 @@ jobs:
           echo "Meteor NPM: $(./meteor npm --version)"
 
       - name: Running self-test (Test Group 7)
+        shell: runuser -u circleci --preserve-environment -- sh -e {0}
         timeout-minutes: 25
         run: |
           mkdir -p tmp/results/junit
@@ -712,6 +785,13 @@ jobs:
             ${{ runner.os }}-meteor-tools-
             ${{ runner.os }}-meteor-
 
+      - name: Prepare non-root self-test user
+        run: |
+          id circleci
+          # Match the original CircleCI user; root emits CLI warnings that
+          # invalidate exact-output self-tests in Meteor 3.3.
+          chown -R circleci:circleci "$GITHUB_WORKSPACE" "$HOME"
+
       - name: Log environment
         run: |
           lsb_release -a
@@ -722,6 +802,7 @@ jobs:
           echo "Meteor NPM: $(./meteor npm --version)"
 
       - name: Running self-test (Test Group 8)
+        shell: runuser -u circleci --preserve-environment -- sh -e {0}
         timeout-minutes: 25
         run: |
           mkdir -p tmp/results/junit
@@ -777,6 +858,13 @@ jobs:
             ${{ runner.os }}-meteor-tools-
             ${{ runner.os }}-meteor-
 
+      - name: Prepare non-root self-test user
+        run: |
+          id circleci
+          # Match the original CircleCI user; root emits CLI warnings that
+          # invalidate exact-output self-tests in Meteor 3.3.
+          chown -R circleci:circleci "$GITHUB_WORKSPACE" "$HOME"
+
       - name: Log environment
         run: |
           lsb_release -a
@@ -787,6 +875,7 @@ jobs:
           echo "Meteor NPM: $(./meteor npm --version)"
 
       - name: Running self-test (Test Group 9)
+        shell: runuser -u circleci --preserve-environment -- sh -e {0}
         timeout-minutes: 25
         run: |
           mkdir -p tmp/results/junit
@@ -842,6 +931,13 @@ jobs:
             ${{ runner.os }}-meteor-tools-
             ${{ runner.os }}-meteor-
 
+      - name: Prepare non-root self-test user
+        run: |
+          id circleci
+          # Match the original CircleCI user; root emits CLI warnings that
+          # invalidate exact-output self-tests in Meteor 3.3.
+          chown -R circleci:circleci "$GITHUB_WORKSPACE" "$HOME"
+
       - name: Log environment
         run: |
           lsb_release -a
@@ -852,6 +948,7 @@ jobs:
           echo "Meteor NPM: $(./meteor npm --version)"
 
       - name: Running self-test (Test Group 10)
+        shell: runuser -u circleci --preserve-environment -- sh -e {0}
         timeout-minutes: 25
         run: |
           mkdir -p tmp/results/junit
@@ -907,6 +1004,13 @@ jobs:
             ${{ runner.os }}-meteor-tools-
             ${{ runner.os }}-meteor-
 
+      - name: Prepare non-root self-test user
+        run: |
+          id circleci
+          # Match the original CircleCI user; root emits CLI warnings that
+          # invalidate exact-output self-tests in Meteor 3.3.
+          chown -R circleci:circleci "$GITHUB_WORKSPACE" "$HOME"
+
       - name: Log environment
         run: |
           lsb_release -a
@@ -917,6 +1021,7 @@ jobs:
           echo "Meteor NPM: $(./meteor npm --version)"
 
       - name: Running self-test (Test Group 11)
+        shell: runuser -u circleci --preserve-environment -- sh -e {0}
         timeout-minutes: 40
         run: |
           mkdir -p tmp/results/junit
