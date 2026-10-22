@@ -419,6 +419,63 @@ Tinytest.addAsync(
   }
 );
 
+Tinytest.add("webapp - _timeoutAdjustmentRequestCallback does not accumulate listeners", function (test) {
+  const EventEmitter = require('events').EventEmitter;
+
+  // Create mock req and res as EventEmitters with setTimeout
+  const req = new EventEmitter();
+  req.setTimeout = function () {};
+
+  const res = new EventEmitter();
+  res.setTimeout = function () {};
+
+  // Add an existing finish listener (simulating Node internals)
+  const existingListener = function () {};
+  res.on('finish', existingListener);
+
+  // Call the callback multiple times on the same res
+  WebApp._timeoutAdjustmentRequestCallback(req, res);
+  WebApp._timeoutAdjustmentRequestCallback(req, res);
+  WebApp._timeoutAdjustmentRequestCallback(req, res);
+
+  // Should have exactly 2 listeners: the timeout reset + the original
+  // NOT 2, 3, 4 growing with each call
+  const finishListeners = res.listeners('finish');
+  test.equal(finishListeners.length, 2,
+    `Expected 2 finish listeners, got ${finishListeners.length}`);
+
+  // The existing listener should still be present
+  test.isTrue(finishListeners.includes(existingListener),
+    "Original listener should still be registered");
+});
+
+Tinytest.add("webapp - _timeoutAdjustmentRequestCallback sets correct timeouts", function (test) {
+  const EventEmitter = require('events').EventEmitter;
+
+  const timeouts = { req: null, res: null };
+
+  const req = new EventEmitter();
+  req.setTimeout = function (ms) { timeouts.req = ms; };
+
+  const res = new EventEmitter();
+  res.setTimeout = function (ms) { timeouts.res = ms; };
+
+  WebApp._timeoutAdjustmentRequestCallback(req, res);
+
+  // Request timeout should be bumped to long timeout (120s)
+  test.equal(timeouts.req, 120 * 1000, "req timeout should be 120s");
+
+  // Simulate response finish
+  res.emit('finish');
+
+  // Response timeout should be reset to short timeout (5s)
+  test.equal(timeouts.res, 5 * 1000, "res timeout should be reset to 5s after finish");
+
+  // prependOnceListener should auto-remove after firing
+  test.equal(res.listeners('finish').length, 0,
+    "finish listener should be removed after firing (once semantics)");
+});
+
 Tinytest.addAsync("webapp - parse url queries", async function (test) {
   WebApp.handlers.get("/queries", async (req, res) => {
     res.json(req.query);
