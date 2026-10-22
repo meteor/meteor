@@ -131,6 +131,7 @@ jobs:
         run: npm run install:e2e
 
       - name: Set NPM_LINK_RSPACK=false for release branches
+        shell: bash
         run: |
           echo "Current branch: ${{ github.head_ref || github.ref_name }}"
           if [[ "${{ github.head_ref || github.ref_name }}" == release-* ]]; then
