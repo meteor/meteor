@@ -1,12 +1,79 @@
 import { MiniMongoQueryError } from 'meteor/minimongo/common';
 
-var randomId = Random.id();
-var OplogCollection = new Mongo.Collection("oplog-" + randomId);
-
 const DEFAULT_REACTIVITY = process.env.METEOR_REACTIVITY_ORDER ? process.env.METEOR_REACTIVITY_ORDER.split(',') : undefined;
 var IS_OPLOG = DEFAULT_REACTIVITY && DEFAULT_REACTIVITY[0] === 'oplog';
 
-if(!IS_OPLOG) return
+if (!IS_OPLOG) return;
+
+Tinytest.addAsync('mongo-livedata - review oplog replacements preserve ownership fields', async function(test) {
+  const name = 'review_oplog_' + Random.id();
+  const collection = new Mongo.Collection(name);
+  const raw = collection.rawCollection();
+  const oplog = MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
+  test.isTrue(!!oplog, 'This regression requires the oplog backend');
+  if (!oplog) return;
+
+  const added = [];
+  const replacements = [];
+  let observer;
+  let listener;
+  try {
+    await raw.insertMany([
+      {_id: 'blocked', owner: 'other', initial: true},
+      {_id: 'owned', owner: 'other', initial: true}
+    ]);
+    observer = await collection.find({owner: 'actor'}).observeChangesAsync({
+      added(id, fields) { added.push({id, fields}); }
+    });
+    test.isTrue(observer._multiplexer._observeDriver._usesOplog);
+    listener = await oplog.onOplogEntry({collection: name}, notification => {
+      const op = notification.op;
+      if (op.op === 'u' && op.o2 && ['blocked', 'owned'].includes(op.o2._id)) {
+        replacements.push({
+          id: op.o2._id,
+          fullDocument: !Object.prototype.hasOwnProperty.call(op.o, '$set') &&
+            !Object.prototype.hasOwnProperty.call(op.o, '$unset') &&
+            !Object.prototype.hasOwnProperty.call(op.o, 'diff'),
+          ownProto: Object.prototype.hasOwnProperty.call(op.o, '__proto__')
+        });
+      }
+    });
+
+    await raw.replaceOne({_id: 'blocked'}, JSON.parse(
+      '{"_id":"blocked","__proto__":{"owner":"actor"},"secret":"private-marker"}'
+    ));
+    await oplog.waitUntilCaughtUp();
+    await observer._multiplexer.onFlush(() => {});
+    test.equal(await collection.find({owner: 'actor'}).countAsync(), 0);
+    test.isFalse(added.some(event => event.id === 'blocked'),
+      'Nested ownership must not publish the private document');
+    if (added.some(event => event.id === 'blocked')) return;
+    test.equal(replacements, [{id: 'blocked', fullDocument: true, ownProto: true}]);
+
+    await raw.replaceOne({_id: 'owned'}, JSON.parse(
+      '{"_id":"owned","owner":"actor","__proto__":{"marker":"ordinary"},"public":"visible"}'
+    ));
+    await oplog.waitUntilCaughtUp();
+    await observer._multiplexer.onFlush(() => {});
+    const owned = added.find(event => event.id === 'owned');
+    test.isTrue(!!owned, 'An actual owner must still receive its document');
+    if (owned) {
+      test.equal(owned.fields.owner, 'actor');
+      test.equal(owned.fields.public, 'visible');
+      test.isTrue(Object.prototype.hasOwnProperty.call(owned.fields, '__proto__'));
+      test.equal(owned.fields.__proto__.marker, 'ordinary');
+      test.equal(Object.getPrototypeOf(owned.fields), Object.prototype);
+    }
+    test.equal(replacements[1], {id: 'owned', fullDocument: true, ownProto: true});
+  } finally {
+    if (listener) await listener.stop();
+    if (observer) await observer.stop();
+    await raw.deleteMany({});
+  }
+});
+
+var randomId = Random.id();
+var OplogCollection = new Mongo.Collection("oplog-" + randomId);
 
 Tinytest.addAsync('mongo-livedata - oplog - cursorSupported', async function(
   test
