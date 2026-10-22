@@ -594,6 +594,7 @@ jobs:
             --retries "$METEOR_SELF_TEST_RETRIES" \
             --exclude "$SELF_TEST_EXCLUDE" \
             --headless \
+            --history 10000 \
             --junit ./tmp/results/junit/5.xml \
             --without-tag "custom-warehouse"
 
