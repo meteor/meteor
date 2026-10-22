@@ -91,7 +91,7 @@ export class CssFile extends InputFile {
     const filePath = convertToPosixPath(path);
 
     const hash = optimisticHashOrNull(filePath);
-    const contents = optimisticReadFile(filePath);
+    const contents = hash !== null ? optimisticReadFile(filePath) : null;
     this._watchSet.addFile(filePath, hash);
 
     return {

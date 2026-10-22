@@ -1,18 +1,18 @@
 Package.describe({
   name: "socket-stream-client",
-  version: '0.5.3',
+  version: '0.7.1',
   summary: "Provides the ClientStream abstraction used by ddp-client",
   documentation: "README.md"
 });
 
 Npm.depends({
   "faye-websocket": "0.11.4",
-  "permessage-deflate": "0.1.7",
+  "permessage-deflate2": "0.1.8",
   "lodash.isequal": "4.5.0",
   "lodash.once": "4.1.1"
 });
 
-Package.onUse(function(api) {
+Package.onUse(function (api) {
   api.use("ecmascript");
   api.use("modern-browsers");
   api.use("retry"); // TODO Try to remove this.
@@ -23,7 +23,7 @@ Package.onUse(function(api) {
   api.mainModule("node.js", "server", { lazy: true });
 });
 
-Package.onTest(function(api) {
+Package.onTest(function (api) {
   api.use("ecmascript");
   api.use("tinytest");
   api.use("test-helpers");

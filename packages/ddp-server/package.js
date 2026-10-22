@@ -1,12 +1,17 @@
 Package.describe({
   summary: "Meteor's latency-compensated distributed data server",
-  version: "3.0.1",
+  version: '3.4.0',
   documentation: null,
 });
 
 Npm.depends({
-  "permessage-deflate": "0.1.7",
+  "uWebSockets.js": "git+https://github.com/unetworking/uWebSockets.js#v20.66.0",
+  "permessage-deflate2": "0.1.8",
   sockjs: "0.3.24",
+  "lodash.once": "4.1.1",
+  "lodash.isempty": "4.4.0",
+  "lodash.isstring": "4.0.1",
+  "lodash.isobject": "3.0.2"
 });
 
 Package.onUse(function (api) {
@@ -15,11 +20,11 @@ Package.onUse(function (api) {
       "check",
       "random",
       "ejson",
-      "underscore",
       "retry",
       "mongo-id",
       "diff-sequence",
       "ecmascript",
+      "typescript",
     ],
     "server"
   );
@@ -46,6 +51,10 @@ Package.onUse(function (api) {
   api.use("callback-hook", "server");
   api.export("DDPServer", "server");
 
+  api.addFiles("transports/raw_connection.js", "server");
+  api.addFiles("transports/sockjs.js", "server");
+  api.addFiles("transports/uws.js", "server");
+  api.addFiles("transports/index.js", "server");
   api.addFiles("stream_server.js", "server");
 
   api.addFiles("livedata_server.js", "server");
@@ -62,7 +71,6 @@ Package.onTest(function (api) {
   api.use("mongo", ["client", "server"]);
   api.use("test-helpers", ["client", "server"]);
   api.use([
-    "underscore",
     "tinytest",
     "random",
     "tracker",
@@ -74,4 +82,7 @@ Package.onTest(function (api) {
   api.addFiles("livedata_server_async_tests.js", "server");
   api.addFiles("session_view_tests.js", ["server"]);
   api.addFiles("crossbar_tests.js", ["server"]);
+  api.addFiles("raw_websocket_tests.js", "server");
+  api.addFiles("transports/uws_tests.js", "server");
+  api.addFiles("transports/sockjs_tests.js", "server");
 });

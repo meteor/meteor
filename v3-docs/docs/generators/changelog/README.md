@@ -32,7 +32,7 @@ organized changelog, since all the files will be reflecting at least one version
 
 ## Update ordering.
 
-If you want to make sure that the changelog is correcly ordered, take a look at the `order-packages.js` file.
+If you want to make sure that the changelog is correctly ordered, take a look at the `order-packages.js` file.
 to use it, run the command below:
 
 ```bash

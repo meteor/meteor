@@ -34,6 +34,8 @@ const packages = {
     // Ignored server files that has a features > 2016
     ignoredFiles: [
       "async_helpers.js",
+      "asynchronous_queue.js",
+      "test_environment.js",
     ]
   },
   "accounts-ui": {},
@@ -41,6 +43,7 @@ const packages = {
   autopublish: {},
   "babel-compiler": {
     serverFiles: ["babel.js", "babel-compiler.js"],
+    ignoredFiles: ["babel-compiler.js"],
   },
   "babel-runtime": {},
   "browser-policy": {},
@@ -83,7 +86,7 @@ const packages = {
   "logic-solver": {
     // TODO: Fibers - Legacy
     // Revisit when we remove fibers, this may break for legacy
-    ignoredFiles: ["logic.js", "optimize.js"],
+    ignoredFiles: ["logic.js", "optimize.js", "minisat.js"],
   },
   "meteor-base": {},
   "mobile-experience": {},
@@ -118,7 +121,6 @@ const packages = {
   typescript: {
     serverFiles: ["plugin.js"],
   },
-  underscore: {},
   url: {},
 };
 

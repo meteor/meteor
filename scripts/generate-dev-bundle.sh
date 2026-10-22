@@ -70,9 +70,8 @@ case $OS in
         ;;
 esac
 
-
 if [ $OS = "macos" ] && [ "$(uname -m)" = "arm64" ] ; then
-  MONGO_NAME="mongodb-${OS}-x86_64-${MONGO_VERSION}"
+  MONGO_NAME="mongodb-${OS}-arm64-${MONGO_VERSION}"
 elif [ $OS = "linux" ] && [ "$ARCH" = "aarch64" ] ; then
   MONGO_NAME="mongodb-linux-aarch64-ubuntu2204-${MONGO_VERSION}"
 else
@@ -83,6 +82,13 @@ MONGO_TGZ="${MONGO_NAME}.tgz"
 MONGO_URL="${MONGO_BASE_URL}/${MONGO_TGZ}"
 echo "Downloading Mongo from ${MONGO_URL}"
 curl -L "${MONGO_URL}" | tar zx
+
+# The tarball outputs as folder name "mongodb-macos-aarch64-X.X.X" even though the URL and the tarball name suggest "mongodb-macos-arm64-X.X.X"
+# So we need to rename the folder to match the expected folder name
+# Watch out for newer versions of the tarball that might already be named correctly
+if [ $OS = "macos" ] && [ "$(uname -m)" = "arm64" ] ; then
+  MONGO_NAME=$(echo "$MONGO_NAME" | sed 's/arm64/aarch64/g')
+fi
 
 # Put Mongo binaries in the right spot (mongodb/bin)
 mkdir -p "mongodb/bin"

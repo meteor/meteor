@@ -18,7 +18,7 @@ TEST_CASES.forEach(({ title, options, testCalls }) => {
           testCall(test, stream);
         });
       });
-      Promise.all(allPromises).then(() => resolver());
+      Promise.all(allPromises).then(() => resolver()).catch(console.error);
     });
     await promise;
   });

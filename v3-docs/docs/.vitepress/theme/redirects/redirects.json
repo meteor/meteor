@@ -1,4 +1,5 @@
 {
   "meteor_call": "meteor-call",
-  "ddp_connect": "DDP-connect"
+  "ddp_connect": "DDP-connect",
+  "changelog": "history"
 }

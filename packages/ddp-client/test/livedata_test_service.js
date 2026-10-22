@@ -1,10 +1,12 @@
+import has from 'lodash.has';
+
 Meteor.methods({
   nothing: function() {
     // No need to check if there are no arguments.
   },
-  echo: function(/* arguments */) {
+  echo: function(...args) {
     check(arguments, [Match.Any]);
-    return _.toArray(arguments);
+    return args;
   },
   echoOne: function(/*arguments*/) {
     check(arguments, [Match.Any]);
@@ -243,15 +245,14 @@ if (Meteor.isServer) {
     const collName = 'overlappingUniversalSubs';
     const universalSubscribers = [[], []];
 
-    _.each([0, 1], function(index) {
+    [0, 1].forEach(function(index) {
       Meteor.publish(null, function() {
         const sub = this;
         universalSubscribers[index].push(sub);
         sub.onStop(function() {
-          universalSubscribers[index] = _.without(
-            universalSubscribers[index],
-            sub
-          );
+          universalSubscribers[index] = universalSubscribers[index].filter(function(value) {
+            return value !== sub;
+          });
         });
       });
     });
@@ -259,13 +260,13 @@ if (Meteor.isServer) {
     Meteor.methods({
       testOverlappingSubs: function(token) {
         check(token, String);
-        _.each(universalSubscribers[0], function(sub) {
+        universalSubscribers[0].forEach(function(sub) {
           sub.added(collName, token, {});
         });
-        _.each(universalSubscribers[1], function(sub) {
+        universalSubscribers[1].forEach(function(sub) {
           sub.added(collName, token, {});
         });
-        _.each(universalSubscribers[0], function(sub) {
+        universalSubscribers[0].forEach(function(sub) {
           sub.removed(collName, token);
         });
       }
@@ -333,48 +334,51 @@ if (Meteor.isServer) {
 One = new Mongo.Collection('collectionOne');
 Two = new Mongo.Collection('collectionTwo');
 
-Meteor.startup(async () => {
-  if (Meteor.isServer) {
-    await One.removeAsync({});
-    await One.insertAsync({ name: 'value1' });
-    await One.insertAsync({ name: 'value2' });
+async function populateDatabase() {
+  await One.removeAsync({});
+  await One.insertAsync({ name: 'value1' });
+  await One.insertAsync({ name: 'value2' });
 
-    await Two.removeAsync({});
-    await Two.insertAsync({ name: 'value3' });
-    await Two.insertAsync({ name: 'value4' });
-    await Two.insertAsync({ name: 'value5' });
+  await Two.removeAsync({});
+  await Two.insertAsync({ name: 'value3' });
+  await Two.insertAsync({ name: 'value4' });
+  await Two.insertAsync({ name: 'value5' });
+}
 
-    Meteor.publish('multiPublish', function(options) {
-      // See below to see what options are accepted.
-      check(options, Object);
-      if (options.normal) {
-        return [One.find(), Two.find()];
-      } else if (options.dup) {
-        // Suppress the log of the expected internal error.
-        Meteor._suppress_log(1);
-        return [
-          One.find(),
-          One.find({ name: 'value2' }), // multiple cursors for one collection - error
-          Two.find(),
-        ];
-      } else if (options.notCursor) {
-        // Suppress the log of the expected internal error.
-        Meteor._suppress_log(1);
-        return [One.find(), 'not a cursor', Two.find()];
-      } else throw 'unexpected options';
-    });
-  }
-});
+if (Meteor.isServer) {
+  Meteor.publish('multiPublish', async function (options) {
+    // See below to see what options are accepted.
+    check(options, Object);
+
+    await populateDatabase();
+
+    if (options.normal) {
+      return [One.find(), Two.find()];
+    } else if (options.dup) {
+      // Suppress the log of the expected internal error.
+      Meteor._suppress_log(1);
+      return [
+        One.find(),
+        One.find({ name: 'value2' }), // multiple cursors for one collection - error
+        Two.find(),
+      ];
+    } else if (options.notCursor) {
+      // Suppress the log of the expected internal error.
+      Meteor._suppress_log(1);
+      return [One.find(), 'not a cursor', Two.find()];
+    } else throw 'unexpected options';
+  });
+}
 
 /// Helper for "livedata - result by value"
 const resultByValueArrays = Object.create(null);
 Meteor.methods({
   getArray: function(testId) {
-    if (!_.has(resultByValueArrays, testId)) resultByValueArrays[testId] = [];
+    if (!has(resultByValueArrays, testId)) resultByValueArrays[testId] = [];
     return resultByValueArrays[testId];
   },
   pushToArray: function(testId, value) {
-    if (!_.has(resultByValueArrays, testId)) resultByValueArrays[testId] = [];
+    if (!has(resultByValueArrays, testId)) resultByValueArrays[testId] = [];
     resultByValueArrays[testId].push(value);
   }
 });

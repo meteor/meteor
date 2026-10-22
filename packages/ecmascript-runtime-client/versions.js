@@ -9,6 +9,7 @@ setMinimumBrowserVersions({
   // (pre-Edge) from the modern classification. #9818 #9839
   ie: 12,
   firefox: 45,
+  firefoxIOS: 100,
   mobileSafari: 10,
   opera: 38,
   safari: 10,

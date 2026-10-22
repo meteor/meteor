@@ -1,6 +1,5 @@
 import { parse, serialize } from 'parse5';
 import { generateHTMLForArch } from './test-lib';
-import { _ } from 'meteor/underscore';
 
 Tinytest.addAsync(
   "boilerplate-generator-tests - web.browser - basic output",
@@ -65,10 +64,6 @@ Tinytest.addAsync(
     "elements when _.template settings are overridden",
   async function (test) {
     const newHtml = await generateHTMLForArch("web.browser", false);
-
-    _.templateSettings = {
-      interpolate: /\{\{(.+?)\}\}/g
-    };
 
     test.matches(newHtml, /foo="foobar"/);
     test.matches(newHtml, /<link[^<>]*href="[^<>]*bootstrap[^<>]*">/);

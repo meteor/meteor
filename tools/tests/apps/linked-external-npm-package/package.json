@@ -10,7 +10,7 @@
   "dependencies": {
     "@babel/runtime": "^7.23.5",
     "external-package": "file:../external-package",
-    "meteor-node-stubs": "^1.2.10"
+    "meteor-node-stubs": "^1.2.12"
   },
   "meteor": {
     "mainModule": {

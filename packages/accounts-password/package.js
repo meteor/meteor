@@ -5,15 +5,17 @@ Package.describe({
   // 2.2.x in the future. The version was also bumped to 2.0.0 temporarily
   // during the Meteor 1.5.1 release process, so versions 2.0.0-beta.2
   // through -beta.5 and -rc.0 have already been published.
-  version: "3.0.2",
+  version: '3.3.1',
 });
 
 Npm.depends({
-  bcrypt: "5.0.1",
+  bcrypt: "6.0.0",
+  argon2: "0.44.0",
+  "node-gyp-build": "4.8.4",
 });
 
 Package.onUse((api) => {
-  api.use(["accounts-base", "sha", "ejson", "ddp"], ["client", "server"]);
+  api.use(["accounts-base", "sha", "ddp"], ["client", "server"]);
 
   // Export Accounts (etc) to packages using this one.
   api.imply("accounts-base", ["client", "server"]);
@@ -40,10 +42,11 @@ Package.onTest((api) => {
     "email",
     "check",
     "ddp",
-    "ecmascript",
+    "ecmascript"
   ]);
   api.addFiles("password_tests_setup.js", "server");
   api.addFiles("password_tests.js", ["client", "server"]);
   api.addFiles("email_tests_setup.js", "server");
   api.addFiles("email_tests.js", "client");
+  api.addFiles("password_argon_tests.js", ["client", "server"]);
 });

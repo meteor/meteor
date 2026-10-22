@@ -3,10 +3,20 @@ import { Meteor } from 'meteor/meteor';
 import { Configuration } from 'meteor/service-configuration';
 import { DDP } from 'meteor/ddp';
 
+/**
+ * Object containing functions that generate URLs for account-related emails.
+ * Override these to customize URLs in password reset, enrollment, and verification emails.
+ * URL methods can return either a string or a Promise that resolves to a string.
+ */
 export interface URLS {
-  resetPassword: (token: string) => string;
-  verifyEmail: (token: string) => string;
-  enrollAccount: (token: string) => string;
+  /** Generates the URL for password reset emails. Can return a Promise for async URL generation. */
+  resetPassword: (token: string, extraParams?: Record<string, string>) => string | Promise<string>;
+  /** Generates the URL for email verification emails. Can return a Promise for async URL generation. */
+  verifyEmail: (token: string, extraParams?: Record<string, string>) => string | Promise<string>;
+  /** Generates the URL for login token emails. Can return a Promise for async URL generation. */
+  loginToken: (selector: string, token: string, extraParams?: Record<string, string>) => string | Promise<string>;
+  /** Generates the URL for account enrollment emails. Can return a Promise for async URL generation. */
+  enrollAccount: (token: string, extraParams?: Record<string, string>) => string | Promise<string>;
 }
 
 export interface EmailFields {
@@ -47,7 +57,7 @@ export namespace Accounts {
       profile?: Meteor.UserProfile | undefined;
     },
     callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
-  ): string;
+  ): Promise<string>;
 
   function createUserAsync(
     options: {
@@ -82,11 +92,19 @@ export namespace Accounts {
     passwordEnrollTokenExpirationInDays?: number | undefined;
     ambiguousErrorMessages?: boolean | undefined;
     bcryptRounds?: number | undefined;
+    argon2Enabled?: string | false;
+    argon2Type?: string | undefined;
+    argon2TimeCost: number | undefined;
+    argon2MemoryCost: number | undefined;
+    argon2Parallelism: number | undefined;
     defaultFieldSelector?: { [key: string]: 0 | 1 } | undefined;
     collection?: string | undefined;
     loginTokenExpirationHours?: number | undefined;
     tokenSequenceLength?: number | undefined;
-    clientStorage?: 'session' | 'local';
+  // Storage strategy for client tokens: 'local' (persist), 'session' (per-tab), or 'none' (in-memory only)
+  clientStorage?: 'session' | 'local' | 'none';
+  // Enable hybrid HttpOnly cookie + short-lived token flow
+  useHttpOnlyCookies?: boolean | undefined;
   }): void;
 
   function onLogin(
@@ -106,6 +124,8 @@ export namespace Accounts {
   function loginServicesConfigured(): boolean;
 
   function onPageLoadLogin(func: Function): void;
+
+  function loginWithTokenAsync(token: string): Promise<Meteor.LoginMethodResult>;
 }
 
 export namespace Accounts {
@@ -113,23 +133,23 @@ export namespace Accounts {
     oldPassword: string,
     newPassword: string,
     callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
-  ): void;
+  ): Promise<void>;
 
   function forgotPassword(
     options: { email?: string | undefined },
     callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
-  ): void;
+  ): Promise<void>;
 
   function resetPassword(
     token: string,
     newPassword: string,
     callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
-  ): void;
+  ): Promise<void>;
 
   function verifyEmail(
     token: string,
     callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
-  ): void;
+  ): Promise<void>;
 
   function onEmailVerificationLink(callback: Function): void;
 
@@ -143,11 +163,21 @@ export namespace Accounts {
 
   function logout(
     callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
-  ): void;
+  ): Promise<void>;
+
+  function logoutAsync(): Promise<void>;
+
+  function logoutAllClients(
+    callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
+  ): Promise<void>;
+
+  function logoutAllClientsAsync(): Promise<void>;
 
   function logoutOtherClients(
     callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
-  ): void;
+  ): Promise<void>;
+
+  function logoutOtherClientsAsync(): Promise<void>;
 
   type PasswordSignupField = 'USERNAME_AND_EMAIL' | 'USERNAME_AND_OPTIONAL_EMAIL' | 'USERNAME_ONLY' | 'EMAIL_ONLY';
   type PasswordlessSignupField = 'USERNAME_AND_EMAIL' | 'EMAIL_ONLY';
@@ -179,9 +209,11 @@ export interface EmailTemplates {
 export namespace Accounts {
   var emailTemplates: EmailTemplates;
 
-  function addEmail(userId: string, newEmail: string, verified?: boolean): void;
+  function addEmailAsync(userId: string, newEmail: string, verified?: boolean): Promise<void>;
 
-  function removeEmail(userId: string, email: string): void;
+  function removeEmail(userId: string, email: string): Promise<void>;
+
+  function replaceEmailAsync(userId: string, oldEmail: string, newEmail: string, verified?: boolean): Promise<void>;
 
   function onCreateUser(
     func: (options: { profile?: {} | undefined }, user: Meteor.User) => void
@@ -190,35 +222,52 @@ export namespace Accounts {
   function findUserByEmail(
     email: string,
     options?: { fields?: Mongo.FieldSpecifier | undefined }
-  ): Meteor.User | null | undefined;
+  ): Promise<Meteor.User | null | undefined>;
 
   function findUserByUsername(
     username: string,
     options?: { fields?: Mongo.FieldSpecifier | undefined }
-  ): Meteor.User | null | undefined;
+  ): Promise<Meteor.User | null | undefined>;
+
+  interface SendEmailOptions {
+    from: string;
+    to: string;
+    subject: string;
+    text: string;
+    html: string;
+    headers?: Header | undefined;
+  }
+
+  interface SendEmailResult {
+    email: string;
+    user: Meteor.User;
+    token: string;
+    url: string;
+    options: SendEmailOptions;
+  }
 
   function sendEnrollmentEmail(
     userId: string,
     email?: string,
     extraTokenData?: Record<string, unknown>,
     extraParams?: Record<string, unknown>
-  ): void;
+  ): Promise<SendEmailResult>;
 
   function sendResetPasswordEmail(
     userId: string,
     email?: string,
     extraTokenData?: Record<string, unknown>,
     extraParams?: Record<string, unknown>
-  ): void;
+  ): Promise<SendEmailResult>;
 
   function sendVerificationEmail(
     userId: string,
     email?: string,
     extraTokenData?: Record<string, unknown>,
     extraParams?: Record<string, unknown>
-  ): void;
+  ): Promise<SendEmailResult>;
 
-  function setUsername(userId: string, newUsername: string): void;
+  function setUsername(userId: string, newUsername: string): Promise<void>;
 
   function setPasswordAsync(
     userId: string,
@@ -250,16 +299,17 @@ export namespace Accounts {
 }
 
 export namespace Accounts {
-  function onLogout(func: Function): void;
-}
-
-export namespace Accounts {
+  function onLogout(func: Function): {
+    stop: () => void;
+  };
   function onLogout(
     func: (options: {
       user: Meteor.User;
       connection: Meteor.Connection;
     }) => void
-  ): void;
+  ): {
+    stop: () => void;
+  };
 }
 
 export namespace Accounts {
@@ -337,11 +387,11 @@ export namespace Accounts {
    * - a login method result object
    **/
   function registerLoginHandler(
-    handler: (options: any) => undefined | LoginMethodResult
+    handler: (options: any) => undefined | LoginMethodResult | Promise<undefined | LoginMethodResult>
   ): void;
   function registerLoginHandler(
     name: string,
-    handler: (options: any) => undefined | LoginMethodResult
+    handler: (options: any) => undefined | LoginMethodResult | Promise<undefined | LoginMethodResult>
   ): void;
 
   type Password =
@@ -353,16 +403,16 @@ export namespace Accounts {
 
   /**
    *
-   * Check whether the provided password matches the bcrypt'ed password in
+   * Check whether the provided password matches the encrypted password in
    * the database user record. `password` can be a string (in which case
-   * it will be run through SHA256 before bcrypt) or an object with
-   * properties `digest` and `algorithm` (in which case we bcrypt
+   * it will be run through SHA256 before bcrypt or argon2) or an object with
+   * properties `digest` and `algorithm` (in which case we bcrypt/argon2
    * `password.digest`).
    */
   function _checkPasswordAsync(
     user: Meteor.User,
     password: Password
-  ): Promise<{ userId: string; error?: any }>
+  ): Promise<{ userId: string; error?: any }>;
 }
 
 export namespace Accounts {

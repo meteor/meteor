@@ -40,10 +40,10 @@ The `meteor reset` command clears only the local cache by default. Using the `--
 
 This command is often recommended to fix your development project by clearing the cache. Previously, it also cleared the local MongoDB, which could accidentally delete important data.
 
-## Node v20
+## Node v22
 
-Meteor 3.0 is now using Node v20. This means that if you have any dependencies or usages
-of Node v14, you will need to update them to be compatible with Node v20.
+Meteor 3.0 is now using Node v22. This means that if you have any dependencies or usages
+of Node v14, you will need to update them to be compatible with Node v22.
 
 
 ## NPM Installer Update
@@ -119,13 +119,24 @@ await Meteor.callAsync('otherMethod') // [!code highlight]
 
 ```
 
-## WebApp Switches to Express
+## WebApp Switches to Express 5
+
 
 ::: tip
 
 WebApp has switched to Express from Connect. This upgrade lets you use all the Express features in your Meteor app.
 If you've customized the WebApp package before, please verify if those customizations work with Express.
 
+:::
+
+::: tip
+
+Starting with Meteor 3.1, Express has been updated to version 5. If you're upgrading from an earlier version, [refer to the migration guide](https://expressjs.com/en/guide/migrating-5.html).
+
+:::
+
+::: info
+You can start using the Express-based WebApp API while still on Meteor 2.x by installing [`harry97:webapp`](https://github.com/harryadel/harry97-webapp), a backport of Meteor 3's Express-based webapp for Meteor 2.17. This lets you migrate your middleware code before upgrading.
 :::
 
 The `webapp` package now exports these new properties:
@@ -331,3 +342,9 @@ function patchPublish(publish: typeof Meteor.publish) {
 ```
 
 This example demonstrates the migration applied to the [`universe:i18n` package](https://github.com/vazco/meteor-universe-i18n/pull/191).
+
+## Mongo driver
+
+In Meteor 3, the MongoDB driver has been updated to version 6.x. This version removes callbacks for async operations, replacing them with standard promises. If you use rawCollection or rawDatabase, ensure your code is updated to use promises.
+
+For details on breaking changes, see [here](https://github.com/mongodb/node-mongodb-native/blob/HEAD/HISTORY.md).

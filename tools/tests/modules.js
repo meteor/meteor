@@ -16,7 +16,11 @@ async function startRun(sandbox) {
   return run;
 }
 
-selftest.define('modules - test app', async function() {
+selftest.define('modules - test legacy app', async function() {
+  // Enable legacy transpiler for testing as babel compiler is used.
+  const currentMeteorModern = process.env.METEOR_MODERN;
+  process.env.METEOR_MODERN = '{ "transpiler": false }';
+
   const s = new Sandbox();
   await s.init();
 
@@ -45,6 +49,39 @@ selftest.define('modules - test app', async function() {
     await run.match('CLIENT FAILURES: 0');
     await run.expectExit(0);
   });
+
+  process.env.METEOR_MODERN = currentMeteorModern;
+});
+
+selftest.define('modules - test modern app', async function() {
+  const s = new Sandbox();
+  await s.init();
+
+  // Make sure we use the right "env" section of .babelrc.
+  s.set('NODE_ENV', 'development');
+
+  // For meteortesting:mocha to work we must set test browser driver
+  // See https://github.com/meteortesting/meteor-mocha
+  s.set('TEST_BROWSER_DRIVER', 'puppeteer');
+
+  await s.createApp('modules-modern-test-app', 'modules-modern');
+  await s.cd('modules-modern-test-app', async function() {
+    const run = s.run(
+        'test',
+        '--once',
+        '--full-app',
+        '--driver-package',
+        // Not running with the --full-app option here, in order to exercise
+        // the normal `meteor test` behavior.
+        "meteortesting:mocha"
+    );
+
+    run.waitSecs(60);
+    await run.match('App running at');
+    await run.match('SERVER FAILURES: 0');
+    await run.match('CLIENT FAILURES: 0');
+    await run.expectExit(0);
+  });
 });
 
 selftest.define('modules - unimported lazy files', async function() {
@@ -64,6 +101,10 @@ selftest.define('modules - unimported lazy files', async function() {
 // mainModule if one exists, otherwise will simply export Package['package'].
 // Overlaps with compiler-plugin.js's "install-packages.js" code.
 selftest.define('modules - import chain for packages', async () => {
+  // Enable legacy transpiler for testing as babel compiler is used.
+  const currentMeteorModern = process.env.METEOR_MODERN;
+  process.env.METEOR_MODERN = '{ "webArchOnly": false }';
+
   const s = new Sandbox({ fakeMongo: true });
   await s.init();
 
@@ -109,6 +150,8 @@ selftest.define('modules - import chain for packages', async () => {
   });
 
   await run.stop();
+
+  process.env.METEOR_MODERN = currentMeteorModern;
 });
 
 async function checkModernAndLegacyUrls(path, test) {

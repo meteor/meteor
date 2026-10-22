@@ -143,7 +143,7 @@ describe("dynamic import(...)", function () {
         assert.strictEqual(lazy.name, requiredName);
       }),
 
-      import("meteor/lazy-test-package/dynamic").then(dynamic => {
+      import("meteor/lazy-test-package/dynamic").then(async dynamic => {
         assert.strictEqual(
           dynamic.name,
           "/node_modules/meteor/lazy-test-package/dynamic.js"
@@ -152,7 +152,7 @@ describe("dynamic import(...)", function () {
         // Now the synchronous dynamic require succeeds because the module
         // has been fetched dynamically.
         assert.strictEqual(
-          require(dynamicId).name,
+          (await require(dynamicId)).name,
           dynamic.name
         );
       })

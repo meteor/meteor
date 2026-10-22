@@ -1,0 +1,20 @@
+{
+  // see https://guide.meteor.com/build-tool.html#typescript for a config example
+  "compilerOptions": {
+    "allowSyntheticDefaultImports": true, // to be able to import eg meteor/mongo
+    "baseUrl": ".", // required by "paths"
+    "module": "esNext", // required by "preserveValueImports"
+    "moduleResolution": "node", // required by zodern:types (not documented)
+    "paths": {
+      "/*": ["*"], // support absolute /imports/* with a leading '/'
+      // support Meteor/Atmospehere packages, required by zodern:types
+      "meteor/*": [
+        "node_modules/@types/meteor/*",
+        ".meteor/local/types/packages.d.ts"
+      ]
+    },
+    "preserveSymlinks": true, // required by zodern:types
+    "preserveValueImports": true // otherwise TS will remove imported components
+  },
+  "exclude": ["./.meteor/**", "!./.meteor/local/types", "./packages/**"] // this may solve VS Code Svelte plugin warnings
+}

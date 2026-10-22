@@ -2,10 +2,6 @@
 let nextSlot = 0;
 let callAsyncMethodRunning = false;
 
-const CURRENT_VALUE_KEY_NAME = "currentValue";
-const UPPER_CALL_DYNAMICS_KEY_NAME = "upperCallDynamics";
-
-const SLOT_CALL_KEY = "slotCall";
 /**
  * @memberOf Meteor
  * @summary Constructor for EnvironmentVariable
@@ -26,12 +22,11 @@ class EnvironmentVariableAsync {
    * @returns {any} The current value of the variable, or `undefined` if no
    */
   get() {
-    if (this.slot !== Meteor._getValueFromAslStore(SLOT_CALL_KEY)) {
-      const dynamics = Meteor._getValueFromAslStore(UPPER_CALL_DYNAMICS_KEY_NAME) || {};
+    let store = Meteor._getAslStore();
 
-      return dynamics[this.slot];
+    if (store && store.dynamics) {
+      return store.dynamics[this.slot];
     }
-    return Meteor._getValueFromAslStore(CURRENT_VALUE_KEY_NAME);
   }
 
   getOrNullIfOutsideFiber() {
@@ -48,48 +43,31 @@ class EnvironmentVariableAsync {
    * @returns {Promise<any>} The return value of the function
    */
   withValue(value, func, options = {}) {
-    const self = this;
-    const slotCall = self.slot;
-    const dynamics = Object.assign(
-      {},
-      Meteor._getValueFromAslStore(UPPER_CALL_DYNAMICS_KEY_NAME) || {}
-    );
+    let store = Meteor._getAslStore();
+    let dynamics = store && store.dynamics ? store.dynamics.slice() : [];
+    dynamics[this.slot] = value;
 
-    if (slotCall != null) {
-      dynamics[slotCall] = value;
+    let newStore = { dynamics: dynamics };
+
+    if (options) {
+      Object.assign(newStore, options);
     }
 
-    return Meteor._runAsync(
-      function () {
-        Meteor._updateAslStore(CURRENT_VALUE_KEY_NAME, value);
-        Meteor._updateAslStore(UPPER_CALL_DYNAMICS_KEY_NAME, dynamics);
-        return func();
-      },
-      self,
-      Object.assign(
-        {
-          callId: `${this.slot}-${Math.random()}`,
-          [SLOT_CALL_KEY]: this.slot,
-        },
-        options,
-      ),
-    );
+    return Meteor._getAsl().run(newStore, func);
   }
 
-  _set(context) {
-    const _meteor_dynamics =
-      Meteor._getValueFromAslStore("_meteor_dynamics") || [];
-    _meteor_dynamics[this.slot] = context;
+  _set(value) {
+    const dynamics = Meteor._getValueFromAslStore('dynamics') || [];
+    dynamics[this.slot] = value;
   }
 
   _setNewContextAndGetCurrent(value) {
-    let _meteor_dynamics = Meteor._getValueFromAslStore("_meteor_dynamics");
-    if (!_meteor_dynamics) {
-      _meteor_dynamics = [];
-    }
+    const dynamics = Meteor._getValueFromAslStore('dynamics') || [];
+    
+    const saved = dynamics[this.slot];
+    
+    dynamics[this.slot] = value;
 
-    const saved = _meteor_dynamics[this.slot];
-    this._set(value);
     return saved;
   }
 
@@ -145,8 +123,8 @@ Meteor.EnvironmentVariable = EnvironmentVariableAsync;
  * @return {Function} The wrapped function
  */
 Meteor.bindEnvironment = (func, onException, _this) => {
-  const dynamics = Meteor._getValueFromAslStore(CURRENT_VALUE_KEY_NAME);
-  const currentSlot = Meteor._getValueFromAslStore(SLOT_CALL_KEY);
+  let store = Meteor._getAsl().getStore();
+  let dynamics = store && store.dynamics ? store.dynamics.slice() : [];
 
   if (!onException || typeof onException === "string") {
     var description = onException || "callback of async function";
@@ -162,37 +140,21 @@ Meteor.bindEnvironment = (func, onException, _this) => {
   return function (/* arguments */) {
     var args = Array.prototype.slice.call(arguments);
 
-    var runWithEnvironment = function () {
-      return Meteor._runAsync(
-        () => {
-          let ret;
-          try {
-            if (currentSlot) {
-              Meteor._updateAslStore(CURRENT_VALUE_KEY_NAME, dynamics);
-            }
-            ret = func.apply(_this, args);
+    return Meteor._getAsl().run({
+      dynamics: dynamics
+    }, function () {
+      let ret;
+      try {
+        ret = func.apply(_this, args);
 
-            // Using this strategy to be consistent between client and server and stop always returning a promise from the server
-            if (Meteor._isPromise(ret)) {
-              ret = ret.catch(onException);
-            }
-          } catch (e) {
-            onException(e);
-          }
-          return ret;
-        },
-        _this,
-        {
-          callId: `bindEnvironment-${Math.random()}`,
-          [SLOT_CALL_KEY]: currentSlot,
+        // Using this strategy to be consistent between client and server and stop always returning a promise from the server
+        if (Meteor._isPromise(ret)) {
+          ret = ret.catch(onException);
         }
-      );
-    };
-
-    if (Meteor._getAslStore()) {
-      return runWithEnvironment();
-    }
-
-    return Meteor._getAsl().run({}, runWithEnvironment);
+      } catch (e) {
+        onException(e);
+      }
+      return ret;
+    });
   };
 };

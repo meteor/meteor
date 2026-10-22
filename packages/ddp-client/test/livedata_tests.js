@@ -1,5 +1,7 @@
-import { DDP } from '../common/namespace.js';
+import { Meteor } from 'meteor/meteor';
 import { Connection } from '../common/livedata_connection.js';
+import { DDP } from '../common/namespace.js';
+import { FlickerCollection, FlickerCollectionName } from './allow_deny_setup.js';
 
 const callWhenSubReady = async (subName, handle, cb = () => {}) => {
   let control = 0;
@@ -436,8 +438,7 @@ const eavesdropOnCollection = function(
   collection_name,
   messages
 ) {
-  const old_livedata_data = _.bind(
-    livedata_connection._livedata_data,
+  const old_livedata_data = livedata_connection._livedata_data.bind(
     livedata_connection
   );
 
@@ -481,7 +482,7 @@ if (Meteor.isClient) {
         ) {
           let actualAddedMessageCount = 0;
           let actualRemovedMessageCount = 0;
-          _.each(messages, function(msg) {
+          messages.forEach(function(msg) {
             if (msg.msg === 'added') ++actualAddedMessageCount;
             else if (msg.msg === 'removed') ++actualRemovedMessageCount;
             else test.fail({ unexpected: JSON.stringify(msg) });
@@ -490,10 +491,9 @@ if (Meteor.isClient) {
           test.equal(actualRemovedMessageCount, expectedRemovedMessageCount);
           expectedNamesInCollection.sort();
           test.equal(
-            _.pluck(
-              objectsWithUsers.find({}, { sort: ['name'] }).fetch(),
-              'name'
-            ),
+            objectsWithUsers.find({}, { sort: ['name'] }).fetch().map(function(x) {
+            return x.name;
+          }),
             expectedNamesInCollection
           );
           messages.length = 0; // clear messages without creating a new object
@@ -780,7 +780,7 @@ if (Meteor.isClient) {
         },
         function(test, expect) {
           test.equal(coll.find().count(), 0);
-          test.equal(_.size(conn._subscriptions), 0); // white-box test
+          test.equal(Object.keys(conn._subscriptions).length, 0); // white-box test
 
           conn.subscribe(
             'publisherErrors',
@@ -798,7 +798,7 @@ if (Meteor.isClient) {
           // Because the last subscription is ready, we should have a document.
           test.equal(coll.find().count(), 1);
           test.isFalse(errorFromRerun);
-          test.equal(_.size(conn._subscriptions), 1); // white-box test
+          test.equal(Object.keys(conn._subscriptions).length, 1); // white-box test
           conn.call(
             'setUserId',
             'bla',
@@ -813,7 +813,7 @@ if (Meteor.isClient) {
           test.instanceOf(errorFromRerun, Meteor.Error);
           test.equal(errorFromRerun.error, 412);
           test.equal(errorFromRerun.reason, 'Explicit error');
-          test.equal(_.size(conn._subscriptions), 0); // white-box test
+          test.equal(Object.keys(conn._subscriptions).length, 0); // white-box test
 
           conn.subscribe(
             'publisherErrors',
@@ -831,7 +831,7 @@ if (Meteor.isClient) {
           test.equal(coll.find().count(), 0);
           // sub.stop does NOT call onError.
           test.isFalse(gotErrorFromStopper);
-          test.equal(_.size(conn._subscriptions), 0); // white-box test
+          test.equal(Object.keys(conn._subscriptions).length, 0); // white-box test
           conn._stream.disconnect({ _permanent: true });
         },
       ];
@@ -877,7 +877,7 @@ if (Meteor.isClient) {
         },
         function(test, expect) {
           test.equal(coll.find().count(), 0);
-          test.equal(_.size(conn._subscriptions), 0); // white-box test
+          test.equal(Object.keys(conn._subscriptions).length, 0); // white-box test
 
           conn.subscribe(
             'publisherErrors',
@@ -895,12 +895,8 @@ if (Meteor.isClient) {
           // Because the last subscription is ready, we should have a document.
           test.equal(coll.find().count(), 1);
           test.isFalse(errorFromRerun);
-          test.equal(_.size(conn._subscriptions), 1); // white-box test
-          conn.call(
-            'setUserId',
-            'bla',
-            expect(function() {})
-          );
+          test.equal(Object.keys(conn._subscriptions).length, 1); // white-box test
+          conn.call('setUserId', 'bla', expect(function() {}));
         },
         function(test, expect) {
           // Now that we've re-run, we should have stopped the subscription,
@@ -910,7 +906,7 @@ if (Meteor.isClient) {
           test.instanceOf(errorFromRerun, Meteor.Error);
           test.equal(errorFromRerun.error, 412);
           test.equal(errorFromRerun.reason, 'Explicit error');
-          test.equal(_.size(conn._subscriptions), 0); // white-box test
+          test.equal(Object.keys(conn._subscriptions).length, 0); // white-box test
 
           const expected = expect();
           conn.subscribe(
@@ -931,7 +927,7 @@ if (Meteor.isClient) {
           test.equal(coll.find().count(), 0);
           // sub.stop does NOT call onError.
           test.isFalse(gotErrorFromStopper);
-          test.equal(_.size(conn._subscriptions), 0); // white-box test
+          test.equal(Object.keys(conn._subscriptions).length, 0); // white-box test
           conn._stream.disconnect({ _permanent: true });
         },
       ];
@@ -1198,6 +1194,168 @@ testAsyncMulti('livedata - methods with nested stubs', [
     }
   },
 ]);
+
+const collName = `test-collection`;
+const coll = new Mongo.Collection(collName);
+
+if (Meteor.isServer) {
+  Meteor.publish(`pub-${collName}`, function () {
+    return coll.find();
+  });
+}
+
+Meteor.methods({
+  [`insert-${collName}`]: async function() {
+    return await coll.insertAsync({ value: 1 });
+  },
+  [`update-${collName}`]: async function(id) {
+    return await coll.updateAsync(id, { $set: { value: 2 } });
+  },
+  [`remove-${collName}`]: async function(id) {
+    return await coll.removeAsync(id);
+  }
+});
+
+if (Meteor.isClient) {
+  Tinytest.addAsync('livedata - method updated message with subscriptions', async function (test) {
+    let messages = [];
+
+    const onMessage = message => messages.push(EJSON.parse(message));
+
+    Meteor.connection._stream.on('message', onMessage);
+
+    const sub = Meteor.subscribe(`pub-${collName}`);
+
+    await new Promise(resolve => {
+      const id = setInterval(() => {
+        if (sub.ready()) {
+          clearInterval(id);
+          resolve();
+        }
+      }, 10);
+    });
+
+    let insertId;
+    let resultId
+
+    try {
+      for (let i = 0; i < 250; i++) {
+        messages = [];
+
+        insertId = await Meteor.callAsync(`insert-${collName}`);
+
+        const hasResult = messages.some(msg => msg.msg === 'result');
+
+        resultId = messages.find(msg => msg.msg === 'result').id;
+
+        const hasAdded = messages.some(msg => msg.msg === 'added');
+        const hasUpdated = messages.some(msg =>
+          msg.msg === 'updated' && msg.methods?.includes(resultId)
+        );
+
+        test.isTrue(hasResult, `Iteration ${i}: Should receive RESULT message for insert`);
+        test.isTrue(hasAdded, `Iteration ${i}: Should receive ADDED message for insert`);
+        test.isTrue(hasUpdated, `Iteration ${i}: Should receive UPDATED message for insert`);
+
+        messages = [];
+
+        await Meteor.callAsync(`update-${collName}`, insertId);
+
+        const hasUpdateResult = messages.some(msg => msg.msg === 'result');
+
+        resultId = messages.find(msg => msg.msg === 'result').id;
+
+        const hasChanged = messages.some(msg => msg.msg === 'changed');
+        const hasUpdateUpdated = messages.some(msg =>
+          msg.msg === 'updated' && msg.methods?.includes(resultId)
+        );
+
+        test.isTrue(hasUpdateResult, `Iteration ${i}: Should receive RESULT message for update`);
+        test.isTrue(hasChanged, `Iteration ${i}: Should receive CHANGED message`);
+        test.isTrue(hasUpdateUpdated, `Iteration ${i}: Should receive UPDATED message for update`);
+
+        messages = [];
+
+        await Meteor.callAsync(`remove-${collName}`, insertId);
+
+        const hasRemoveResult = messages.some(msg => msg.msg === 'result');
+
+        resultId = messages.find(msg => msg.msg === 'result').id;
+
+        const hasRemoved = messages.some(msg => msg.msg === 'removed');
+        const hasRemoveUpdated = messages.some(msg =>
+          msg.msg === 'updated' && msg.methods?.includes(resultId)
+        );
+
+        test.isTrue(hasRemoveResult, `Iteration ${i}: Should receive RESULT message for remove`);
+        test.isTrue(hasRemoved, `Iteration ${i}: Should receive REMOVED message`);
+        test.isTrue(hasRemoveUpdated, `Iteration ${i}: Should receive UPDATED message for remove`);
+      }
+    } finally {
+      sub.stop();
+    }
+  });
+}
+
+if (Meteor.isClient) {
+  testAsyncMulti('livedata - allow/deny - no flicker with isomorphic calls', [
+    async function(test, expect) {
+      const docId = await FlickerCollection.insertAsync({
+        value: ['initial'],
+        test: test.runId()
+      });
+
+      let changeCount = 0;
+      const messages = [];
+
+      const handle = await FlickerCollection.find({ _id: docId }).observeChanges({
+        added(id, fields) {
+          messages.push(['added', id, fields]);
+        },
+        changed(id, fields) {
+          changeCount++;
+          messages.push(['changed', id, fields]);
+          
+          if (changeCount > 1) {
+            test.fail('Multiple changes detected - flicker occurred');
+          }
+
+          test.equal(fields.value.length, 2);
+          test.isTrue(fields.value.includes('updated'));
+        }
+      });
+
+      const sub = Meteor.subscribe(`pub-${FlickerCollectionName}`);
+      
+      await new Promise(resolve => {
+        const checkReady = setInterval(() => {
+          console.log('sub.ready()', sub.ready());
+          if (sub.ready()) {
+            clearInterval(checkReady);
+            resolve();
+          }
+        }, 10);
+      });
+
+      await FlickerCollection.updateAsync(docId, {
+        $addToSet: {
+          value: 'updated'
+        }
+      });
+
+      await Meteor._sleepForMs(200);
+
+      handle.stop();
+      sub.stop();
+      
+      test.equal(changeCount, 1, 'Expected exactly one change notification');
+      
+      test.equal(messages.length, 2);
+      test.equal(messages[0][0], 'added');
+      test.equal(messages[1][0], 'changed');
+    }
+  ]);
+}
 
 // TODO [FIBERS] - check if this still makes sense to have
 

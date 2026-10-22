@@ -1,25 +1,25 @@
 Package.describe({
   summary: "Serves a Meteor app over HTTP",
-  version: "2.0.2",
+  version: '2.3.0',
 });
 
 Npm.depends({
   "cookie-parser": "1.4.6",
-  express: "4.21.0",
-  "@types/express": "4.17.21",
+  express: "5.1.0",
+  "@types/express": "5.0.1",
   compression: "1.7.4",
   errorhandler: "1.5.1",
   parseurl: "1.3.3",
   send: "1.1.0",
   "stream-to-string": "1.2.1",
   qs: "6.13.0",
-  useragent: "2.3.0",
-  "@types/connect": "3.4.38",
+  "useragent-ng": "2.4.4",
+  "tmp": "0.2.3",
 });
 
 Npm.strip({
   multiparty: ["test/"],
-  useragent: ["test/"],
+  "useragent-ng": ["test/"],
 });
 
 // whitelist plugin is now included in the core
@@ -31,14 +31,13 @@ Package.onUse(function (api) {
   api.use("ecmascript");
   api.use(
     [
-      "logging",
-      "underscore",
-      "routepolicy",
-      "modern-browsers",
-      "boilerplate-generator",
-      "webapp-hashing",
-      "inter-process-messaging",
-      "callback-hook",
+      'logging',
+      'routepolicy',
+      'modern-browsers',
+      'boilerplate-generator',
+      'webapp-hashing',
+      'inter-process-messaging',
+      'callback-hook',
     ],
     "server"
   );
@@ -66,7 +65,6 @@ Package.onTest(function (api) {
     "ecmascript",
     "webapp",
     "http",
-    "underscore",
     "fetch",
     "test-helpers",
   ]);

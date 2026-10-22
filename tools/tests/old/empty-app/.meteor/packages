@@ -1,4 +1,5 @@
 # no packages
 
 meteor-base
+babel-compiler
 standard-minifiers

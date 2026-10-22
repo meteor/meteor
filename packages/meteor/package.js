@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: "Core Meteor environment",
-  version: '2.0.1',
+  version: '2.3.1',
 });
 
 Package.registerBuildPlugin({
@@ -34,12 +34,14 @@ Package.onUse(function (api) {
   api.addFiles('timers.js', ['client', 'server']);
   api.addFiles('errors.js', ['client', 'server']);
   api.addFiles('asl-helpers.js', 'server');
+  api.addFiles('asynchronous_queue.js', 'server');
   api.addFiles('async_helpers.js', ['client', 'server']);
   api.addFiles('fiber_stubs_client.js', 'client');
   api.addFiles('asl-helpers-client.js', 'client');
   api.addFiles('startup_client.js', ['client']);
   api.addFiles('startup_server.js', ['server']);
   api.addFiles('debug.js', ['client', 'server']);
+  api.addFiles('deprecate.js', ['client', 'server']);
   api.addFiles('string_utils.js', ['client', 'server']);
   api.addFiles('test_environment.js', ['client', 'server']);
 
@@ -53,6 +55,8 @@ Package.onUse(function (api) {
   api.addFiles('url_server.js', 'server');
   api.addFiles('url_common.js', ['client', 'server']);
 
+  api.addFiles('fetch.js', ['client', 'server']);
+
   // People expect process.exit() to not swallow console output.
   // On Windows, it sometimes does, so we fix it for all apps and packages
   api.addFiles('flush-buffers-on-exit-in-windows.js', 'server');
@@ -64,7 +68,7 @@ Package.onUse(function (api) {
 });
 
 Package.onTest(function (api) {
-  api.use(['underscore', 'tinytest', 'test-helpers']);
+  api.use(['tinytest', 'test-helpers']);
 
   api.addFiles('browser_environment_test.js', 'web.browser');
   api.addFiles('client_environment_test.js', 'client');
@@ -82,7 +86,7 @@ Package.onTest(function (api) {
 
   api.addFiles('debug_test.js', 'client');
 
-  api.addFiles('bare_test_setup.js', 'client', {bare: true});
+  api.addFiles('bare_test_setup.js', 'client', { bare: true });
   api.addFiles('bare_tests.js', 'client');
   //api.addFiles('asl_helpers_test.js', 'server');
   api.addFiles('emitter-promise-tests.js', 'server');

@@ -105,6 +105,34 @@ Internally, every profiled function should be wrapped into a `Profile(fn)` call.
 The entry point should be started explicitly with the `Profile.run()`
 call. Otherwise, it won't start measuring anything.
 
+### Inspector Profiling
+
+In addition to the standard profiler, you can use the more advanced inspector profiling:
+
+```bash
+# Profile a specific function (e.g. bundler.bundle)
+METEOR_INSPECT=bundler.bundle meteor run
+
+# Profile multiple functions
+METEOR_INSPECT=bundler.bundle,compiler.compile meteor build
+```
+
+Additional options:
+```bash
+# Output directory for .cpuprofile files
+METEOR_INSPECT_OUTPUT=/path/to/directory
+
+# Name to identify profile files
+METEOR_INSPECT_CONTEXT=project_xyz
+
+# Sampling interval (lower = more details, more memory)
+METEOR_INSPECT_INTERVAL=500
+```
+
+The generated `.cpuprofile` files can be opened in Chrome DevTools through the "Performance" or "Profiler" tab.
+
+For more details, see the `PERFORMANCE.md` file.
+
 ## Debugging
 
 Currently, to debug the tool with `node-inspector`, you can set the `

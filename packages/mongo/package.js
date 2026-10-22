@@ -9,7 +9,7 @@
 
 Package.describe({
   summary: "Adaptor for using MongoDB and Minimongo over DDP",
-  version: "2.0.2",
+  version: '2.5.1',
 });
 
 Npm.depends({
@@ -19,9 +19,8 @@ Npm.depends({
   "lodash.has": "4.5.2",
   "lodash.throttle": "4.1.1",
   "lodash.once": "4.1.1",
-  "lodash.identity": "3.0.0",
   "lodash.isobject": "3.0.2",
-  "lodash.clone": "4.5.0"
+  "lodash.clone": "4.5.0",
 });
 
 Npm.strip({
@@ -42,6 +41,7 @@ Package.onUse(function (api) {
     "mongo-id",
     "check",
     "ecmascript",
+    "typescript",
     "mongo-dev-server",
     "logging",
   ]);
@@ -50,8 +50,6 @@ Package.onUse(function (api) {
   api.use("mongo-decimal", "client", { weak: true });
   api.use("mongo-decimal", "server");
   //api.use('emitter-promise', 'server');
-
-  api.use("underscore", "server");
 
   // Binary Heap data structure is used to optimize oplog observe driver
   // performance.
@@ -81,43 +79,69 @@ Package.onUse(function (api) {
   api.export("MongoInternals", "server");
 
   api.export("Mongo");
+  api.export("CollectionExtensions");
   api.export("ObserveMultiplexer", "server", { testOnly: true });
 
   api.addFiles(
     [
       "mongo_driver.js",
-      "oplog_tailing.js",
-      "observe_multiplex.js",
+      "oplog_admin_command.js",
+      "oplog_replica_set_error.js",
+      "oplog_tailing.ts",
+      "observe_multiplex.ts",
       "doc_fetcher.js",
-      "polling_observe_driver.js",
+      "polling_observe_driver.ts",
       "oplog_observe_driver.js",
-      "oplog_v2_converter.js",
+      "oplog_v2_converter.ts",
+      "cursor_description.ts",
+      "mongo_connection.js",
+      "mongo_common.js",
+      "asynchronous_cursor.js",
+      "cursor.ts",
+      "shared_change_stream.js",
+      "changestream_observe_driver.js",
     ],
     "server"
   );
   api.addFiles("local_collection_driver.js", ["client", "server"]);
-  api.addFiles("remote_collection_driver.js", "server");
-  api.addFiles("collection.js", ["client", "server"]);
-  api.addFiles("connection_options.js", "server");
+  api.addFiles("remote_collection_driver.ts", "server");
+  api.addFiles("collection/collection_extensions.js", ["client", "server"]);
+  api.addFiles("collection/collection.js", ["client", "server"]);
+  api.addFiles("connection_options.ts", "server");
+  // For zodern:types to pick up our published types.
+  // Both the .d.ts file and package-types.json must be published
   api.addAssets("mongo.d.ts", "server");
+  api.addAssets("package-types.json", "server");
 });
 
 Package.onTest(function (api) {
-  api.use('mongo');
-  api.use('check');
-  api.use('ecmascript');
-  api.use('npm-mongo', 'server');
-  api.use(['tinytest', 'test-helpers', 'ejson', 'random',
-           'ddp', 'base64']);
+  api.use("mongo");
+  api.use("check");
+  api.use("ecmascript");
+  api.use("npm-mongo", "server");
+  api.use([
+    "tinytest",
+    "test-helpers",
+    "ejson",
+    "random",
+    "ddp",
+    "base64",
+    "typescript",
+  ]);
   // XXX test order dependency: the allow_tests "partial allow" test
   // fails if it is run before mongo_livedata_tests.
-  api.addFiles("mongo_livedata_tests.js", ["client", "server"]);
-  api.addFiles("upsert_compatibility_test.js", "server");
-  api.addFiles("allow_tests.js", ["client", "server"]);
-  api.addFiles("collection_tests.js", ["client", "server"]);
-  api.addFiles("collection_async_tests.js", ["client", "server"]);
-  api.addFiles("observe_changes_tests.js", ["client", "server"]);
-  api.addFiles("oplog_tests.js", "server");
-  api.addFiles("oplog_v2_converter_tests.js", "server");
-  api.addFiles("doc_fetcher_tests.js", "server");
+  api.addFiles("tests/mongo_livedata_tests.js", ["client", "server"]);
+  api.addFiles("tests/upsert_compatibility_test.js", "server");
+  api.addFiles("tests/allow_tests.js", ["client", "server"]);
+  api.addFiles("tests/collection_tests.js", ["client", "server"]);
+  api.addFiles("tests/collection_async_tests.js", ["client", "server"]);
+  api.addFiles("tests/observe_changes_tests.js", ["client", "server"]);
+  api.addFiles("tests/collection_extensions_tests.js", ["client", "server"]);
+  api.addFiles("tests/oplog_tests.js", "server");
+  api.addFiles("tests/oplog_admin_command_tests.js", "server");
+  api.addFiles("tests/oplog_replica_set_error_tests.js", "server");
+  api.addFiles("tests/changestream_observe_driver_tests.js", "server");
+  api.addFiles("tests/oplog_v2_converter_tests.js", "server");
+  api.addFiles("tests/doc_fetcher_tests.js", "server");
+  api.addFiles("tests/collation_tests.js", ["client", "server"]);
 });

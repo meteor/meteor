@@ -1,8 +1,8 @@
 # Reactive Dict
 
 A ReactiveDict stores an arbitrary set of key-value pairs. Use it to manage
-internal state in your components, ie. like the currently selected item in a list.
-Each key is individully reactive such that calling `set` for a key will
+internal state in your components, e.g. the currently selected item in a list.
+Each key is individually reactive such that calling `set` for a key will
 invalidate any Computations that called `get` with that key, according to the
 usual contract for reactive data sources.
 

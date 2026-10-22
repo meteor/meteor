@@ -1,6 +1,8 @@
 import Visitor from "@meteorjs/reify/lib/visitor.js";
 import { findPossibleIndexes } from "@meteorjs/reify/lib/utils.js";
 import { Babel } from "meteor/babel-compiler";
+import acorn from"acorn";
+
 
 // This RegExp will be used to scan the source for calls to meteorInstall,
 // taking into consideration that the function name may have been mangled
@@ -22,7 +24,22 @@ const meteorInstallRegExp = new RegExp([
 export function extractModuleSizesTree(source) {
   const match = meteorInstallRegExp.exec(source);
   if (match) {
-    const ast = Babel.parse(source);
+    try {
+      ast = acorn.parse(source, {
+        ecmaVersion: 'latest',
+        sourceType: 'script',
+        allowAwaitOutsideFunction: true,
+        allowImportExportEverywhere: true,
+        allowReturnOutsideFunction: true,
+        allowHashBang: true,
+        checkPrivateFields: false
+      });
+    }
+    catch(e){
+      console.log(`Error while parsing with acorn. Falling back to babel minifier. ${e}`);
+      ast = Babel.parse(source);
+    }
+    
     let meteorInstallName = "meteorInstall";
     // The minifier may have renamed meteorInstall to something shorter.
     match.some((name, i) => (i > 0 && (meteorInstallName = name)));

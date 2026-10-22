@@ -20,9 +20,9 @@ assert.strictEqual(
 import ganalytics from "ganalytics";
 assert.strictEqual(typeof ganalytics, "function");
 
-export function checkWhere(where) {
-  const { where: serverWhere } = require("./server/where.js");
-  const { where: clientWhere } = require("./client/where.js");
+export async function checkWhere(where) {
+  const { where: serverWhere } = await require("./server/where.js");
+  const { where: clientWhere } = await require("./client/where.js");
   assert.strictEqual(serverWhere, where);
   assert.strictEqual(clientWhere, where);
 }

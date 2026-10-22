@@ -183,6 +183,53 @@ Tinytest.addAsync("environment - bare bindEnvironment",
  * This won't work on the client due to the absence of ALS/AH
  */
 if (Meteor.isServer) {
+  Tinytest.addAsync("environment - defer and environment variables", async function (test) {
+    const varA = new Meteor.EnvironmentVariable("a");
+    const varB = new Meteor.EnvironmentVariable("b");
+
+    let deferOnly = null;
+
+    varA.withValue(1, () => {
+      varB.withValue(2, () => {
+        Meteor.defer(() => {
+          console.log('Defer', varA.get(), varB.get());
+
+          deferOnly = [varA.get(), varB.get()];
+        });
+      });
+    });
+
+    let deferWithBindEnv = null;
+
+    varA.withValue(1, () => {
+      varB.withValue(2, () => {
+        Meteor.defer(
+          Meteor.bindEnvironment(() => {
+            console.log('Defer + Bind', varA.get(), varB.get());
+
+            deferWithBindEnv = [varA.get(), varB.get()];
+          })
+        );
+      });
+    });
+
+    let raw = null;
+
+    varA.withValue(1, () => {
+      varB.withValue(2, () => {
+        console.log('Raw:', varA.get(), varB.get());
+
+        raw = [varA.get(), varB.get()];
+      });
+    });
+
+    await Meteor.sleep(100);
+
+    test.equal(deferOnly, [1, 2]);
+    test.equal(deferWithBindEnv, [1, 2]);
+    test.equal(raw, [1, 2]);
+  })
+
   Tinytest.addAsync('environment - preserve ev value async/await', async function (test) {
     let val1 = null;
     let val2 = null;

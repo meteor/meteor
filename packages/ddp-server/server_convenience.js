@@ -11,7 +11,7 @@ Meteor.refresh = async function (notification) {
 
 // Proxy the public methods of Meteor.server so they can
 // be called directly on Meteor.
-_.each(
+
   [
     'publish',
     'isAsyncCall',
@@ -22,8 +22,8 @@ _.each(
     'applyAsync',
     'onConnection',
     'onMessage',
-  ],
+  ].forEach(
   function(name) {
-    Meteor[name] = _.bind(Meteor.server[name], Meteor.server);
+    Meteor[name] = Meteor.server[name].bind(Meteor.server);
   }
 );

@@ -154,13 +154,69 @@
 //       other A: 350.0
 //     B: 100.0
 //
-// and in the leaf time report:
+// and in the leaf report:
 //
 //     other A: 350.0
 //     B: 250.0
 //
 // In both reports the grand total is 600ms.
 
+// Profiler Usage Documentation
+/**
+* To use the Meteor profiler:
+* 
+* 1. For basic profiling:
+* METEOR_PROFILE=1 meteor <command>
+* 
+* 2. For profiling with inspector (generating .cpuprofile files):
+* METEOR_INSPECT=bundler.bundle,<other_function_names> meteor <command>
+* 
+* 3. Additional settings:
+* METEOR_INSPECT_CONTEXT=context_name (identification for files)
+* METEOR_INSPECT_OUTPUT=path/to/directory (location where to save files)
+* 
+* 4. To view .cpuprofile files:
+* - Open Chrome DevTools
+* - Go to the "Performance" or "Profiler" tab
+* - Click "Load Profile" and select the .cpuprofile file
+*/
+
+import * as inspector from 'inspector';
+import * as fs from 'fs';
+import * as path from 'path';
+
+interface MeteorAsyncLocalStorage {
+  getStore: () => ProfileStore | undefined;
+  run: <T>(store: ProfileStore, fn: () => T) => T;
+}
+
+interface ProfileStore {
+  currentEntry: string[];
+  [key: string]: any;
+}
+
+declare global {
+  var __METEOR_ASYNC_LOCAL_STORAGE: MeteorAsyncLocalStorage;
+}
+
+interface InspectorConfigType {
+  enabled: boolean;
+  filter: string[];
+  context: string;
+  outputDir: string;
+  samplingInterval: number | undefined;
+  maxProfileSize: number;
+}
+
+const INSPECTOR_CONFIG: InspectorConfigType = {
+  enabled: !!process.env.METEOR_INSPECT,
+  filter: process.env.METEOR_INSPECT ? process.env.METEOR_INSPECT.split(',') : [],
+  context: process.env.METEOR_INSPECT_CONTEXT || '',
+  outputDir: process.env.METEOR_INSPECT_OUTPUT || path.join(process.cwd(), 'profiling'),
+  // Interval in ms (smaller = more details, but more memory)
+  samplingInterval: process.env.METEOR_INSPECT_INTERVAL ? parseInt(process.env.METEOR_INSPECT_INTERVAL || '1000', 10) : undefined,
+  maxProfileSize: parseInt(process.env.METEOR_INSPECT_MAX_SIZE || '2000', 10)
+};
 
 const filter = parseFloat(process.env.METEOR_PROFILE || "100"); // ms
 
@@ -230,7 +286,6 @@ function decodeEntryKey(key: string) {
   return key.split('\t');
 }
 
-const globalEntry: string[] = [];
 let running = false;
 
 export function Profile<
@@ -238,49 +293,330 @@ export function Profile<
   TResult,
 >(
   bucketName: string | ((...args: TArgs) => string),
-  f: (...args: TArgs) => TResult,
+  f: (...args: TArgs) => TResult | Promise<TResult>,
 ): typeof f {
-  if (! Profile.enabled) {
+  if (!Profile.enabled) {
     return f;
   }
 
   return Object.assign(function profileWrapper(this: any) {
-    if (! running) {
-      return f.apply(this, arguments as any);
+    const args = Array.from(arguments) as TArgs;
+
+    if (!running) {
+      return f.apply(this, args);
     }
 
-    const name = typeof bucketName === "function"
-      ? bucketName.apply(this, arguments as any)
-      : bucketName;
+    const asyncLocalStorage = global.__METEOR_ASYNC_LOCAL_STORAGE;
+    let store = asyncLocalStorage.getStore() || { currentEntry: [] };
 
-    // TODO Test with Profile / use __METEOR_ASYNC_LOCAL_STORAGE
-    //const currentStore = asyncLo
-    // const currentEntry = Fiber.current
-    //   ? Fiber.current.profilerEntry || (Fiber.current.profilerEntry = [])
-    //   : globalEntry;
-    const currentEntry = globalEntry;
+    const name = typeof bucketName === 'function' ? bucketName.apply(this, args) : bucketName;
+    
+    // callbacks with observer to track when the function finishes
+    const profileInfo = {
+      name,
+      isActive: false,
+      isCompleted: false,
+      startTime: Date.now()
+    };
 
-    currentEntry.push(name);
-    const key = encodeEntryKey(currentEntry);
-    const start = process.hrtime();
+    if (shouldRunInspectorProfiling(name)) {
+      profileInfo.isActive = startInspectorProfiling(name);
+      
+      if (profileInfo.isActive) {
+        const handleTermination = (context: string) => {
+          if (profileInfo.isActive && !profileInfo.isCompleted) {
+            return stopInspectorProfiling(name, true).catch(err => {
+              process.stdout.write(`[PROFILING_${context}] Error stopping profiling: ${err}\n`);
+            });
+          }
+          return Promise.resolve();
+        };
+
+        process.on('exit', () => { handleTermination('EXIT'); });
+
+        const signals = ['SIGINT', 'SIGTERM', 'SIGHUP'];
+        signals.forEach(signal => {
+          process.once(signal, () => {
+            handleTermination('SIGNAL').finally(() => {
+              process.exit(130);
+            });
+          });
+        });
+      }
+    }
+
+    const completeProfiler = () => {
+      if (profileInfo.isActive && !profileInfo.isCompleted) {
+        profileInfo.isCompleted = true;
+        return stopInspectorProfiling(name, true).catch(err => {
+          process.stdout.write(`[PROFILING_COMPLETE] Error stopping profiling: ${err}`);
+        });
+      }
+      return Promise.resolve();
+    };
+
+    function completeIfSync(result:  TResult | Promise<TResult>){
+      if (!(result instanceof Promise)) {
+        completeProfiler();
+      }
+    }
+
     try {
-      return f.apply(this, arguments as any);
-    } finally {
-      const elapsed = process.hrtime(start);
-      const stats = (bucketStats[key] || (bucketStats[key] = {
-        time: 0.0,
-        count: 0,
-        isOther: false,
-      }));
-      stats.time += (elapsed[0] * 1000 + elapsed[1] / 1000000);
-      stats.count++;
-      currentEntry.pop();
+      if (!asyncLocalStorage.getStore()) {
+        const result = asyncLocalStorage.run(store, () => 
+          runWithContext(name, store, f, this, args, completeProfiler));
+          
+        // For sync results, complete profiling here
+        completeIfSync(result)
+        return result;
+      }
+
+      // if there is already a store, use the current context
+      const result = runWithContext(name, store, f, this, args, completeProfiler);
+      
+      // For sync results, complete profiling here
+      completeIfSync(result)
+      return result;
+    } catch (error) {
+      completeProfiler();
+      throw error;
     }
   }, f) as typeof f;
 }
 
+// ================================
+// Inspector Profiling
+// ================================
+let inspectorActive = false;
+let rootSession: inspector.Session | null = null;
+let rootProfileName: string | null = null;
+let profileStartTime: number | null = null;
+
+function shouldRunInspectorProfiling(name: string): boolean {
+  if (!INSPECTOR_CONFIG.enabled) return false;
+  return INSPECTOR_CONFIG.filter.includes(name);
+}
+
+function startInspectorProfiling(name: string): boolean {
+  if (!shouldRunInspectorProfiling(name)) {
+    return false;
+  }
+
+  try {
+    if (rootSession) {
+      return false;
+    }
+    
+    profileStartTime = Date.now();
+    
+    // Open the inspector only if it's not active
+    if (!inspectorActive) {
+      inspector.open();
+      inspectorActive = true;
+    }
+    
+    // Create a single session for the duration of profiling
+    const session = new inspector.Session();
+    session.connect();
+    session.post('Profiler.enable');
+    session.post('Profiler.start', {
+      samplingInterval: INSPECTOR_CONFIG.samplingInterval
+    });
+
+    // Store the root session for later use
+    rootSession = session;
+    rootProfileName = name;
+    
+    return true;
+  } catch (err) {
+    process.stdout.write(`[PROFILING_START] Error starting profiling for ${name}: ${err}\n`);
+    return false;
+  }
+}
+
+function stopInspectorProfiling(name: string, isActive: boolean): Promise<void> {
+  if (!isActive || !rootSession || name !== rootProfileName) {
+    return Promise.resolve();
+  }
+  
+  return new Promise((resolve, reject) => {
+    try {
+      const duration = profileStartTime ? Date.now() - profileStartTime : 0;
+      const session = rootSession;
+      if (!session) {
+        return resolve();
+      }
+      
+      session.post('Profiler.stop', (err: Error | null, result: any) => {
+        if (err) {
+          cleanupAndResolve(resolve);
+          reject(err);
+          return;
+        }
+        
+        try {
+          // check if we have data in the profile
+          if (!result || !result.profile) {
+            console.error(`[PROFILING_STOP] Empty profile for ${name}`);
+            cleanupAndResolve(resolve);
+            return;
+          }
+          
+          // check the approximate size of the profile
+          const profileStr = JSON.stringify(result.profile);
+          const profileSize = profileStr.length / (1024 * 1024); // in MB
+          
+          process.stdout.write(`[PROFILING_STOP] Profile captured successfully for ${name}: ${JSON.stringify({
+            nodes: result.profile.nodes?.length || 0,
+            samples: result.profile.samples?.length || 0,
+            timeDeltas: result.profile.timeDeltas?.length || 0,
+            duration: duration,
+            size: profileSize.toFixed(2) + " MB"
+          })}`);
+          
+          if (profileSize > INSPECTOR_CONFIG.maxProfileSize) {
+            process.stdout.write(`[PROFILING_STOP] Profile too large (${profileSize.toFixed(2)}MB > ${INSPECTOR_CONFIG.maxProfileSize}MB)`);
+            process.stdout.write('[PROFILING_STOP] To avoid OOM, a reduced profile will be saved');
+            process.stdout.write('[PROFILING_STOP] Increase METEOR_INSPECT_MAX_SIZE or METEOR_INSPECT_INTERVAL to adjust');
+            
+            // Try to save a reduced profile
+            try {
+              // Simplify the profile to reduce size
+              const reducedProfile = {
+                nodes: result.profile.nodes?.slice(0, 10000) || [],
+                samples: result.profile.samples?.slice(0, 10000) || [],
+                timeDeltas: result.profile.timeDeltas?.slice(0, 10000) || [],
+                startTime: result.profile.startTime,
+                endTime: result.profile.endTime,
+                _warning: "profile truncated to avoid OOM. Use a larger interval."
+              };
+              
+              saveProfile(reducedProfile, name, `${name}_reduced`, duration);
+            } catch (reduceErr) {
+              process.stdout.write(`[PROFILING_STOP] Error saving reduced profile: ${reduceErr}`);
+            }
+            
+            cleanupAndResolve(resolve);
+            return;
+          }
+          
+          try {
+            saveProfile(result.profile, name, name, duration);
+          } catch (saveErr) {
+            process.stdout.write(`[PROFILING_STOP] Error saving profile: ${saveErr}`);
+          }
+          
+          cleanupAndResolve(resolve);
+        } catch (processErr) {
+          process.stdout.write(`[PROFILING_STOP] Error processing profile for ${name}: ${processErr}`);
+          cleanupAndResolve(resolve);
+          reject(processErr);
+        }
+      });
+    } catch (err) {
+      process.stdout.write(`[PROFILING_STOP] Error in stopInspectorProfiling for ${name}: ${err}`);
+      cleanupAndResolve(resolve);
+      reject(err);
+    }
+  });
+  
+  function cleanupAndResolve(resolve: (value?: void | PromiseLike<void>) => void) {
+    try {
+      if (rootSession) {
+        rootSession.post('Profiler.disable');
+        rootSession.disconnect();
+      }
+      
+      if (inspectorActive) {
+        inspector.close();
+        inspectorActive = false;
+      }
+      
+      rootSession = null;
+      rootProfileName = null;
+      profileStartTime = null;
+      
+      // Force GC if available
+      if (typeof global.gc === 'function') {
+        try {
+          global.gc();
+          process.stdout.write('[PROFILING_STOP] Garbage collector executed successfully');
+        } catch (gcErr) {
+          process.stdout.write(`[PROFILING_STOP] Error executing garbage collector: ${gcErr}`);
+        }
+      }
+      
+      return resolve();
+    } catch (cleanupErr) {
+      process.stdout.write(`[PROFILING_STOP] Error during cleanup: ${cleanupErr}`);
+      return resolve();
+    }
+  }
+}
+
+function saveProfile(profile: any, name: string, filename: string, duration: number): void {
+  if (!fs.existsSync(INSPECTOR_CONFIG.outputDir)) {
+    fs.mkdirSync(INSPECTOR_CONFIG.outputDir, { recursive: true });
+  }
+  
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const safeFilename = filename.replace(/[\/\\:]/g, '_');
+  const filepath = path.join(INSPECTOR_CONFIG.outputDir, `${safeFilename}-${INSPECTOR_CONFIG.context}-${timestamp}.cpuprofile`);
+  
+  fs.writeFileSync(filepath, JSON.stringify(profile));
+  
+  const profileSize = JSON.stringify(profile).length / (1024 * 1024);
+  
+  process.stdout.write(`[PROFILING_SAVE] Profile for ${name} saved in: ${filepath}`);
+  process.stdout.write(`[PROFILING_SAVE] Duration: ${duration}ms, size: ${profileSize.toFixed(2)}MB`);
+}
+
+function runWithContext<TArgs extends any[], TResult>(
+    bucketName: string | ((...args: TArgs) => string),
+    store: { currentEntry: string[]; [key: string]: any },
+    f: (...args: TArgs) => TResult | Promise<TResult>,
+    context: any,
+    args: any[],
+    completeProfiler: () => Promise<void>
+): TResult | Promise<TResult> {
+  const name = typeof bucketName === "function" ? bucketName.apply(context, args as TArgs) : bucketName;
+  store.currentEntry = [...store.currentEntry || [], name];
+  const key = encodeEntryKey(store.currentEntry);
+  const start = process.hrtime();
+
+  let result: TResult | Promise<TResult>;
+  try {
+    result = f.apply(context, args as TArgs);
+
+    if (result instanceof Promise) {
+      // Return a promise if async
+      return result.finally(() => finalizeProfiling(key, start, store.currentEntry, completeProfiler));
+    }
+
+    // Return directly if sync
+    return result;
+  } finally {
+    if (!(result! instanceof Promise)) {
+      finalizeProfiling(key, start, store.currentEntry, completeProfiler);
+    }
+  }
+}
+
+function finalizeProfiling(key: string, start: [number, number], currentEntry: string[], completeProfiler: () => Promise<void>) {
+  const elapsed = process.hrtime(start);
+  const stats = (bucketStats[key] || (bucketStats[key] = {
+    time: 0.0,
+    count: 0,
+    isOther: false,
+  }));
+  stats.time += elapsed[0] * 1000 + elapsed[1] / 1_000_000;
+  stats.count++;
+  currentEntry.pop();
+  completeProfiler();
+}
+
 export namespace Profile {
-  export let enabled = !! process.env.METEOR_PROFILE;
+  export let enabled = !! process.env.METEOR_PROFILE || !! process.env.METEOR_INSPECT;
 
   async function _runAsync<TResult>(bucket: string, f: () => TResult) {
     runningName = bucket;
@@ -511,3 +847,4 @@ function setupReport() {
     injectOtherTime(parent);
   });
 }
+

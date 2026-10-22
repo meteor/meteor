@@ -2,6 +2,11 @@ import has from 'lodash.has';
 import isEmpty from 'lodash.isempty';
 import { oplogV2V1Converter } from "./oplog_v2_converter";
 import { check, Match } from 'meteor/check';
+import { CursorDescription } from './cursor_description';
+import { forEachTrigger, listenAll } from './mongo_driver';
+import { Cursor } from './cursor';
+import LocalCollection from 'meteor/minimongo/local_collection';
+import { idForOp } from './oplog_tailing';
 
 var PHASE = {
   QUERYING: "QUERYING",
@@ -25,12 +30,22 @@ var finishIfNeedToPollQuery = function (f) {
 
 var currentId = 0;
 
-// OplogObserveDriver is an alternative to PollingObserveDriver which follows
-// the Mongo operation log instead of just re-polling the query. It obeys the
-// same simple interface: constructing it starts sending observeChanges
-// callbacks (and a ready() invocation) to the ObserveMultiplexer, and you stop
-// it by calling the stop() method.
-OplogObserveDriver = function (options) {
+/**
+ * @class OplogObserveDriver
+ * An alternative to PollingObserveDriver which follows the MongoDB operation log
+ * instead of re-polling the query.
+ *
+ * Characteristics:
+ * - Follows the MongoDB operation log
+ * - Directly observes database changes
+ * - More efficient than polling for most use cases
+ * - Requires access to MongoDB oplog
+ *
+ * Interface:
+ * - Construction initiates observeChanges callbacks and ready() invocation to the ObserveMultiplexer
+ * - Observation can be terminated via the stop() method
+ */
+export const OplogObserveDriver = function (options) {
   const self = this;
   self._usesOplog = true;  // tests look at this
 
@@ -72,6 +87,7 @@ OplogObserveDriver = function (options) {
     self._comparator = null;
     self._sorter = null;
     self._unpublishedBuffer = null;
+    // Memory Growth
     self._published = new LocalCollection._IdMap;
   }
 
@@ -113,12 +129,9 @@ OplogObserveDriver = function (options) {
 
   self._requeryWhenDoneThisQuery = false;
   self._writesToCommitWhenWeReachSteady = [];
-
-
-
  };
 
-_.extend(OplogObserveDriver.prototype, {
+Object.assign(OplogObserveDriver.prototype, {
   _init: async function() {
     const self = this;
 
@@ -512,37 +525,30 @@ _.extend(OplogObserveDriver.prototype, {
         self._currentlyFetching = self._needToFetch;
         var thisGeneration = ++self._fetchGeneration;
         self._needToFetch = new LocalCollection._IdMap;
-        var waiting = 0;
 
-        let promiseResolver = null;
-        const awaitablePromise = new Promise(r => promiseResolver = r);
-        // This loop is safe, because _currentlyFetching will not be updated
-        // during this loop (in fact, it is never mutated).
-        await self._currentlyFetching.forEachAsync(async function (op, id) {
-          waiting++;
-          await self._mongoHandle._docFetcher.fetch(
-            self._cursorDescription.collectionName,
-            id,
-            op,
-            finishIfNeedToPollQuery(function(err, doc) {
-              if (err) {
-                Meteor._debug('Got exception while fetching documents', err);
-                // If we get an error from the fetcher (eg, trouble
-                // connecting to Mongo), let's just abandon the fetch phase
-                // altogether and fall back to polling. It's not like we're
-                // getting live updates anyway.
-                if (self._phase !== PHASE.QUERYING) {
-                  self._needToPollQuery();
+        // Create an array of promises for all the fetch operations
+        const fetchPromises = [];
+
+        self._currentlyFetching.forEach(function (op, id) {
+          const fetchPromise = new Promise((resolve, reject) => {
+            self._mongoHandle._docFetcher.fetch(
+              self._cursorDescription.collectionName,
+              id,
+              op,
+              finishIfNeedToPollQuery(function(err, doc) {
+                if (err) {
+                  Meteor._debug('Got exception while fetching documents', err);
+                  // If we get an error from the fetcher (eg, trouble
+                  // connecting to Mongo), let's just abandon the fetch phase
+                  // altogether and fall back to polling. It's not like we're
+                  // getting live updates anyway.
+                  if (self._phase !== PHASE.QUERYING) {
+                    self._needToPollQuery();
+                  }
+                  resolve();
+                  return;
                 }
-                waiting--;
-                // Because fetch() never calls its callback synchronously,
-                // this is safe (ie, we won't call fut.return() before the
-                // forEach is done).
-                if (waiting === 0) promiseResolver();
-                return;
-              }
 
-              try {
                 if (
                   !self._stopped &&
                   self._phase === PHASE.FETCHING &&
@@ -552,20 +558,33 @@ _.extend(OplogObserveDriver.prototype, {
                   // _pollQuery call (eg, in another fiber) which should
                   // effectively cancel this round of fetches.  (_pollQuery
                   // increments the generation.)
-
-                  self._handleDoc(id, doc);
+                  try {
+                    self._handleDoc(id, doc);
+                    resolve();
+                  } catch (err) {
+                    reject(err);
+                  }
+                } else {
+                  resolve();
                 }
-              } finally {
-                waiting--;
-                // Because fetch() never calls its callback synchronously,
-                // this is safe (ie, we won't call fut.return() before the
-                // forEach is done).
-                if (waiting === 0) promiseResolver();
-              }
-            })
-          );
+              })
+            )
+          })
+          fetchPromises.push(fetchPromise);
         });
-        await awaitablePromise;
+        // Wait for all fetch operations to complete
+        try {
+          const results = await Promise.allSettled(fetchPromises);
+          const errors = results
+            .filter(result => result.status === 'rejected')
+            .map(result => result.reason);
+
+          if (errors.length > 0) {
+            Meteor._debug('Some fetch queries failed:', errors);
+          }
+        } catch (err) {
+          Meteor._debug('Got an exception in a fetch query', err);
+        }
         // Exit now if we've had a _pollQuery call (here or in another fiber).
         if (self._phase === PHASE.QUERYING)
           return;
@@ -1052,5 +1071,3 @@ var modifierCanBeDirectlyApplied = function (modifier) {
     });
   });
 };
-
-MongoInternals.OplogObserveDriver = OplogObserveDriver;
