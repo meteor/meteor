@@ -1,17 +1,11 @@
 name: Test Packages
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - "packages/**"
       - ".github/workflows/test-packages.yml"
-
-jobs:
-  test-packages:
-    runs-on: ubuntu-22.04
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
-      cancel-in-progress: true
 
 jobs:
   test-packages:

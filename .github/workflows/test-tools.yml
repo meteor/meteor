@@ -1,6 +1,7 @@
 name: Test Tools
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - "tools/**"
