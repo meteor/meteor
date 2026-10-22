@@ -1,5 +1,6 @@
 name: Check code-style
 on:
+  workflow_dispatch:
   push:
     paths:
       - 'packages/**'

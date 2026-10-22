@@ -1,5 +1,6 @@
 name: NPM eslint-plugin-meteor
 on:
+  workflow_dispatch:
   push:
     paths:
       - "npm-packages/eslint-plugin-meteor/**"
