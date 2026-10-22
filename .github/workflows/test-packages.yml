@@ -1,6 +1,7 @@
 name: Test Packages
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - "packages/**"
@@ -62,6 +63,10 @@ jobs:
           key: ${{ runner.os }}-meteor-${{ hashFiles('meteor', '**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-meteor-
+      - name: Verify Meteor Node runtime
+        run: |
+          ./meteor node -e "if (process.version !== 'v24.15.0') throw new Error('Unexpected Meteor runtime: ' + process.version); console.log(process.version)"
+
       - name: Run test-in-console suite
         run: |
           export TEST_PACKAGES_EXCLUDE="stylus"
@@ -71,4 +76,7 @@ jobs:
           export phantom="false"
           export TIMEOUT_SCALE_FACTOR="20"
           export METEOR_HEADLESS="true"
-          ./packages/test-in-console/run.sh
+          set -o pipefail
+          ./packages/test-in-console/run.sh 2>&1 | tee "$RUNNER_TEMP/meteor-package-tests.log"
+          grep -Eq '^Tests complete with 0 failures$' "$RUNNER_TEMP/meteor-package-tests.log"
+          grep -Eq '^Tests complete with [1-9][0-9]* passes$' "$RUNNER_TEMP/meteor-package-tests.log"

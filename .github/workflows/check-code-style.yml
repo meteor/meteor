@@ -1,5 +1,6 @@
 name: Check code-style
 on:
+  workflow_dispatch:
   push:
     paths:
       - 'packages/**'
@@ -18,7 +19,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 24.x
+          node-version: 24.15.0
       - run: npm ci
       - name: Check formatting with oxfmt
         run: npx oxfmt --ignore-path .fmtignore --check .
