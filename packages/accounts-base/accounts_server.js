@@ -6,7 +6,6 @@ import {
   EXPIRE_TOKENS_INTERVAL_MS,
 } from './accounts_common.js';
 import { URL } from 'meteor/url';
-import { check, Match } from 'meteor/check';
 import { Hook } from 'meteor/callback-hook';
 export const _CurrentEndpointInvocation = new Meteor.EnvironmentVariable();
 
