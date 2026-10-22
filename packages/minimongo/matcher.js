@@ -3,6 +3,7 @@ import {
   compileDocumentSelector,
   hasOwn,
   nothingMatcher,
+  setOwnProperty,
 } from './common.js';
 
 const Decimal = Package['mongo-decimal']?.Decimal || class DecimalStub {}
@@ -123,7 +124,7 @@ export default class Matcher {
   }
 
   _recordPathUsed(path) {
-    this._paths[path] = true;
+    setOwnProperty(this._paths, path, true);
   }
 }
 

@@ -24,6 +24,11 @@ Package.onUse(api => {
 Package.onTest(function(api) {
   api.use(['accounts-base', 'ecmascript', 'tinytest', 'sha']);
 
+  api.use(['accounts-passwordless', 'ddp', 'random'], 'server');
   api.addFiles('server_utils.js', 'server');
+  api.use('accounts-2fa', 'server');
+  api.addFiles('passwordless_user_token_tests.js', 'server');
+  api.addFiles('passwordless_login_race_tests.js', 'server');
+  api.addFiles('compatibility_runtime_tests.js', 'server');
   api.mainModule('server_tests.js', 'server');
 });

@@ -1,3 +1,98 @@
+Tinytest.add('minimongo - review projection preserves own-field rules', test => {
+  const doc = JSON.parse('{"_id":"preview","profile":{"__proto__":{"secret":"private-marker"},"public":1},"__proto__":{"secret":"private-marker"},"public":2}');
+  for (const fields of [
+    {'profile.__proto__': 0, ['__proto__']: 0},
+    {'profile.public': 1, public: 1},
+  ]) {
+    const result = LocalCollection._compileProjection(fields)(doc);
+    const serialized = EJSON.stringify(result);
+    test.isFalse(serialized.includes('private-marker'));
+    test.equal(result.profile.public, 1);
+    test.equal(result.public, 2);
+    test.isFalse(Object.prototype.hasOwnProperty.call(result, '__proto__'));
+    test.isFalse(Object.prototype.hasOwnProperty.call(result.profile, '__proto__'));
+    test.equal(Object.getPrototypeOf(result), Object.prototype);
+    test.equal(Object.getPrototypeOf(result.profile), Object.prototype);
+  }
+  const included = LocalCollection._compileProjection({['__proto__']: 1, 'profile.__proto__': 1})(doc);
+  test.isTrue(Object.prototype.hasOwnProperty.call(included, '__proto__'));
+  test.isTrue(Object.prototype.hasOwnProperty.call(included.profile, '__proto__'));
+  test.equal(included.__proto__.secret, 'private-marker');
+  test.equal(Object.getPrototypeOf(included), Object.prototype);
+  test.equal(Object.getPrototypeOf(included.profile), Object.prototype);
+  test.isUndefined(included.secret);
+  test.throws(() => LocalCollection._compileProjection({profile: 0, 'profile.public': 0}));
+});
+
+Tinytest.add('minimongo - review upsert keeps prototype-named data', test => {
+  const replacement = JSON.parse('{"__proto__":{"owner":"nested"},"public":1}');
+  for (const doc of [
+    LocalCollection._createUpsertDocument({_id: 'replacement'}, replacement),
+    LocalCollection._createUpsertDocument({['__proto__']: {owner: 'nested'}}, {$set: {public: 1}}),
+  ]) {
+    test.equal(Object.getPrototypeOf(doc), Object.prototype);
+    test.isTrue(Object.prototype.hasOwnProperty.call(doc, '__proto__'));
+    test.isUndefined(doc.owner);
+    test.equal(doc.__proto__.owner, 'nested');
+    test.equal(doc.public, 1);
+  }
+});
+
+Tinytest.add('minimongo - modifiers only traverse own document fields', test => {
+  const marker = 'meteorModifierPrototypeMarker';
+  try {
+    for (const prefix of ['__proto__', 'constructor.prototype', 'nested.__proto__', 'items.0.__proto__']) {
+      const doc = {_id: 'safe', items: [{}]};
+      LocalCollection._modify(doc, {$set: {[`${prefix}.${marker}`]: 7}});
+      test.isFalse(Object.prototype.hasOwnProperty.call(Object.prototype, marker));
+      test.equal(Object.getPrototypeOf(doc), Object.prototype);
+      test.equal(prefix.split('.').reduce((value, key) => value[key], doc)[marker], 7);
+    }
+
+    // Non-creating operators must not read or mutate inherited fields.
+    const doc = {_id: 'safe', kept: 1};
+    Object.prototype[marker] = 3;
+    LocalCollection._modify(doc, {$unset: {[`__proto__.${marker}`]: 1}});
+    test.equal(Object.prototype[marker], 3);
+    delete Object.prototype[marker];
+    LocalCollection._modify(doc, {$rename: {constructor: 'copied'}});
+    test.isFalse(Object.prototype.hasOwnProperty.call(doc, 'copied'));
+    test.equal(typeof Object.prototype.toString, 'function');
+
+    LocalCollection._modify(doc, {$rename: {kept: `__proto__.${marker}`}});
+    test.equal(doc.__proto__[marker], 1);
+    test.isFalse(Object.prototype.hasOwnProperty.call(Object.prototype, marker));
+  } finally {
+    delete Object.prototype[marker];
+  }
+});
+
+Tinytest.add('minimongo - prototype names remain ordinary own fields', test => {
+  for (const field of ['__proto__', 'constructor', 'toString']) {
+    for (const [operator, argument, expected] of [
+      ['$set', {safe: true}, {safe: true}],
+      ['$inc', 2, 2], ['$mul', 2, 0], ['$min', 2, 2], ['$max', 2, 2],
+      ['$push', 2, [2]], ['$pushAll', [2], [2]], ['$addToSet', 2, [2]],
+    ]) {
+      const doc = {_id: 'safe'};
+      LocalCollection._modify(doc, {[operator]: {[field]: argument}});
+      test.isTrue(Object.prototype.hasOwnProperty.call(doc, field));
+      test.equal(doc[field], expected);
+      test.equal(Object.getPrototypeOf(doc), Object.prototype);
+    }
+  }
+  const replacement = JSON.parse('{"__proto__":{"safe":true},"_id":"safe"}');
+  const doc = {_id: 'safe'};
+  LocalCollection._modify(doc, replacement);
+  test.isTrue(Object.prototype.hasOwnProperty.call(doc, '__proto__'));
+  test.equal(Object.getPrototypeOf(doc), Object.prototype);
+  LocalCollection._modify(doc, {$set: {'__proto__.safe': false}});
+  test.equal(doc.__proto__.safe, false);
+  LocalCollection._modify(doc, {$set: {items: [{n: 1}]}});
+  LocalCollection._modify(doc, {$inc: {'items.$.n': 2}}, {arrayIndices: [0]});
+  test.equal(doc.items, [{n: 3}]);
+});
+
 Tinytest.add('minimongo - wrapTransform', test => {
   const wrap = LocalCollection.wrapTransform;
 
