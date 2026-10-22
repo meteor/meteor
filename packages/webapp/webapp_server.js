@@ -1624,6 +1624,22 @@ export const getGroupInfo = (groupName) => {
   return groupInfo;
 };
 
+/**
+ * Boilerplate-affecting state setters.
+ *
+ * The variables below (`inlineScriptsAllowed`, `sriMode`, `additionalStaticJs`)
+ * are captured into Boilerplate instances each time `generateBoilerplate()` runs.
+ * The pattern for every public setter is therefore:
+ *   1. Mutate the module-level variable.
+ *   2. Call `await WebAppInternals.generateBoilerplate()` so the boilerplate
+ *      HTML reflects the new value before the next request is served.
+ *
+ * Callers **must** `await` these setters if they need the updated boilerplate
+ * to be in place before issuing further work (e.g. starting the server or
+ * serving a response).  `addStaticJs` additionally guards the regeneration
+ * call because packages may invoke it during module initialisation, before
+ * `runWebAppServer()` assigns `WebAppInternals.generateBoilerplate`.
+ */
 var inlineScriptsAllowed = true;
 
 WebAppInternals.inlineScriptsAllowed = function() {
@@ -1659,8 +1675,13 @@ WebAppInternals.setBundledJsCssPrefix = async function(prefix) {
 // unless inline scripts have been disabled, in which case it will be
 // served under `/<sha1 of contents>`.
 var additionalStaticJs = {};
-WebAppInternals.addStaticJs = function(contents) {
+WebAppInternals.addStaticJs = async function(contents) {
   additionalStaticJs['/' + sha1(contents) + '.js'] = contents;
+  // generateBoilerplate is assigned inside runWebAppServer(); guard
+  // against calls made before that (e.g. during module initialisation).
+  if (WebAppInternals.generateBoilerplate) {
+    await WebAppInternals.generateBoilerplate();
+  }
 };
 
 var disableBoilerplateResponse = false;
