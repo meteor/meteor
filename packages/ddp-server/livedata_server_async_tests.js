@@ -1,4 +1,3 @@
-var Fiber = Npm.require('fibers');
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -8,7 +7,7 @@ function sleep(ms) {
 var onSubscription = {};
 
 Meteor.publish('livedata_server_test_sub_async', async function(connectionId) {
-  await sleep(50);
+  await Meteor._sleepForMs(50);
   var callback = onSubscription[connectionId];
   if (callback) callback(this);
   this.stop();
@@ -18,11 +17,13 @@ Meteor.publish('livedata_server_test_sub_context_async', async function(
   connectionId,
   userId
 ) {
-  await sleep(50);
+  await Meteor._sleepForMs(50);
   var callback = onSubscription[connectionId];
   var methodInvocation = DDP._CurrentMethodInvocation.get();
   var publicationInvocation = DDP._CurrentPublicationInvocation.get();
 
+// console.log('methodInvocation', methodInvocation);
+// console.log('publicationInvocation', !!publicationInvocation);
   // Check the publish function's environment variables and context.
   if (callback) {
     callback.call(this, methodInvocation, publicationInvocation);
@@ -33,6 +34,7 @@ Meteor.publish('livedata_server_test_sub_context_async', async function(
   this.onStop(function() {
     var onStopMethodInvocation = DDP._CurrentMethodInvocation.get();
     var onStopPublicationInvocation = DDP._CurrentPublicationInvocation.get();
+
     callback.call(
       this,
       onStopMethodInvocation,
@@ -45,7 +47,7 @@ Meteor.publish('livedata_server_test_sub_context_async', async function(
     this.stop();
   } else {
     this.ready();
-    Meteor.call('livedata_server_test_setuserid', userId);
+    await Meteor.callAsync('livedata_server_test_setuserid', userId);
   }
 });
 
@@ -97,7 +99,7 @@ let onSubscriptions = {};
 
 Meteor.publish({
   async publicationObjectAsync() {
-    await sleep(50);
+    await Meteor._sleepForMs(50);
     let callback = onSubscriptions;
     if (callback) callback("publicationObjectAsync");
     this.stop();
@@ -106,7 +108,7 @@ Meteor.publish({
 
 Meteor.publish({
   publication_object_async: async function() {
-    await sleep(50);
+    await Meteor._sleepForMs(50);
     let callback = onSubscriptions;
     if (callback) callback("publication_object_async");
     this.stop();
@@ -114,7 +116,7 @@ Meteor.publish({
 });
 
 Meteor.publish('publication_compatibility_async', async function() {
-  await sleep(50);
+  await Meteor._sleepForMs(50);
   let callback = onSubscriptions;
   if (callback) callback("publication_compatibility_async");
   this.stop();
@@ -131,7 +133,6 @@ Tinytest.addAsync('livedata server - async publish object', function(
       // for debugging
       // console.log('subscription is ok:', subscription) 
       testsLength++;
-      delete onSubscriptions;
       if (testsLength === 3) {
         clientConn.disconnect();
         onComplete();
@@ -150,7 +151,7 @@ async function getAllNames(shouldThrow = false) {
     throw new Meteor.Error('Expected error');
   }
   if (count <= 0) {
-    collection.insert({ name: 'async' });
+    await collection.insertAsync({ name: 'async' });
   }
 }
 Meteor.publish('asyncPublishCursor', async function() {
@@ -166,10 +167,25 @@ Tinytest.addAsync('livedata server - async publish cursor', function(
     const remoteCollection = new Mongo.Collection('names', {
       connection: clientConn,
     });
-    clientConn.subscribe('asyncPublishCursor', () => {
-      const actual = remoteCollection.find().fetch();
-      test.equal(actual[0].name, 'async');
-      onComplete();
+    clientConn.subscribe('asyncPublishCursor', async () => {
+      // Wait for data to arrive - the subscription is ready but data may still be in transit
+      // This can happen when a previous test run was interrupted (page reload) and the
+      // server is still processing the old session's grace period
+      let attempts = 0;
+      const maxAttempts = 50; // 5 seconds max wait
+      const checkData = async () => {
+        const actual = await remoteCollection.find().fetch();
+        if (actual.length > 0) {
+          test.equal(actual[0].name, 'async');
+          onComplete();
+        } else if (attempts++ < maxAttempts) {
+          setTimeout(checkData, 100);
+        } else {
+          test.fail('Timed out waiting for data in async publish cursor test');
+          onComplete();
+        }
+      };
+      await checkData();
     });
   });
 });
@@ -192,3 +208,19 @@ Tinytest.addAsync('livedata server - async publish test error thrown', function(
     });
   });
 });
+
+// A server-side Meteor.callAsync runs through Server.applyAsync, which must expose
+// the method name on the current invocation, the same way the DDP method path does.
+Meteor.methods({
+  'livedata_server_test_invocation_name'() {
+    return DDP._CurrentMethodInvocation.get()?.name;
+  },
+});
+
+Tinytest.addAsync(
+  'livedata server - server-side callAsync exposes the current invocation name',
+  async function (test) {
+    const name = await Meteor.callAsync('livedata_server_test_invocation_name');
+    test.equal(name, 'livedata_server_test_invocation_name');
+  }
+);

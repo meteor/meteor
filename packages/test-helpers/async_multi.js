@@ -52,32 +52,32 @@ var ExpectationManager = function (test, onComplete) {
   self.outstanding = 0;
 };
 
-_.extend(ExpectationManager.prototype, {
+Object.assign(ExpectationManager.prototype, {
   expect: function (/* arguments */) {
     var self = this;
 
     if (typeof arguments[0] === "function")
       var expected = arguments[0];
     else
-      var expected = _.toArray(arguments);
+      var expected = Array.from(arguments);
 
     if (self.closed)
       throw new Error("Too late to add more expectations to the test");
     self.outstanding++;
 
-    return function (/* arguments */) {
+    return async function (/* arguments */) {
       if (self.dead)
         return;
 
       if (typeof expected === "function") {
         try {
-          expected.apply({}, arguments);
+          await expected.apply({}, arguments);
         } catch (e) {
           if (self.cancel())
             self.test.exception(e);
         }
       } else {
-        self.test.equal(_.toArray(arguments), expected);
+        self.test.equal(Array.from(arguments), expected);
       }
 
       self.outstanding--;
@@ -115,7 +115,7 @@ testAsyncMulti = function (name, funcs, { isOnly = false } = {}) {
 
   const addFunction = isOnly ? Tinytest.onlyAsync : Tinytest.addAsync;
   addFunction(name, function (test, onComplete) {
-    var remaining = _.clone(funcs);
+    var remaining = [...funcs]
     var context = {};
     var i = 0;
 
@@ -127,11 +127,11 @@ testAsyncMulti = function (name, funcs, { isOnly = false } = {}) {
       }
       else {
         var em = new ExpectationManager(test, function () {
-          Meteor.clearTimeout(timer);
+          clearTimeout(timer);
           runNext();
         });
 
-        var timer = Meteor.setTimeout(function () {
+        var timer = setTimeout(function () {
           if (em.cancel()) {
             test.fail({type: "timeout", message: "Async batch timed out"});
             onComplete();
@@ -142,7 +142,7 @@ testAsyncMulti = function (name, funcs, { isOnly = false } = {}) {
         test.extraDetails.asyncBlock = i++;
 
         new Promise(resolve => {
-          const result = func.apply(context, [test, _.bind(em.expect, em)]);
+          const result = func.apply(context, [test, em.expect.bind(em)]);
           if (result && typeof result.then === "function") {
             return result.then((r) => resolve(r))
           }
@@ -155,7 +155,7 @@ testAsyncMulti = function (name, funcs, { isOnly = false } = {}) {
             test.exception(exception);
             // Because we called test.exception, we're not to call onComplete.
           }
-          Meteor.clearTimeout(timer);
+          clearTimeout(timer);
         });
       }
     };
@@ -170,16 +170,19 @@ simplePoll = function (fn, success, failed, timeout, step) {
   timeout = timeout || 10000;
   step = step || 100;
   var start = (new Date()).valueOf();
+  let timeOutId;
   var helper = function () {
     if (fn()) {
       success();
+      Meteor.clearTimeout(timeOutId);
       return;
     }
     if (start + timeout < (new Date()).valueOf()) {
       failed();
+      Meteor.clearTimeout(timeOutId);
       return;
     }
-    Meteor.setTimeout(helper, step);
+    timeOutId = Meteor.setTimeout(helper, step);
   };
   helper();
 };

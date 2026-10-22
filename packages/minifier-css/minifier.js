@@ -1,5 +1,4 @@
 import path from 'path';
-import url from 'url';
 import postcss from 'postcss';
 import cssnano from 'cssnano';
 
@@ -61,10 +60,10 @@ const CssTools = {
    * Minify the passed in CSS string.
    *
    * @param {string} cssText CSS string to minify.
-   * @return {String[]} Array containing the minified CSS.
+   * @return {Promise<String[]>} Array containing the minified CSS.
    */
   minifyCss(cssText) {
-    return Promise.await(CssTools.minifyCssAsync(cssText));
+    return CssTools.minifyCssAsync(cssText);
   },
 
   /**
@@ -236,25 +235,29 @@ const rewriteRules = (rules, mergedCssPath) => {
     while (parts = cssUrlRegex.exec(value)) {
       const oldCssUrl = parts[0];
       const quote = parts[1];
-      const resource = url.parse(parts[2]);
+      const cssUrlValue = parts[2];
 
       // We don't rewrite URLs starting with a protocol definition such as
       // http, https, or data, or those with network-path references
       // i.e. //img.domain.com/cat.gif
-      if (resource.protocol !== null ||
-          resource.href.startsWith('//') ||
-          resource.href.startsWith('#')) {
+      if (/^[a-zA-Z][a-zA-Z0-9+\-.]*:/.test(cssUrlValue) ||
+          cssUrlValue.startsWith('//') ||
+          cssUrlValue.startsWith('#')) {
         continue;
       }
 
       // Rewrite relative paths (that refers to the internal application tree)
       // to absolute paths (addressable from the public build).
-      let absolutePath = isRelative(resource.path)
-        ? pathJoin(basePath, resource.path)
-        : resource.path;
+      const hashIndex = cssUrlValue.indexOf('#');
+      const hash = hashIndex >= 0 ? cssUrlValue.slice(hashIndex) : '';
+      const pathPart = hashIndex >= 0 ? cssUrlValue.slice(0, hashIndex) : cssUrlValue;
 
-      if (resource.hash) {
-        absolutePath += resource.hash;
+      let absolutePath = isRelative(pathPart)
+        ? pathJoin(basePath, pathPart)
+        : pathPart;
+
+      if (hash) {
+        absolutePath += hash;
       }
 
       // We used to finish the rewriting process at the absolute path step

@@ -34,7 +34,7 @@ OAuth.registerService('meetup', 2, null, async query => {
 });
 
 const getAccessToken = async query => {
-  const config = ServiceConfiguration.configurations.findOne({service: 'meetup'});
+  const config = await ServiceConfiguration.configurations.findOneAsync({service: 'meetup'});
   if (!config)
     throw new ServiceConfiguration.ConfigError();
 

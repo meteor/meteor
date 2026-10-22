@@ -3,15 +3,13 @@ import { readFileSync, chmodSync, chownSync } from 'fs';
 import { createServer } from 'http';
 import { userInfo } from 'os';
 import { join as pathJoin, dirname as pathDirname } from 'path';
-import { parse as parseUrl } from 'url';
 import { createHash } from 'crypto';
-import { connect } from './connect.js';
+import express from 'express';
 import compress from 'compression';
 import cookieParser from 'cookie-parser';
 import qs from 'qs';
 import parseRequest from 'parseurl';
-import basicAuth from 'basic-auth-connect';
-import { lookup as lookupUserAgent } from 'useragent';
+import { lookup as lookupUserAgent } from 'useragent-ng';
 import { isModern } from 'meteor/modern-browsers';
 import send from 'send';
 import {
@@ -19,25 +17,36 @@ import {
   registerSocketFileCleanup,
 } from './socket_file.js';
 import cluster from 'cluster';
-import whomst from '@vlasky/whomst';
+import { execSync } from 'child_process';
+import { onMessage } from 'meteor/inter-process-messaging';
 
 var SHORT_SOCKET_TIMEOUT = 5 * 1000;
 var LONG_SOCKET_TIMEOUT = 120 * 1000;
 
+const createExpressApp = () => {
+  const app = express();
+  // Security and performace headers
+  // these headers come from these docs: https://expressjs.com/en/api.html#app.settings.table
+  app.set('x-powered-by', false);
+  app.set('etag', false);
+  app.set('query parser', qs.parse);
+  return app;
+}
 export const WebApp = {};
 export const WebAppInternals = {};
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
-// backwards compat to 2.0 of connect
-connect.basicAuth = basicAuth;
 
 WebAppInternals.NpmModules = {
-  connect: {
-    version: Npm.require('connect/package.json').version,
-    module: connect,
-  },
+  express : {
+    version: Npm.require('express/package.json').version,
+    module: express,
+  }
 };
+
+// More of a convenience for the end user
+WebApp.express = express;
 
 // Though we might prefer to use web.browser (modern) as the default
 // architecture, safety requires a more compatible defaultArch.
@@ -66,6 +75,15 @@ function shouldCompress(req, res) {
     return false;
   }
 
+  if (
+    Meteor.settings.packages?.webapp?.skipCompressionWithContentLength &&
+    res.getHeader('Content-Length')
+  ) {
+    // Leave responses that already declare a Content-Length uncompressed, so the
+    // header survives (compressing switches them to chunked and removes it).
+    return false;
+  }
+
   // fallback to standard filter function
   return compress.filter(req, res);
 }
@@ -87,13 +105,13 @@ function shouldCompress(req, res) {
 //
 // Also here is an early version of a Meteor `request` object, intended
 // to be a high-level description of the request without exposing
-// details of connect's low-level `req`.  Currently it contains:
+// details of Express's low-level `req`.  Currently it contains:
 //
 // * `browser`: browser identification object described above
 // * `url`: parsed url, including parsed query params
 //
 // As a temporary hack there is a `categorizeRequest` function on WebApp which
-// converts a connect `req` to a Meteor `request`. This can go away once smart
+// converts a Express `req` to a Meteor `request`. This can go away once smart
 // packages such as appcache are being passed a `request` object directly when
 // they serve content.
 //
@@ -109,12 +127,20 @@ var camelCase = function(name) {
   var parts = name.split(' ');
   parts[0] = parts[0].toLowerCase();
   for (var i = 1; i < parts.length; ++i) {
-    parts[i] = parts[i].charAt(0).toUpperCase() + parts[i].substr(1);
+    parts[i] = parts[i].charAt(0).toUpperCase() + parts[i].substring(1);
   }
   return parts.join('');
 };
 
 var identifyBrowser = function(userAgentString) {
+  if (!userAgentString) {
+    return {
+      name: 'unknown',
+      major: 0,
+      minor: 0,
+      patch: 0
+    };
+  }
   var userAgent = lookupUserAgent(userAgentString);
   return {
     name: camelCase(userAgent.family),
@@ -145,7 +171,7 @@ WebApp.categorizeRequest = function(req) {
     modern,
     path,
     arch: WebApp.defaultArch,
-    url: parseUrl(req.url, true),
+    url: { query: Object.fromEntries(new URL(req.url, 'http://localhost').searchParams) },
     dynamicHead: req.dynamicHead,
     dynamicBody: req.dynamicBody,
     headers: req.headers,
@@ -188,21 +214,29 @@ WebApp.categorizeRequest = function(req) {
   return categorized;
 };
 
-// HTML attribute hooks: functions to be called to determine any attributes to
-// be added to the '<html>' tag. Each function is passed a 'request' object (see
-// #BrowserIdentification) and should return null or object.
 var htmlAttributeHooks = [];
 var getHtmlAttributes = function(request) {
   var combinedAttributes = {};
-  _.each(htmlAttributeHooks || [], function(hook) {
+  (htmlAttributeHooks || []).forEach(function(hook) {
     var attributes = hook(request);
     if (attributes === null) return;
     if (typeof attributes !== 'object')
       throw Error('HTML attribute hook must return null or object');
-    _.extend(combinedAttributes, attributes);
+    Object.assign(combinedAttributes, attributes);
   });
   return combinedAttributes;
 };
+
+/**
+ * @summary Registers a callback that runs whenever Meteor generates app HTML.
+ * Attributes returned by all registered callbacks are merged onto the
+ * `<html>` element. If callbacks return the same attribute, the callback
+ * registered last takes precedence.
+ * @locus Server
+ * @param {Function} hook A callback that receives information about the request
+ * for app HTML and returns an object of HTML attribute names and values, or
+ * `null` to add no attributes for that request.
+ */
 WebApp.addHtmlAttributeHook = function(hook) {
   htmlAttributeHooks.push(hook);
 };
@@ -282,7 +316,7 @@ WebApp._timeoutAdjustmentRequestCallback = function(req, res) {
   res.on('finish', function() {
     res.setTimeout(SHORT_SOCKET_TIMEOUT);
   });
-  _.each(finishListeners, function(l) {
+  Object.values(finishListeners).forEach(function(l) {
     res.on('finish', l);
   });
 };
@@ -320,13 +354,13 @@ WebAppInternals.registerBoilerplateDataCallback = function(key, callback) {
 // Given a request (as returned from `categorizeRequest`), return the
 // boilerplate HTML to serve for that request.
 //
-// If a previous connect middleware has rendered content for the head or body,
+// If a previous Express middleware has rendered content for the head or body,
 // returns the boilerplate with that content patched in otherwise
 // memoizes on HTML attributes (used by, eg, appcache) and whether inline
 // scripts are currently allowed.
 // XXX so far this function is always called with arch === 'web.browser'
 function getBoilerplate(request, arch) {
-  return getBoilerplateAsync(request, arch).await();
+  return getBoilerplateAsync(request, arch);
 }
 
 /**
@@ -420,10 +454,89 @@ WebApp.addRuntimeConfigHook = function(callback) {
   return runtimeConfig.hooks.register(callback);
 };
 
-function getBoilerplateAsync(request, arch) {
+// Per-arch snapshot of the PUBLIC_SETTINGS that are currently baked into the
+// cached runtime config, so we only re-encode when they actually change.
+const lastPublicSettingsByArch = Object.create(null);
+
+// The encoded runtime config (including PUBLIC_SETTINGS) is generated once at
+// startup and cached per arch. Apps are documented to be able to mutate
+// `Meteor.settings.public` at runtime and have the change picked up by new
+// client connections, so before serving we refresh the cached config whenever
+// the live public settings differ from what was last encoded. See #13489.
+function refreshRuntimeConfigPublicSettings(arch) {
+  const livePublicSettings =
+    (typeof __meteor_runtime_config__ === 'object' &&
+      __meteor_runtime_config__.PUBLIC_SETTINGS) ||
+    {};
+  const serialized = JSON.stringify(livePublicSettings);
+  if (lastPublicSettingsByArch[arch] === serialized) {
+    return;
+  }
+
+  let changed = false;
+  let failed = false;
+
+  const boilerplate = boilerplateByArch[arch];
+  if (boilerplate && boilerplate.baseData &&
+      boilerplate.baseData.meteorRuntimeConfig) {
+    try {
+      const decoded = WebApp.decodeRuntimeConfig(
+        boilerplate.baseData.meteorRuntimeConfig
+      );
+      decoded.PUBLIC_SETTINGS = livePublicSettings;
+      const encoded = WebApp.encodeRuntimeConfig(decoded);
+      boilerplate.baseData = Object.assign({}, boilerplate.baseData, {
+        meteorRuntimeConfig: encoded,
+        meteorRuntimeHash: sha1(encoded),
+      });
+      changed = true;
+    } catch (e) {
+      // Leave the cached config untouched if it cannot be decoded, and keep
+      // the snapshot stale so the refresh is retried on the next request.
+      failed = true;
+      Log.debug(
+        'refreshRuntimeConfigPublicSettings: could not decode boilerplate ' +
+        'runtime config for arch ' + arch + ': ' + e
+      );
+    }
+  }
+
+  const program = WebApp.clientPrograms[arch];
+  if (program && typeof program.meteorRuntimeConfig === 'string') {
+    try {
+      const parsed = JSON.parse(program.meteorRuntimeConfig);
+      parsed.PUBLIC_SETTINGS = livePublicSettings;
+      program.meteorRuntimeConfig = JSON.stringify(parsed);
+      changed = true;
+    } catch (e) {
+      // Leave the cached config untouched if it cannot be parsed, and keep
+      // the snapshot stale so the refresh is retried on the next request.
+      failed = true;
+      Log.debug(
+        'refreshRuntimeConfigPublicSettings: could not parse client program ' +
+        'runtime config for arch ' + arch + ': ' + e
+      );
+    }
+  }
+
+  if (changed) {
+    // Let runtime-config hooks know the config changed for this arch so any
+    // caches they keep are refreshed on this request.
+    runtimeConfig.isUpdatedByArch[arch] = true;
+  }
+  // Only advance the snapshot when the refresh fully succeeded. If a decode or
+  // parse step threw, leaving the snapshot stale ensures the next request
+  // retries instead of short-circuiting on a value that was never applied.
+  if (!failed) {
+    lastPublicSettingsByArch[arch] = serialized;
+  }
+}
+
+async function getBoilerplateAsync(request, arch, response) {
+  refreshRuntimeConfigPublicSettings(arch);
   let boilerplate = boilerplateByArch[arch];
-  runtimeConfig.hooks.forEach(hook => {
-    const meteorRuntimeConfig = hook({
+  await runtimeConfig.hooks.forEachAsync(async hook => {
+    const meteorRuntimeConfig = await hook({
       arch,
       request,
       encodedCurrentConfig: boilerplate.baseData.meteorRuntimeConfig,
@@ -436,13 +549,14 @@ function getBoilerplateAsync(request, arch) {
     return true;
   });
   runtimeConfig.isUpdatedByArch[arch] = false;
+  const { dynamicHead, dynamicBody } = request;
   const data = Object.assign(
     {},
     boilerplate.baseData,
     {
       htmlAttributes: getHtmlAttributes(request),
     },
-    _.pick(request, 'dynamicHead', 'dynamicBody')
+    { dynamicHead, dynamicBody }
   );
 
   let madeChanges = false;
@@ -452,7 +566,7 @@ function getBoilerplateAsync(request, arch) {
     promise = promise
       .then(() => {
         const callback = boilerplateDataCallbacks[key];
-        return callback(request, data, arch);
+        return callback(request, data, arch, response);
       })
       .then(result => {
         // Callbacks should return false if they did not make any changes.
@@ -526,9 +640,8 @@ WebAppInternals.generateBoilerplateInstance = function(
           return pathJoin(archPath[arch], itemPath);
         },
         baseDataExtension: {
-          additionalStaticJs: _.map(additionalStaticJs || [], function(
-            contents,
-            pathname
+          additionalStaticJs: (Object.entries(additionalStaticJs) || []).map(function(
+            [pathname, contents]
           ) {
             return {
               pathname: pathname,
@@ -605,7 +718,7 @@ WebAppInternals.staticFilesMiddleware = async function(
   };
 
   if (
-    _.has(additionalStaticJs, pathname) &&
+    pathname in additionalStaticJs &&
     !WebAppInternals.inlineScriptsAllowed()
   ) {
     serveStaticJs(additionalStaticJs[pathname]);
@@ -629,6 +742,7 @@ WebAppInternals.staticFilesMiddleware = async function(
     path === '/meteor_runtime_config.js' &&
     !WebAppInternals.inlineScriptsAllowed()
   ) {
+    refreshRuntimeConfigPublicSettings(arch);
     serveStaticJs(
       `__meteor_runtime_config__ = ${program.meteorRuntimeConfig};`
     );
@@ -664,11 +778,17 @@ WebAppInternals.staticFilesMiddleware = async function(
   // We cache them ~forever (1yr).
   const maxAge = info.cacheable ? 1000 * 60 * 60 * 24 * 365 : 0;
 
-  if (info.cacheable) {
-    // Since we use req.headers["user-agent"] to determine whether the
-    // client should receive modern or legacy resources, tell the client
-    // to invalidate cached resources when/if its user agent string
-    // changes in the future.
+  // Resources whose URL already contains the content hash are immutable
+  // and unique per architecture (modern vs legacy), so Vary: User-Agent
+  // is unnecessary and harms CDN cache efficiency.
+  //
+  // If the requested URL does not contain the hash (e.g. development
+  // or unhashed assets), we keep Vary: User-Agent to prevent cache
+  // poisoning across different browsers.
+  const includeVaryUserAgent =
+  Meteor.settings.packages?.webapp?.includeVaryUserAgent ?? true;
+
+  if (info.cacheable && !pathname.includes(info.hash) && includeVaryUserAgent) {
     res.setHeader('Vary', 'User-Agent');
   }
 
@@ -778,26 +898,24 @@ WebAppInternals.parsePort = port => {
   return parsedPort;
 };
 
-import { onMessage } from 'meteor/inter-process-messaging';
-
 onMessage('webapp-pause-client', async ({ arch }) => {
-  WebAppInternals.pauseClient(arch);
+  await WebAppInternals.pauseClient(arch);
 });
 
 onMessage('webapp-reload-client', async ({ arch }) => {
-  WebAppInternals.generateClientProgram(arch);
+  await WebAppInternals.generateClientProgram(arch);
 });
 
-function runWebAppServer() {
+async function runWebAppServer() {
   var shuttingDown = false;
-  var syncQueue = new Meteor._SynchronousQueue();
+  var syncQueue = new Meteor._AsynchronousQueue();
 
   var getItemPathname = function(itemUrl) {
-    return decodeURIComponent(parseUrl(itemUrl).pathname);
+    return decodeURIComponent(new URL(itemUrl, 'http://localhost').pathname);
   };
 
-  WebAppInternals.reloadClientPrograms = function() {
-    syncQueue.runTask(function() {
+  WebAppInternals.reloadClientPrograms = async function() {
+    await syncQueue.runTask(function() {
       const staticFilesByArch = Object.create(null);
 
       const { configJson } = __meteor_bootstrap__;
@@ -818,8 +936,8 @@ function runWebAppServer() {
 
   // Pause any incoming requests and make them wait for the program to be
   // unpaused the next time generateClientProgram(arch) is called.
-  WebAppInternals.pauseClient = function(arch) {
-    syncQueue.runTask(() => {
+  WebAppInternals.pauseClient = async function(arch) {
+    await syncQueue.runTask(() => {
       const program = WebApp.clientPrograms[arch];
       const { unpause } = program;
       program.paused = new Promise(resolve => {
@@ -837,8 +955,8 @@ function runWebAppServer() {
     });
   };
 
-  WebAppInternals.generateClientProgram = function(arch) {
-    syncQueue.runTask(() => generateClientProgram(arch));
+  WebAppInternals.generateClientProgram = async function(arch) {
+    await syncQueue.runTask(() => generateClientProgram(arch));
   };
 
   function generateClientProgram(
@@ -1007,12 +1125,12 @@ function runWebAppServer() {
     },
   };
 
-  WebAppInternals.generateBoilerplate = function() {
+  WebAppInternals.generateBoilerplate = async function() {
     // This boilerplate will be served to the mobile devices when used with
     // Meteor/Cordova for the Hot-Code Push and since the file will be served by
     // the device's server, it is important to set the DDP url to the actual
     // Meteor server accepting DDP connections and not the device's file server.
-    syncQueue.runTask(function() {
+    await syncQueue.runTask(function() {
       Object.keys(WebApp.clientPrograms).forEach(generateBoilerplateForArch);
     });
   };
@@ -1037,15 +1155,15 @@ function runWebAppServer() {
     }));
   }
 
-  WebAppInternals.reloadClientPrograms();
+  await WebAppInternals.reloadClientPrograms();
 
   // webserver
-  var app = connect();
+  var app = createExpressApp()
 
   // Packages and apps can add handlers that run before any other Meteor
-  // handlers via WebApp.rawConnectHandlers.
-  var rawConnectHandlers = connect();
-  app.use(rawConnectHandlers);
+  // handlers via WebApp.rawExpressHandlers.
+  var rawExpressHandlers = createExpressApp()
+  app.use(rawExpressHandlers);
 
   // Auto-compress any json, javascript, or text.
   app.use(compress({ filter: shouldCompress }));
@@ -1065,16 +1183,6 @@ function runWebAppServer() {
     res.end();
   });
 
-  // Parse the query string into res.query. Used by oauth_server, but it's
-  // generally pretty handy..
-  //
-  // Do this before the next middleware destroys req.url if a path prefix
-  // is set to close #10111.
-  app.use(function(request, response, next) {
-    request.query = qs.parse(parseUrl(request.url).query);
-    next();
-  });
-
   function getPathParts(path) {
     const parts = path.split('/');
     while (parts[0] === '') parts.shift();
@@ -1091,7 +1199,7 @@ function runWebAppServer() {
   // Strip off the path prefix, if it exists.
   app.use(function(request, response, next) {
     const pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX;
-    const { pathname, search } = parseUrl(request.url);
+    const { pathname, search } = new URL(request.url, 'http://localhost');
 
     // check if the path in the url starts with the path prefix
     if (pathPrefix) {
@@ -1123,6 +1231,7 @@ function runWebAppServer() {
   // Serve static files from the manifest.
   // This is inspired by the 'static' middleware.
   app.use(function(req, res, next) {
+    // console.log(String(arguments.callee));
     WebAppInternals.staticFilesMiddleware(
       WebAppInternals.staticFilesByArch,
       req,
@@ -1133,13 +1242,13 @@ function runWebAppServer() {
 
   // Core Meteor packages like dynamic-import can add handlers before
   // other handlers added by package and application code.
-  app.use((WebAppInternals.meteorInternalHandlers = connect()));
+  app.use((WebAppInternals.meteorInternalHandlers = createExpressApp()));
 
   /**
-   * @name connectHandlersCallback(req, res, next)
+   * @name expressHandlersCallback(req, res, next)
    * @locus Server
    * @isprototype true
-   * @summary callback handler for `WebApp.connectHandlers`
+   * @summary callback handler for `WebApp.expressHandlers`
    * @param {Object} req
    * a Node.js
    * [IncomingMessage](https://nodejs.org/api/http.html#class-httpincomingmessage)
@@ -1157,7 +1266,7 @@ function runWebAppServer() {
    */
 
   /**
-   * @method connectHandlers
+   * @method handlers
    * @memberof WebApp
    * @locus Server
    * @summary Register a handler for all HTTP requests.
@@ -1167,22 +1276,22 @@ function runWebAppServer() {
    *
    * For example, `/hello` will match `/hello/world` and
    * `/hello.world`, but not `/hello_world`.
-   * @param {connectHandlersCallback} handler
+   * @param {expressHandlersCallback} handler
    * A handler function that will be called on HTTP requests.
-   * See `connectHandlersCallback`
+   * See `expressHandlersCallback`
    *
    */
-  // Packages and apps can add handlers to this via WebApp.connectHandlers.
+  // Packages and apps can add handlers to this via WebApp.expressHandlers.
   // They are inserted before our default handler.
-  var packageAndAppHandlers = connect();
+  var packageAndAppHandlers = createExpressApp()
   app.use(packageAndAppHandlers);
 
-  var suppressConnectErrors = false;
-  // connect knows it is an error handler because it has 4 arguments instead of
+  let suppressExpressErrors = false;
+  // Express knows it is an error handler because it has 4 arguments instead of
   // 3. go figure.  (It is not smart enough to find such a thing if it's hidden
   // inside packageAndAppHandlers.)
   app.use(function(err, req, res, next) {
-    if (!err || !suppressConnectErrors || !req.headers['x-suppress-error']) {
+    if (!err || !suppressExpressErrors || !req.headers['x-suppress-error']) {
       next(err);
       return;
     }
@@ -1214,6 +1323,7 @@ function runWebAppServer() {
       }
 
       var request = WebApp.categorizeRequest(req);
+      var response = res;
 
       if (request.url.query && request.url.query['meteor_css_resource']) {
         // In this case, we're requesting a CSS resource in the meteor-specific
@@ -1273,7 +1383,7 @@ function runWebAppServer() {
       // Promise that will be resolved when the program is unpaused.
       await WebApp.clientPrograms[arch].paused;
 
-      return getBoilerplateAsync(request, arch)
+      return getBoilerplateAsync(request, arch, response)
         .then(({ stream, statusCode, headers: newHeaders }) => {
           if (!statusCode) {
             statusCode = res.statusCode ? res.statusCode : 200;
@@ -1285,10 +1395,12 @@ function runWebAppServer() {
 
           res.writeHead(statusCode, headers);
 
-          stream.pipe(res, {
-            // End the response when the stream ends.
-            end: true,
-          });
+          if (!disableBoilerplateResponse) {
+            stream.pipe(res, {
+              // End the response when the stream ends.
+              end: true,
+            });
+          }
         })
         .catch(error => {
           Log.error('Error running template: ' + error.stack);
@@ -1339,16 +1451,29 @@ function runWebAppServer() {
     }
   });
 
+  const suppressErrors = function() {
+    suppressExpressErrors = true;
+  };
+
+  let warnedAboutConnectUsage = false;
+
   // start up app
-  _.extend(WebApp, {
+  Object.assign(WebApp, {
     connectHandlers: packageAndAppHandlers,
-    rawConnectHandlers: rawConnectHandlers,
+    handlers: packageAndAppHandlers,
+    rawConnectHandlers: rawExpressHandlers,
+    rawHandlers: rawExpressHandlers,
     httpServer: httpServer,
-    connectApp: app,
+    expressApp: app,
     // For testing.
-    suppressConnectErrors: function() {
-      suppressConnectErrors = true;
+    suppressConnectErrors: () => {
+      if (! warnedAboutConnectUsage) {
+        Meteor._debug("WebApp.suppressConnectErrors has been renamed to Meteor._suppressExpressErrors and it should be used only in tests.");
+        warnedAboutConnectUsage = true;
+      }
+      suppressErrors();
     },
+    _suppressExpressErrors: suppressErrors,
     onListening: function(f) {
       if (onListeningCallbacks) onListeningCallbacks.push(f);
       else f();
@@ -1365,17 +1490,17 @@ function runWebAppServer() {
    * @locus Server
    * @summary Starts the HTTP server.
    *  If `UNIX_SOCKET_PATH` is present Meteor's HTTP server will use that socket file for inter-process communication, instead of TCP.
-   * If you choose to not include webapp package in your application this method still must be defined for your Meteor application to work. 
+   * If you choose to not include webapp package in your application this method still must be defined for your Meteor application to work.
    */
-  // Let the rest of the packages (and Meteor.startup hooks) insert connect
+  // Let the rest of the packages (and Meteor.startup hooks) insert Express
   // middlewares and update __meteor_runtime_config__, then keep going to set up
   // actually serving HTML.
-  exports.main = argv => {
-    WebAppInternals.generateBoilerplate();
+  exports.main = async argv => {
+    await WebAppInternals.generateBoilerplate();
 
     const startHttpServer = listenOptions => {
       WebApp.startListening(
-        httpServer,
+        argv?.httpServer || httpServer,
         listenOptions,
         Meteor.bindEnvironment(
           () => {
@@ -1384,7 +1509,7 @@ function runWebAppServer() {
             }
             const callbacks = onListeningCallbacks;
             onListeningCallbacks = null;
-            callbacks.forEach(callback => {
+            callbacks?.forEach(callback => {
               callback();
             });
           },
@@ -1421,12 +1546,19 @@ function runWebAppServer() {
 
       const unixSocketGroup = (process.env.UNIX_SOCKET_GROUP || '').trim();
       if (unixSocketGroup) {
-        //whomst automatically handles both group names and numerical gids
-        const unixSocketGroupInfo = whomst.sync.group(unixSocketGroup);
+        const unixSocketGroupInfo = getGroupInfo(unixSocketGroup);
         if (unixSocketGroupInfo === null) {
           throw new Error('Invalid UNIX_SOCKET_GROUP name specified');
         }
-        chownSync(unixSocketPath, userInfo().uid, unixSocketGroupInfo.gid);
+        try {
+          chownSync(unixSocketPath, userInfo().uid, unixSocketGroupInfo.gid);
+        } catch (error) {
+          if (error.code === 'EPERM' || error.code === 'EACCES') {
+            console.error(`Skipping UNIX_SOCKET_GROUP change for "${unixSocketGroup}" because current user lacks permission.`);
+          } else {
+            throw error;
+          }
+        }
       }
 
       registerSocketFileCleanup(unixSocketPath);
@@ -1450,32 +1582,74 @@ function runWebAppServer() {
   };
 }
 
+const isGetentAvailable = () => {
+  try {
+    execSync('which getent');
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const getGroupInfoUsingGetent = (groupName) => {
+  try {
+    const stdout = execSync(`getent group ${groupName}`, { encoding: 'utf8' });
+    if (!stdout) return null;
+    const [name, , gid] = stdout.trim().split(':');
+    if (name == null || gid == null) return null;
+    return { name, gid: Number(gid) };
+  } catch (error) {
+    return null;
+  }
+};
+
+const getGroupInfoFromFile = (groupName) => {
+  try {
+    const data = readFileSync('/etc/group', 'utf8');
+    const groupLine = data.trim().split('\n').find(line => line.startsWith(`${groupName}:`));
+    if (!groupLine) return null;
+    const [name, , gid] = groupLine.trim().split(':');
+    if (name == null || gid == null) return null;
+    return { name, gid: Number(gid) };
+  } catch (error) {
+    return null;
+  }
+};
+
+export const getGroupInfo = (groupName) => {
+  let groupInfo = getGroupInfoFromFile(groupName);
+  if (!groupInfo && isGetentAvailable()) {
+    groupInfo = getGroupInfoUsingGetent(groupName);
+  }
+  return groupInfo;
+};
+
 var inlineScriptsAllowed = true;
 
 WebAppInternals.inlineScriptsAllowed = function() {
   return inlineScriptsAllowed;
 };
 
-WebAppInternals.setInlineScriptsAllowed = function(value) {
+WebAppInternals.setInlineScriptsAllowed = async function(value) {
   inlineScriptsAllowed = value;
-  WebAppInternals.generateBoilerplate();
+  await WebAppInternals.generateBoilerplate();
 };
 
 var sriMode;
 
-WebAppInternals.enableSubresourceIntegrity = function(use_credentials = false) {
+WebAppInternals.enableSubresourceIntegrity = async function(use_credentials = false) {
   sriMode = use_credentials ? 'use-credentials' : 'anonymous';
-  WebAppInternals.generateBoilerplate();
+  await WebAppInternals.generateBoilerplate();
 };
 
-WebAppInternals.setBundledJsCssUrlRewriteHook = function(hookFn) {
+WebAppInternals.setBundledJsCssUrlRewriteHook = async function(hookFn) {
   bundledJsCssUrlRewriteHook = hookFn;
-  WebAppInternals.generateBoilerplate();
+  await WebAppInternals.generateBoilerplate();
 };
 
-WebAppInternals.setBundledJsCssPrefix = function(prefix) {
+WebAppInternals.setBundledJsCssPrefix = async function(prefix) {
   var self = this;
-  self.setBundledJsCssUrlRewriteHook(function(url) {
+  await self.setBundledJsCssUrlRewriteHook(function(url) {
     return prefix + url;
   });
 };
@@ -1489,9 +1663,13 @@ WebAppInternals.addStaticJs = function(contents) {
   additionalStaticJs['/' + sha1(contents) + '.js'] = contents;
 };
 
+var disableBoilerplateResponse = false;
+WebAppInternals.disableBoilerplateResponse = function() {
+  disableBoilerplateResponse = true;
+}
+
 // Exported for tests
 WebAppInternals.getBoilerplate = getBoilerplate;
 WebAppInternals.additionalStaticJs = additionalStaticJs;
 
-// Start the server!
-runWebAppServer();
+await runWebAppServer();

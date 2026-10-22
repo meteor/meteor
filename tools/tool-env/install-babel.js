@@ -11,7 +11,8 @@ function babelRegister() {
   const cacheDir = path.join(meteorPath, ".babel-cache");
   const babelOptions = meteorBabel.getDefaultOptions({
     nodeMajorVersion: parseInt(process.versions.node),
-    typescript: true
+    typescript: true,
+    useNativeAsyncAwait: true
   });
 
   // Make sure that source maps are included in the generated code for
@@ -26,8 +27,6 @@ function babelRegister() {
     // Exclude files that are imported before we configure
     // meteor-babel/register (including this very file).
     .excludeFile(path.join(toolsPath, "index.js"))
-    .excludeFile(path.join(__dirname, "install-promise.js"))
-    .excludeFile(path.join(__dirname, "wrap-fibers.js"))
     .excludeFile(path.join(__dirname, "install-reify.js"))
     .excludeFile(path.join(toolsPath, "cli", "dev-bundle-bin-commands.js"))
     .excludeFile(path.join(toolsPath, "cli", "dev-bundle-bin-helpers.js"))

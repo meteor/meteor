@@ -27,7 +27,7 @@ var cspsEqual = function (csp1, csp2) {
     values.forEach(function (value) {
       value.sort();
     });
-    
+
     return toObject(keys, values);
   };
 
@@ -37,21 +37,21 @@ var cspsEqual = function (csp1, csp2) {
 // It's important to call _reset() at the beginning of these tests; otherwise
 // the headers left over at the end of the last test run will be used.
 
-Tinytest.add("browser-policy - csp", function (test) {
+Tinytest.addAsync("browser-policy - csp", async function (test) {
   var defaultCsp = "default-src 'self'; script-src 'self' 'unsafe-inline'; " +
         "connect-src * 'self'; img-src data: 'self'; style-src 'self' 'unsafe-inline';"
 
-  BrowserPolicy.content._reset();
+  await BrowserPolicy.content._reset();
   // Default policy
   test.isTrue(cspsEqual(BrowserPolicy.content._constructCsp(), defaultCsp));
   test.isTrue(BrowserPolicy.content._keywordAllowed("script-src", "'unsafe-inline'"));
 
   // Redundant whitelisting (inline scripts already allowed in default policy)
-  BrowserPolicy.content.allowInlineScripts();
+  await BrowserPolicy.content.allowInlineScripts();
   test.isTrue(cspsEqual(BrowserPolicy.content._constructCsp(), defaultCsp));
 
   // Disallow inline scripts
-  BrowserPolicy.content.disallowInlineScripts();
+  await BrowserPolicy.content.disallowInlineScripts();
   test.isTrue(cspsEqual(BrowserPolicy.content._constructCsp(),
                         "default-src 'self'; script-src 'self'; " +
                         "connect-src * 'self'; img-src data: 'self'; style-src 'self' 'unsafe-inline';"));
@@ -74,12 +74,12 @@ Tinytest.add("browser-policy - csp", function (test) {
                         "connect-src * data: 'self'; img-src data: 'self'; style-src 'self' data:;"));
 
   // Disallow everything
-  BrowserPolicy.content.disallowAll();
+  await BrowserPolicy.content.disallowAll();
   test.isTrue(cspsEqual(BrowserPolicy.content._constructCsp(), "default-src 'none';"));
   test.isFalse(BrowserPolicy.content._keywordAllowed("script-src", "'unsafe-inline'"));
 
   // Put inline scripts back in
-  BrowserPolicy.content.allowInlineScripts();
+  await BrowserPolicy.content.allowInlineScripts();
   test.isTrue(cspsEqual(BrowserPolicy.content._constructCsp(),
                         "default-src 'none'; script-src 'unsafe-inline';"));
   test.isTrue(BrowserPolicy.content._keywordAllowed("script-src", "'unsafe-inline'"));
@@ -91,7 +91,7 @@ Tinytest.add("browser-policy - csp", function (test) {
   test.isTrue(BrowserPolicy.content._keywordAllowed("script-src", "'unsafe-inline'"));
 
   // Disallow all content except same-origin scripts
-  BrowserPolicy.content.disallowAll();
+  await BrowserPolicy.content.disallowAll();
   BrowserPolicy.content.allowScriptSameOrigin();
   test.isTrue(cspsEqual(BrowserPolicy.content._constructCsp(),
                         "default-src 'none'; script-src 'self';"));
@@ -100,31 +100,31 @@ Tinytest.add("browser-policy - csp", function (test) {
   // Starting with all content same origin, disallowScript() and then allow
   // inline scripts. Result should be that that only inline scripts can execute,
   // not same-origin scripts.
-  BrowserPolicy.content.disallowAll();
+  await BrowserPolicy.content.disallowAll();
   BrowserPolicy.content.allowSameOriginForAll();
   test.isTrue(cspsEqual(BrowserPolicy.content._constructCsp(), "default-src 'self';"));
   BrowserPolicy.content.disallowScript();
   test.isTrue(cspsEqual(BrowserPolicy.content._constructCsp(),
                         "default-src 'self'; script-src 'none';"));
   test.isFalse(BrowserPolicy.content._keywordAllowed("script-src", "'unsafe-inline'"));
-  BrowserPolicy.content.allowInlineScripts();
+  await BrowserPolicy.content.allowInlineScripts();
   test.isTrue(cspsEqual(BrowserPolicy.content._constructCsp(),
                         "default-src 'self'; script-src 'unsafe-inline';"));
   test.isTrue(BrowserPolicy.content._keywordAllowed("script-src", "'unsafe-inline'"));
 
   // Starting with all content same origin, allow inline scripts. (Should result
   // in both same origin and inline scripts allowed.)
-  BrowserPolicy.content.disallowAll();
+  await BrowserPolicy.content.disallowAll();
   BrowserPolicy.content.allowSameOriginForAll();
-  BrowserPolicy.content.allowInlineScripts();
+  await BrowserPolicy.content.allowInlineScripts();
   test.isTrue(cspsEqual(BrowserPolicy.content._constructCsp(),
                         "default-src 'self'; script-src 'self' 'unsafe-inline';"));
-  BrowserPolicy.content.disallowInlineScripts();
+  await BrowserPolicy.content.disallowInlineScripts();
   test.isTrue(cspsEqual(BrowserPolicy.content._constructCsp(),
                         "default-src 'self'; script-src 'self';"));
 
   // Allow same origin for all content, then disallow object entirely.
-  BrowserPolicy.content.disallowAll();
+  await BrowserPolicy.content.disallowAll();
   BrowserPolicy.content.allowSameOriginForAll();
   BrowserPolicy.content.disallowObject();
   test.isTrue(cspsEqual(BrowserPolicy.content._constructCsp(),
@@ -145,7 +145,7 @@ Tinytest.add("browser-policy - csp", function (test) {
                         "img-src 'self' http://foo.com https://foo.com;"));
 
   // Check that trailing slashes are trimmed from origins.
-  BrowserPolicy.content.disallowAll();
+  await BrowserPolicy.content.disallowAll();
   BrowserPolicy.content.allowFrameOrigin("https://foo.com/");
   test.isTrue(cspsEqual(BrowserPolicy.content._constructCsp(),
                         "default-src 'none'; frame-src https://foo.com;"));
@@ -162,25 +162,25 @@ Tinytest.add("browser-policy - csp", function (test) {
                         "frame-ancestors https://foo.com;"));
 
   // CSP2 options: nonce
-  BrowserPolicy.content.disallowAll();
+  await BrowserPolicy.content.disallowAll();
   BrowserPolicy.content.allowScriptOrigin('nonce-2gB8y5CrknnK2dgQk');
   test.isTrue(cspsEqual(BrowserPolicy.content._constructCsp(),
                         "default-src 'none'; script-src 'nonce-2gB8y5CrknnK2dgQk';"));
 
   // CSP2 options: sha256
-  BrowserPolicy.content.disallowAll();
+  await BrowserPolicy.content.disallowAll();
   BrowserPolicy.content.allowScriptOrigin('sha256-KFQx9ysdKgqbAPoY7');
   test.isTrue(cspsEqual(BrowserPolicy.content._constructCsp(),
                         "default-src 'none'; script-src 'sha256-KFQx9ysdKgqbAPoY7';"));
 
   // CSP2 options: sha384
-  BrowserPolicy.content.disallowAll();
+  await BrowserPolicy.content.disallowAll();
   BrowserPolicy.content.allowScriptOrigin('sha384-mChdKgyBF83ewvbTy');
   test.isTrue(cspsEqual(BrowserPolicy.content._constructCsp(),
                         "default-src 'none'; script-src 'sha384-mChdKgyBF83ewvbTy';"));
 
   // CSP2 options: sha512
-  BrowserPolicy.content.disallowAll();
+  await BrowserPolicy.content.disallowAll();
   BrowserPolicy.content.allowScriptOrigin('sha512-A8x946bPwaak2LToB');
   test.isTrue(cspsEqual(BrowserPolicy.content._constructCsp(),
                         "default-src 'none'; script-src 'sha512-A8x946bPwaak2LToB';"));
@@ -200,8 +200,8 @@ Tinytest.add("browser-policy - x-frame-options", function (test) {
   });
 });
 
-Tinytest.add("browser-policy - X-Content-Type-Options", function (test) {
-  BrowserPolicy.content._reset();
+Tinytest.addAsync("browser-policy - X-Content-Type-Options", async function (test) {
+  await BrowserPolicy.content._reset();
   test.equal(BrowserPolicy.content._xContentTypeOptions(), "nosniff");
   BrowserPolicy.content.allowContentTypeSniffing();
   test.equal(BrowserPolicy.content._xContentTypeOptions(), undefined);

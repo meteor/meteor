@@ -4,12 +4,15 @@ export namespace DDP {
   interface DDPStatic {
     subscribe(name: string, ...rest: any[]): Meteor.SubscriptionHandle;
     call(method: string, ...parameters: any[]): any;
+    callAsync(method: string, ...parameters: any[]): Promise<any>;
     apply(method: string, ...parameters: any[]): any;
     methods(IMeteorMethodsDictionary: any): any;
     status(): DDPStatus;
     reconnect(): void;
     disconnect(): void;
-    onReconnect(): void;
+    onReconnect(callback: (connection: DDPStatic) => void | Promise<void>): {
+      stop(): void;
+    };
   }
 
   function _allSubscriptionsReady(): boolean;

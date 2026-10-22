@@ -1,0 +1,9 @@
+body {
+  padding: 10px;
+  font-family: sans-serif;
+  background-image: url('/1x1-css.png');
+}
+
+h1 {
+  background-image: url('@public/1x1-public.jpg');
+}

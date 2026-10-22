@@ -4,44 +4,48 @@
 // The dev_bundle/bin command has to come immediately after the meteor
 // command, as in `meteor npm` or `meteor node`, because we don't want to
 // require("./main.js") for these commands.
-var devBundleBinCommand = process.argv[2];
-var args = process.argv.slice(3);
+const { getDevBundleDir, DEFAULT_DEV_BUNDLE_DIR } = require('./dev-bundle');
+const { getEnv } = require('./dev-bundle-bin-helpers');
+const devBundleBinCommand = process.argv[2];
+const args = process.argv.slice(3);
 
-function getChildProcess() {
+async function getChildProcess({ isFirstTry }) {
   if (typeof devBundleBinCommand !== "string") {
     return Promise.resolve(null);
   }
 
-  var helpers = require("./dev-bundle-bin-helpers.js");
+  const helpers = require("./dev-bundle-bin-helpers");
 
-  return Promise.all([
-    helpers.getDevBundle(),
-    helpers.getEnv()
-  ]).then(function (devBundleAndEnv) {
-    var devBundleDir = devBundleAndEnv[0];
-    var cmd = helpers.getCommand(devBundleBinCommand, devBundleDir);
-    if (! cmd) {
-      return null;
-    }
+  const [devBundleDir, env] = await Promise.all([
+    getDevBundleDir(),
+    getEnv()
+  ]);
 
-    var env = devBundleAndEnv[1];
-    var child = require("child_process").spawn(cmd, args, {
-      stdio: "inherit",
-      env: env
-    });
+  if (isFirstTry && devBundleDir === DEFAULT_DEV_BUNDLE_DIR) {
+    return null
+  }
 
-    require("./flush-buffers-on-exit-in-windows.js");
+  const cmd = helpers.getCommand(devBundleBinCommand, devBundleDir);
 
-    child.on("error", function (error) {
-      console.log(error.stack || error);
-    });
+  if (!cmd) {
+    return null;
+  }
 
-    child.on("exit", function (exitCode) {
-      process.exit(exitCode);
-    });
-
-    return child;
+  const child = require('child_process').spawn(cmd, args, {
+    stdio: 'inherit',
+    env: env,
+    shell: process.platform === 'win32' && ['.cmd', '.bat'].some(_extension => cmd.endsWith(_extension)),
   });
+  require("./flush-buffers-on-exit-in-windows");
+  child.on("error", function (error) {
+    console.log(error.stack || error);
+  });
+  child.on("exit", function (exitCode) {
+    process.exit(exitCode);
+  });
+  return child;
 }
 
-module.exports = getChildProcess();
+module.exports = {
+  getChildProcess
+}

@@ -6,7 +6,7 @@ babel-runtime@0.1.10
 base64@1.0.9
 binary-heap@1.0.9
 blaze@2.1.8
-blaze-html-templates@1.0.4
+blaze-html-templates@3.0.0-alpha300.6
 blaze-tools@1.0.9
 boilerplate-generator@1.0.9
 caching-compiler@1.1.6

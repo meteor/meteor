@@ -1,0 +1,6 @@
+pre-push:
+  commands:
+    fmt-check:
+      run: npm run fmt:check
+    lint:
+      run: npm run lint

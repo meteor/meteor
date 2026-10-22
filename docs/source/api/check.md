@@ -87,6 +87,10 @@ Matches a primitive of the given type.
 Matches a signed 32-bit integer. Doesn't match `Infinity`, `-Infinity`, or `NaN`.
 {% enddtdd %}
 
+{% dtdd name:"<code>Match.NonEmptyString</code>" %}
+Matches a non-empty string.
+{% enddtdd %}
+
 {% dtdd name:"<code>[<em>pattern</em>]</code>" %}
 A one-element array matches an array of elements, each of which match
 *pattern*. For example, `[Number]` matches a (possibly empty) array of numbers;
@@ -160,12 +164,13 @@ from the call to `check` or `Match.test`. Examples:
 {% codeblock lang:js %}
 check(buffer, Match.Where(EJSON.isBinary));
 
-const NonEmptyString = Match.Where((x) => {
-  check(x, String);
-  return x.length > 0;
+// Example: creating a custom pattern for positive numbers
+const PositiveNumber = Match.Where((x) => {
+  check(x, Number);
+  return x > 0;
 });
 
-check(arg, NonEmptyString);
+check(arg, PositiveNumber);
 {% endcodeblock %}
 {% enddtdd %}
 </dl>

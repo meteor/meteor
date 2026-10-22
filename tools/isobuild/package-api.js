@@ -75,6 +75,7 @@ export class PackageAPI {
     options = options || {};
 
     this.buildingIsopackets = !!options.buildingIsopackets;
+    this.buildingSelfTestCatalog = !!options.buildingSelfTestCatalog;
 
     // source files used.
     // It's a multi-level map structured as:
@@ -103,6 +104,7 @@ export class PackageAPI {
     });
 
     this.releaseRecords = [];
+    this.pendingPromises = [];
   }
 
   // Called when this package wants to make another package be
@@ -531,6 +533,18 @@ export class PackageAPI {
       return;
     }
 
+    if (self.buildingSelfTestCatalog) {
+      // The self-test catalog is built from a checkout-only set of packages
+      // where the local catalog has exactly one version of each package.
+      // versionsFrom's release records would only fill in unspecified
+      // version constraints (see the !_.isEmpty(api.releaseRecords) check
+      // in package-source.js), which has no effect when there is exactly
+      // one candidate version. Skipping the lookup
+      // avoids a hard dependency on catalog.official having every Meteor
+      // release cached on disk, which is fragile in CI.
+      return;
+    }
+
     releases = toArray(releases);
 
     // using for loop rather than underscore to help with useMyCaller
@@ -548,15 +562,27 @@ export class PackageAPI {
                            { useMyCaller: true });
         return;
       }
-      var releaseRecord = catalog.official.getReleaseVersion(
-        relInf[0], relInf[1]);
-      if (!releaseRecord) {
-        buildmessage.error("Unknown release "+ release,
-                           { tags: { refreshCouldHelp: true } });
-      } else {
-        self.releaseRecords.push(releaseRecord);
-      }
+
+      let promise = catalog.official.getReleaseVersion(relInf[0], relInf[1])
+        .then(releaseRecord => {
+          if (!releaseRecord) {
+            buildmessage.error("Unknown release "+ release,
+                               { tags: { refreshCouldHelp: true } });
+          } else {
+            self.releaseRecords.push(releaseRecord);
+          }
+        });
+
+      this.pendingPromises.push(promise);
     }
+  }
+
+  // Internal method used by the meteor-tool
+  _waitForAsyncWork() {
+    let promises = this.pendingPromises;
+    this.pendingPromises = [];
+
+    return Promise.all(promises);
   }
 
   // Export symbols from this package.

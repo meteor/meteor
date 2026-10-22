@@ -10,17 +10,13 @@ var packageJson = {
   dependencies: {
     // Explicit dependency because we are replacing it with a bundled version
     // and we want to make sure there are no dependencies on a higher version
-    npm: "6.14.18",
+    npm: "11.12.1",
     pacote: "https://github.com/meteor/pacote/tarball/a81b0324686e85d22c7688c47629d4009000e8b8",
-    "node-gyp": "8.0.0",
-    "node-pre-gyp": "0.15.0",
-    typescript: "4.9.5",
-    "@meteorjs/babel": "7.18.0-beta.6",
-    // Keep the versions of these packages consistent with the versions
-    // found in dev-bundle-server-package.js.
-    "meteor-promise": "0.9.0",
-    fibers: "https://github.com/meteor/node-fibers/archive/refs/tags/5.0.0.tar.gz",
-    "@meteorjs/reify": "0.24.0",
+    "node-gyp": "9.4.0",
+    "@mapbox/node-pre-gyp": "2.0.3",
+    typescript: "5.6.3",
+    "@meteorjs/babel": "7.20.0",
+    "@meteorjs/reify": "0.25.3",
     // So that Babel can emit require("@babel/runtime/helpers/...") calls.
     "@babel/runtime": "7.15.3",
     // For backwards compatibility with isopackets that still depend on
@@ -42,26 +38,26 @@ var packageJson = {
     kexec: "https://github.com/meteor/node-kexec/tarball/f29f54037c7db6ad29e1781463b182e5929215a0",
     "source-map": "0.7.3",
     chalk: "4.1.2",
-    sqlite3: "5.0.2",
-    "http-proxy": "1.18.1",
+    sqlite3: "5.1.6",
+    "http-proxy-3": "1.22.0",
     "is-reachable": "3.1.0",
     "wordwrap": "1.0.0",
     "moment": "2.29.1",
     "rimraf": "2.6.2",
-    "glob": "7.1.6",
+    "glob": "11.0.1",
     ignore: "3.3.7",
     // XXX: When we update this, see if it fixes this Github issue:
     // https://github.com/jgm/CommonMark/issues/276 . If it does, remove the
     // workaround from the tool.
     "commonmark": "0.15.0",
-    escope: "3.6.0",
+    escope: "4.0.0",
     split2: "3.2.2",
     multipipe: "2.0.1",
     pathwatcher: "8.1.0",
     // The @wry/context package version must be compatible with the
     // version constraint imposed by optimism/package.json.
-    optimism: "0.16.1",
-    "@wry/context": "0.6.0",
+    optimism: "0.18.1",
+    "@wry/context": "0.7.4",
     'lru-cache': '4.1.5',
     "anser": "2.0.1",
     'xmlbuilder2': '1.8.1',

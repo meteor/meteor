@@ -1,0 +1,286 @@
+# WebApp
+
+The `webapp` package is what lets your Meteor app serve content to a web
+browser. It is included in the `meteor-base` set of packages that is
+automatically added when you run `meteor create`. You can easily build a
+Meteor app without it - for example if you wanted to make a command-line
+tool that still used the Meteor package system and DDP.
+
+This package also allows you to add handlers for HTTP requests.
+This lets other services access your app's data through an HTTP API, allowing
+it to easily interoperate with tools and frameworks that don't yet support DDP.
+
+`webapp` exposes the [express](https://github.com/expressjs/express) API for
+handling requests through `WebApp.handlers`.
+Here's an example that will let you handle a specific URL:
+
+```js
+// Listen to incoming HTTP requests (can only be used on the server).
+WebApp.handlers.use("/hello", (req, res, next) => {
+  res.writeHead(200);
+  res.end(`Hello world from: ${Meteor.release}`);
+});
+```
+
+<ApiBox name="WebApp.handlers"/>
+<ApiBox name="expressHandlersCallback(req, res, next)" hasCustomExample/>
+
+### Customizing the `<html>` Element
+
+Use `WebApp.addHtmlAttributeHook` on the server to add attributes to the
+`<html>` element. The hook runs whenever Meteor generates app HTML and receives
+information about the request, so attributes can be static or request-specific.
+
+For example, this sets the document language for every request:
+
+```js
+// server/main.js
+import { WebApp } from "meteor/webapp";
+
+WebApp.addHtmlAttributeHook(() => ({ lang: "en" }));
+```
+
+Return `null` when no attributes should be added for a request. If multiple
+hooks return the same attribute, the hook registered last takes precedence.
+The request object contains:
+
+- `browser`: the browser `name` and `major`, `minor`, and `patch` versions
+- `modern`: whether the browser supports Meteor's modern JavaScript bundle
+- `path`: the request path
+- `arch`: the selected client architecture
+- `url`: parsed URL data, including a `query` object
+- `headers`: the request headers
+- `cookies`: the parsed request cookies
+
+<ApiBox name="WebApp.addHtmlAttributeHook" hasCustomExample/>
+
+### Serving a Static Landing Page
+
+One of the really cool things you can do with WebApp is serve static HTML for a landing page where TTFB (time to first byte) is of utmost importance.
+
+The [Bundle Visualizer](/packages/bundle-visualizer) and [Dynamic Imports](/packages/dynamic-import) are great tools to help you minimize initial page load times. But sometimes you just need to skinny down your initial page load to bare metal.
+
+The good news is that WebApp makes this is really easy to do.
+
+Step one is to create a your static HTML file and place it in the _private_ folder at the root of your application.
+
+Here's a sample _index.html_ you might use to get started:
+
+::: code-group
+
+```html [index.html]
+<head>
+    <title>Fast Landing Page</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0 user-scalable=no" />
+    <link rel="stylesheet" href="path to your style sheet etc">
+</head>
+
+    <body>
+        <!-- your content -->
+    </body>
+
+    <script>
+
+    // any functions you need to support your landing page
+
+    </script>
+
+</html>
+```
+
+```javascript [index.js]
+/* global WebApp Assets */
+import crypto from "crypto";
+import express from "express";
+
+const router = express.Router();
+
+router.get("/", async function (req, res, next) {
+  const buf = await Assets.getTextAsync("index.html");
+
+  if (buf.length > 0) {
+    const eTag = crypto.createHash("md5").update(buf).digest("hex");
+
+    if (req.headers["if-none-match"] === eTag) {
+      res.writeHead(304, "Not Modified");
+      return res.end();
+    }
+
+    res.writeHead(200, {
+      ETag: eTag,
+      "Content-Type": "text/html",
+    });
+
+    return res.end(buf);
+  }
+
+  return res.end("<html><body>Index page not found!</body></html>");
+});
+
+WebApp.handlers.use(router);
+
+```
+
+:::
+There are a couple things to think about with this approach.
+
+We're reading the contents of index.html using the [Assets](../api/assets.md) module that makes it really easy to read files out of the _private_ root folder.
+
+We're using the [connect-route](https://www.npmjs.com/package/connect-route) NPM package to simplify WebApp route processing. But you can use any package you want to understand what is being requested.
+
+And finally, if you decide to use this technique you'll want to make sure you understand how conflicting client side routing will affect user experience.
+
+### Static Assets & Caching
+
+By default, Meteor serves different bundles (Modern vs. Legacy) based on the user's browser. Historically, this required the `Vary: User-Agent` header on all responses, which forced CDNs to fragment their cache (storing separate copies for Chrome, Safari, etc.).
+
+`webapp` now includes an automatic optimization to solve this:
+
+* **Production (Hashed Filenames):** Files with the hash in the pathname (e.g., `/app.abc12345.js`) are served **without** the `Vary: User-Agent` header. Since the pathname uniquely identifies the content, CDNs can safely cache a single copy for all users.
+* **Development (Unhashed Filenames):** Files without the hash in the pathname (e.g., `/packages/promise.js?hash=abc123`) **keep** the `Vary: User-Agent` header to ensure safety during development.
+
+This behavior is enabled by default. You can control it via `Meteor.settings`:
+```json
+{
+  "packages": {
+    "webapp": {
+      "includeVaryUserAgent": true
+    }
+  }
+}
+```
+
+Setting `includeVaryUserAgent` to `false` will disable the header for **all** static files. 
+
+#### Skipping compression for responses with a Content-Length
+
+By default, `webapp` may compress responses (dropping their `Content-Length` header in the process). If you sit behind a proxy or CDN — or have clients — that rely on an explicit `Content-Length` (for example, to show download progress or to serve range requests), you can opt in to leave already-sized responses uncompressed:
+
+```json
+{
+  "packages": {
+    "webapp": {
+      "skipCompressionWithContentLength": true
+    }
+  }
+}
+```
+
+When enabled, any response that already declares a `Content-Length` header is served as-is, without compression. Responses without a `Content-Length` are unaffected and still compress as before. This setting is `false` by default.
+
+### React SSR Optimization (Meteor 3.4)
+
+**Experimental: Disable Boilerplate Response** ([PR#13855](https://github.com/meteor/meteor/pull/13855))
+
+Meteor 3.4 introduces an experimental configuration option to improve React Server-Side Rendering (SSR) performance by disabling the default boilerplate HTML response.
+
+When using React SSR with packages like `server-render`, you may want to completely control the HTML output without Meteor's default boilerplate injection. Enable this with:
+
+```js
+// server/main.js
+import { WebAppInternals } from "meteor/webapp";
+
+WebAppInternals.disableBoilerplateResponse();
+```
+
+**Benefits:**
+- **Full SSR Control**: Complete control over the HTML output for SSR frameworks
+- **Better Performance**: Reduces overhead by skipping boilerplate generation
+- **Cleaner Output**: No automatic script/link injection, allowing custom placement
+
+**Use Cases:**
+- Advanced React SSR implementations
+- Custom HTML structure requirements
+- Integration with SSR frameworks like Next.js patterns in Meteor
+
+**Important Notes:**
+- This is an experimental feature and may change in future releases
+- When enabled, you're responsible for including all necessary scripts and assets
+- Best used with the `server-render` package for full SSR implementations
+
+Example with server-render:
+
+```js
+import { onPageLoad } from 'meteor/server-render';
+import { renderToString } from 'react-dom/server';
+import { WebAppInternals } from 'meteor/webapp';
+
+WebAppInternals.disableBoilerplateResponse();
+
+onPageLoad(sink => {
+  const html = renderToString(<App />);
+
+  sink.renderIntoElementById('root', html);
+  sink.appendToHead('<link rel="stylesheet" href="/styles.css">');
+  sink.appendToBody('<script src="/client.js"></script>');
+});
+```
+
+### Dynamic Runtime Configuration
+
+In some cases it is valuable to be able to control the **meteor_runtime_config** variable that initializes Meteor at runtime.
+
+#### Example
+
+There are occasions when a single Meteor server would like to serve multiple cordova applications that each have a unique `ROOT_URL`. But there are 2 problems:
+
+1. The Meteor server can only be configured to serve a single `ROOT_URL`.
+2. The `cordova` applications are build time configured with a specific `ROOT_URL`.
+
+These 2 conditions break `autoupdate` for the cordova applications. `cordova-plugin-meteor-webapp` will fail the update if the `ROOT_URL` from the server does not match the build time configured `ROOT_URL` of the cordova application.
+
+To remedy this problem `webapp` has a hook for dynamically configuring `__meteor_runtime_config__` on the server.
+
+#### Dynamic Runtime Configuration Hook
+
+```js
+WebApp.addRuntimeConfigHook(
+  ({ arch, request, encodedCurrentConfig, updated }) => {
+    // check the request to see if this is a request that requires
+    // modifying the runtime configuration
+    if (request.headers.domain === "calling.domain") {
+      // make changes to the config for this domain
+      // decode the current runtime config string into an object
+      const config = WebApp.decodeRuntimeConfig(current);
+      // make your changes
+      config.newVar = "some value";
+      config.oldVar = "new value";
+      // encode the modified object to the runtime config string
+      // and return it
+      return WebApp.encodeRuntimeConfig(config);
+    }
+    // Not modifying other domains so return undefined
+    return undefined;
+  }
+);
+```
+
+<ApiBox name="WebApp.addRuntimeConfigHook"/>
+<ApiBox name="addRuntimeConfigHookCallback(options)" hasCustomExample/>
+
+Additionally, 2 helper functions are available to decode the runtime config string and encode the runtime config object.
+
+<ApiBox name="WebApp.decodeRuntimeConfig"/>
+<ApiBox name="WebApp.encodeRuntimeConfig"/>
+
+### Updated Runtime Configuration Hook
+
+```js
+const autoupdateCache;
+// Get a notification when the runtime configuration is updated
+// for each arch
+WebApp.addUpdatedNotifyHook(({arch, manifest, runtimeConfig}) => {
+  // Example, see if runtimeConfig.autoupdate has changed and if so
+  // do something
+  if(!_.isEqual(autoupdateCache, runtimeConfig.autoupdate)) {
+    autoupdateCache = runtimeConfig.autoupdate;
+    // do something...
+  }
+})
+```
+
+<ApiBox name="WebApp.addUpdatedNotifyHook"/>
+<ApiBox name="addUpdatedNotifyHookCallback(options)" hasCustomExample/>
+<ApiBox name="main"/>

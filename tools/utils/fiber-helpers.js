@@ -1,11 +1,23 @@
 var _ = require("underscore");
-var Fiber = require("fibers");
 
-exports.parallelEach = function (collection, callback, context) {
+const getAslStore = () => global.__METEOR_ASYNC_LOCAL_STORAGE.getStore();
+const getValueFromAslStore = key => getAslStore()[key];
+const updateAslStore = (key, value) => getAslStore()[key] = value;
+
+exports.makeGlobalAsyncLocalStorage = () => {
+  if (!global.__METEOR_ASYNC_LOCAL_STORAGE) {
+    const { AsyncLocalStorage } = require('async_hooks');
+    global.__METEOR_ASYNC_LOCAL_STORAGE = new AsyncLocalStorage();
+  }
+
+  return global.__METEOR_ASYNC_LOCAL_STORAGE;
+};
+
+exports.parallelEach = async function (collection, callback, context) {
   const errors = [];
   context = context || null;
 
-  const results = Promise.all(_.map(collection, (...args) => {
+  const results = await Promise.all(_.map(collection, (...args) => {
     async function run() {
       return callback.apply(context, args);
     }
@@ -15,7 +27,7 @@ exports.parallelEach = function (collection, callback, context) {
       // re-throw the first error after all iterations have completed.
       errors.push(error);
     });
-  })).await();
+  }));
 
   if (errors.length > 0) {
     throw errors[0];
@@ -31,25 +43,12 @@ function disallowedYield() {
 disallowedYield.disallowed = true;
 
 exports.noYieldsAllowed = function (f, context) {
-  var savedYield = Fiber.yield;
-  Fiber.yield = disallowedYield;
-  try {
-    return f.call(context || null);
-  } finally {
-    Fiber.yield = savedYield;
-  }
+  // no op since we don't use fibers anymore
+  return f.call(context || null);
 };
 
 // Borrowed from packages/meteor/dynamics_nodejs.js
 // Used by buildmessage
-
-exports.nodeCodeMustBeInFiber = function () {
-  if (!Fiber.current) {
-    throw new Error("Meteor code must always run within a Fiber. " +
-                    "Try wrapping callbacks that you pass to non-Meteor " +
-                    "libraries with Meteor.bindEnvironment.");
-  }
-};
 
 var nextSlot = 0;
 exports.EnvironmentVariable = function (defaultValue) {
@@ -59,42 +58,51 @@ exports.EnvironmentVariable = function (defaultValue) {
 };
 
 Object.assign(exports.EnvironmentVariable.prototype, {
+  /**
+   * @memberof Meteor.EnvironmentVariable
+   * @method get
+   * @returns {any} The current value of the variable, or its default value if
+   */
   get() {
-    var self = this;
-    exports.nodeCodeMustBeInFiber();
+    const self = this;
+    const currentValue = getValueFromAslStore("_meteor_dynamics");
+    let returnValue = currentValue && currentValue[self.slot];
 
-    if (!Fiber.current._meteorDynamics) {
-      return self.defaultValue;
+    if (!returnValue) {
+      returnValue = self.defaultValue;
     }
-    if (!_.has(Fiber.current._meteorDynamics, self.slot)) {
-      return self.defaultValue;
-    }
-    return Fiber.current._meteorDynamics[self.slot];
+
+    return returnValue;
   },
 
   set(value) {
-    exports.nodeCodeMustBeInFiber();
+    const self = this;
+    const currentValues = getValueFromAslStore("_meteor_dynamics") || {};
 
-    const fiber = Fiber.current;
-    const currentValues = fiber._meteorDynamics || (
-      fiber._meteorDynamics = {}
-    );
-
-    const saved = _.has(currentValues, this.slot)
-      ? currentValues[this.slot]
+    const saved = _.has(currentValues, self.slot)
+      ? currentValues[self.slot]
       : this.defaultValue;
 
-    currentValues[this.slot] = value;
+    currentValues[self.slot] = value;
+    updateAslStore("_meteor_dynamics", currentValues);
 
     return () => {
-      currentValues[this.slot] = saved;
+      currentValues[self.slot] = saved;
+      updateAslStore("_meteor_dynamics", currentValues);
     };
   },
 
-  withValue(value, func) {
+  /**
+   * @memberof Meteor.EnvironmentVariable
+   * @method withValue
+   * @param {any} value The value to set for the duration of the function call
+   * @param {Function} func The function to call with the new value of the
+   * @returns {any} The return value of the function
+   */
+  async withValue(value, func) {
     const reset = this.set(value);
     try {
-      return func();
+      return await func();
     } finally {
       reset();
     }
@@ -104,29 +112,34 @@ Object.assign(exports.EnvironmentVariable.prototype, {
 // This is like Meteor.bindEnvironment.
 // Experimentally, we are NOT including onException or _this in this version.
 exports.bindEnvironment = function (func) {
-  exports.nodeCodeMustBeInFiber();
-
-  var boundValues = _.clone(Fiber.current._meteorDynamics || {});
+  var dynamics = getValueFromAslStore("_meteor_dynamics");
+  var boundValues = Array.isArray(dynamics) ? dynamics.slice() : [];
 
   return function (...args) {
-    var self = this;
+    const self = this;
 
-    var runWithEnvironment = function () {
-      var savedValues = Fiber.current._meteorDynamics;
+    var runWithEnvironment = async function () {
+      const savedValues = getValueFromAslStore("_meteor_dynamics");
+      let ret;
       try {
         // Need to clone boundValues in case two fibers invoke this
         // function at the same time
-        Fiber.current._meteorDynamics = _.clone(boundValues);
-        return func.apply(self, args);
+        // TODO -> Probably not needed
+        updateAslStore("_meteor_dynamics", boundValues.slice());
+        ret = await func.apply(self, args);
+      } catch (e) {
+        console.error(e);
       } finally {
-        Fiber.current._meteorDynamics = savedValues;
+        updateAslStore("_meteor_dynamics", savedValues);
       }
+      return ret;
     };
 
-    if (Fiber.current) {
+    if (getAslStore()) {
       return runWithEnvironment();
     }
-    Fiber(runWithEnvironment).run();
+
+    return global.__METEOR_ASYNC_LOCAL_STORAGE.run({}, runWithEnvironment);
   };
 };
 

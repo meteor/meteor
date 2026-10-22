@@ -30,8 +30,8 @@ testAsyncMulti('ddp rate limiter - default rate limit', [
       },
     );
   },
-  function (test, expect) {
-    Meteor.call('removeUserByUsername', this.username, expect(() => {}));
+  async function (test, expect) {
+    await Meteor.callAsync('removeUserByUsername', this.username);
     // Remove the default rate limiter rule
     Meteor.call('removeDefaultAccountsRateLimitRule');
   },
@@ -66,8 +66,8 @@ testAsyncMulti('ddp rate limiter - matchers get passed correct arguments', [
         test.isNotUndefined(result.clientAddress, 'clientAddress is not defined');
       }));
   },
-  function (test, expect) {
-    Meteor.call('removeUserByUsername', this.username, expect(() => {}));
+  async function (test, expect) {
+    await Meteor.callAsync('removeUserByUsername', this.username);
   },
   function (test, expect) {
     // Cleanup
@@ -126,8 +126,8 @@ testAsyncMulti('ddp rate limiter - callbacks get passed correct arguments', [
       test.equal(result.ruleInput.name, 'dummyMethod');
     }));
   },
-  function (test, expect) {
-    Meteor.call('removeUserByUsername', this.username, expect(() => {}));
+  async function (test, expect) {
+    await Meteor.callAsync('removeUserByUsername', this.username);
   },
   function (test, expect) {
     // Cleanup
@@ -335,8 +335,8 @@ testAsyncMulti('ddp rate limiter - test removing rule with rateLimited ' +
       },
     );
   },
-  function (test, expect) {
-    Meteor.call('removeUserByUsername', this.username, expect(function () {}));
+  async function (test, expect) {
+    await Meteor.callAsync('removeUserByUsername', this.username);
   },
 ]);
 

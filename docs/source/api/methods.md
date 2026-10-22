@@ -80,6 +80,12 @@ with this ID has already been made.  Alternatively, you can use
 
 Read more about methods and how to use them in the [Methods](http://guide.meteor.com/methods.html) article in the Meteor Guide.
 
+{% apibox "Meteor.isAsyncCall" %}
+
+This method can be used to determine if the current method invocation is
+asynchronous.  It returns true if the method is running on the server and came from
+an async call(`Meteor.callAsync`)
+
 {% apibox "DDPCommon.MethodInvocation#userId" %}
 
 The user id is an arbitrary string &mdash; typically the id of the user record
@@ -235,8 +241,8 @@ Here's example of defining a rule and adding it into the `DDPRateLimiter`:
 ```js
 // Define a rule that matches login attempts by non-admin users.
 const loginRule = {
-  userId(userId) {
-    const user = Meteor.users.findOne(userId);
+  async userId(userId) {
+    const user = await Meteor.users.findOneAsync(userId);
     return user && user.type !== 'admin';
   },
 
@@ -260,8 +266,8 @@ default English error message.
 Here is an example with a custom error message:
 ```js
 const setupGoogleAuthenticatorRule = {
-  userId(userId) {
-    const user = Meteor.users.findOne(userId);
+  async userId(userId) {
+    const user = await Meteor.users.findOneAsync(userId);
     return user;
   },
   type: 'method',

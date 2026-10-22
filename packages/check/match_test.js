@@ -77,7 +77,7 @@ Tinytest.add('check - check', test => {
           }
         }));
       }
-      
+
       if ( type !== null ) {
 
         // Optional doesn't allow null, but does match on null type
@@ -175,7 +175,8 @@ Tinytest.add('check - check', test => {
   fails(true, false);
   fails(true, 'true');
   fails('false', false);
-
+  matches('xx', Match.NonEmptyString);
+  fails('', Match.NonEmptyString);
   matches(/foo/, RegExp);
   fails(/foo/, String);
   matches(new Date, Date);
@@ -193,7 +194,7 @@ Tinytest.add('check - check', test => {
       {x: 43, k: true, p: ['yay']},
     ],
   }, {
-    a: String, 
+    a: String,
     b: [
       Match.ObjectIncluding({
         x: Number,
@@ -573,7 +574,8 @@ Tinytest.add('check - check throw all errors deeply nested', test => {
     int: { i: 1.2, a: [1, '2'], b: [{x: 1, y: '1'}, {x: '2', y: 2}, {x: '3', y: '3'}] },
     oneOf: { f: 'm', a: [1, '2'], b: [{x: 1, y: '1'}, {x: '2', y: 2}, {x: '3', y: '3'}] },
     where: { w: 'a', a: [1, '2'], b: [{x: 1, y: '1'}, {x: '2', y: 2}, {x: '3', y: '3'}] },
-    whereArr: [1, 2, 3]
+    whereArr: [1, 2, 3],
+    embedded: { thing: '1' }
   };
 
   const pattern = {
@@ -599,7 +601,10 @@ Tinytest.add('check - check throw all errors deeply nested', test => {
     whereArr: Match.Where((x) => {
       check(x, [String]);
       return x.length === 1;
-    })
+    }),
+    missing1: String,
+    missing2: String,
+    embedded: { thing: String, another: String }
   }
 
   try {
@@ -609,7 +614,8 @@ Tinytest.add('check - check throw all errors deeply nested', test => {
   }
 
   test.isTrue(error);
-  test.equal(error.length, 37);
+  test.equal(error.length, 40);
+  test.equal(error.filter(e => e.message.includes('Missing key')).map(e => e.message), [`Match error: Missing key 'another' in field embedded`, `Match error: Missing key 'missing1'`, `Match error: Missing key 'missing2'`]);
   error.every(e => test.instanceOf(e, Match.Error));
   test.isFalse(Match.test(value, pattern));
 })
@@ -768,40 +774,9 @@ Tinytest.add('check - Match error message', test => {
 
 });
 
-// Regression test for https://github.com/meteor/meteor/issues/2136
-Meteor.isServer && Tinytest.addAsync('check - non-fiber check works', (test, onComplete) => {
-  const Fiber = Npm.require('fibers');
-
-  // We can only call test.isTrue inside normal Meteor Fibery code, so give us a
-  // bindEnvironment way to get back.
-  const report = Meteor.bindEnvironment(success => {
-    test.isTrue(success);
-    onComplete();
-  });
-
-  // Get out of a fiber with process.nextTick and ensure that we can still use
-  // check.
-  process.nextTick(() => {
-    let success = true;
-    if (Fiber.current) {
-      success = false;
-    }
-
-    if (success) {
-      try {
-        check(true, Boolean);
-      } catch (e) {
-        success = false;
-      }
-    }
-
-    report(success);
-  });
-});
-
 Tinytest.add(
-  'check - Match methods that return class instances can be called as ' + 
-  'constructors', 
+  'check - Match methods that return class instances can be called as ' +
+  'constructors',
   test => {
 
     // Existing code sometimes uses these properties as constructors, so we can't

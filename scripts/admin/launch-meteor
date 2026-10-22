@@ -60,6 +60,8 @@ if [ ! -x "$METEOR_WAREHOUSE_DIR/meteor" ]; then
           PLATFORM="os.linux.x86_32"
       elif [ "${LINUX_ARCH}" = "x86_64" ] ; then
           PLATFORM="os.linux.x86_64"
+      elif [ "${LINUX_ARCH}" = "aarch64" ] ; then
+          PLATFORM="os.linux.aarch64"
       else
           echo "Unusable architecture: ${LINUX_ARCH}"
           echo "Meteor only supports i686 and x86_64 for now."

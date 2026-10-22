@@ -1,4 +1,5 @@
 import { loadIsopackage } from '../tool-env/isopackets.js';
+import {clearScreenDown} from "readline";
 var files = require('../fs/files');
 var fiberHelpers = require("../utils/fiber-helpers.js");
 
@@ -24,86 +25,93 @@ var fiberHelpers = require("../utils/fiber-helpers.js");
 //
 var ServiceConnection = function (endpointUrl, options) {
   const self = this;
-  const ddpClient = loadIsopackage('ddp-client');
 
   // ServiceConnection never should retry connections: just one TCP connection
-  // is enough, and any errors on it should be detected promptly.
-  options = Object.assign({}, options, {
-    // We found that this was likely to time out with the DDP default of 10s,
-    // especially if the CPU is churning on bundling (eg, for the stats
-    // connection which we start in parallel with bundling).
-    connectTimeoutMs: 30000,
-    // Disable client->server heartbeats for service connections.  Users with
-    // slow internet connections were seeing heartbeat timeouts because the
-    // heartbeats were buried behind large responses (eg
-    // https://github.com/meteor/meteor/issues/2777).
-    heartbeatInterval: 0,
-    retry: false,
-    onConnected: function () {
-      self.connected = true;
-      if (! self.currentPromise) {
-        throw Error("nobody waiting for connection?");
-      }
-      if (self.currentPromise !== connectPromise) {
-        throw Error("waiting for something that isn't connection?");
-      }
-      self.currentPromise = null;
-      connectPromise.resolve();
-      connectPromise.resolve = null;
-    }
-  });
+  // is enough, and any errors on it should be detected promptly.]
+  self.options = options;
+  self.endpointUrl = endpointUrl;
+
   if (process.env.CAFILE) {
     options.npmFayeOptions = {
       ca: files.readFile(process.env.CAFILE)
-    }
+    };
   }
-
-  self.connection = ddpClient.DDP.connect(endpointUrl, options);
-
-  // Wait until we have some sort of initial connection or error (including the
-  // 10-second timeout built into our DDP client).
-
-  var connectPromise = self.currentPromise =
-    fiberHelpers.makeFulfillablePromise();
-
-  self.connection._stream.on('disconnect', function (error) {
-    self.connected = false;
-    if (error && error.errorType === "DDP.ForcedReconnectError") {
-      // OK, we requested this, probably due to version negotiation failure.
-      //
-      // This ought to have happened before we successfully connect, unless
-      // somebody adds other calls to forced reconnect to Meteor...
-      if (! connectPromise.resolve) {
-        throw Error("disconnect before connect?");
-      }
-      // Otherwise, ignore this error. We're going to reconnect!
-      return;
-    }
-    // Are we waiting to connect or for the result of a method apply or a
-    // subscribeAndWait? If so, disconnecting is a problem.
-    if (self.currentPromise) {
-      var promise = self.currentPromise;
-      self.currentPromise = null;
-      promise.reject(
-        error || new ddpClient.DDP.ConnectionError(
-          "DDP disconnected while connection in progress")
-      );
-    } else if (error) {
-      // We got some sort of error with nobody listening for it; handle it.
-      // XXX probably have a better way to handle it than this
-      throw error;
-    }
-  });
-
-  connectPromise.await();
 };
 
 Object.assign(ServiceConnection.prototype, {
+  init: async function() {
+    const self = this;
+    const ddpClient = await loadIsopackage('ddp-client');
+
+    const options = Object.assign({}, self.options, {
+      // We found that this was likely to time out with the DDP default of 10s,
+      // especially if the CPU is churning on bundling (eg, for the stats
+      // connection which we start in parallel with bundling).
+      connectTimeoutMs: 30000,
+      // Disable client->server heartbeats for service connections.  Users with
+      // slow internet connections were seeing heartbeat timeouts because the
+      // heartbeats were buried behind large responses (eg
+      // https://github.com/meteor/meteor/issues/2777).
+      heartbeatInterval: 0,
+      retry: false,
+      onConnected: function () {
+        self.connected = true;
+        if (! self.currentPromise) {
+          throw Error("nobody waiting for connection?");
+        }
+        if (self.currentPromise !== connectPromise) {
+          throw Error("waiting for something that isn't connection?");
+        }
+        self.currentPromise = null;
+        connectPromise.resolve();
+        connectPromise.resolve = null;
+      }
+    });
+
+    self.connection = ddpClient.DDP.connect(self.endpointUrl, options);
+
+    // Wait until we have some sort of initial connection or error (including the
+    // 10-second timeout built into our DDP client).
+
+    var connectPromise = self.currentPromise =
+        fiberHelpers.makeFulfillablePromise();
+
+    self.connection._stream.on('disconnect', function (error) {
+      self.connected = false;
+      if (error && error.errorType === "DDP.ForcedReconnectError") {
+        // OK, we requested this, probably due to version negotiation failure.
+        //
+        // This ought to have happened before we successfully connect, unless
+        // somebody adds other calls to forced reconnect to Meteor...
+        if (! connectPromise.resolve) {
+          throw Error("disconnect before connect?");
+        }
+        // Otherwise, ignore this error. We're going to reconnect!
+        return;
+      }
+      // Are we waiting to connect or for the result of a method apply or a
+      // subscribeAndWait? If so, disconnecting is a problem.
+      if (self.currentPromise) {
+        var promise = self.currentPromise;
+        self.currentPromise = null;
+        promise.reject(
+            error || new ddpClient.DDP.ConnectionError(
+                "DDP disconnected while connection in progress")
+        );
+      } else if (error) {
+        // We got some sort of error with nobody listening for it; handle it.
+        // XXX probably have a better way to handle it than this
+        throw error;
+      }
+    });
+
+    await connectPromise;
+  },
   call: function (name, ...args) {
     return this.apply(name, args);
   },
 
-  apply: function (...args) {
+  apply: async function (...args) {
     var self = this;
 
     if (self.currentPromise) {
@@ -128,12 +136,12 @@ Object.assign(ServiceConnection.prototype, {
 
     self.connection.apply(...args);
 
-    return self.currentPromise.await();
+    return await self.currentPromise;
   },
 
   // XXX derived from _subscribeAndWait in ddp_connection.js
   // -- but with a different signature..
-  subscribeAndWait: function (...args) {
+  subscribeAndWait: async function (...args) {
     var self = this;
 
     if (self.currentPromise) {
@@ -165,7 +173,7 @@ Object.assign(ServiceConnection.prototype, {
     });
 
     var sub = self.connection.subscribe(...args);
-    subPromise.await();
+    await subPromise;
     return sub;
   },
 

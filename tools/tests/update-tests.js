@@ -7,20 +7,21 @@ const SIMPLE_WAREHOUSE = {
   v2: { recommended: true }
 };
 
-selftest.define("'meteor update' adds constraints to `.meteor/packages`", () => {
+selftest.define("'meteor update' adds constraints to `.meteor/packages`", async () => {
   const s = new Sandbox({
     warehouse: SIMPLE_WAREHOUSE,
     fakeMongo: true
   });
+  await s.init();
 
-  s.createApp("myapp", "very-simple-app-with-no-package-constraints", {
+  await s.createApp("myapp", "very-simple-app-with-no-package-constraints", {
     release: DEFAULT_RELEASE_TRACK + '@v1'
   });
   s.cd("myapp");
 
   run = s.run("update");
-  run.match("updated to Meteor v2");
-  run.expectExit(0);
+  await run.match("updated to Meteor v2");
+  await run.expectExit(0);
 
   const packages = s.read(".meteor/packages");
   if (!packages.match('meteor-base@')) {
@@ -28,13 +29,14 @@ selftest.define("'meteor update' adds constraints to `.meteor/packages`", () => 
   }
 });
 
-selftest.define("'meteor update' alters constraints in `.meteor/packages`", () => {
+selftest.define("'meteor update' alters constraints in `.meteor/packages`", async () => {
   const s = new Sandbox({
     warehouse: SIMPLE_WAREHOUSE,
     fakeMongo: true
   });
+  await s.init();
 
-  s.createApp("myapp", "very-simple-app-with-no-package-constraints", {
+  await s.createApp("myapp", "very-simple-app-with-no-package-constraints", {
     release: DEFAULT_RELEASE_TRACK + '@v1',
     dontPrepareApp: true,
   });
@@ -44,8 +46,8 @@ selftest.define("'meteor update' alters constraints in `.meteor/packages`", () =
   s.write('.meteor/packages', 'meteor-base@0.0.1');
 
   run = s.run("update");
-  run.match("updated to Meteor v2");
-  run.expectExit(0);
+  await run.match("updated to Meteor v2");
+  await run.expectExit(0);
 
   const packages = s.read(".meteor/packages");
   if (packages.match('meteor-base@0.0.1')) {
@@ -53,10 +55,11 @@ selftest.define("'meteor update' alters constraints in `.meteor/packages`", () =
   }
 });
 
-selftest.define("'meteor update' updates indirect dependencies with patches", () => {
+selftest.define("'meteor update' updates indirect dependencies with patches", async () => {
   const s = new Sandbox();
+  await s.init();
 
-  s.createApp("myapp", "app-with-indirect-dependencies", {
+  await s.createApp("myapp", "app-with-indirect-dependencies", {
     release: DEFAULT_RELEASE_TRACK + '@v1'
   });
   s.cd("myapp");
@@ -64,19 +67,20 @@ selftest.define("'meteor update' updates indirect dependencies with patches", ()
   var run = s.run("--prepare-app");
   // our .meteor/versions contains a version of this so we shouldn't change it
   run.forbid(/indirect-dependency/);
-  run.expectExit(0);
+  await run.expectExit(0);
 
   var update = s.run("update");
   // we have direct-dependency@=1.0.0, which depends on indirect@1.0.0
   // we should update to 1.0.1 (only take patches to indirect dependencies)
-  update.match(/indirect-dependency.*1.0.1/);
-  update.expectExit(0);
+  await update.match(/indirect-dependency.*1.0.1/);
+  await update.expectExit(0);
 });
 
-selftest.define("'meteor update --all-packages' updates indirect dependencies to latest, within constraints", () => {
+selftest.define("'meteor update --all-packages' updates indirect dependencies to latest, within constraints", async () => {
   const s = new Sandbox();
+  await s.init();
 
-  s.createApp("myapp", "app-with-indirect-dependencies", {
+  await s.createApp("myapp", "app-with-indirect-dependencies", {
     release: DEFAULT_RELEASE_TRACK + '@v1'
   });
   s.cd("myapp");
@@ -84,11 +88,11 @@ selftest.define("'meteor update --all-packages' updates indirect dependencies to
   var run = s.run("--prepare-app");
   // our .meteor/versions contains a version of this so we shouldn't change it
   run.forbid(/indirect-dependency/);
-  run.expectExit(0);
+  await run.expectExit(0);
 
   var update = s.run("update", "--all-packages");
   // we have direct-dependency@=1.0.0, which depends on indirect@1.0.0
   // we should update to 1.1.0 but not 2.0.0
-  update.match(/indirect-dependency.*1.1.0/);
-  update.expectExit(0);
+  await update.match(/indirect-dependency.*1.1.0/);
+  await update.expectExit(0);
 });

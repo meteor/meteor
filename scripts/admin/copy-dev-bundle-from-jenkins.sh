@@ -27,7 +27,7 @@ if [ $# -ne 1 ]; then
     exit 1
 fi
 
-DIRNAME=$(aws s3 ls s3://com.meteor.jenkins/ | perl -nle 'print $1 if m!(dev-bundle-.+--'${arg}'--.+)/!')
+DIRNAME=$(aws s3 ls s3://com.meteor.jenkins/ | perl -nle 'print $1 if m!(dev-bundle-.+--'${arg}')/!')
 
 if [ -z "$DIRNAME" ]; then
     echo "build not found" 1>&2
@@ -36,10 +36,10 @@ fi
 
 echo Found build $DIRNAME
 
-trap "echo Found surprising number of tarballs." EXIT
+trap "echo 'Found surprising number of tarballs.'; aws s3 ls s3://com.meteor.jenkins/$DIRNAME/" EXIT
 # Check to make sure the proper number of each kind of file is there.
 aws s3 ls s3://com.meteor.jenkins/$DIRNAME/ | \
-  perl -nle 'if (/\.tar\.gz/) { ++$TAR } else { die "something weird" }  END { exit !($TAR == 3) }'
+  perl -nle 'if (/\.tar\.gz/) { ++$TAR } else { die "something weird" }  END { exit !($TAR == 4) }'
 
 trap - EXIT
 

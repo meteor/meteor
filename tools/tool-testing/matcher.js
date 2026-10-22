@@ -16,10 +16,10 @@ export default class Matcher {
     });
   }
 
-  write(data) {
+  async write(data) {
     this.buf += data;
     this.fullBuffer += data;
-    this._tryMatch();
+    await this._tryMatch();
   }
 
   getFullBuffer() {
@@ -60,11 +60,11 @@ export default class Matcher {
   }
 
   match(pattern, timeout, strict) {
-    return this.matchAsync(pattern, { timeout, strict }).await();
+    return this.matchAsync(pattern, { timeout, strict });
   }
 
   // Like match, but returns a Promise without calling .await().
-  matchAsync(pattern, {
+  async matchAsync(pattern, {
     timeout = null,
     strict = false,
     matchFullBuffer = false,
@@ -76,7 +76,7 @@ export default class Matcher {
     this.matchStrict = strict;
     this.matchFullBuffer = matchFullBuffer;
     const mp = this.matchPromise = makeFulfillablePromise();
-    this._tryMatch(); // could clear this.matchPromise
+    await this._tryMatch(); // could clear this.matchPromise
 
     let timer = null;
     if (timeout) {
@@ -92,13 +92,16 @@ export default class Matcher {
       return mp;
     }
 
-    return mp.then((result) => {
-      clearTimeout(timer);
-      return result;
-    }, (error) => {
-      clearTimeout(timer);
-      throw error;
-    });
+    return mp.then(
+      (result) => {
+        clearTimeout(timer);
+        return result;
+      },
+      (error) => {
+        clearTimeout(timer);
+        throw error;
+      }
+    );
   }
 
   matchBeforeEnd(pattern, timeout) {
@@ -114,12 +117,12 @@ export default class Matcher {
   }
 
   end() {
-    return this.endAsync().await();
+    return this.endAsync();
   }
 
   endAsync() {
     this.resolveEndPromise();
-    return this._beforeEnd(() => {
+    return this._beforeEnd(async () => {
       this.ended = true;
       this._tryMatch();
       return this.matchPromise;
@@ -127,13 +130,30 @@ export default class Matcher {
   }
 
   matchEmpty() {
-    if (this.buf.length > 0) {
+    if (this.buf.length === 0) return;
+
+    // Strip Node.js runtime warning lines before checking for unexpected output.
+    // These originate from third-party packages (e.g. http-proxy using the
+    // deprecated url.parse() API) and should not cause test failures.
+    // Pattern covers: "(node:NNNN) Warning: ...\n(Use `node --trace-warnings ...`)\n"
+    const nodeWarningRe = /\(node:\d+\) \w+: [^\n]+\n(?:\(Use [^\n]+\)\n)?/g;
+    const stripped = this.buf.replace(nodeWarningRe, '');
+
+    if (stripped.length > 0) {
       Console.info("Extra junk is :", this.buf);
       throw new TestFailure('junk-at-end', { run: this.run });
     }
   }
 
-  _tryMatch() {
+  async awaitMatchPromise() {
+    if (!this.matchPromise) {
+      return;
+    }
+    await this.matchPromise;
+    this.matchPattern = null;
+  }
+
+  async _tryMatch() {
     const mp = this.matchPromise;
     if (! mp) {
       return;

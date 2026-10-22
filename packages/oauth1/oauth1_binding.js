@@ -86,11 +86,6 @@ export class OAuth1Binding {
     return this.callAsync('POST', url, params, callback);
   }
 
-  call(method, url, params, callback) {
-    // Require changes when remove Fibers. Exposed to public api.
-    return Promise.await(this.callAsync(method, url, params, callback));
-  }
-
   get(url, params, callback) {
     // Require changes when remove Fibers. Exposed to public api.
     return this.call('GET', url, params, callback);

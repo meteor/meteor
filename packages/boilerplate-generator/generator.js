@@ -1,11 +1,11 @@
-import { readFile } from 'fs';
+import {readFileSync} from 'fs';
 import { create as createStream } from "combined-stream2";
 
-import WebBrowserTemplate from './template-web.browser';
-import WebCordovaTemplate from './template-web.cordova';
+import { headTemplate as modernHeadTemplate, closeTemplate as modernCloseTemplate } from './template-web.browser';
+import { headTemplate as cordovaHeadTemplate, closeTemplate as cordovaCloseTemplate } from './template-web.cordova';
 
 // Copied from webapp_server
-const readUtf8FileSync = filename => Meteor.wrapAsync(readFile)(filename, 'utf8');
+const readUtf8FileSync = filename => readFileSync(filename, 'utf8');
 
 const identity = value => value;
 
@@ -17,8 +17,6 @@ function appendToStream(chunk, stream) {
     stream.append(chunk);
   }
 }
-
-let shouldWarnAboutToHTMLDeprecation = ! Meteor.isProduction;
 
 export class Boilerplate {
   constructor(arch, manifest, options = {}) {
@@ -34,17 +32,10 @@ export class Boilerplate {
   }
 
   toHTML(extraData) {
-    if (shouldWarnAboutToHTMLDeprecation) {
-      shouldWarnAboutToHTMLDeprecation = false;
-      console.error(
-        "The Boilerplate#toHTML method has been deprecated. " +
-          "Please use Boilerplate#toHTMLStream instead."
-      );
-      console.trace();
-    }
-
-    // Calling .await() requires a Fiber.
-    return this.toHTMLAsync(extraData).await();
+    throw new Error(
+      "The Boilerplate#toHTML method has been removed. " +
+        "Please use Boilerplate#toHTMLStream instead."
+    );
   }
 
   // Returns a Promise that resolves to a string of HTML.
@@ -160,11 +151,11 @@ function getTemplate(arch) {
   const prefix = arch.split(".", 2).join(".");
 
   if (prefix === "web.browser") {
-    return WebBrowserTemplate;
+    return { headTemplate: modernHeadTemplate, closeTemplate: modernCloseTemplate };
   }
 
   if (prefix === "web.cordova") {
-    return WebCordovaTemplate;
+    return { headTemplate: cordovaHeadTemplate, closeTemplate: cordovaCloseTemplate };
   }
 
   throw new Error("Unsupported arch: " + arch);

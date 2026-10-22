@@ -1,5 +1,3 @@
-var _ = require('underscore');
-var Fiber = require('fibers');
 var files = require('../fs/files');
 var watch = require('../fs/watch');
 var bundler = require('../isobuild/bundler.js');
@@ -12,19 +10,90 @@ var Profile = require('../tool-env/profile').Profile;
 var release = require('../packaging/release.js');
 import { pluginVersionsFromStarManifest } from '../cordova/index.js';
 import { closeAllWatchers } from "../fs/safe-watcher";
-import { eachline } from "../utils/eachline";
 import { loadIsopackage } from '../tool-env/isopackets.js';
+import { eachline } from "../utils/eachline";
 
-// Parse out s as if it were a bash command line.
-var bashParse = function (s) {
-  if (s.search("\"") !== -1 || s.search("'") !== -1) {
-    throw new Error("Meteor cannot currently handle quoted SERVER_NODE_OPTIONS");
+// Minimal shell-like splitter for SERVER_NODE_OPTIONS.
+// Handles single/double quotes and backslash escapes so that values like
+// --flag="hello world" or --require='/path/with spaces/f.js' are kept as
+// single tokens.  This is NOT a full bash parser — it only covers the
+// quoting subset needed for Node CLI flags.
+var splitQuotedArgs = exports.splitQuotedArgs = function (s) {
+  const args = [];
+  let current = '';
+  let inDouble = false;
+  let inSingle = false;
+  let escaped = false;
+  let hasQuotes = false;
+
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+
+    if (escaped) {
+      current += ch;
+      escaped = false;
+      continue;
+    }
+
+    // Backslash: escape next char only when it precedes a meaningful
+    // character (space, quote, or another backslash). This preserves
+    // Windows-style paths like C:\temp\my-file.js.
+    if (ch === '\\' && !inSingle && i + 1 < s.length) {
+      const next = s[i + 1];
+      if (inDouble) {
+        // Inside double quotes, only \" and \\ are escape sequences
+        if (next === '"' || next === '\\') {
+          escaped = true;
+          continue;
+        }
+      } else {
+        // Outside quotes, escape spaces, quotes, and backslashes
+        if (next === ' ' || next === '"' || next === "'" || next === '\\') {
+          escaped = true;
+          continue;
+        }
+      }
+    }
+
+    if (ch === '"' && !inSingle) {
+      inDouble = !inDouble;
+      hasQuotes = true;
+      continue;
+    }
+
+    if (ch === "'" && !inDouble) {
+      inSingle = !inSingle;
+      hasQuotes = true;
+      continue;
+    }
+
+    if (/\s/.test(ch) && !inDouble && !inSingle) {
+      if (current || hasQuotes) {
+        args.push(current);
+        current = '';
+        hasQuotes = false;
+      }
+      continue;
+    }
+
+    current += ch;
   }
-  return _.without(s.split(/\s+/), '');
+
+  if (current || hasQuotes) {
+    args.push(current);
+  }
+
+  if (inDouble || inSingle) {
+    throw new Error(
+      "Unterminated quote in SERVER_NODE_OPTIONS: " + s
+    );
+  }
+
+  return args;
 };
 
 var getNodeOptionsFromEnvironment = function () {
-  return bashParse(process.env.SERVER_NODE_OPTIONS || "");
+  return splitQuotedArgs(process.env.SERVER_NODE_OPTIONS || "");
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -48,6 +117,13 @@ var getNodeOptionsFromEnvironment = function () {
 //
 // Required options: bundlePath, port, rootUrl, mongoUrl, oplogUrl
 // Optional options: onExit, onListen, nodeOptions, settings
+
+// How long to wait, after sending SIGTERM, before escalating to SIGKILL when
+// stopping the app process. An app that registers its own `process.on('SIGTERM')`
+// handler without calling `process.exit()` overrides Node's default "terminate
+// on SIGTERM" behavior, so SIGTERM alone would leave it running and holding the
+// port; the escalation guarantees the process is gone.
+const APP_STOP_SIGKILL_GRACE_MS = 3000;
 
 var AppProcess = function (options) {
   var self = this;
@@ -77,7 +153,7 @@ var AppProcess = function (options) {
 
 Object.assign(AppProcess.prototype, {
   // Call to start the process.
-  start: function () {
+  start: async function () {
     var self = this;
 
     if (self.proc) {
@@ -85,28 +161,27 @@ Object.assign(AppProcess.prototype, {
     }
 
     // Start the app!
-    self.proc = self._spawn();
+    self.proc = await self._spawn();
 
-    eachline(self.proc.stdout, function (line) {
+    eachline(self.proc.stdout, async function (line) {
       if (line.match(/^LISTENING\s*$/)) {
         // This is the child process telling us that it's ready to receive
         // connections.  (It does this because we told it to with
         // $METEOR_PRINT_ON_LISTEN.)
-        self.onListen && self.onListen();
-
+        self.onListen && await self.onListen();
       } else {
-        runLog.logAppOutput(line);
+        await runLog.logAppOutput(line);
       }
     });
 
-    eachline(self.proc.stderr, function (line) {
-      runLog.logAppOutput(line, true);
+    eachline(self.proc.stderr, async function (line) {
+      await runLog.logAppOutput(line, true);
     });
 
     // Watch for exit and for stdio to be fully closed (so that we don't miss
     // log lines).
     self.proc.on('close', async function (code, signal) {
-      self._maybeCallOnExit(code, signal);
+      await self._maybeCallOnExit(code, signal);
     });
 
     self.proc.on('error', async function (err) {
@@ -115,7 +190,7 @@ Object.assign(AppProcess.prototype, {
       // node docs say that it might make both an 'error' and a
       // 'close' callback, so we use a guard to make sure we only call
       // onExit once.
-      self._maybeCallOnExit();
+      await self._maybeCallOnExit();
     });
 
     // This happens sometimes when we write a keepalive after the app
@@ -125,13 +200,13 @@ Object.assign(AppProcess.prototype, {
     self.proc.stdin.on('error', function () {});
   },
 
-  _maybeCallOnExit: function (code, signal) {
+  _maybeCallOnExit: async function (code, signal) {
     var self = this;
     if (self.madeExitCallback) {
       return;
     }
     self.madeExitCallback = true;
-    self.onExit && self.onExit(code, signal);
+    self.onExit && await self.onExit(code, signal);
   },
 
   // Idempotent. Once stop() returns it is guaranteed that you will
@@ -140,9 +215,39 @@ Object.assign(AppProcess.prototype, {
     var self = this;
 
     if (self.proc && self.proc.pid) {
-      self.proc.removeAllListeners('close');
-      self.proc.removeAllListeners('error');
-      self.proc.kill();
+      const proc = self.proc;
+      proc.removeAllListeners('close');
+      proc.removeAllListeners('error');
+      proc.kill();
+
+      // The kill() above only sends SIGTERM, which an app can ignore via its
+      // own handler. Escalate to SIGKILL after a short grace period so a
+      // process that refuses to exit can't keep running or holding the port.
+      const sigkillTimer = setTimeout(function () {
+        // We only reach here if the app ignored SIGTERM for the whole grace
+        // period, so surface it — this is exactly the symptom of an app that
+        // keeps running and holds the port across restarts.
+        runLog.log(
+          "App didn't exit " + APP_STOP_SIGKILL_GRACE_MS +
+            "ms after SIGTERM; sending SIGKILL.",
+          { arrow: true });
+        // Use the child handle rather than process.kill(pid): once the child
+        // has exited and been reaped, proc.kill() is a no-op, so there is no
+        // chance of signalling an unrelated process that reused the pid.
+        proc.kill('SIGKILL');
+      }, APP_STOP_SIGKILL_GRACE_MS);
+      // Don't let this timer keep the tool's event loop alive. Because it's
+      // unref'd, the escalation only fires while the tool itself keeps running
+      // — e.g. across a dev restart, where the newly spawned AppProcess keeps
+      // the event loop alive. On a full tool shutdown the tool may exit before
+      // the grace period elapses; that path is unchanged from before this fix.
+      if (sigkillTimer.unref) {
+        sigkillTimer.unref();
+      }
+      // If the process exits on its own first, cancel the pending SIGKILL.
+      proc.once('exit', function () {
+        clearTimeout(sigkillTimer);
+      });
     }
     self.proc = null;
 
@@ -232,7 +337,7 @@ Object.assign(AppProcess.prototype, {
   },
 
   // Spawn the server process and return the handle from child_process.spawn.
-  _spawn: function () {
+  _spawn: async function () {
     var self = this;
 
     // Path conversions
@@ -240,7 +345,7 @@ Object.assign(AppProcess.prototype, {
       files.pathJoin(self.bundlePath, 'main.js'));
 
     // Setting options
-    var opts = _.clone(self.nodeOptions);
+    var opts = JSON.parse(JSON.stringify(self.nodeOptions));
 
     if (self.inspect) {
       // Always use --inspect rather than --inspect-brk, even when
@@ -252,6 +357,8 @@ Object.assign(AppProcess.prototype, {
       // env.METEOR_INSPECT_BRK in that case.
       opts.push("--inspect=" + self.inspect.port);
     }
+
+    opts.push(`--require=${files.convertToOSPath(files.pathJoin(__dirname, '../node-process-warnings.js'))}`)
 
     opts.push(entryPoint);
 
@@ -266,7 +373,8 @@ Object.assign(AppProcess.prototype, {
 
     // Add a child.sendMessage(topic, payload) method to this child
     // process object.
-    loadIsopackage("inter-process-messaging").enable(child);
+    const interProcessMessaging = await loadIsopackage("inter-process-messaging");
+    interProcessMessaging.enable(child);
 
     return child;
   }
@@ -373,7 +481,7 @@ var AppRunner = function (options) {
   self.omitPackageMapDeltaDisplayOnFirstRun =
     options.omitPackageMapDeltaDisplayOnFirstRun;
 
-  self.fiber = null;
+  self.isRunning = null;
   self.startPromise = null;
   self.runPromise = null;
   self.exitPromise = null;
@@ -395,33 +503,41 @@ var AppRunner = function (options) {
 Object.assign(AppRunner.prototype, {
   // Start the app running, and restart it as necessary. Returns
   // immediately.
-  start: function () {
+  start: async function () {
     var self = this;
 
-    if (self.fiber) {
+    if (self.isRunning) {
       throw new Error("already started?");
     }
 
     self.startPromise = self._makePromise("start");
 
-    self.fiber = Fiber(function () {
-      self._fiber();
-    });
-    self.fiber.run();
-
-    self.startPromise.await();
+    self.isRunning = true;
+    global.__METEOR_ASYNC_LOCAL_STORAGE.run({}, () =>
+        self._runApp()
+          .catch((e) => {
+            // There was an unexpected error when building the app
+            // This is not recoverable, so we turn it into an unhandled exception
+            // and crash.
+            setTimeout(() => {
+              throw e;
+            });
+          })
+    );
+    await self.startPromise;
     self.startPromise = null;
   },
 
-  _makePromise: function (name) {
-    var self = this;
-    return new Promise(function (resolve) {
-      self._promiseResolvers[name] = resolve;
+  // Creates a promise that can be resolved later by calling _resolvePromise
+  _makePromise (name) {
+    return new Promise((resolve) => {
+      this._promiseResolvers[name] = resolve;
     });
   },
 
-  _resolvePromise: function (name, value) {
-    var resolve = this._promiseResolvers[name];
+  // Resolves a promise already created by _makePromise
+  _resolvePromise (name, value) {
+    const resolve = this._promiseResolvers[name];
     if (resolve) {
       this._promiseResolvers[name] = null;
       resolve(value);
@@ -430,7 +546,7 @@ Object.assign(AppRunner.prototype, {
 
   _cleanUpPromises: function () {
     if (this._promiseResolvers) {
-      _.each(this._promiseResolvers, function (resolve) {
+      Object.values(this._promiseResolvers).forEach(resolve => {
         resolve && resolve();
       });
       this._promiseResolvers = null;
@@ -441,10 +557,10 @@ Object.assign(AppRunner.prototype, {
   // down. This may involve waiting for bundling to
   // finish. Idempotent, however only one thread may be in stop() at a
   // time.
-  stop: function () {
+  stop: async function () {
     var self = this;
 
-    if (! self.fiber) {
+    if (! self.isRunning) {
       // nothing to do
       return;
     }
@@ -465,7 +581,7 @@ Object.assign(AppRunner.prototype, {
       self._resolvePromise("beforeStart", true);
     }
 
-    self.exitPromise.await();
+    await self.exitPromise;
     self.exitPromise = null;
   },
 
@@ -475,12 +591,12 @@ Object.assign(AppRunner.prototype, {
       throw new Error("makeBeforeStartPromise called twice?");
     }
     this._beforeStartPromise = this._makePromise("beforeStart");
-    return this._promiseResolvers["beforeStart"];
+    return () => this._resolvePromise("beforeStart");
   },
 
   // Run the program once, wait for it to exit, and then return. The
   // return value is same as onRunEnd.
-  _runOnce: function (options) {
+  _runOnce: async function (options) {
     var self = this;
     options = options || {};
     var firstRun = options.firstRun;
@@ -497,7 +613,7 @@ Object.assign(AppRunner.prototype, {
     // a single invocation of _runOnce().
     var cachedServerWatchSet;
 
-    var bundleApp = function () {
+    var bundleApp = async function () {
       if (! firstRun) {
         // If the build fails in a way that could be fixed by a refresh, allow
         // it even if we refreshed previously, since that might have been a
@@ -524,8 +640,8 @@ Object.assign(AppRunner.prototype, {
           // shown from the previous solution.
           preservePackageMap: true
         });
-        var messages = buildmessage.capture(function () {
-          self.projectContext.readProjectMetadata();
+        var messages = await buildmessage.capture(() => {
+          return self.projectContext.readProjectMetadata()
         });
         if (messages.hasMessages()) {
           return {
@@ -550,9 +666,7 @@ Object.assign(AppRunner.prototype, {
         };
       }
 
-      messages = buildmessage.capture(function () {
-        self.projectContext.prepareProjectForBuild();
-      });
+      messages = await buildmessage.capture(() => self.projectContext.prepareProjectForBuild());
       if (messages.hasMessages()) {
         return {
           runResult: {
@@ -569,14 +683,15 @@ Object.assign(AppRunner.prototype, {
       }
 
       if (self.recordPackageUsage) {
+        // Maybe this doesn't need to be awaited for?
         stats.recordPackages({
           what: "sdk.run",
           projectContext: self.projectContext
         });
       }
 
-      var bundleResult = Profile.run((firstRun?"B":"Reb")+"uild App", () => {
-        return bundler.bundle({
+      var bundleResult = await Profile.run((firstRun?"B":"Reb")+"uild App", async () =>
+        bundler.bundle({
           projectContext: self.projectContext,
           outputPath: bundlePath,
           includeNodeModules: "symlink",
@@ -591,8 +706,7 @@ Object.assign(AppRunner.prototype, {
           // None of the targets are used during full rebuilds
           // so we can safely build in place on Windows
           forceInPlaceBuild: !cachedServerWatchSet
-        });
-      });
+        }));
 
       // Keep the server watch set from the initial bundle, because subsequent
       // bundles will not contain a server target.
@@ -620,9 +734,8 @@ Object.assign(AppRunner.prototype, {
       watchSet.merge(br.clientWatchSet);
       return watchSet;
     };
-
     var bundleResult;
-    var bundleResultOrRunResult = bundleApp();
+    var bundleResultOrRunResult = await bundleApp();
     if (bundleResultOrRunResult.runResult) {
       return bundleResultOrRunResult.runResult;
     }
@@ -633,10 +746,10 @@ Object.assign(AppRunner.prototype, {
     // Read the settings file, if any
     var settings = null;
     var settingsWatchSet = new watch.WatchSet;
-    var settingsMessages = buildmessage.capture({
+    var settingsMessages = await buildmessage.capture({
       title: "preparing to run",
       rootPath: process.cwd()
-    }, function () {
+    }, async function () {
       if (self.settingsFile) {
         settings = files.getSettings(self.settingsFile, settingsWatchSet);
       }
@@ -669,8 +782,8 @@ Object.assign(AppRunner.prototype, {
 
       if (!cordovaRunner.started) {
         const { settingsFile, mobileServerUrl } = self;
-        const messages = buildmessage.capture(() => {
-          cordovaRunner.prepareProject(bundlePath, pluginVersions,
+        const messages = await buildmessage.capture(async () => {
+          await cordovaRunner.prepareProject(bundlePath, pluginVersions,
             { settingsFile, mobileServerUrl });
         });
 
@@ -706,13 +819,13 @@ Object.assign(AppRunner.prototype, {
 
     // We should have reset self.runPromise to null by now, but await it
     // just in case it's still defined.
-    Promise.await(self.runPromise);
-
-    var runPromise = self.runPromise = self._makePromise("run");
+    await self.runPromise;
+    self.runPromise = self._makePromise("run");
+    var runPromise = self.runPromise;
     var listenPromise = self._makePromise("listen");
 
     // Run the program
-    options.beforeRun && options.beforeRun();
+    options.beforeRun && await options.beforeRun();
     var appProcess = new AppProcess({
       projectContext: self.projectContext,
       bundlePath: bundlePath,
@@ -748,13 +861,14 @@ Object.assign(AppRunner.prototype, {
     });
 
     if (options.firstRun && self._beforeStartPromise) {
-      var stopped = self._beforeStartPromise.await();
+      var stopped = await self._beforeStartPromise;
       if (stopped) {
         return true;
       }
     }
 
-    appProcess.start();
+    await appProcess.start();
+
     function maybePrintLintWarnings(bundleResult) {
       if (! (self.projectContext.lintAppAndLocalPackages &&
              bundleResult.warnings)) {
@@ -773,7 +887,7 @@ Object.assign(AppRunner.prototype, {
     maybePrintLintWarnings(bundleResult);
 
     if (cordovaRunner && !cordovaRunner.started) {
-      cordovaRunner.startRunTargets();
+      await cordovaRunner.startRunTargets();
     }
 
     // Start watching for changes for files if requested. There's no
@@ -842,22 +956,22 @@ Object.assign(AppRunner.prototype, {
       await appProcess.proc.sendMessage("client-refresh");
     }
 
-    function runPostStartupCallbacks(bundleResult) {
+    async function runPostStartupCallbacks(bundleResult) {
       const callbacks = bundleResult.postStartupCallbacks;
       if (! callbacks) return;
 
-      const messages = buildmessage.capture({
+      const messages = await buildmessage.capture({
         title: "running post-startup callbacks"
-      }, () => {
+      }, async () => {
         while (callbacks.length > 0) {
           const fn = callbacks.shift();
           try {
-            Promise.await(fn({
+            await fn({
               // Miscellany that the callback might find useful.
               pauseClient,
               refreshClient,
               runLog,
-            }));
+            });
           } catch (error) {
             buildmessage.error(error.message);
           }
@@ -875,19 +989,17 @@ Object.assign(AppRunner.prototype, {
 
     Console.enableProgressDisplay(false);
 
-    const postStartupResult = Promise.race([
-      listenPromise,
-      runPromise
-    ]).then(() => {
-      return runPostStartupCallbacks(bundleResult);
-    }).await();
+    const promList = [runPromise, listenPromise];
+    await Promise.race(promList)
+
+    const postStartupResult =
+      await runPostStartupCallbacks(bundleResult)
 
     if (postStartupResult) return postStartupResult;
 
     // Wait for either the process to exit, or (if watchForChanges) a
     // source file to change. Or, for stop() to be called.
-    var ret = runPromise.await();
-
+    var ret = await runPromise;
     try {
       while (ret.outcome === 'changed-refreshable') {
         if (! canRefreshClient) {
@@ -896,7 +1008,8 @@ Object.assign(AppRunner.prototype, {
 
         // We stay in this loop as long as only refreshable assets have changed.
         // When ret.refreshable becomes false, we restart the server.
-        bundleResultOrRunResult = bundleApp();
+        bundleResultOrRunResult = await bundleApp();
+
         if (bundleResultOrRunResult.runResult) {
           return bundleResultOrRunResult.runResult;
         }
@@ -913,11 +1026,11 @@ Object.assign(AppRunner.prototype, {
         // Establish a watcher on the new files.
         setupClientWatcher();
 
-        const postStartupResult = runPostStartupCallbacks(bundleResult);
+        const postStartupResult = await runPostStartupCallbacks(bundleResult);
         if (postStartupResult) return postStartupResult;
 
         // Wait until another file changes.
-        ret = oldPromise.await();
+        ret = await oldPromise;
       }
     } finally {
       self.runPromise = null;
@@ -930,7 +1043,7 @@ Object.assign(AppRunner.prototype, {
       if (self.hmrServer) {
         self.hmrServer.setAppState("okay");
       }
-      appProcess.stop();
+      await appProcess.stop();
 
       serverWatcher && serverWatcher.stop();
       clientWatcher && clientWatcher.stop();
@@ -939,12 +1052,12 @@ Object.assign(AppRunner.prototype, {
     return ret;
   },
 
-  _fiber: function () {
+  _runApp: async function () {
     var self = this;
     var firstRun = true;
 
     while (true) {
-      var runResult = self._runOnce({
+      var runResult = await self._runOnce({
         onListen: function () {
           if (! self.noRestartBanner && ! firstRun) {
             runLog.logRestart(self);
@@ -955,7 +1068,7 @@ Object.assign(AppRunner.prototype, {
       });
       firstRun = false;
 
-      var wantExit = self.onRunEnd ? !self.onRunEnd(runResult) : false;
+      var wantExit = self.onRunEnd ? !(await self.onRunEnd(runResult)) : false;
       if (wantExit || self.exitPromise || runResult.outcome === "stopped") {
         break;
       }
@@ -1022,7 +1135,7 @@ Object.assign(AppRunner.prototype, {
         }
         // If onChange wasn't called synchronously (clearing watchPromise), wait
         // on it.
-        self.watchPromise && self.watchPromise.await();
+        self.watchPromise && await self.watchPromise;
         // While we were waiting, did somebody stop() us?
         if (self.exitPromise) {
           break;
@@ -1042,7 +1155,7 @@ Object.assign(AppRunner.prototype, {
     // Giving up for good.
     self._cleanUpPromises();
 
-    self.fiber = null;
+    self.isRunning = null;
   }
 });
 

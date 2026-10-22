@@ -32,7 +32,7 @@ OAuth.registerService('weibo', 2, null, async query => {
 // - access_token
 // - expires_in: lifetime of this token in seconds (5 years(!) right now)
 const getTokenResponse = async (query) => {
-  const config = ServiceConfiguration.configurations.findOne({
+  const config = await ServiceConfiguration.configurations.findOneAsync({
     service: 'weibo',
   });
   if (!config) throw new ServiceConfiguration.ConfigError();

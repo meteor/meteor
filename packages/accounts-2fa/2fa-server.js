@@ -1,8 +1,36 @@
 import { Accounts } from 'meteor/accounts-base';
-import twofactor from 'node-2fa';
+import * as OTPAuth from 'otpauth';
 import QRCode from 'qrcode-svg';
 import { Meteor } from 'meteor/meteor';
 import { check, Match } from 'meteor/check';
+
+const TOTP_ALGORITHM = 'SHA1';
+const TOTP_DIGITS = 6;
+const TOTP_PERIOD = 30;
+const TOTP_WINDOW = 10;
+const TOTP_SECRET_SIZE = 20;
+
+const getOtpSecret = secret => OTPAuth.Secret.fromBase32(secret);
+
+const getTotp = ({ issuer = '', label = 'OTPAuth', secret }) =>
+  new OTPAuth.TOTP({
+    issuer,
+    label,
+    secret: typeof secret === 'string' ? getOtpSecret(secret) : secret,
+    algorithm: TOTP_ALGORITHM,
+    digits: TOTP_DIGITS,
+    period: TOTP_PERIOD,
+  });
+
+const generateActivationData = ({ issuer, label }) => {
+  const secret = new OTPAuth.Secret({ size: TOTP_SECRET_SIZE });
+  const totp = getTotp({ issuer, label, secret });
+
+  return {
+    secret: secret.base32,
+    uri: totp.toString(),
+  };
+};
 
 Accounts._check2faEnabled = user => {
   const { services: { twoFactorAuthentication } = {} } = user;
@@ -13,15 +41,17 @@ Accounts._check2faEnabled = user => {
   );
 };
 
-Accounts._is2faEnabledForUser = () => {
-  const user = Meteor.user();
+Accounts._is2faEnabledForUser = async () => {
+  const user = await Meteor.userAsync();
   if (!user) {
     throw new Meteor.Error('no-logged-user', 'No user logged in.');
   }
   return Accounts._check2faEnabled(user);
 };
 
-Accounts._generate2faToken = secret => twofactor.generateToken(secret);
+Accounts._generate2faToken = secret => ({
+  token: getTotp({ secret }).generate(),
+});
 
 Accounts._isTokenValid = (secret, code) => {
   if (!Meteor.isServer) {
@@ -30,13 +60,21 @@ Accounts._isTokenValid = (secret, code) => {
       'The function _isTokenValid can only be called on the server'
     );
   }
-  return twofactor.verifyToken(secret, code, 10) !== null;
+
+  try {
+    return getTotp({ secret }).validate({
+      token: code.replace(/\W+/g, ''),
+      window: TOTP_WINDOW,
+    }) !== null;
+  } catch (error) {
+    return false;
+  }
 };
 
 Meteor.methods({
-  generate2faActivationQrCode(appName) {
+  async generate2faActivationQrCode(appName) {
     check(appName, String);
-    const user = Meteor.user();
+    const user = await Meteor.userAsync();
 
     if (!user) {
       throw new Meteor.Error(
@@ -53,13 +91,13 @@ Meteor.methods({
     }
 
     const emails = user.emails || [];
-    const { secret, uri } = twofactor.generateSecret({
-      name: appName.trim(),
-      account: user.username || emails[0]?.address || user._id,
+    const { secret, uri } = generateActivationData({
+      issuer: appName.trim(),
+      label: user.username || emails[0]?.address || user._id,
     });
     const svg = new QRCode(uri).svg();
 
-    Meteor.users.update(
+    await Meteor.users.updateAsync(
       { _id: user._id },
       {
         $set: {
@@ -72,9 +110,9 @@ Meteor.methods({
 
     return { svg, secret, uri };
   },
-  enableUser2fa(code) {
+  async enableUser2fa(code) {
     check(code, String);
-    const user = Meteor.user();
+    const user = await Meteor.userAsync();
 
     if (!user) {
       throw new Meteor.Error(400, 'No user logged in.');
@@ -94,7 +132,7 @@ Meteor.methods({
       Accounts._handleError('Invalid 2FA code', true, 'invalid-2fa-code');
     }
 
-    Meteor.users.update(
+    await Meteor.users.updateAsync(
       { _id: user._id },
       {
         $set: {
@@ -106,14 +144,14 @@ Meteor.methods({
       }
     );
   },
-  disableUser2fa() {
+  async disableUser2fa() {
     const userId = Meteor.userId();
 
     if (!userId) {
       throw new Meteor.Error(400, 'No user logged in.');
     }
 
-    Meteor.users.update(
+    await Meteor.users.updateAsync(
       { _id: userId },
       {
         $unset: {
@@ -122,7 +160,7 @@ Meteor.methods({
       }
     );
   },
-  has2faEnabled() {
+  async has2faEnabled() {
     return Accounts._is2faEnabledForUser();
   },
 });

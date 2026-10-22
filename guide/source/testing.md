@@ -238,9 +238,11 @@ import { Tracker } from 'meteor/tracker';
 const withDiv = function withDiv(callback) {
   const el = document.createElement('div');
   document.body.appendChild(el);
+  let view = null
   try {
-    callback(el);
+    view = callback(el);
   } finally {
+    if (view) Blaze.remove(view)
     document.body.removeChild(el);
   }
 };
@@ -248,9 +250,10 @@ const withDiv = function withDiv(callback) {
 export const withRenderedTemplate = function withRenderedTemplate(template, data, callback) {
   withDiv((el) => {
     const ourTemplate = isString(template) ? Template[template] : template;
-    Blaze.renderWithData(ourTemplate, data, el);
+    const view = Blaze.renderWithData(ourTemplate, data, el);
     Tracker.flush();
     callback(el);
+    return view
   });
 };
 ```

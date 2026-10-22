@@ -63,7 +63,7 @@ WebApp.addHtmlAttributeHook(request =>
     { manifest: "/app.manifest" }
 );
 
-WebApp.connectHandlers.use((req, res, next) => {
+WebApp.handlers.use((req, res, next) => {
   if (req.url !== '/app.manifest') {
     return next();
   }

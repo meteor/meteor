@@ -16,6 +16,10 @@ export class TestCaseResults {
     this.extraDetails = {};
   }
 
+  sleep(ms = 0) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
   ok(doc) {
     var ok = {type: "ok"};
     if (doc)
@@ -70,7 +74,7 @@ export class TestCaseResults {
         var frame = stack[i];
         // Heuristic: use the OUTERMOST line which is in a :tests.js
         // file (this is less likely to be a test helper function).
-        const fileName = frame.getFileName();
+        const fileName = frame?.getFileName ? frame.getFileName() : null;
         if (fileName && fileName.match(/:tests\.js/)) {
           doc.filename = fileName;
           doc.line = frame.getLineNumber();
@@ -240,6 +244,19 @@ export class TestCaseResults {
   // The upshot is, if you want to test whether an error is of a
   // particular class, use a predicate function.
   //
+  /**
+   * Assert that `f` throws.
+   *
+   * `expected` can be:
+   * - undefined: accept any exception.
+   * - string: pass if the string is a substring of the exception message.
+   * - regexp: pass if the exception message passes the regexp.
+   * - function: call the function as a predicate with the exception.
+   *
+   * @param {Function} f
+   * @param {*} expected
+   * @param {String} message
+   */
   throws(f, expected, message) {
     let actual;
     const predicate = this._guessPredicate(expected);
@@ -254,10 +271,34 @@ export class TestCaseResults {
   }
 
   /**
-   * Same as throw, but accepts an async function as a parameter.
-   * @param f
-   * @param expected
-   * @param message
+   * Assert that `f` does not throw.
+   * @param {Function} f
+   * @param {String} failureMessage
+   */
+  doesNotThrows(f, failureMessage) {
+    let actual;
+
+    try {
+      f();
+    } catch (exception) {
+      actual = exception;
+    }
+
+    if (!actual) {
+      this.ok();
+    } else {
+      this.fail({
+        type: "throws",
+        message: ("threw an error unexpectedly: " + actual.message) + (failureMessage ? ": " + failureMessage : ""),
+      });
+    }
+  }
+
+  /**
+   * Same as `throws`, but accepts an async function as a parameter.
+   * @param {Function} f
+   * @param {*} expected
+   * @param {String} message
    * @returns {Promise<void>}
    */
   async throwsAsync(f, expected, message) {
@@ -269,8 +310,32 @@ export class TestCaseResults {
     } catch (exception) {
       actual = exception;
     }
-
     this._assertActual(actual, predicate, message);
+  }
+
+  /**
+   * Same as `doesNotThrows`, but accepts an async function as a parameter.
+   * @param {Function} f
+   * @param {String} failureMessage
+   * @returns {Promise<void>}
+   */
+  async doesNotThrowsAsync(f, failureMessage) {
+    let actual;
+
+    try {
+      await f();
+    } catch (exception) {
+      actual = exception;
+    }
+
+    if (!actual) {
+      this.ok();
+    } else {
+      this.fail({
+        type: "throws",
+        message: ("threw an error unexpectedly: " + actual.message) + (failureMessage ? ": " + failureMessage : ""),
+      });
+    }
   }
 
   isTrue(v, msg) {
@@ -413,7 +478,7 @@ export class TestCase {
   // test raised (or voluntarily reported) an exception.
   run(onEvent, onComplete, onException, stop_at_offset) {
     let completed = false;
-
+    const self = this;
     return new Promise((resolve, reject) => {
       const results = new TestCaseResults(
         this,
@@ -423,6 +488,7 @@ export class TestCase {
           // test will display as "waiting" even when it counts as passed
           // or failed.
           if (completed) {
+            console.warn('Test name:', self.name);
             console.trace("event after complete!");
           }
           return onEvent(event);
@@ -431,9 +497,9 @@ export class TestCase {
         stop_at_offset
       );
 
-      const result = this.func(results, resolve);
+      const result = Meteor._runFresh(() => this.func(results, resolve));
       if (result && typeof result.then === "function") {
-        result.then(resolve, reject);
+        return result.then(resolve, reject);
       }
 
     }).then(
@@ -457,7 +523,7 @@ export const TestManager = new (class TestManager {
   constructor() {
     this.tests = {};
     this.ordered_tests = [];
-    this.testQueue = Meteor.isServer && new Meteor._SynchronousQueue();
+    this.testQueue = Meteor.isServer && new Meteor._AsynchronousQueue();
     this.onlyTestsNames = [];
   }
 
@@ -532,7 +598,8 @@ export class TestRun {
   _runTest(test, onComplete, stop_at_offset) {
     var startTime = (+new Date);
     Tinytest._currentRunningTestName = test.name;
-    test.run(event => {
+
+    return test.run(event => {
       /* onEvent */
       // Ignore result callbacks if the test has already been reported
       // as timed out.
@@ -556,8 +623,8 @@ export class TestRun {
       this._report(test, {
         type: "exception",
         details: {
-          message: exception.message, // XXX empty???
-          stack: exception.stack // XXX portability
+          message: exception?.message ?? String(exception),
+          stack: exception?.stack // XXX portability
         }
       });
 
@@ -611,7 +678,7 @@ export class TestRun {
       });
     } else {
       // client
-      this._runTest(test, () => {
+      return this._runTest(test, () => {
         onComplete && onComplete();
       }, stop_at_offset);
     }

@@ -36,6 +36,9 @@ same as `meteor run`.
 To pass additional options to Node.js use the `SERVER_NODE_OPTIONS` environment variable. E.g. for Windows PowerShell:
 `$env:SERVER_NODE_OPTIONS = '--inspect' | meteor run`. Or for Linux: `SERVER_NODE_OPTIONS=--inspect-brk meteor run`.
 
+Quoted values are supported, so you can pass options that contain spaces or special characters:
+`SERVER_NODE_OPTIONS='--test-name-pattern="my test"' meteor run`.
+
 To specify a port to listen on (instead of the default 3000), use `--port [PORT]`.
 (The development server also uses port `N+1` for the default MongoDB instance)
 
@@ -284,20 +287,6 @@ Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `reactive
 You can also use Vue 3 with Vite by using the [jorgenvatle:meteor-vite](https://github.com/JorgenVatle/meteor-vite)
 package. You can see an example on the [meteor-vite](https://github.com/JorgenVatle/meteor-vite/tree/release/examples/vue)
 repository.
-
-
-<h3 id="vue-2">--vue-2</h3>
-
-The command `meteor create --vue-2 app-name` creates a Meteor app with [Vue 2](https://v2.vuejs.org/) and
-[MongoDB](https://www.mongodb.com/). To create a complete app, including testing and deployment, follow the
-[Vue 2 tutorial](https://vue-tutorial.meteor.com/).
-
-Npm packages included: `@babel/runtime`, `meteor-node-stubs`, `vue`, `vue-meteor-tracker`.
-
-Meteor packages included: `meteor-base`, `mobile-experience`, `mongo`, `reactive-var`, `standard-minifier-css`,
-`standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`, `tracker`, `static-html`, `akryum:vue-component`,
-`meteortesting:mocha`, `johanbrook:publication-collector`.
-
 
 <h2 id="meteorgenerate"> meteor generate </h2>
 
@@ -691,7 +680,7 @@ Your project should be a git repository as the commit hash is going to be used t
 The `cache-build` option is available since Meteor 1.11.
 {% endpullquote %}
 
-With the argument `--container-size` you can change your app's container size using the deploy command. The valid arguments are: `tiny`, `compact`, `standard`, `double`, `quad`, `octa`, and `dozen`. One more thing to note here is that the `--container-size` flag can only be used when the `--plan` option is already specified, otherwise using the `--container-size` option will throw an error with the message : `Error deploying application: Internal error`. To see more about the difference and prices of each one you can check [here](https://www.meteor.com/cloud#pricing-section).
+With the argument `--container-size` you can change your app's container size using the deploy command. The valid arguments are: `tiny`, `compact`, `standard`, `double`, `quad`, `octa`, and `dozen`. One more thing to note here is that the `--container-size` flag can only be used when the `--plan` option is already specified, otherwise using the `--container-size` option will throw an error with the message : `Error deploying application: Internal error`. To see more about the difference and prices of each one you can check [here](https://galaxycloud.app/meteorjs/pricing).
 
 {% pullquote warning %}
 The `--container-size` option is available since Meteor 2.4.1.

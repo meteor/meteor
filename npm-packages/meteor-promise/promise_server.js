@@ -9,7 +9,7 @@ exports.makeCompatible = function (Promise, Fiber) {
   }
 
   if (es6PromiseThen.name === "meteorPromiseThen") {
-    return; // Already compatible.
+    return; // Already compatible
   }
 
   function meteorPromiseThen(onResolved, onRejected) {

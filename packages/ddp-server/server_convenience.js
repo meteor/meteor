@@ -3,17 +3,18 @@ if (process.env.DDP_DEFAULT_CONNECTION_URL) {
     process.env.DDP_DEFAULT_CONNECTION_URL;
 }
 
-Meteor.server = new Server;
+Meteor.server = new Server();
 
-Meteor.refresh = function (notification) {
-  DDPServer._InvalidationCrossbar.fire(notification);
+Meteor.refresh = async function (notification) {
+  await DDPServer._InvalidationCrossbar.fire(notification);
 };
 
 // Proxy the public methods of Meteor.server so they can
 // be called directly on Meteor.
-_.each(
+
   [
     'publish',
+    'isAsyncCall',
     'methods',
     'call',
     'callAsync',
@@ -21,8 +22,8 @@ _.each(
     'applyAsync',
     'onConnection',
     'onMessage',
-  ],
+  ].forEach(
   function(name) {
-    Meteor[name] = _.bind(Meteor.server[name], Meteor.server);
+    Meteor[name] = Meteor.server[name].bind(Meteor.server);
   }
 );

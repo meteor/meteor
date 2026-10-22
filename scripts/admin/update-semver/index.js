@@ -78,10 +78,17 @@ async function main() {
    * @type {string[]}
    */
   let args = process.argv.slice(2);
+  // if gets bigger turn into a function
+  const dir = args[1]?.includes("blaze")
+    ? "packages/non-core/blaze/packages"
+    : "packages";
   const releaseNumber = await getReleaseNumber();
   if (args[0].startsWith('@all')) {
     const [_, type] = args[0].split('.');
-    const allPackages = await getDirectories('../../../packages');
+    
+ 
+
+    const allPackages = await getDirectories(`../../../${ dir }`);
     args = allPackages.map((packageName) => `${ packageName }.${ type }`);
   }
 
@@ -116,7 +123,7 @@ async function main() {
     .filter((value, index, self) => self.findIndex((v) => v.name === value.name) === index);
 
   for (const { name, release } of packages) {
-    const filePath = `../../../packages/${ name }/package.js`;
+    const filePath = `../../../${ dir }/${ name }/package.js`;
     const [code, err] = await getFile(filePath);
     // if there is an error reading the file, we will skip it.
     if (err) continue;
@@ -130,6 +137,10 @@ async function main() {
       //});
       const [_, version] = line.split(':');
       if (!version) continue;
+
+      // for updating all packages
+      if (version.includes("-alpha300")) continue;
+       
       const getVersionValue = (value) => {
         const removeQuotes =
           (v) => v
@@ -162,12 +173,13 @@ async function main() {
           const version =
             semver.inc(currentVersion, 'prerelease', release);
           if (name === 'meteor-tool') return version;
-          return version.replace(release, `${ release }${ releaseNumber }`);
+          return version?.replace(release, `${ release }${ releaseNumber }`);
         }
         return semver.inc(currentVersion, release);
       }
 
-      const newVersion = incrementNewVersion(release);
+      const n = incrementNewVersion(release);
+      const newVersion = n?.replace(n, `${n}`)
       console.log(`Updating ${ name } from ${ currentVersion } to ${ newVersion }`);
       const newCode = code.replace(rawVersion, ` '${ newVersion }',`);
       await fs.promises.writeFile(filePath, newCode);

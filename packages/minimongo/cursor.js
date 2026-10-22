@@ -9,16 +9,21 @@ export default class Cursor {
   constructor(collection, selector, options = {}) {
     this.collection = collection;
     this.sorter = null;
-    this.matcher = new Minimongo.Matcher(selector);
 
-    if (LocalCollection._selectorIsIdPerhapsAsObject(selector)) {
+    // Create the collator once and share it with both Matcher and Sorter.
+    const collator = LocalCollection._createCollator(options.collation);
+
+    this.matcher = new Minimongo.Matcher(selector, undefined, collator);
+
+    if (LocalCollection._selectorIsIdPerhapsAsObject(selector) &&
+        !options.collation) {
       // stash for fast _id and { _id }
       this._selectorId = hasOwn.call(selector, '_id') ? selector._id : selector;
     } else {
       this._selectorId = undefined;
 
       if (this.matcher.hasGeoQuery() || options.sort) {
-        this.sorter = new Minimongo.Sorter(options.sort || []);
+        this.sorter = new Minimongo.Sorter(options.sort || [], collator);
       }
     }
 
@@ -135,25 +140,34 @@ export default class Cursor {
    *                        `callback`.
    */
   forEach(callback, thisArg) {
-    if (this.reactive) {
-      this._depend({
-        addedBefore: true,
-        removed: true,
-        changed: true,
-        movedBefore: true,
-      });
+    let i = 0;
+
+    for (const doc of this) {
+      callback.call(thisArg, doc, i++, this);
     }
+  }
 
-    this._getRawObjects({ ordered: true }).forEach((element, i) => {
-      // This doubles as a clone operation.
-      element = this._projectionFn(element);
+  /**
+   * @summary Call `callback` once for each matching document, sequentially and
+   *          synchronously.
+   * @locus Anywhere
+   * @method  forEachAsync
+   * @instance
+   * @memberOf Mongo.Cursor
+   * @param {IterationCallback} callback Function to call. It will be called
+   *                                     with three arguments: the document, a
+   *                                     0-based index, and <em>cursor</em>
+   *                                     itself.
+   * @param {Any} [thisArg] An object which will be the value of `this` inside
+   *                        `callback`.
+   * @returns {Promise}
+   */
+  async forEachAsync(callback, thisArg) {
+    let i = 0;
 
-      if (this._transform) {
-        element = this._transform(element);
-      }
-
-      callback.call(thisArg, element, i, this);
-    });
+    for await (const doc of this) {
+      await callback.call(thisArg, doc, i++, this);
+    }
   }
 
   getTransform() {
@@ -161,7 +175,7 @@ export default class Cursor {
   }
 
   /**
-   * @summary Map callback over all matching documents.  Returns an Array.
+   * @summary Map callback over all matching documents. Returns an Array.
    * @locus Anywhere
    * @method map
    * @instance
@@ -178,6 +192,30 @@ export default class Cursor {
 
     this.forEach((doc, i) => {
       result.push(callback.call(thisArg, doc, i, this));
+    });
+
+    return result;
+  }
+
+  /**
+   * @summary Map callback over all matching documents. Returns a Promise<Array>.
+   * @locus Anywhere
+   * @method mapAsync
+   * @instance
+   * @memberOf Mongo.Cursor
+   * @param {IterationCallback} callback Function to call. It will be called
+   *                                     with three arguments: the document, a
+   *                                     0-based index, and <em>cursor</em>
+   *                                     itself.
+   * @param {Any} [thisArg] An object which will be the value of `this` inside
+   *                        `callback`.
+   * @returns {Promise<Array>}
+   */
+  async mapAsync(callback, thisArg) {
+    const result = [];
+
+    await this.forEachAsync(async (doc, i) => {
+      result.push(await callback.call(thisArg, doc, i, this));
     });
 
     return result;
@@ -217,9 +255,9 @@ export default class Cursor {
   }
 
   /**
-   * @summary observe async version
+   * @summary Watch a query.  Receive callbacks as the result set changes.
    * @locus Anywhere
-   * @memberOf Promise<Mongo.Cursor>
+   * @memberOf Mongo.Cursor
    * @instance
    */
   observeAsync(options) {
@@ -251,7 +289,7 @@ export default class Cursor {
     }
 
     if (this.fields && (this.fields._id === 0 || this.fields._id === false)) {
-      throw Error('You may not observe a cursor with {fields: {_id: 0}}');
+      throw Error("You may not observe a cursor with {fields: {_id: 0}}");
     }
 
     const distances =
@@ -293,13 +331,14 @@ export default class Cursor {
 
     // furthermore, callbacks enqueue until the operation we're working on is
     // done.
-    const wrapCallback = fn => {
+    const wrapCallback = (fn) => {
       if (!fn) {
         return () => {};
       }
 
       const self = this;
-      return function(/* args*/) {
+
+      return function (/* args*/) {
         if (self.collection.paused) {
           return;
         }
@@ -322,7 +361,7 @@ export default class Cursor {
     }
 
     if (!options._suppress_initial && !this.collection.paused) {
-      query.results.forEach(doc => {
+      const handler = (doc) => {
         const fields = EJSON.clone(doc);
 
         delete fields._id;
@@ -332,7 +371,17 @@ export default class Cursor {
         }
 
         query.added(doc._id, this._projectionFn(fields));
-      });
+      };
+      // it means it's just an array
+      if (query.results.length) {
+        for (const doc of query.results) {
+          handler(doc);
+        }
+      }
+      // it means it's an id map
+      if (query.results?.size?.()) {
+        query.results.forEach(handler);
+      }
     }
 
     const handle = Object.assign(new LocalCollection.ObserveHandle(), {
@@ -342,6 +391,8 @@ export default class Cursor {
           delete this.collection.queries[qid];
         }
       },
+      isReady: false,
+      isReadyPromise: null,
     });
 
     if (this.reactive && Tracker.active) {
@@ -357,19 +408,34 @@ export default class Cursor {
 
     // run the observe callbacks resulting from the initial contents
     // before we leave the observe.
-    this.collection._observeQueue.drain();
+    const drainResult = this.collection._observeQueue.drain();
+
+    if (drainResult instanceof Promise) {
+      handle.isReadyPromise = drainResult;
+      drainResult.then(() => (handle.isReady = true));
+    } else {
+      handle.isReady = true;
+      handle.isReadyPromise = Promise.resolve();
+    }
 
     return handle;
   }
 
   /**
-   * @summary observeChanges async version
+   * @summary Watch a query. Receive callbacks as the result set changes. Only
+   *          the differences between the old and new documents are passed to
+   *          the callbacks.
    * @locus Anywhere
-   * @memberOf Promise<Mongo.Cursor>
+   * @memberOf Mongo.Cursor
    * @instance
+   * @param {Object} callbacks Functions to call to deliver the result set as it
+   *                           changes
    */
   observeChangesAsync(options) {
-    return new Promise(resolve => resolve(this.observeChanges(options)));
+    return new Promise((resolve) => {
+      const handle = this.observeChanges(options);
+      handle.isReadyPromise.then(() => resolve(handle));
+    });
   }
 
   // XXX Maybe we need a version of observe that just calls a callback if
@@ -437,7 +503,6 @@ export default class Cursor {
       }
 
       const selectedDoc = this.collection._docs.get(this._selectorId);
-
       if (selectedDoc) {
         if (options.ordered) {
           results.push(selectedDoc);
@@ -445,7 +510,6 @@ export default class Cursor {
           results.set(this._selectorId, selectedDoc);
         }
       }
-
       return results;
     }
 
@@ -464,31 +528,32 @@ export default class Cursor {
       }
     }
 
-    this.collection._docs.forEach((doc, id) => {
-      const matchResult = this.matcher.documentMatches(doc);
+    Meteor._runFresh(() => {
+      this.collection._docs.forEach((doc, id) => {
+        const matchResult = this.matcher.documentMatches(doc);
+        if (matchResult.result) {
+          if (options.ordered) {
+            results.push(doc);
 
-      if (matchResult.result) {
-        if (options.ordered) {
-          results.push(doc);
-
-          if (distances && matchResult.distance !== undefined) {
-            distances.set(id, matchResult.distance);
+            if (distances && matchResult.distance !== undefined) {
+              distances.set(id, matchResult.distance);
+            }
+          } else {
+            results.set(id, doc);
           }
-        } else {
-          results.set(id, doc);
         }
-      }
 
-      // Override to ensure all docs are matched if ignoring skip & limit
-      if (!applySkipLimit) {
-        return true;
-      }
+        // Override to ensure all docs are matched if ignoring skip & limit
+        if (!applySkipLimit) {
+          return true;
+        }
 
-      // Fast path for limited unsorted queries.
-      // XXX 'length' check here seems wrong for ordered
-      return (
-        !this.limit || this.skip || this.sorter || results.length !== this.limit
-      );
+        // Fast path for limited unsorted queries.
+        // XXX 'length' check here seems wrong for ordered
+        return (
+          !this.limit || this.skip || this.sorter || results.length !== this.limit
+        );
+      });
     });
 
     if (!options.ordered) {
@@ -536,9 +601,13 @@ export default class Cursor {
 // Implements async version of cursor methods to keep collections isomorphic
 ASYNC_CURSOR_METHODS.forEach(method => {
   const asyncName = getAsyncMethodName(method);
+
+  if (Cursor.prototype[asyncName]) {
+    return;
+  }
+
   Cursor.prototype[asyncName] = function(...args) {
     try {
-      this[method].isCalledFromAsync = true;
       return Promise.resolve(this[method].apply(this, args));
     } catch (error) {
       return Promise.reject(error);

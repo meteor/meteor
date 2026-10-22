@@ -1,6 +1,6 @@
 import { Meteor } from "meteor/meteor";
-import { toWebsocketUrl } from "./urls.js";
 import { StreamClientCommon } from "./common.js";
+import { toWebsocketUrl } from "./urls.js";
 
 // @param endpoint {String} URL to Meteor app
 //   "http://subdomain.meteor.com/" or "/" or
@@ -132,7 +132,7 @@ export class ClientStream extends StreamClientCommon {
     // require the module if we actually create a server-to-server
     // connection.
     var FayeWebSocket = Npm.require('faye-websocket');
-    var deflate = Npm.require('permessage-deflate');
+    var deflate = Npm.require('permessage-deflate2');
 
     var targetUrl = toWebsocketUrl(this.endpoint);
     var fayeOptions = {
