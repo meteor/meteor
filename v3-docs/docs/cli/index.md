@@ -297,7 +297,7 @@ If you run `meteor create` without arguments, Meteor will launch an interactive 
 | `--package` | Create a new package instead of an application |
 
 ::: warning Prototype Mode
-The `--prototype` option adds packages that make development faster but shouldn't be used in production. See the [security checklist](/tutorials/security/security#checklist).
+The `--prototype` option adds packages that make development faster but shouldn't be used in production. See the [security checklist](/tutorials/security/security#security-checklist).
 :::
 
 ### Included Packages
