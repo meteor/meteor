@@ -123,3 +123,30 @@ Tinytest.add('passwordless - Valid token without email', test => {
 
   test.isFalse(!!result.error);
 });
+
+Tinytest.addAsync('passwordless - public signup rejects role options', async test => {
+  for (const userData of [{ role: 'admin' }, { scope: 'tenant' }]) {
+    await test.throwsAsync(() => Meteor.server.method_handlers.requestLoginTokenForUser({
+      selector: { email: 'roles-test@example.com' }, userData,
+    }), /Roles can only be assigned by the server/);
+  }
+});
+
+Tinytest.addAsync('passwordless - explicit emails override the default selector', async test => {
+  const previous = Accounts._options.defaultFieldSelector;
+  const previousHook = Accounts._onCreateLoginTokenHook;
+  const id = await Meteor.users.insertAsync({
+    username: Random.id(), emails: [{ address: 'projection-test@example.com', verified: false }],
+  });
+  try {
+    Accounts._options.defaultFieldSelector = { username: 1 };
+    Accounts._onCreateLoginTokenHook = async () => false;
+    await Meteor.server.method_handlers.requestLoginTokenForUser({ selector: { id } });
+    const user = await Meteor.users.findOneAsync(id);
+    test.equal(user.services.passwordless.tokens[0].email, 'projection-test@example.com');
+  } finally {
+    Accounts._options.defaultFieldSelector = previous;
+    Accounts._onCreateLoginTokenHook = previousHook;
+    await Meteor.users.removeAsync(id);
+  }
+});

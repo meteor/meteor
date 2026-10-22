@@ -3053,14 +3053,3 @@ Tinytest.addAsync("roles - settings adminRole", async function (test) {
   const adminRole = await RolesCollection.findOneAsync({ _id: 'administrator' });
   test.equal(adminRole?._id, 'administrator')
 });
-
-// Tinytest.addAsync("roles - settings addFirstUserAsAdmin", async function (test) {
-//   await clearData();
-//   await Meteor.users.removeAsync({});
-//   await Roles.config({ adminRole: 'admin', addFirstUserAsAdmin: true });
-//
-//   const userId = await Accounts.createUserAsync({ username: 'admin' });
-//
-//   const roleAssignment = await RoleAssignmentCollection.findOneAsync({ 'user._id': userId });
-//   test.equal(roleAssignment?.role._id, 'admin');
-// });

@@ -1433,13 +1433,6 @@ export class AccountsServer extends AccountsCommon {
       opts = await this._onExternalLoginHook(options, user);
     }
 
-    const role = options?.role;
-    const scope = options?.scope;
-    if (Package['roles'] && options?.role) {
-      options.role === undefined;
-      options.scope === undefined;
-    }
-
     if (user) {
       await pinEncryptedFieldsToUser(serviceData, user._id);
 
@@ -1464,9 +1457,7 @@ export class AccountsServer extends AccountsCommon {
       user = {services: {}};
       user.services[serviceName] = serviceData;
       const userId = await this.insertUserDoc(opts, user);
-      if (Package["roles"] && role) {
-        await Package["roles"].Roles.addUsersToRolesAsync(userId, role, scope);
-      }
+      await this._finishUserCreation(userId, opts);
       return {
         type: serviceName,
         userId,
@@ -1588,12 +1579,6 @@ export class AccountsServer extends AccountsCommon {
     await this._checkForCaseInsensitiveDuplicates('username', 'Username', username);
     await this._checkForCaseInsensitiveDuplicates('emails.address', 'Email', email);
 
-    const role = options?.role;
-    const scope = options?.scope;
-    if (Package['roles'] && options?.role) {
-      options.role === undefined;
-      options.scope === undefined;
-    }
     const userId = await this.insertUserDoc(options, newUser);
     // Perform another check after insert, in case a matching user has been
     // inserted in the meantime
@@ -1606,21 +1591,37 @@ export class AccountsServer extends AccountsCommon {
       throw ex;
     }
 
-    if (Package['roles'] && options?.role) {
+    await this._finishUserCreation(userId, options);
+
+    return userId;
+  }
+
+  // Only the built-in client registration methods call this guard. Server
+  // application code may authorize role assignment before creating a user.
+  _validateClientUserCreationOptions(options) {
+    if (options && (options.role !== undefined || options.scope !== undefined)) {
+      throw new Meteor.Error(403, 'Roles can only be assigned by the server');
+    }
+  }
+
+  async _finishUserCreation(userId, options = {}) {
+    if (Package['roles'] && options.role) {
       try {
-        await Package['roles'].Roles.addUsersToRolesAsync(userId, role, scope);
-      } catch (e) {
-        // Delete user if adding roles fails
-        await Meteor.users.removeAsync(userId);
-        throw e;
+        await Package['roles'].Roles.addUsersToRolesAsync(userId, options.role, options.scope);
+      } catch (error) {
+        await this.users.removeAsync(userId);
+        throw error;
       }
     }
 
-    this.afterCreateUserHook.forEachAsync((hook) => {
-      hook({ ...newUser, _id: userId });
+    // Hooks observe the stored document and complete before registration returns.
+    // A hook failure propagates but leaves the account in place: hooks may have
+    // already performed side effects that cannot be rolled back.
+    const user = await this.users.findOneAsync(userId);
+    await this.afterCreateUserHook.forEachAsync(async hook => {
+      await hook(user);
+      return true;
     });
-
-    return userId;
   }
 
   _handleError = (msg, throwError = true, errorCode = 403) => {

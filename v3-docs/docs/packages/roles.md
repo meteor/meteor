@@ -104,7 +104,11 @@ Name the desired admin role in your `settings.json` file at the following route:
 
 ### First user as admin
 If you have set the default admin role, then this option will add that role to the first user that registers. This is useful if you want to easily designate the first user as admin.
-Once your application is running and the first user has registered it is advised to turn this option off.
+The package stores a server-only bootstrap claim, so concurrent registrations can assign the role to only one account. The claim survives account deletion and is not reset by restarting the application or changing the role name. Enabling this option in an application that already has users does not grant a later registration the admin role.
+
+If assigning the role fails after the account is created, registration reports the error and retains both the account and its claim. An administrator must correct the role assignment; a later signup cannot take over the claim.
+
+Once the first user has registered, turn this option off.
 Set this boolean value in your `settings.json` file at the following route: `packages.roles.addFirstUserAsAdmin`
 
 ## Role Management

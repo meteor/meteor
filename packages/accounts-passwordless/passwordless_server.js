@@ -115,8 +115,9 @@ function generateSequence() {
 
 Meteor.methods({
   requestLoginTokenForUser: async ({ selector, userData, options = {} }) => {
+    Accounts._validateClientUserCreationOptions(userData);
     let user = await Accounts._findUserByQuery(selector, {
-      projection: { emails: 1 },
+      fields: { emails: 1 },
     });
 
     if (
@@ -135,7 +136,7 @@ Meteor.methods({
       user = await Accounts._findUserByQuery(
         { id: userId },
         {
-          projection: { emails: 1 },
+          fields: { emails: 1 },
         }
       );
     }

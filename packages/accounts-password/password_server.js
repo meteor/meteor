@@ -1221,6 +1221,7 @@ Meteor.methods(
         async () => {
           // createUser() above does more checking.
           check(options, Object);
+          Accounts._validateClientUserCreationOptions(options);
           if (Accounts._options.forbidClientAccountCreation)
             return {
               error: new Meteor.Error(403, "Signups forbidden")

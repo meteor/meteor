@@ -1,6 +1,7 @@
 import { Accounts } from 'meteor/accounts-base'
 import { RolesCollection, RoleAssignmentCollection } from './roles_common_async'
 import { Meteor } from 'meteor/meteor'
+import { Mongo } from 'meteor/mongo'
 
 const indexFnAssignment = RoleAssignmentCollection.createIndexAsync.bind(RoleAssignmentCollection)
 const indexFnRoles = RolesCollection.createIndexAsync.bind(RolesCollection)
@@ -19,7 +20,21 @@ indexFnRoles({ 'children._id': 1 })
 
 const VALID_CONFIG_KEYS = ['adminRole', 'addFirstUserAsAdmin']
 
-let settings = Meteor.settings?.packages?.roles
+let settings = Meteor.settings?.packages?.roles;
+let bootstrapReady;
+
+// Server-only state survives account deletion and is never published to clients.
+export const FirstUserAdminCollection = new Mongo.Collection('meteor_roles_bootstrap', {
+  _preventAutopublish: true,
+  defineMutationMethods: false,
+});
+
+async function initializeFirstUserAdmin() {
+  const existingUser = await Accounts.users.findOneAsync({}, { fields: { _id: 1 } });
+  await FirstUserAdminCollection.upsertAsync('first-user-admin', {
+    $setOnInsert: { userId: existingUser?._id ?? null },
+  });
+}
 
 Object.assign(Roles, {
   /**
@@ -36,53 +51,42 @@ Object.assign(Roles, {
       }
     }
 
-    settings = options
-
-    if (settings.adminRole) {
+    if (options.adminRole) {
       try {
-        await Roles.createRoleAsync(settings.adminRole, { unlessExists: true })
+        await Roles.createRoleAsync(options.adminRole, { unlessExists: true })
       } catch (e) {
-        Meteor.Error(500, `Error creating super admin role: ${e.message}`)
+        throw new Meteor.Error(500, `Error creating super admin role: ${e.message}`)
       }
     }
+
+    if (options.addFirstUserAsAdmin && options.adminRole) {
+      bootstrapReady = initializeFirstUserAdmin();
+      await bootstrapReady;
+    }
+    settings = { ...options };
   }
 })
 
 Meteor.startup(async () => {
-  if (settings) {
-    if (!Meteor.isProduction) {
-      // Validate config options keys
-      for (const key of Object.keys(settings)) {
-        if (!VALID_CONFIG_KEYS.includes(key)) {
-          console.error(`Roles config: Invalid key: ${key}`)
-        }
-      }
-    }
-
-    if (settings.adminRole) {
-      try {
-        await Roles.createRoleAsync(settings.adminRole, { unlessExists: true })
-      } catch (e) {
-        Meteor.Error(500, `Error creating super admin role: ${e.message}`)
-      }
-    }
-  }
-})
+  if (settings) await Roles.config(settings);
+});
 
 Accounts.afterCreateUserHook.register(async user => {
-  if (settings?.addFirstUserAsAdmin && settings.adminRole) {
-    // Check if this is the first user created
-    const count = await Accounts.users.countDocuments({}, { limit: 2 })
-    if (count === 1) {
-      // Add the first user to the admin role
+  const config = settings;
+  if (config?.addFirstUserAsAdmin && config.adminRole) {
+    await bootstrapReady;
+    // Only one concurrent signup can change the durable claim from null.
+    // Never clear the claim after deletion or assignment failure.
+    const claimed = await FirstUserAdminCollection.updateAsync(
+      { _id: 'first-user-admin', userId: null },
+      { $set: { userId: user._id } },
+    );
+    if (claimed) {
       try {
-        await Roles.addUsersToRolesAsync(user._id, settings.adminRole)
-      } catch (e) {
-        Meteor.Error(
-          500,
-          `Error adding first user to super admin role: ${e.message}`,
-        );
+        await Roles.addUsersToRolesAsync(user._id, config.adminRole);
+      } catch (error) {
+        throw new Meteor.Error(500, `Error adding first user to super admin role: ${error.message}`);
       }
     }
   }
-})
+});
