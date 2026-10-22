@@ -3332,7 +3332,9 @@ main.registerCommand({
 
   if (importIntoServerMain || serverImportFile?.length > 0) {
     let mainJsPath
-    if (importIntoServerMain) {
+    if (serverImportFile?.length > 0) {
+      mainJsPath = files.pathJoin(appDir, serverImportFile);
+    } else if (importIntoServerMain) {
       const packageJsonPath = files.pathJoin(appDir, 'package.json');
       const packageJsonFile = files.readFile(packageJsonPath, 'utf8');
       const packageJson = JSON.parse(packageJsonFile);
@@ -3341,8 +3343,6 @@ main.registerCommand({
         packageJson?.meteor?.mainModule?.server
           ? files.pathJoin(appDir, packageJson.meteor.mainModule.server)
           : files.pathJoin(appDir, 'server', 'main.js');
-    } else if (serverImportFile && serverImportFile.length > 0) {
-      mainJsPath = files.pathJoin(appDir, serverImportFile)
     }
     // If `mainJsPath` is not found the generate script will error out
     const mainJs = files.readFile(mainJsPath);
