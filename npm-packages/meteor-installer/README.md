@@ -40,7 +40,11 @@ This npm package is not the Meteor framework itself; it is just an installer. Do
 
 ### Path Management
 
-By default, the Meteor installer adds its install path (by default, `~/.meteor/`) to your PATH by updating either your `.bashrc`, `.bash_profile`, or `.zshrc` as appropriate. To disable this behavior, install Meteor by running:
+By default, the Meteor installer adds its install path (by default, `~/.meteor/`) to your PATH by updating your `.zshrc`, or your `.bashrc` plus the login file bash reads (`.bash_profile`, `.bash_login` or `.profile`, whichever exists first). On Windows it updates your user `PATH` environment variable. Existing entries are not duplicated.
+
+If Meteor is already installed but `meteor` is not on your PATH, running `npx meteor` again adds the missing entry and asks you to open a new terminal.
+
+To disable this behavior, install Meteor by running:
 
 ```bash
 npm install -g meteor --ignore-meteor-setup-exec-path
