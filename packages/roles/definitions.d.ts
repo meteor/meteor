@@ -360,6 +360,31 @@ export declare namespace Roles {
   ): Promise<Mongo.Cursor<Meteor.User>>;
 
   /**
+   * Retrieve all userIds who are in target role.
+   *
+   * Options:
+   *
+   * @method getUserIdsInRole
+   * @param {Array|String} roles Name of role or an array of roles. If array, users
+   *                             returned will have at least one of the roles
+   *                             specified but need not have _all_ roles.
+   *                             Roles do not have to exist.
+   * @param {Object|String} options Options:
+   *   - `scope`: name of the scope to restrict roles to; user's global
+   *     roles will also be checked
+   *   - `anyScope`: if set, role can be in any scope (`scope` option is ignored)
+   *   - `onlyScoped`: if set, only roles in the specified scope are returned 
+   */
+  function getUserIdsInRole(
+    roles: string | string[],
+    options?: string | { scope?: string; anyScope?: boolean; onlyScoped?: boolean }
+  ): string[]
+  function getUserIdsInRoleAsync(
+    roles: string | string[],
+    options?: string | { scope?: string; anyScope?: boolean; onlyScoped?: boolean }
+  ): Promise<string[]>;
+
+  /**
    * Remove users from assigned roles.
    *
    * @example

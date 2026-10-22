@@ -40,6 +40,14 @@ Please bear in mind if you are adding a package to this list, try providing as m
 - [`jam:soft-delete`](./soft-delete.md), An easy way to add soft deletes to your Meteor app
 - [`jam:archive`](./archive.md),
 
+#### Scaling / Clustering
+
+- [`dupontbertrand:cluster`](./cluster.md), Meteor 3 fork of meteorhacks:cluster — multi-core, load balancing, service discovery
+
+#### Developer tools
+
+- [`dupontbertrand:mail-preview`](./mail-preview.md), Zero-config dev-mode mail preview UI — view captured emails at `/__meteor_mail__/`
+
 #### Utilities
 
 - [`jam:offline`](./offline.md), An easy way to give your Meteor app offline capabilities and make it feel instant

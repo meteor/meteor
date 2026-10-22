@@ -247,6 +247,28 @@ const users = await (await Roles.getUsersInRoleAsync("manager", {
 })).fetchAsync();
 ```
 
+<ApiBox name="Roles.getUserIdsInRoleAsync" hasCustomExample />
+
+Example:
+
+```js
+// Get all user IDs with the "admin" role
+const adminIds = await Roles.getUserIdsInRoleAsync("admin");
+
+// Get user IDs with specific roles in a scope
+const editorIds = await Roles.getUserIdsInRoleAsync(
+  ["editor", "writer"],
+  { scope: "blog" }
+);
+
+// Check across any scope
+const managerIds = await Roles.getUserIdsInRoleAsync("manager", {
+  anyScope: true,
+});
+```
+
+Unlike `getUsersInRoleAsync` which returns a cursor, `getUserIdsInRoleAsync` returns a `Promise<Array>` of user ID strings directly, making it useful when you only need the IDs without fetching full user documents.
+
 ## Checking Roles
 
 <ApiBox name="Roles.userIsInRoleAsync" hasCustomExample />

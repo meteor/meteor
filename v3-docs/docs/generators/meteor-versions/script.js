@@ -2,7 +2,7 @@ const _fs = require("fs");
 const fs = _fs.promises;
 
 const getDocsUrl = (version = "") =>
-  `https://release-${version}.docs.meteor.com/`;
+  `https://release-${version}.docs-online.meteor.com/`;
 
 exports.generateMeteorVersions = async () => {
   console.log("Reading meteor versions...");

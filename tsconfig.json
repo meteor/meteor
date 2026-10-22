@@ -7,18 +7,26 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "outDir": "./dist",
-    "rootDir": "./src",
+    "noEmit": true,
+    "allowJs": true,
+    "checkJs": false,
+    "moduleResolution": "node",
     "typeRoots": [
       "./node_modules/@types",
       "./types"
     ]
   },
   "include": [
-    "src/**/*.ts",
-    "src/**/*.d.ts",
-    "types/**/*.d.ts"
+    "packages/**/*.ts",
+    "packages/**/*.d.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "**/node_modules/**",
+    "**/.npm/**",
+    "tools/static-assets/skel*/**",
+    "tools/static-assets/scaffolds*/**",
+    "tools/tests/**",
+    "tools/modern-tests/**"
   ]
 }

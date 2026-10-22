@@ -25,6 +25,35 @@ WebApp.handlers.use("/hello", (req, res, next) => {
 <ApiBox name="WebApp.handlers"/>
 <ApiBox name="expressHandlersCallback(req, res, next)" hasCustomExample/>
 
+### Customizing the `<html>` Element
+
+Use `WebApp.addHtmlAttributeHook` on the server to add attributes to the
+`<html>` element. The hook runs whenever Meteor generates app HTML and receives
+information about the request, so attributes can be static or request-specific.
+
+For example, this sets the document language for every request:
+
+```js
+// server/main.js
+import { WebApp } from "meteor/webapp";
+
+WebApp.addHtmlAttributeHook(() => ({ lang: "en" }));
+```
+
+Return `null` when no attributes should be added for a request. If multiple
+hooks return the same attribute, the hook registered last takes precedence.
+The request object contains:
+
+- `browser`: the browser `name` and `major`, `minor`, and `patch` versions
+- `modern`: whether the browser supports Meteor's modern JavaScript bundle
+- `path`: the request path
+- `arch`: the selected client architecture
+- `url`: parsed URL data, including a `query` object
+- `headers`: the request headers
+- `cookies`: the parsed request cookies
+
+<ApiBox name="WebApp.addHtmlAttributeHook" hasCustomExample/>
+
 ### Serving a Static Landing Page
 
 One of the really cool things you can do with WebApp is serve static HTML for a landing page where TTFB (time to first byte) is of utmost importance.
@@ -103,6 +132,44 @@ We're using the [connect-route](https://www.npmjs.com/package/connect-route) NPM
 
 And finally, if you decide to use this technique you'll want to make sure you understand how conflicting client side routing will affect user experience.
 
+### Static Assets & Caching
+
+By default, Meteor serves different bundles (Modern vs. Legacy) based on the user's browser. Historically, this required the `Vary: User-Agent` header on all responses, which forced CDNs to fragment their cache (storing separate copies for Chrome, Safari, etc.).
+
+`webapp` now includes an automatic optimization to solve this:
+
+* **Production (Hashed Filenames):** Files with the hash in the pathname (e.g., `/app.abc12345.js`) are served **without** the `Vary: User-Agent` header. Since the pathname uniquely identifies the content, CDNs can safely cache a single copy for all users.
+* **Development (Unhashed Filenames):** Files without the hash in the pathname (e.g., `/packages/promise.js?hash=abc123`) **keep** the `Vary: User-Agent` header to ensure safety during development.
+
+This behavior is enabled by default. You can control it via `Meteor.settings`:
+```json
+{
+  "packages": {
+    "webapp": {
+      "includeVaryUserAgent": true
+    }
+  }
+}
+```
+
+Setting `includeVaryUserAgent` to `false` will disable the header for **all** static files. 
+
+#### Skipping compression for responses with a Content-Length
+
+By default, `webapp` may compress responses (dropping their `Content-Length` header in the process). If you sit behind a proxy or CDN — or have clients — that rely on an explicit `Content-Length` (for example, to show download progress or to serve range requests), you can opt in to leave already-sized responses uncompressed:
+
+```json
+{
+  "packages": {
+    "webapp": {
+      "skipCompressionWithContentLength": true
+    }
+  }
+}
+```
+
+When enabled, any response that already declares a `Content-Length` header is served as-is, without compression. Responses without a `Content-Length` are unaffected and still compress as before. This setting is `false` by default.
+
 ### React SSR Optimization (Meteor 3.4)
 
 **Experimental: Disable Boilerplate Response** ([PR#13855](https://github.com/meteor/meteor/pull/13855))
@@ -113,11 +180,9 @@ When using React SSR with packages like `server-render`, you may want to complet
 
 ```js
 // server/main.js
-import { WebApp } from 'meteor/webapp';
+import { WebAppInternals } from "meteor/webapp";
 
-WebApp.addHtmlAttributeHook(() => ({
-  disableBoilerplateResponse: true
-}));
+WebAppInternals.disableBoilerplateResponse();
 ```
 
 **Benefits:**
@@ -140,11 +205,9 @@ Example with server-render:
 ```js
 import { onPageLoad } from 'meteor/server-render';
 import { renderToString } from 'react-dom/server';
-import { WebApp } from 'meteor/webapp';
+import { WebAppInternals } from 'meteor/webapp';
 
-WebApp.addHtmlAttributeHook(() => ({
-  disableBoilerplateResponse: true
-}));
+WebAppInternals.disableBoilerplateResponse();
 
 onPageLoad(sink => {
   const html = renderToString(<App />);

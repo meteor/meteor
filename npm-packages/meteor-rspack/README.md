@@ -14,6 +14,7 @@ When Meteor runs with the Rspack bundler enabled, this package is what generates
 - **Asset externals and HTML generation** through custom Rspack plugins
 - **A `defineConfig` helper** that accepts a factory function receiving Meteor environment flags and build utilities
 - **Customizable config** via `rspack.config.js` in your project root, with safe merging that warns if you try to override reserved settings
+- **Automatic CSS delegation** when rspack is configured with CSS, Less, or SCSS loaders, Meteor automatically detects the handled extensions after the first compilation and stops processing those files itself in the entry folder context. No `.meteorignore` entries needed.
 
 ## Installation
 

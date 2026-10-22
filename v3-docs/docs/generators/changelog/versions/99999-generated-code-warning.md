@@ -8,7 +8,4 @@ This is a complete history of changes for Meteor releases.
 
 [//]: # (If you want to change something in this file)
 
-[//]: # (go to meteor/docs/generators/changelog/docs)
-
-
-
+[//]: # (go to meteor/v3-docs/docs/generators/changelog/versions)
