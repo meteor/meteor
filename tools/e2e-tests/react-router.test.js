@@ -32,8 +32,10 @@ describe('R.Router App Bundling /', () => {
       },
       afterRun: async ({ result, port }) => {
         await waitForReactEnvs(result.outputLines, { isTsxEnabled: true });
-        // negated as cached output (babel.config.js)
-        await waitForMeteorOutput(result.outputLines, /.*babel-plugin-react-compiler.*/, { negate: true });
+        // Do not assert babel.config.js output is absent on the second run:
+        // rspack persistent-cache reuse across separate `meteor run`
+        // invocations is not deterministic in CI, so a negated wait here can
+        // hang for the full test timeout. See afterInit for the positive check.
         await assert404Page(port);
         // Less styles support
         await assertBodyStyles({
