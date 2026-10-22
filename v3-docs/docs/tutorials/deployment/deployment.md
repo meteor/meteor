@@ -44,7 +44,7 @@ Settings should be used to set environment (i.e. staging vs production) specific
 
 Environment variables are used to set process-specific things, which could conceivably change for different instances of your application's processes. A list of environment variables can be found in the [CLI documentation](/cli/environment-variables).
 
-A final note on storing these settings: It's not a good idea to store settings in the same repository where you keep your app code. Read about good places to put your settings in the [Security article](/tutorials/security/security#api-keys).
+A final note on storing these settings: It's not a good idea to store settings in the same repository where you keep your app code. Read about good places to put your settings in the [Security article](/tutorials/security/security#securing-api-keys).
 
 ## Other considerations
 

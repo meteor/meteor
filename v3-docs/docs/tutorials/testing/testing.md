@@ -37,7 +37,7 @@ This loads your application in a special "test mode". What this does is:
 - Starts up the test driver package ([see below](#driver-packages)).
 
 ::: info
-The Meteor build tool and the `meteor test` command ignore any files located in any `tests/` directory. This allows you to put tests in this directory that you can run using a test runner outside of Meteor's built-in test tools and still not have those files loaded in your application. See Meteor's [default file load order](/tutorials/application-structure/#load-order) rules.
+The Meteor build tool and the `meteor test` command ignore any files located in any `tests/` directory. This allows you to put tests in this directory that you can run using a test runner outside of Meteor's built-in test tools and still not have those files loaded in your application. See Meteor's [default file load order](/tutorials/application-structure/#default-file-load-order) rules.
 :::
 
 What this means is that you can write tests in files with a certain filename pattern and know they'll not be included in normal builds of your app. When your app runs in test mode, those files will be loaded (and nothing else will), and they can import the modules you want to test. As we'll see this is ideal for [unit tests](#unit-testing) and [simple integration tests](#simple-integration-test).
