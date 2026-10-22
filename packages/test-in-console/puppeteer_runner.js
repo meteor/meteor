@@ -1,4 +1,9 @@
-const puppeteer = require('../../dev_bundle/lib/node_modules/puppeteer');
+let puppeteer;
+try {
+  puppeteer = require('../../dev_bundle/lib/node_modules/puppeteer');
+} catch (error) {
+  puppeteer = require('puppeteer');
+}
 
 let testNumber = 0;
 
@@ -44,6 +49,10 @@ async function runNextUrl(browser) {
   }
 
   await page.goto(process.env.URL);
+  await page.waitForFunction(
+    () => typeof TEST_STATUS !== 'undefined' || typeof DONE !== 'undefined',
+    { timeout: 60000 }
+  );
 
   async function poll() {
     if (await isDone(page)) {
@@ -144,6 +153,7 @@ async function runTests() {
   await runNextUrl(browser)
 }
 
-runTests().catch((e) =>
-  console.log(`something broke while running puppeter: `, e)
-);
+runTests().catch((error) => {
+  console.error('Puppeteer test runner failed:', error);
+  process.exit(1);
+});
