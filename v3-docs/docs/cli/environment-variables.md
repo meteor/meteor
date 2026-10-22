@@ -174,7 +174,7 @@ This way each command only processes the files it actually needs, reducing build
 
 Overrides the directory Meteor uses for per-project local runtime/build state. By default, this directory is `.meteor/local` inside your app.
 
-Setting `METEOR_LOCAL_DIR` moves everything that would normally be written under `.meteor/local` (for example build output and caches like `build/`, `isopacks/`, and `plugin-cache/`, and other command runtime state) to the specified directory.
+`METEOR_LOCAL_DIR` redirects build output and caches managed through Meteor's project-local directory, including `build/`, `isopacks/`, and `plugin-cache/`. Some tools still write directly to `.meteor/local`: the `dev_bundle` link and Rspack test output under `.meteor/local/test` are not redirected.
 
 If you set a relative path, it is resolved relative to your project directory.
 
@@ -200,7 +200,7 @@ METEOR_LOCAL_DIR=/tmp/my-app-local-1 meteor run --port 3000
 METEOR_LOCAL_DIR=/tmp/my-app-local-2 meteor run --port 3001
 
 # CI: use an isolated temp directory per job
-METEOR_LOCAL_DIR="$(mktemp -d)" meteor test --driver-package meteor/test-in-console
+METEOR_LOCAL_DIR="$(mktemp -d)" meteor test --driver-package test-in-console
 ```
 
 When using the [Rspack bundler integration](../about/modern-build-stack/rspack-bundler-integration.md), `METEOR_LOCAL_DIR` also influences the Rspack build context. It extracts the name of the folder represented in the path and appends it as a suffix to the following Rspack constants:
@@ -250,7 +250,7 @@ METEOR_PACKAGE_SERVER_URL="https://my-packages.example.com" meteor update
 
 Overrides the server Meteor uses for package usage reporting (defaults to `https://activity.meteor.com`).
 
-Most users will not need this. To disable package usage reporting entirely, see [`DO_NOT_TRACK`](#do_not_track).
+Most users will not need this. To disable package usage reporting entirely, see [`DO_NOT_TRACK`](#do-not-track).
 
 ## METEOR_BUILD_FARM_URL
 (_development, production_)
