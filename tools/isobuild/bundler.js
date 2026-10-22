@@ -293,7 +293,9 @@ class NodeModulesDirectory {
         // Normalize .npm/package/node_modules/... paths so that they get
         // copied into the bundle as if they were in the top-level local
         // node_modules directory of the package.
-        if (relParts[1] === "package") {
+        if (relParts[1] === "devPackage") {
+          relParts.splice(0, 2, 'dev');
+        } else if (relParts[1] === "package") {
           relParts.splice(0, 2);
         } else if (relParts[1] === "plugin") {
           relParts.splice(0, 3);
@@ -1546,6 +1548,9 @@ class Target {
   // with the original sources.
   rewriteSourceMaps() {
     const rewriteSourceMap = function (sm) {
+      if (!sm.sources) {
+        return sm;
+      }
       sm.sources = sm.sources.map(function (path) {
         const prefix = SOURCE_URL_PREFIX;
         if (path.slice(0, prefix.length) === prefix) {
@@ -1766,6 +1771,7 @@ class ClientTarget extends Target {
     // Build up a manifest of all resources served via HTTP.
     const manifest = [];
     await eachResource(async (file, type) => {
+      const isDynamic = file.targetPath.startsWith("dynamic/");
       const manifestItem = {
         path: file.targetPath,
         where: "client",
@@ -1774,6 +1780,18 @@ class ClientTarget extends Target {
         url: file.url,
         replaceable: file.replaceable
       };
+
+      // writeFile() (below) strips //# sourceMappingURL / //# sourceURL
+      // comments from non-asset client files before writing them. Apply that
+      // strip before reading size/hash/sri so the manifest describes the bytes
+      // actually written and served (#10710).
+      if (type !== 'asset') {
+        const original = file.contents();
+        const stripped = removeSourceMappingURLs(original);
+        if (stripped !== original && ! stripped.equals(original)) {
+          file.setContents(stripped);
+        }
+      }
 
       const antiXSSIPrepend = Profile("anti-XSSI header for source-maps", function (sourceMap) {
         // Add anti-XSSI header to this file which will be served over
@@ -1801,8 +1819,24 @@ class ClientTarget extends Target {
 
         // Use a SHA to make this cacheable.
         const sourceMapBaseName = file.hash() + '.map';
-        manifestItem.sourceMapUrl = require('url').resolve(
-          file.url, sourceMapBaseName);
+        // Resolve the source map URL relative to the file's URL by replacing
+        // its last path segment (and dropping any query string). This matches
+        // the previous url.resolve() behavior without the deprecated legacy
+        // url API (file.url is always an absolute path starting with "/").
+        const fileUrlPath = file.url.split('?')[0];
+        manifestItem.sourceMapUrl =
+          fileUrlPath.slice(0, fileUrlPath.lastIndexOf('/') + 1) +
+          sourceMapBaseName;
+      }
+
+      if (isDynamic && manifestItem.sourceMapUrl) {
+        const url = (process.env.ROOT_URL || "") + manifestItem.sourceMapUrl;
+        const contentsWithSourceMapUrl =
+          addSourceMappingURL(file.contents(), url);
+
+        if (! contentsWithSourceMapUrl.equals(file.contents())) {
+          file.setContents(contentsWithSourceMapUrl);
+        }
       }
 
       // Set this now, in case we mutated the file's contents.
@@ -1810,7 +1844,7 @@ class ClientTarget extends Target {
       manifestItem.hash = file.hash();
       manifestItem.sri = file.sri();
 
-      if (! file.targetPath.startsWith("dynamic/")) {
+      if (! isDynamic) {
         await writeFile(file, builder, {
           leaveSourceMapUrls: type === 'asset'
         });
@@ -1837,8 +1871,10 @@ class ClientTarget extends Target {
         // source maps can be very large), but rather include a normal URL
         // referring to the source map (as a comment), so that it can be
         // loaded from the web server when needed.
+        // The source map URL was added before the manifest fields were
+        // computed, so preserve those exact bytes when writing the file.
         await writeFile(file, builder, {
-          sourceMapUrl: manifestItem.sourceMapUrl,
+          leaveSourceMapUrls: true,
         });
 
         manifest.push({
@@ -1986,6 +2022,29 @@ function hashOfFiles(files) {
   ClientTarget.prototype[method] = Profile(`ClientTarget#${method}`, ClientTarget.prototype[method]);
 });
 
+/**
+ * Collects all dev-only package names.
+ *
+ * @returns {string[]} Array of dev-only package names
+ */
+function getDevOnlyPackages() {
+  const targets = global.meteorBundlerTargets || {};
+  return [
+    ...new Set(
+        ['web.browser', 'server'].flatMap(target => {
+          const pkgMap = targets[target]?.unibuilds;
+
+          if (!pkgMap) {
+            return [];
+          }
+
+          return pkgMap
+              .filter(unibuild => unibuild?.pkg?.devOnly)
+              .map(unibuild => unibuild?.pkg.name);
+        })
+    )
+  ];
+}
 
 //////////////////// JsImageTarget and JsImage  ////////////////////
 
@@ -2415,6 +2474,10 @@ class JsImage {
       addNodeModulesDirToObject(nmd, nodeModulesDirectories);
     });
 
+    var devOnlySkipPackages = [];
+    const isProductionLike = ['build', 'deploy'].includes(global.currentCommand?.name) && buildMode === 'production';
+    if (isProductionLike) devOnlySkipPackages = getDevOnlyPackages();
+
     // If multiple load files share the same asset, only write one copy of
     // each. (eg, for app assets).
     var assetFilesBySha = {};
@@ -2424,6 +2487,11 @@ class JsImage {
     for (const item of self.jsToLoad) {
       if (! item.targetPath) {
         throw new Error("No targetPath?");
+      }
+
+      // Skip dev-only packages on build for production
+      if (devOnlySkipPackages.some(_package => item?.targetPath?.includes(`${_package}.js`))) {
+        continue;
       }
 
       var loadItem = {
@@ -2540,6 +2608,11 @@ class JsImage {
     for (const nmd of Object.values(nodeModulesDirectories)) {
       assert.strictEqual(typeof nmd.preferredBundlePath, "string");
 
+      // Skip dev-only packages on build for production
+      if (devOnlySkipPackages.includes(nmd?.packageName)) {
+        continue;
+      }
+
       // Skip calculating isPortable in 'meteor run' since the
       // modules are never rebuilt
       if (includeNodeModules !== 'symlink' && !nmd.isPortable()) {
@@ -2548,9 +2621,25 @@ class JsImage {
       }
 
       if (nmd.sourcePath !== nmd.preferredBundlePath) {
+        const hasDevNodeModules = nmd.sourcePath.includes('npm/dev/node_modules')
+            || nmd.sourcePath.includes('devPackage/node_modules');
+        // Skip copy dev node_modules in production-like mode
+        if (isProductionLike && hasDevNodeModules) {
+          continue;
+        }
+        // Skip copy prod node_modules in dev mode when dev node_modules exist
+        if (!isProductionLike
+            && files.exists(`${nmd.sourceRoot}/npm/dev/node_modules`)
+            && nmd.sourcePath.includes('npm/node_modules')) {
+          continue;
+        }
+        // Ensure to copy dev node_modules to proper context
+        const to = hasDevNodeModules
+            ? nmd.preferredBundlePath.replace('/dev/node_modules', '/node_modules')
+            : nmd.preferredBundlePath;
         var copyOptions = {
           from: nmd.sourcePath,
-          to: nmd.preferredBundlePath,
+          to: to,
           npmDiscards: nmd.npmDiscards,
           symlink: includeNodeModules === 'symlink'
         };
@@ -3075,6 +3164,7 @@ Node.js ${process.version}. To run the application:
   $ export MONGO_URL='mongodb://user:password@host:port/databasename'
   $ export ROOT_URL='http://example.com'
   $ export MAIL_URL='smtp://user:password@mailhost:port/'
+  $ export METEOR_SETTINGS='{"public":{"key":"value"}}'
   $ node main.js
 
 Use the PORT environment variable to set the port where the
@@ -3462,6 +3552,11 @@ async function bundle({
     // Server
     if (! hasCachedBundle) {
       targets.server = await makeServerTarget(app, webArchs);
+    }
+
+    if (buildOptions.buildMode === 'production') {
+      // Store targets in global variable for access in JsImage.write
+      global.meteorBundlerTargets = targets;
     }
 
     if (outputPath !== null) {

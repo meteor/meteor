@@ -20,3 +20,5 @@ hot-module-replacement  # Update client in development without reloading the pag
 static-html             # Define static page content in .html files
 apollo                  # Basic Apollo integration for Meteor apps
 compat:graphql           # Import .graphql files
+
+rspack                  # Integrate Rspack into Meteor for client and server app bundling

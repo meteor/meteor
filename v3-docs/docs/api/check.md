@@ -114,6 +114,22 @@ result = Match.test(value, Match.Integer);
 console.log(result); // true
 ```
 
+### `Match.NonEmptyString`
+
+Matches a non-empty string.
+
+```js
+import { Match } from "meteor/check";
+let result;
+// Will return true if `value` is a non-empty string.
+result = Match.test("hello", Match.NonEmptyString);
+console.log(result); // true
+
+// Will return false for empty strings.
+result = Match.test("", Match.NonEmptyString);
+console.log(result); // false
+```
+
 ### `[pattern]` { #arraypattern }
 
 A one-element array matches an array of elements, each of which match
@@ -224,10 +240,11 @@ import { Match, check } from "meteor/check";
 
 check(buffer, Match.Where(EJSON.isBinary));
 
-const NonEmptyString = Match.Where((x) => {
-  check(x, String);
-  return x.length > 0;
+// Example: creating a custom pattern for positive numbers
+const PositiveNumber = Match.Where((x) => {
+  check(x, Number);
+  return x > 0;
 });
 
-check(arg, NonEmptyString);
+check(arg, PositiveNumber);
 ```

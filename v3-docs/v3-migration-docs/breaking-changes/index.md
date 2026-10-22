@@ -135,6 +135,10 @@ Starting with Meteor 3.1, Express has been updated to version 5. If you're upgra
 
 :::
 
+::: info
+You can start using the Express-based WebApp API while still on Meteor 2.x by installing [`harry97:webapp`](https://github.com/harryadel/harry97-webapp), a backport of Meteor 3's Express-based webapp for Meteor 2.17. This lets you migrate your middleware code before upgrading.
+:::
+
 The `webapp` package now exports these new properties:
 
 ```ts

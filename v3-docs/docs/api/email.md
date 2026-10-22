@@ -7,7 +7,7 @@ package to your project by running in your terminal:
 meteor add email
 ```
 
-There are two ways on how to setup the package for sending e-mail.
+There are two ways to set up the package for sending email.
 
 First is to set `MAIL_URL`. The server reads from the `MAIL_URL` environment
 variable to determine how to send mail. The `MAIL_URL` should reference an
@@ -20,7 +20,7 @@ prior to being upgraded to TLS/SSL (using `STARTTLS`) typically use port 587
 (and _sometimes_ 25) and should use `smtp://`. For more information see the
 [Nodemailer docs](https://nodemailer.com/smtp/)
 
-Second, if you are using a one of the [supported services](https://community.nodemailer.com/smtp/well-known/#supported-services) you can setup the sending options in your app settings like this:
+Second, if you are using one of the [supported services](https://community.nodemailer.com/smtp/well-known/#supported-services) you can set up the sending options in your app settings like this:
 
 ```json
 {
@@ -89,7 +89,7 @@ Meteor.callAsync("sendEmail", {
 <ApiBox name="Email.sendAsync" hasCustomExample/>
 
 `sendAsync` only works on the server. It has the same behavior as `Email.send`, but returns a Promise.
-If you defined `Email.customTransport`, the `callAsync` method returns the return value from the `customTransport` method or a Promise, if this method is async.
+If you defined `Email.customTransport`, the `sendAsync` method returns the return value from the `customTransport` method or a Promise, if this method is async.
 
 ```js
 // Server: Define a method that the client can call.

@@ -1,7 +1,7 @@
 import assert from "assert";
 import {WatchSet, readAndWatchFile, sha1} from '../fs/watch';
 import files, {
-  symlinkWithOverwrite, realpath,
+  symlinkWithOverwrite, realpath, rm_recursive_deferred,
 } from '../fs/files';
 import NpmDiscards from './npm-discards';
 import {Profile} from '../tool-env/profile';
@@ -126,7 +126,8 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
   async init() {
     // Build the output from scratch
     if (this.resetBuildPath) {
-      await files.rm_recursive(this.buildPath);
+      await files.rm_recursive_deferred(this.buildPath);
+      // Create the new build directory immediately without waiting for deletion
       await files.mkdir_p(this.buildPath, 0o755);
     }
     this.watchSet = new WatchSet();
@@ -537,24 +538,35 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     // assert.strictEqual(files.pathBasename(options.from), "node_modules");
     assert.strictEqual(files.pathBasename(options.to), "node_modules");
 
+    const absFrom = realpath(options.from);
+    // Bundler scratch written during the build; transient and not part
+    // of the bundle. Matched by absolute path so a `.cache/` shipped
+    // inside a published package isn't dropped.
+    const rootCache = files.pathJoin(absFrom, ".cache");
+
     if (options.symlink) {
       // If we're going to use symlinks to speed up this copy, then we
       // need to make sure we've reserved all directories that are not
       // package directories, such as the node_modules directory itself,
       // as well as node_modules/meteor and the parent directories of any
       // scoped npm packages.
-      this._ensureAllNonPackageDirectories(
-        realpath(options.from),
-        options.to
-      );
+      this._ensureAllNonPackageDirectories(absFrom, options.to, rootCache);
     }
 
+    const userFilter = options.filter;
     // Call this._copyDirectory rather than this.copyDirectory so that the
     // subBuilder hacks from Builder#enter won't apply a second time.
-    return this._copyDirectory(options);
+    return this._copyDirectory(Object.assign({}, options, {
+      filter: (absPath, isDirectory) => {
+        if (isDirectory && absPath === rootCache) return false;
+        return userFilter ? userFilter(absPath, isDirectory) : true;
+      },
+    }));
   }
 
-  _ensureAllNonPackageDirectories(absFromDir, relToDir) {
+  _ensureAllNonPackageDirectories(absFromDir, relToDir, skipPath) {
+    if (skipPath && absFromDir === skipPath) return;
+
     const dirStat = optimisticStatOrNull(absFromDir);
     if (! (dirStat && dirStat.isDirectory())) {
       return;
@@ -573,10 +585,21 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
     this._ensureDirectory(relToDir);
 
-    optimisticReaddir(absFromDir).forEach(item => {
+    let entries;
+    try {
+      entries = optimisticReaddir(absFromDir);
+    } catch (e) {
+      // The directory may have vanished between stat and readdir (e.g.
+      // a bundler tool rewriting files underneath us). Skip it.
+      if (e.code === "ENOENT") return;
+      throw e;
+    }
+
+    entries.forEach(item => {
       this._ensureAllNonPackageDirectories(
         files.pathJoin(absFromDir, item),
-        files.pathJoin(relToDir, item)
+        files.pathJoin(relToDir, item),
+        skipPath
       );
     });
   }
@@ -657,7 +680,17 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
       this._ensureDirectory(relTo);
 
-      for (const item of optimisticReaddir(absFrom)) {
+      let items;
+      try {
+        items = optimisticReaddir(absFrom);
+      } catch (e) {
+        // The directory may have disappeared mid-walk (e.g. a bundler
+        // tool rewriting files underneath us). Skip it.
+        if (e.code === "ENOENT") return;
+        throw e;
+      }
+
+      for (const item of items) {
         let thisAbsFrom = files.pathResolve(absFrom, item);
         const thisRelTo = files.pathJoin(relTo, item);
 
@@ -881,7 +914,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           removed[path] = true;
         } else {
           // directory
-          await files.rm_recursive(absPath);
+          await files.rm_recursive_deferred(absPath);
 
           // mark all sub-paths as removed, too
           paths.forEach((anotherPath) => {
@@ -904,7 +937,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
   // Delete the partially-completed bundle. Do not disturb outputPath.
   abort() {
-    return files.rm_recursive(this.buildPath);
+    return files.rm_recursive_deferred(this.buildPath);
   }
 
   // Returns a WatchSet representing all files that were read from disk by the
@@ -936,7 +969,7 @@ async function atomicallyRewriteFile(path, data, options) {
       // replacing a directory with a file; this is rare (so it can
       // be a slow path) but can legitimately happen if e.g. a developer
       // puts a file where there used to be a directory in their app.
-      await files.rm_recursive(path);
+      await files.rm_recursive_deferred(path);
       files.rename(rpath, path);
     } else {
       throw e;

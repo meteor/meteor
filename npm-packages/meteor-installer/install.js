@@ -360,7 +360,7 @@ Or see the docs at:
 
 Deploy and host your app with Cloud:
 
-  www.meteor.com/cloud
+  https://galaxycloud.app/
 
 ***************************************
 You might need to open a new terminal window to have access to the meteor command, or run this in your terminal:

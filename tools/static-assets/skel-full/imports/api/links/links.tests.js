@@ -8,14 +8,14 @@ import { Links } from './links.js';
 
 if (Meteor.isServer) {
   describe('links collection', function () {
-    it('insert correctly', function () {
-      const linkId = Links.insert({
+    it('insert correctly', async function () {
+      const linkId = await Links.insertAsync({
         title: 'meteor homepage',
         url: 'https://www.meteor.com',
       });
       const added = Links.find({ _id: linkId });
       const collectionName = added._getCollectionName();
-      const count = added.count();
+      const count = await added.countAsync();
 
       assert.equal(collectionName, 'links');
       assert.equal(count, 1);

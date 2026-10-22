@@ -1,124 +1,178 @@
 Project:Accounts:Password:
-  - packages/accounts-password/**/*
+  - changed-files:
+    - any-glob-to-any-file: packages/accounts-password/**/*
 
 Project:Accounts:UI:
-  - packages/meteor-developer-config-ui/**/*
-  - packages/github-config-ui/**/*
-  - packages/google-config-ui/**/*
-  - packages/twitter-config-ui/**/*
-  - packages/facebook-config-ui/**/*
-  - packages/accounts-ui/**/*
-  - packages/accounts-ui-unstyled/**/*
+  - changed-files:
+    - any-glob-to-any-file:
+      - packages/meteor-developer-config-ui/**/*
+      - packages/github-config-ui/**/*
+      - packages/google-config-ui/**/*
+      - packages/twitter-config-ui/**/*
+      - packages/facebook-config-ui/**/*
+      - packages/accounts-ui/**/*
+      - packages/accounts-ui-unstyled/**/*
 
 Project:CSS:
-  - packages/non-core/less/**/*
-  - packages/minifier-css/**/*
-  - packages/standard-minifier-css/**/*
+  - changed-files:
+    - any-glob-to-any-file:
+      - packages/non-core/less/**/*
+      - packages/minifier-css/**/*
+      - packages/standard-minifier-css/**/*
 
 Project:DDP:
-  - packages/ddp-common/**/*
-  - packages/ddp-rate-limiter/**/*
-  - packages/ddp-server/**/*
-  - packages/ddp-client/**/*
-  - packages/ddp/**/*
-  - packages/socket-stream-client/**/*
+  - changed-files:
+    - any-glob-to-any-file:
+      - packages/ddp-common/**/*
+      - packages/ddp-rate-limiter/**/*
+      - packages/ddp-server/**/*
+      - packages/ddp-client/**/*
+      - packages/ddp/**/*
+      - packages/socket-stream-client/**/*
 
 Project:EJSON:
-  - packages/ejson/**/*
+  - changed-files:
+    - any-glob-to-any-file: packages/ejson/**/*
 
 Project:HMR:
-  - packages/hot-code-push/**/*
-  - packages/hot-module-replacement/**/*
+  - changed-files:
+    - any-glob-to-any-file:
+      - packages/hot-code-push/**/*
+      - packages/hot-module-replacement/**/*
 
 Project:Isobuild:Minifiers:
-  - packages/minifier-css/**/*
-  - packages/minifier-js/**/*
-  - packages/standard-minifier-js/**/*
-  - packages/standard-minifier-css/**/*
-  - packages/standard-minifiers/**/*
+  - changed-files:
+    - any-glob-to-any-file:
+      - packages/minifier-css/**/*
+      - packages/minifier-js/**/*
+      - packages/standard-minifier-js/**/*
+      - packages/standard-minifier-css/**/*
+      - packages/standard-minifiers/**/*
 
 Project:Isobuild:
-  - tools/isobuild/**/*
+  - changed-files:
+    - any-glob-to-any-file:
+      - tools/isobuild/**/*
 
 Project:JS Environment:Typescript:
-  - packages/typescript/**/*
+  - changed-files:
+    - any-glob-to-any-file:
+      - packages/typescript/**/*
 
 Project:JS Environment:
-  - packages/babel-compiler/**/*
-  - packages/babel-runtime/**/*
-  - packages/ecmascript/**/*
-  - packages/ecmascript-runtime/**/*
-  - packages/ecmascript-runtime-client/**/*
-  - packages/ecmascript-runtime-server/**/*
-  - packages/es5-shim/**/*
-  - packages/jshint/**/*
+  - changed-files:
+    - any-glob-to-any-file:
+      - packages/babel-compiler/**/*
+      - packages/babel-runtime/**/*
+      - packages/ecmascript/**/*
+      - packages/ecmascript-runtime/**/*
+      - packages/ecmascript-runtime-client/**/*
+      - packages/ecmascript-runtime-server/**/*
+      - packages/es5-shim/**/*
+      - packages/jshint/**/*
 
 Project:Livequery:
-  - packages/livedata/**/*
+  - changed-files:
+    - any-glob-to-any-file:
+      - packages/livedata/**/*
 
 Project:Minimongo:
-  - packages/minimongo
+  - changed-files:
+    - any-glob-to-any-file:
+      - packages/minimongo
 
 Project:Mobile:
-  - tools/cordova/**/*
-  - packages/launch-screen/**/*
-  - packages/mobile-experience/**/*
-  - packages/mobile-status-bar/**/*
+  - changed-files:
+    - any-glob-to-any-file:
+      - tools/cordova/**/*
+      - packages/launch-screen/**/*
+      - packages/mobile-experience/**/*
+      - packages/mobile-status-bar/**/*
 
 Project:Mongo Driver:
-  - packages/mongo/**/*
-  - packages/mongo-dev-server/**/*
-  - packages/mongo-id/**/*
-  - packages/mongo-livedata/**/*
-  - packages/disable-oplog/**/*
-  - packages/non-core/mongo-decimal/**/*
+  - changed-files:
+    - any-glob-to-any-file:
+      - packages/mongo/**/*
+      - packages/mongo-dev-server/**/*
+      - packages/mongo-id/**/*
+      - packages/mongo-livedata/**/*
+      - packages/disable-oplog/**/*
+      - packages/non-core/mongo-decimal/**/*
 
 Project:NPM:
-  - npm-packages/**/*
+  - changed-files:
+    - any-glob-to-any-file:
+      - npm-packages/**/*
 
 Project:Release Process:
-  - scripts/**/*
+  - changed-files:
+    - any-glob-to-any-file:
+      - scripts/**/*
 
 Project:Tool:
-  - tools/**/*
-  - packages/meteor-tool/**/*
+  - changed-files:
+    - any-glob-to-any-file:
+      - tools/**/*
+      - packages/meteor-tool/**/*
 
 Project:Tool:Shell:
-  - tools/console/**/*
+  - changed-files:
+    - any-glob-to-any-file:
+      - tools/console/**/*
 
 Project:Utilities:Email:
-  - packages/email/**/*
+  - changed-files:
+    - any-glob-to-any-file:
+      - packages/email/**/*
 
 Project:Utilities:HTTP:
-  - packages/deprecated/http/**/*
-  - packages/fetch/**/*
-  - packages/url/**/*
+  - changed-files:
+    - any-glob-to-any-file:
+      - packages/deprecated/http/**/*
+      - packages/fetch/**/*
+      - packages/url/**/*
 
 Project:Webapp:
-  - packages/webapp/**/*
-  - packages/webapp-hashing/**/*
+  - changed-files:
+    - any-glob-to-any-file:
+      - packages/webapp/**/*
+      - packages/webapp-hashing/**/*
 
 Project:Windows:
-  - scripts/windows/**/*
+  - changed-files:
+    - any-glob-to-any-file:
+      - scripts/windows/**/*
 
 Project:Webapp:Browser Policy:
-  - packages/browser-policy/**/*
-  - packages/browser-policy-common/**/*
-  - packages/browser-policy-content/**/*
-  - packages/browser-policy-framing/**/*
+  - changed-files:
+    - any-glob-to-any-file:
+      - packages/browser-policy/**/*
+      - packages/browser-policy-common/**/*
+      - packages/browser-policy-content/**/*
+      - packages/browser-policy-framing/**/*
 
 Project:Examples:
-  - tools/cli/example-repositories.js
+  - changed-files:
+    - any-glob-to-any-file:
+      - tools/cli/example-repositories.js
 
 Project:Dynamic Import:
-  - packages/dynamic-import/**/*
+  - changed-files:
+    - any-glob-to-any-file:
+      - packages/dynamic-import/**/*
 
 Project:Docs:
-  - docs/**/*
-  - v3-docs/**/*
+  - changed-files:
+    - any-glob-to-any-file:
+      - docs/**/*
+      - v3-docs/**/*
 
 Project:Guide:
-  - guide/**/*
+  - changed-files:
+    - any-glob-to-any-file:
+      - guide/**/*
 
 github_actions:
-  - ./github/**/*
+  - changed-files:
+    - any-glob-to-any-file:
+      - ./github/**/*

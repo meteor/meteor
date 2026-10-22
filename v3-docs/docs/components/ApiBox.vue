@@ -27,6 +27,10 @@ const props = defineProps({
     from: {
         type: String,
         default: ''
+    },
+    isDefaultImport: {
+        type: Boolean,
+        default: false
     }
 })
 
@@ -99,7 +103,8 @@ const debug = (name) => {
 <template>
     <div>
         <h2 :id="link">
-            <a class="header-anchor" :href="'#' + link" :aria-label="'Permalink to &quot;' + ui.longname + '&quot;'">​</a>
+            <a class="header-anchor" :href="'#' + link"
+                :aria-label="'Permalink to &quot;' + ui.longname + '&quot;'">​</a>
 
             {{ showName(ui.longname) }}
             <Locus v-if="ui.locus && ui.locus !== 'Anywhere'" :locus="ui.locus" />
@@ -112,10 +117,13 @@ const debug = (name) => {
         <slot />
         <ParamTable v-if="isFunction || isClass" :params="ui.params" :options="ui.options" :from="gitHubSource" />
         <template v-if="!hasCustomExample">
-            <Booleans v-if="isBoolean" :memberof="ui.memberof" :from="ui.module" :longname="ui.longname" />
-            <Functions v-if="isFunction" :from="ui.module" :longname="ui.longname" :params="ui.params" :fnName="ui.name"
+            <Booleans v-if="isBoolean" :memberof="ui.memberof" :from="ui.module" :is-default-import="isDefaultImport"
+                :longname="ui.longname" />
+            <Functions v-if="isFunction" :from="ui.module" :is-default-import="isDefaultImport"
+                :longname="ui.longname" :params="ui.params" :fnName="ui.name"
                 :memberof="isInstance ? instanceName : ui.memberof" :scope="ui.scope" :returns="ui.returns" />
-            <Classes v-if="isClass" :params="ui.params" :from="ui.module" :longname="ui.longname" />
+            <Classes v-if="isClass" :params="ui.params" :from="ui.module" :is-default-import="isDefaultImport"
+                :longname="ui.longname" />
 
         </template>
 

@@ -1,4 +1,5 @@
 import { Accounts } from 'meteor/accounts-base';
+import * as OTPAuth from 'otpauth';
 import { Random } from 'meteor/random';
 
 const findUserById =
@@ -26,4 +27,21 @@ Tinytest.addAsync('account - 2fa - has2faEnabled - server', async test => {
   // cleanup
   await Accounts.users.removeAsync(userWithout2FA);
   await Accounts.users.removeAsync(userWith2FA);
+});
+
+Tinytest.add('account - 2fa - generated tokens validate against Base32 secrets', test => {
+  const secret = new OTPAuth.Secret({ size: 20 }).base32;
+  const { token } = Accounts._generate2faToken(secret);
+
+  test.equal(token.length, 6);
+  test.isTrue(/^[A-Z2-7]+$/.test(secret));
+  test.isTrue(Accounts._isTokenValid(secret, token));
+  test.isFalse(Accounts._isTokenValid(secret, '000000'));
+});
+
+Tinytest.add('account - 2fa - existing lowercase secrets remain valid', test => {
+  const secret = 'jbswy3dpehpk3pxp';
+  const { token } = Accounts._generate2faToken(secret);
+
+  test.isTrue(Accounts._isTokenValid(secret, token));
 });

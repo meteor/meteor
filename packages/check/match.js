@@ -17,6 +17,11 @@ const format = result => {
   return err;
 }
 
+function nonEmptyStringCondition(value) {
+  check(value, String);
+  return value.length > 0;
+}
+
 /**
  * @summary Check that a value matches a [pattern](#matchpatterns).
  * If the value does not match the pattern, throw a `Match.Error`.
@@ -76,6 +81,8 @@ export const Match = {
   Where: function(condition) {
     return new Where(condition);
   },
+
+  NonEmptyString: ['__NonEmptyString__'],
 
   ObjectIncluding: function(pattern) {
     return new ObjectIncluding(pattern)
@@ -204,6 +211,7 @@ const stringForErrorMessage = (value, options = {}) => {
   return EJSON.stringify(value);
 };
 
+
 const typeofChecks = [
   [String, 'string'],
   [Number, 'number'],
@@ -282,6 +290,11 @@ const testSubtree = (value, pattern, collectErrors = false, errors = [], path = 
   // 'Object' is shorthand for Match.ObjectIncluding({});
   if (pattern === Object) {
     pattern = Match.ObjectIncluding({});
+  }
+  // This must be invoked before pattern instanceof Array as strings are regarded as arrays
+  // We invoke the pattern as IIFE so that `pattern isntanceof Where` catches it 
+  if (pattern === Match.NonEmptyString) {
+    pattern = new Where(nonEmptyStringCondition);
   }
 
   // Array (checked AFTER Any, which is implemented as an Array).

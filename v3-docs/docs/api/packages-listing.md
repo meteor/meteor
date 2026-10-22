@@ -15,6 +15,7 @@
 ### [react-packages](https://github.com/meteor/react-packages) {#react-packages}
 ### [accounts-2fa](https://github.com/meteor/meteor/tree/devel/packages/accounts-2fa) {#accounts-2fa}
 ### [accounts-base](https://github.com/meteor/meteor/tree/devel/packages/accounts-base) {#accounts-base}
+### [accounts-express](https://github.com/meteor/meteor/tree/devel/packages/accounts-express) {#accounts-express}
 ### [accounts-facebook](https://github.com/meteor/meteor/tree/devel/packages/accounts-facebook) {#accounts-facebook}
 ### [accounts-github](https://github.com/meteor/meteor/tree/devel/packages/accounts-github) {#accounts-github}
 ### [accounts-google](https://github.com/meteor/meteor/tree/devel/packages/accounts-google) {#accounts-google}
@@ -106,6 +107,7 @@
 ### [mongo-id](https://github.com/meteor/meteor/tree/devel/packages/mongo-id) {#mongo-id}
 ### [mongo-livedata](https://github.com/meteor/meteor/tree/devel/packages/mongo-livedata) {#mongo-livedata}
 ### [npm-mongo](https://github.com/meteor/meteor/tree/devel/packages/npm-mongo) {#npm-mongo}
+### [npm-mongo-legacy](https://github.com/meteor/meteor/tree/devel/packages/npm-mongo-legacy) {#npm-mongo-legacy}
 ### [oauth](https://github.com/meteor/meteor/tree/devel/packages/oauth) {#oauth}
 ### [oauth-encryption](https://github.com/meteor/meteor/tree/devel/packages/oauth-encryption) {#oauth-encryption}
 ### [oauth1](https://github.com/meteor/meteor/tree/devel/packages/oauth1) {#oauth1}
@@ -124,6 +126,7 @@
 ### [retry](https://github.com/meteor/meteor/tree/devel/packages/retry) {#retry}
 ### [roles](https://github.com/meteor/meteor/tree/devel/packages/roles) {#roles}
 ### [routepolicy](https://github.com/meteor/meteor/tree/devel/packages/routepolicy) {#routepolicy}
+### [rspack](https://github.com/meteor/meteor/tree/devel/packages/rspack) {#rspack}
 ### [server-render](https://github.com/meteor/meteor/tree/devel/packages/server-render) {#server-render}
 ### [service-configuration](https://github.com/meteor/meteor/tree/devel/packages/service-configuration) {#service-configuration}
 ### [session](https://github.com/meteor/meteor/tree/devel/packages/session) {#session}
@@ -141,11 +144,11 @@
 ### [test-server-tests-in-console-once](https://github.com/meteor/meteor/tree/devel/packages/test-server-tests-in-console-once) {#test-server-tests-in-console-once}
 ### [tinytest](https://github.com/meteor/meteor/tree/devel/packages/tinytest) {#tinytest}
 ### [tinytest-harness](https://github.com/meteor/meteor/tree/devel/packages/tinytest-harness) {#tinytest-harness}
+### [tools-core](https://github.com/meteor/meteor/tree/devel/packages/tools-core) {#tools-core}
 ### [tracker](https://github.com/meteor/meteor/tree/devel/packages/tracker) {#tracker}
 ### [twitter-config-ui](https://github.com/meteor/meteor/tree/devel/packages/twitter-config-ui) {#twitter-config-ui}
 ### [twitter-oauth](https://github.com/meteor/meteor/tree/devel/packages/twitter-oauth) {#twitter-oauth}
 ### [typescript](https://github.com/meteor/meteor/tree/devel/packages/typescript) {#typescript}
-### [underscore](https://github.com/meteor/meteor/tree/devel/packages/underscore) {#underscore}
 ### [url](https://github.com/meteor/meteor/tree/devel/packages/url) {#url}
 ### [webapp](https://github.com/meteor/meteor/tree/devel/packages/webapp) {#webapp}
 ### [webapp-hashing](https://github.com/meteor/meteor/tree/devel/packages/webapp-hashing) {#webapp-hashing}

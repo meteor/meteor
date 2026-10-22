@@ -1,0 +1,304 @@
+/* this file is imported in client/main.jsx */
+
+:root {
+  /* Colors */
+  --color-background: hsl(210, 20%, 98%);
+  --color-foreground: hsl(220, 20%, 15%);
+  --color-card: hsl(0, 0%, 100%);
+  --color-primary: hsl(4, 70%, 55%);
+  --color-primary-hover: hsl(4, 70%, 45%);
+  --color-muted: hsl(220, 10%, 50%);
+  --color-border: hsl(220, 14%, 90%);
+
+  /* Shadows */
+  --shadow-card: 0 1px 3px 0 hsl(220 20% 15% / 0.04),
+    0 1px 2px -1px hsl(220 20% 15% / 0.04);
+  --shadow-card-hover: 0 10px 15px -3px hsl(220 20% 15% / 0.08),
+    0 4px 6px -4px hsl(220 20% 15% / 0.04);
+
+  /* Spacing */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+
+  /* Border radius */
+  --radius: 0.75rem;
+  --radius-sm: 0.5rem;
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-normal: 200ms ease;
+  --transition-slow: 250ms ease;
+}
+
+/* ============ Reset & Base Styles ============ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    sans-serif;
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* ============ Layout ============ */
+.page {
+  min-height: 100vh;
+  background-color: var(--color-background);
+}
+
+.container {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding-left: var(--spacing-md);
+  padding-right: var(--spacing-md);
+}
+
+@media (min-width: 768px) {
+  .container {
+    padding-left: var(--spacing-lg);
+    padding-right: var(--spacing-lg);
+  }
+}
+
+/* ============ Header / Navigation ============ */
+.header {
+  border-bottom: 1px solid var(--color-border);
+  background-color: var(--color-card);
+  border-radius: var(--radius);
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 4rem;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.logo {
+  width: 4rem;
+  height: 4rem;
+}
+
+.logo-text {
+  font-weight: 600;
+  color: var(--color-foreground);
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .logo-text {
+    display: inline;
+  }
+}
+
+.page-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-foreground);
+  letter-spacing: -0.025em;
+}
+
+@media (min-width: 768px) {
+  .page-title {
+    font-size: 1.5rem;
+  }
+}
+
+.nav-link {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-primary);
+  transition: opacity var(--transition-fast);
+}
+
+.nav-link:hover {
+  opacity: 0.8;
+}
+
+/* ============ Main Content ============ */
+.main {
+  padding-top: var(--spacing-xl);
+  padding-bottom: var(--spacing-xl);
+}
+
+@media (min-width: 768px) {
+  .main {
+    padding-top: var(--spacing-2xl);
+    padding-bottom: var(--spacing-2xl);
+  }
+}
+
+/* ============ Card Component ============ */
+.card {
+  background-color: var(--color-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--color-border);
+}
+
+/* ============ Counter Section ============ */
+.counter-card {
+  padding: var(--spacing-lg);
+  margin-bottom: 2.5rem;
+}
+
+@media (min-width: 768px) {
+  .counter-card {
+    padding: var(--spacing-xl);
+    margin-bottom: var(--spacing-2xl);
+  }
+}
+
+.counter-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-md);
+}
+
+@media (min-width: 640px) {
+  .counter-content {
+    flex-direction: row;
+  }
+}
+
+.counter-text {
+  color: var(--color-muted);
+  text-align: center;
+}
+
+@media (min-width: 640px) {
+  .counter-text {
+    text-align: left;
+  }
+}
+
+.counter-value {
+  font-weight: 600;
+  color: var(--color-foreground);
+}
+
+/* ============ Button Component ============ */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 120px;
+  padding: 0.625rem 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  font-family: inherit;
+  color: white;
+  background-color: var(--color-primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color var(--transition-normal),
+    transform var(--transition-fast);
+}
+
+.button:hover {
+  background-color: var(--color-primary-hover);
+}
+
+.button:active {
+  transform: scale(0.98);
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* ============ Resources Section ============ */
+.section-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-foreground);
+  margin-bottom: var(--spacing-lg);
+  letter-spacing: -0.025em;
+}
+
+.resources-grid {
+  list-style-type: none;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-md);
+}
+
+@media (min-width: 640px) {
+  .resources-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ============ Resource Card ============ */
+.resource-link {
+  display: block;
+}
+
+.resource-card {
+  padding: 1.25rem;
+  transition: box-shadow var(--transition-slow),
+    transform var(--transition-slow);
+}
+
+.resource-card:hover {
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-2px);
+}
+
+.resource-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.resource-title {
+  font-weight: 500;
+  color: var(--color-foreground);
+  transition: color var(--transition-fast);
+}
+
+.resource-link:hover .resource-title {
+  color: var(--color-primary);
+}
+
+.resource-icon {
+  width: 1rem;
+  height: 1rem;
+  color: var(--color-muted);
+  opacity: 0;
+  transition: opacity var(--transition-fast), color var(--transition-fast);
+}
+
+.resource-link:hover .resource-icon {
+  opacity: 1;
+  color: var(--color-primary);
+}
