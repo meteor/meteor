@@ -16,11 +16,15 @@ It is important to note that at the end of the day Meteor is a Node.js app tied 
 
 Before any optimization can take place we need to know what is our problem. This is where APM (Application Performance Monitor) comes in.
 
-The recommended Meteor-specific APM solution is [Monti APM](https://montiapm.com/). Unlike generic Node.js APM tools, Monti APM understands Meteor's DDP protocol, publications, methods, and livequery observers, giving you insights tailored to your Meteor app.
+For Meteor-specific monitoring, you have two options that understand Meteor's DDP protocol, publications, methods, and livequery observers. Both give you insights tailored to your Meteor app rather than generic Node.js metrics.
+
+[Monti APM](https://montiapm.com/) is the established, production-proven choice. It has been the de facto Meteor APM for years, with a mature feature set, broad community adoption, and a track record across thousands of Meteor deployments. For most teams, this is the safest starting point.
+
+[SkySignal](https://skysignal.app/) is a newer Meteor-specific APM built around the same Meteor primitives. It is earlier in its lifecycle than Monti and has a smaller user base, so teams evaluating it should expect a younger feature set and treat it accordingly. 
 
 > **Note:** Galaxy APM (`mdg:meteor-apm-agent`) has been discontinued. If you were using it, migrate to Monti APM which provides the same Meteor-specific monitoring capabilities.
 
-To get started, add the Monti APM agent to your Meteor app:
+To get started with Monti APM, add the Monti APM agent to your Meteor app:
 
 ```bash
 meteor add montiapm:agent
@@ -28,7 +32,7 @@ meteor add montiapm:agent
 
 Then configure it with your Monti APM credentials. See the [Monti APM documentation](https://docs.montiapm.com/) for full setup instructions, including [getting started](https://docs.montiapm.com/getting-started) and [dashboard guides](https://docs.montiapm.com/dashboards/jobs-dashboard).
 
-You can also choose other APM tools for Node.js (such as [Datadog](https://www.datadoghq.com/product/apm/) or [Elastic APM](https://github.com/Meteor-Community-Packages/meteor-elastic-apm)), but they will not show you Meteor-specific data like DDP response times, publication performance, and observer reuse metrics.
+You can also use general-purpose Node.js APMs such as [Datadog](https://www.datadoghq.com/product/apm/) or [Elastic APM](https://github.com/Meteor-Community-Packages/meteor-elastic-apm). However, they will not surface Meteor-specific data like DDP response times, publication performance, and observer reuse metrics.
 
 ### Finding issues in APM
 

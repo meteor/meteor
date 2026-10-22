@@ -318,6 +318,42 @@ Tinytest.addAsync(
   }
 );
 
+// Regression test for #13489: mutating Meteor.settings.public (which mutates
+// __meteor_runtime_config__.PUBLIC_SETTINGS) after the boilerplate has been
+// generated and cached at startup should still be reflected for clients that
+// connect afterwards.
+Tinytest.addAsync(
+  "webapp - runtime updates to public settings reach new clients",
+  async function (test) {
+    const original = __meteor_runtime_config__.PUBLIC_SETTINGS;
+    __meteor_runtime_config__.PUBLIC_SETTINGS = {
+      ...(original || {}),
+      webappRuntimePublicSetting: "set-after-startup",
+    };
+
+    try {
+      const req = new http.IncomingMessage();
+      req.url = "http://example.com";
+      req.browser = { name: "headless" };
+
+      const { stream } = await WebAppInternals.getBoilerplate(
+        req,
+        "web.browser"
+      );
+      const html = await streamToString(stream);
+
+      test.isTrue(
+        html.indexOf("webappRuntimePublicSetting") >= 0 &&
+          html.indexOf("set-after-startup") >= 0,
+        "boilerplate served to a new client should include public settings " +
+          "that were set after startup"
+      );
+    } finally {
+      __meteor_runtime_config__.PUBLIC_SETTINGS = original;
+    }
+  }
+);
+
 // Support 'named pipes' (strings) as ports for support of Windows Server /
 // Azure deployments
 Tinytest.add(
@@ -426,7 +462,7 @@ Tinytest.addAsync("webapp - parse url queries", async function (test) {
   ];
   let i = 0;
   for await (const queriesTestCase of queriesTestCases) {
-    const resp = await asyncGet(`${Meteor.absoluteUrl()}/queries?${queriesTestCase}`);
+    const resp = await asyncGet(Meteor.absoluteUrl(`/queries?${queriesTestCase}`));
     const queryParsed = JSON.parse(resp.content);
     test.equal(queryParsed, queryResults[i]);
     i++;
@@ -532,6 +568,54 @@ Tinytest.addAsync(
     } finally {
       delete WebAppInternals.staticFilesByArch[arch][unhashedJs];
       Meteor.settings.packages.webapp.includeVaryUserAgent = originalSettings;
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'webapp - skipCompressionWithContentLength setting keeps Content-Length',
+  async function (test) {
+    const arch = 'web.browser';
+    const staticPath = '/skip-compression-test.js';
+    const original =
+      Meteor.settings.packages?.webapp?.skipCompressionWithContentLength;
+
+    if (!Meteor.settings.packages) Meteor.settings.packages = {};
+    if (!Meteor.settings.packages.webapp) Meteor.settings.packages.webapp = {};
+
+    // Large enough to be past the compression module's default threshold.
+    const content = 'console.log("skip-compression-test");\n'.repeat(80);
+    WebAppInternals.staticFilesByArch[arch][staticPath] = {
+      content,
+      absolutePath: '/tmp/mock-skip-compression.js',
+      cacheable: true,
+      hash: 'skip-compression-hash',
+      type: 'js',
+    };
+
+    const reqOpts = { headers: { 'Accept-Encoding': 'gzip' } };
+    try {
+      Meteor.settings.packages.webapp.skipCompressionWithContentLength = false;
+      const off = await asyncGet(Meteor.absoluteUrl(staticPath), reqOpts);
+      test.equal(
+        (off.headers['content-encoding'] || '').toLowerCase(),
+        'gzip',
+        'should compress (and drop Content-Length) when the setting is off'
+      );
+
+      Meteor.settings.packages.webapp.skipCompressionWithContentLength = true;
+      const on = await asyncGet(Meteor.absoluteUrl(staticPath), reqOpts);
+      test.isFalse(
+        (on.headers['content-encoding'] || '').toLowerCase().includes('gzip'),
+        'should not compress when the setting is on'
+      );
+      test.isTrue(
+        !!on.headers['content-length'],
+        'Content-Length should be preserved when the setting is on'
+      );
+    } finally {
+      delete WebAppInternals.staticFilesByArch[arch][staticPath];
+      Meteor.settings.packages.webapp.skipCompressionWithContentLength = original;
     }
   }
 );

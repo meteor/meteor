@@ -1,4 +1,7 @@
-import { inheritMeteorToolNodeFlags } from "../lib/meteor.js";
+import {
+  inheritMeteorToolNodeFlags,
+  setMeteorAppIgnore,
+} from "../lib/meteor.js";
 
 Tinytest.add(
   "tools-core - inheritMeteorToolNodeFlags - no TOOL_NODE_FLAGS",
@@ -208,5 +211,77 @@ Tinytest.add(
       0,
       "Should return empty object for undefined input"
     );
+  }
+);
+
+Tinytest.add(
+  "tools-core - setMeteorAppIgnore - appends new patterns",
+  function (test) {
+    const previousIgnore = process.env.METEOR_IGNORE;
+
+    try {
+      process.env.METEOR_IGNORE = "node_modules";
+      setMeteorAppIgnore("client/*.css");
+
+      test.equal(
+        process.env.METEOR_IGNORE,
+        "node_modules client/*.css",
+        "Should append new ignore patterns"
+      );
+    } finally {
+      if (previousIgnore === undefined) {
+        delete process.env.METEOR_IGNORE;
+      } else {
+        process.env.METEOR_IGNORE = previousIgnore;
+      }
+    }
+  }
+);
+
+Tinytest.add(
+  "tools-core - setMeteorAppIgnore - keeps last duplicate occurrence",
+  function (test) {
+    const previousIgnore = process.env.METEOR_IGNORE;
+
+    try {
+      process.env.METEOR_IGNORE = "!client/meteor.css";
+      setMeteorAppIgnore("client/*.css !client/meteor.css");
+
+      test.equal(
+        process.env.METEOR_IGNORE,
+        "client/*.css !client/meteor.css",
+        "Should preserve the last occurrence so unignore rules can override earlier ignores"
+      );
+    } finally {
+      if (previousIgnore === undefined) {
+        delete process.env.METEOR_IGNORE;
+      } else {
+        process.env.METEOR_IGNORE = previousIgnore;
+      }
+    }
+  }
+);
+
+Tinytest.add(
+  "tools-core - setMeteorAppIgnore - dedupes repeated patterns to bound growth",
+  function (test) {
+    const previousIgnore = process.env.METEOR_IGNORE;
+
+    try {
+      process.env.METEOR_IGNORE = "client/*.css";
+      setMeteorAppIgnore("client/*.css client/*.css");
+
+      test.equal(
+        process.env.METEOR_IGNORE,
+        "client/*.css",
+        "Should avoid growing METEOR_IGNORE when the same pattern is appended repeatedly"
+      );
+    } finally {
+      if (previousIgnore === undefined) {
+        delete process.env.METEOR_IGNORE;
+      } else {
+        process.env.METEOR_IGNORE = previousIgnore;
+      }
+    }
   }
 );

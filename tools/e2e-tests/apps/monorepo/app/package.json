@@ -21,7 +21,8 @@
     "zod": "^3.24.4"
   },
   "devDependencies": {
-    "playwright": "1.59.0"
+    "playwright": "1.59.0",
+    "workbox-webpack-plugin": "^7.4.0"
   },
   "meteor": {
     "mainModule": {

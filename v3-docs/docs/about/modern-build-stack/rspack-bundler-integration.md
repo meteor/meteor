@@ -87,6 +87,57 @@ Attempts were made to reuse the existing `.meteor/local` cache context instead o
 Use `.meteor/local` or folders that suggest internals or hidden content (e.g., starting with a dot). These affect debug visibility, file watching, final compilation, and inclusion in the Cordova bundle.
 :::
 
+### Required npm dependencies
+
+The `rspack` package declares a minimum supported version for each of the npm packages it relies on at the project level: `@rspack/core`, `@rspack/cli`, `@meteorjs/rspack`, `@swc/helpers`, and `@rsdoctor/rspack-plugin`. Each Meteor release pins these minimums so the build stack stays compatible across upgrades.
+
+By default, Meteor installs or updates them for you on the first run after adding the `rspack` package, and prints a short summary of what changed:
+
+```
+=> 📦 Rspack: updating npm dependencies
+   Dev dependencies:
+   • @rspack/core           1.7.1  (new)
+   • @meteorjs/rspack       2.0.0 -> 2.0.1
+   Dependencies:
+   • @swc/helpers           0.5.17 (new)
+=> ✅ Rspack dependencies are up to date
+=> ℹ️ Set `"meteor": { "autoInstallDeps": false }` in package.json to manage them yourself.
+```
+
+If your project already meets every minimum, no log is printed and the build moves on.
+
+#### Disabling auto-install
+
+If you prefer to manage these dependencies yourself, set `meteor.autoInstallDeps` to `false` in your app's `package.json`:
+
+```json
+{
+  "meteor": {
+    "autoInstallDeps": false
+  }
+}
+```
+
+With this flag off, Meteor still detects when a required dependency is missing or below the supported version, but it no longer touches your project. Instead, you get a single ready-to-copy install command:
+
+``` bash
+=> ⚠️  Rspack: npm dependencies need attention
+   Dev dependencies:
+   • @rspack/core           1.7.1  (not installed)
+   • @meteorjs/rspack       2.0.1  (currently 2.0.0)
+   Dependencies:
+   • @swc/helpers           0.5.17 (not installed)
+
+   To bring your project in line, run:
+       meteor npm install --save-dev @rspack/core@1.7.1 @meteorjs/rspack@2.0.1
+       meteor npm install --save @swc/helpers@0.5.17
+=> ℹ️  Set `"meteor": { "autoInstallDeps": true }` in package.json to manage them automatically.
+```
+
+If you ignore the warning, the build continues and fails with the underlying module-not-found error. To re-enable auto-install, use the setting shown in the warning, or remove `autoInstallDeps` from your `meteor` block.
+
+If your CI or Docker pipeline reports missing NPM dependencies after disabling auto-install, see [CI & Docker](#docker) for the recommended commit-and-push flow.
+
 ### Replace build plugins
 
 Meteor build plugins extend the Meteor bundler by letting you handle new file types and process them for the final app bundle. They’ve commonly handled HTML templating, style files for Less or SCSS, CoffeeScript, and more, since the system allows third-party customization.
@@ -111,7 +162,9 @@ Refer to the [Migration Topics](#migration-topics) section for more details on o
 
 ## Custom `rspack.config.js`
 
-Meteor-Rspack projects can be customized using the `rspack.config.js` file, which is automatically available when installing the `rspack` package. You can also use `rspack.config.mjs` or `rspack.config.cjs` if you prefer strict ESM or CommonJS formats.
+Meteor-Rspack projects can be customized using the `rspack.config.js` file, which is automatically available when installing the `rspack` package. You can also use `rspack.config.ts`, `rspack.config.mjs`, or `rspack.config.cjs` if you prefer TypeScript, strict ESM, or CommonJS formats.
+
+The configuration file and the relative local modules it references through `import`, dynamic `import()`, re-exports, or `require()` are tracked as Rspack build dependencies. Changing one of these files invalidates the persistent cache so the next build uses the updated configuration.
 
 This file defines dynamic configurations, so you return the config from a resolved function.
 
@@ -119,20 +172,17 @@ This file defines dynamic configurations, so you return the config from a resolv
 const { defineConfig } = require('@meteorjs/rspack');
 const { rspack } = require('@rspack/core');
 const HtmlRspackPlugin = require('html-rspack-plugin');
-const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
 
 /**
  * Example: Using different plugins for client and server builds
  *
  * - For client: Load Lodash automatically with ProvidePlugin
- * - For server: Add Node.js polyfills with NodePolyfillPlugin
  * - For both: Add progress plugin
  */
 module.exports = defineConfig(Meteor => {
   return {
     plugins: [
       Meteor.isClient && new rspack.ProvidePlugin({ _: 'lodash' }),
-      Meteor.isServer && new NodePolyfillPlugin(),
       new rspack.ProgressPlugin()
     ].filter(Boolean),
   };
@@ -260,6 +310,25 @@ Meteor-Rspack supports apps without a client entry point. If your app only defin
 ```
 
 This is useful for API servers, microservices, or background workers that don't serve a client UI. Rspack still handles server-side bundling, including dependency resolution and tree-shaking.
+
+### Testing
+
+Meteor-Rspack supports both normal test mode and full-app test mode. Run a full-app test with the usual command:
+
+```bash
+meteor test --full-app --driver-package meteortesting:mocha
+```
+
+In full-app mode, Rspack builds the application bundles defined by `meteor.mainModule` alongside the app-test modules. A configured client bundle is still built when `meteor.testModule` contains only a server entry, so browser and server integration tests run against the complete application.
+
+Meteor also waits for asynchronous server startup to finish before running the tests. This includes top-level `await` in the server entry point:
+
+```js
+// server/main.js
+await initializeServices();
+```
+
+When the test driver starts, `initializeServices()` has already settled and the application is ready for the full-app tests.
 
 ### Nested Imports
 
@@ -801,8 +870,6 @@ This Rspack cache is enabled by default in persistent mode. If you [encounter is
 
 ```javascript
 const { defineConfig } = require('@meteorjs/rspack');
-const { rspack } = require('@rspack/core');
-const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
 
 module.exports = defineConfig(Meteor => ({
   // Disable cache, or use 'memory' to switch to in-memory cache
@@ -816,46 +883,136 @@ This helper provide a shortcut to apply the needed Rspack configuration and safe
 
 ### Service Worker
 
-Rspack lets you use standard plugins to manage Service Workers, such as Workbox, so you don’t need to maintain your own setup. You can follow the Webpack guide for integrating Workbox with [`workbox-webpack-plugin`](https://developer.chrome.com/docs/workbox/modules/workbox-webpack-plugin) (it should be compatible), or try the Rspack-specific version [`@aaroon/workbox-rspack-plugin`](https://github.com/Clarkkkk/workbox-rspack-plugin).
+::: info
+Starting with Meteor 3.4.1
+:::
 
-Whether you use a managed tool or a custom setup, ensure that only the Rspack dev server endpoints are treated as network-only for proper development. Otherwise, you may end up with infinite reload loops that only clear after removing the Service Worker. Skip caching of `__rspack__` endpoints.
+Rspack lets you use standard plugins to manage Service Workers, such as Workbox, so you don't need to maintain your own setup. You can follow the Webpack guide for integrating Workbox with [`workbox-webpack-plugin`](https://developer.chrome.com/docs/workbox/modules/workbox-webpack-plugin).
 
-If you use a custom implementation in your `sw.js`, intercept fetch requests to ignore Rspack contexts like this:
+Here is a recommended `GenerateSW` configuration that works with Meteor's build pipeline:
+
+```js
+const { defineConfig } = require('@meteorjs/rspack');
+const { GenerateSW } = require('workbox-webpack-plugin');
+
+module.exports = defineConfig(Meteor => ({
+  plugins: [
+    Meteor.isClient &&
+      new GenerateSW({
+        swDest: 'sw.js',
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
+        inlineWorkboxRuntime: true,
+        // Skip precaching for build output, runtime caching handles app bundles
+        exclude: [/./],
+        // Precache static files that should be available offline immediately
+        additionalManifestEntries: [
+          { url: '/icon.png', revision: '1' },
+        ],
+        runtimeCaching: [
+          // Never cache HMR hot-update files
+          {
+            urlPattern: /\.hot-update\./,
+            handler: 'NetworkOnly',
+          },
+          // Navigation requests: network-first with fallback
+          {
+            urlPattern: ({ request }) => request.mode === 'navigate',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'pages',
+              networkTimeoutSeconds: 15,
+            },
+          },
+          // Meteor/Rspack build assets (dev server, asset & chunk contexts)
+          {
+            urlPattern: new RegExp(
+              `(/__rspack__/|/${Meteor.assetsContext}/|/${Meteor.chunksContext}/|[?&](hash|meteor_css_resource|meteor_js_resource)=)`
+            ),
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'bundles',
+              // Meteor serves assets with Vary headers that can cause cache misses
+              matchOptions: { ignoreVary: true },
+            },
+          },
+          // Static assets: scripts, styles, workers
+          {
+            urlPattern: ({ request }) =>
+              request.destination === 'style' ||
+              request.destination === 'script' ||
+              request.destination === 'worker',
+            handler: 'StaleWhileRevalidate',
+            options: { cacheName: 'assets' },
+          },
+          // Images: cache-first for fast repeat loads
+          {
+            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|ico|webp)$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'images',
+              expiration: { maxEntries: 60 },
+              matchOptions: { ignoreVary: true },
+            },
+          },
+        ],
+      }),
+  ].filter(Boolean),
+  // GenerateSW runs per compiler (client + legacy); suppress the warning
+  ignoreWarnings: [/GenerateSW has been called multiple times/],
+}));
+```
+
+Key points:
+- **`exclude: [/./]`** skips precaching for build output, runtime caching rules handle the dynamic app bundles instead. You can still precache other static files (e.g. offline fallback pages, icons) via `additionalManifestEntries`, which are cached during SW installation and available offline immediately.
+- **`.hot-update.` is `NetworkOnly`** so HMR payloads are never served from cache.
+- **`Meteor.assetsContext` and `Meteor.chunksContext`** match the directories Meteor uses for build output, keeping the cache strategy aligned with the build pipeline.
+- **`ignoreWarnings`** silences the expected duplicate-call warning because `GenerateSW` runs once per Rspack compiler (modern + legacy).
+
+If you use a custom `sw.js` instead of Workbox, ensure your fetch handler applies the same principles:
 
 ```js
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
-
   const sameOrigin = url.origin === self.location.origin;
-  // Skip Rspack  devServer
-  if (sameOrigin && url.pathname.includes('/__rspack__/')) {
-    // Never cache ignores and hot updates; hit the network every time
-    event.respondWith(fetch(event.request, { cache: 'no-store' }));
+
+  // Never cache HMR hot-update files
+  if (url.pathname.match(/\.hot-update\./)) {
     return;
   }
 
+  // Skip Meteor build-asset and chunk contexts, always fetch fresh
+  if (sameOrigin && (
+    url.pathname.includes('/build-assets/') ||
+    url.pathname.includes('/build-chunks/')
+  )) {
+    event.respondWith(fetch(request, { cache: 'no-store' }));
+    return;
+  }
+
+  // Your caching strategy for navigation, scripts, styles, images, etc.
   // ...
 });
 ```
 
-When using Workbox, the equivalent with `GenerateSW` might look like this:
+During development, the HMR dev server keeps most build assets in memory for faster rebuilds and reduced disk I/O, and only writes `sw.js` (on the first build only). Subsequent HMR rebuilds skip rewriting `sw.js` on purpose: rewriting it re-registers the service worker and forces a full page reload, which defeats HMR.
+
+This is handled internally by [`Meteor.persistDevFiles`](#persist-dev-files), which controls the Rspack [`devServer.devMiddleware.writeToDisk`](https://rspack.rs/config/dev-server#devserverdevmiddleware) option. If your service worker uses a custom filename (via `swDest` in `GenerateSW`), you also need to register it with `persistDevFiles` so it gets written to disk during development:
 
 ```js
 new GenerateSW({
+  swDest: 'service-worker.js',
   // ...
-  runtimeCaching: [
-    {
-      urlPattern: ({ url }) => url.pathname.includes('/__rspack__/'),
-      handler: 'NetworkOnly',
-    },
-    // ...
-  ],
-  // ...
-})
+}),
 ```
 
-During development, the HMR dev server writes `sw.js` to disk by default, so build-generated service workers are served by Meteor's web server without extra configuration. If your service worker uses a different filename, see the [Dev Server](#dev-server) section for how to extend `writeToDisk`.
+```js
+...Meteor.persistDevFiles({ once: ['service-worker.js'] }),
+```
+
+For more details on strategies and matchers, see the [Persist Dev Files](#persist-dev-files) section.
 
 ### Dev Server
 
@@ -870,19 +1027,52 @@ RSPACK_DEVSERVER_PORT=3232 meteor run
 
 The reason is that the Rspack dev server is handled by the Meteor so it can make both dev server works together, and the info of the port needs to be properly shared via the env.
 
-During development, the HMR dev server keeps most build assets in memory and only writes HTML files and `sw.js` to disk by default. This means if your build pipeline generates files that need to be served from the root path, like `service-worker.js`, `manifest.json`, or any other output that Meteor's web server should serve directly, you can extend `writeToDisk` in your `rspack.config.js`:
+### Persist Dev Files
+
+::: info
+Starting with Meteor 3.4.1
+:::
+
+During development, the Rspack dev server keeps most build assets in memory for faster rebuilds and reduced disk I/O. Files that are part of the Rspack build output (generated by plugins like `GenerateSW`, `HtmlRspackPlugin`, etc.) live in memory by default. If Meteor's web server needs to serve any of these files directly, they must be explicitly persisted to disk.
+
+This is powered by Rspack's [`devServer.devMiddleware`](https://rspack.rs/config/dev-server#devserverdevmiddleware) option (see also [webpack-dev-middleware#writeToDisk](https://github.com/webpack/webpack-dev-middleware#writetodisk)). Static files in `public/` that are not part of the build output (e.g. images, fonts) are served by Meteor directly and do not need to be listed here.
+
+`Meteor.persistDevFiles` provides a declarative way to control which files are persisted and how often. HTML files are always persisted automatically, as Meteor's web server relies on them to serve the app shell.
 
 ```js
 const { defineConfig } = require('@meteorjs/rspack');
 
 module.exports = defineConfig(Meteor => ({
-  devServer: {
-    devMiddleware: {
-      writeToDisk: (filePath) =>
-        /\.(html)$/.test(filePath) || filePath.endsWith('service-worker.js'),
-    },
-  },
+  // Array form: writes on every rebuild (default)
+  ...Meteor.persistDevFiles(['manifest.json']),
 }));
+```
+
+For files that should only be written once per run (e.g. service workers, where rewriting triggers a full page reload), use the `once` strategy:
+
+```js
+...Meteor.persistDevFiles({
+  once: ['sw.js'],              // first build only (avoids SW re-registration)
+  always: ['manifest.json'],    // every rebuild
+})
+```
+
+**Strategies:**
+
+| Strategy | Behavior | Use case |
+|----------|----------|----------|
+| `always` | Written on every build (default) | Manifests, files that should always reflect the latest output |
+| `once` | Written on the first build, skipped on HMR rebuilds | Service workers, files that trigger full reloads when rewritten |
+
+HTML files (`.html`) are always persisted regardless of the matchers provided.
+
+**Matchers** can be strings (matched with `endsWith`), regular expressions, or functions:
+
+```js
+...Meteor.persistDevFiles({
+  once: [/\.worker\.js$/],
+  always: [(filePath) => filePath.includes('/custom/')],
+})
 ```
 
 In production, all build outputs are written to disk normally, so this only affects local development.
@@ -940,6 +1130,53 @@ PORT=3001 METEOR_LOCAL_DIR=.meteor/local-2 meteor run
 
 For more details on how this variable affects Rspack, see the [`METEOR_LOCAL_DIR`](../../cli/environment-variables.md#meteor_local_dir) documentation.
 
+Rspack also separates command-mode output within each build context. Development,
+normal test, and full-app test builds use distinct module directories such as
+`_build/main-dev`, `_build/test`, and `_build/app-test`. This prevents one mode's
+Rspack cleanup from deleting another mode's build artifacts. This isolation does
+not require `METEOR_LOCAL_DIR`. Set it only when each process also needs separate
+Meteor build caches and local state.
+
+### Symlinks and Monorepos
+
+Meteor-Rspack supports different ways to share code across projects in monorepo setups, depending on how you link and consume dependencies.
+
+There are two primary approaches for sharing code, which fundamentally differ in how files are resolved: sharing by package name or sharing by file location.
+
+#### Workspace Setups (Share a package by name)
+
+This is the standard model used by package managers like npm, pnpm, and Yarn workspaces. It allows you to share versioned packages—each with its own `package.json`, name, and entry in a root manifest—and resolve them by package name through `node_modules`.
+
+Rspack defaults are oriented toward supporting this pattern out of the box, as it gives bundlers an explicit dependency graph to reason about, which powers caching, affected-detection, and other build optimizations.
+
+For a practical example, you can explore this [pnpm monorepo skeleton](https://github.com/nachocodoner/meteor-pnpm-skeleton) demonstrating how to set up Meteor within a pnpm workspace.
+
+:::warning
+Future versions of Meteor will introduce native support for scaffolding monorepo setups (such as pnpm workspaces) directly via `meteor create` skeletons.
+:::
+
+#### App-Local Source Symlinks (Share a file by location)
+
+This approach involves sharing individual files or directories at specific paths without promoting them to full packages. It provides a file-granular sharing mechanism with less ceremony: no manifests, names, or versioning. When you symlink to a shared module, the import context is preserved within the symlink path, where consumers expect it, instead of being replaced with the real filesystem path.
+
+Because Rspack defaults to package-style resolution, it assumes the workspace model and resolves symlinks to their real path. To preserve the app-local source symlink semantics, you need to configure Rspack to retain the symlinked path.
+
+You can achieve this by setting `resolve.symlinks: false` in your `rspack.config.js`:
+
+```javascript
+const { defineConfig } = require('@meteorjs/rspack');
+
+module.exports = defineConfig(Meteor => ({
+  resolve: {
+    symlinks: false
+  }
+}));
+```
+
+With this setting, Rspack will resolve imports using the symlink location rather than the real target path, preserving the expected context.
+
+[See this diagram for a detailed comparison between both approaches](https://github.com/user-attachments/assets/2f1ddcef-3d15-4ce7-b478-dcdd7479bab4).
+
 ## Benefits
 
 Meteor–Rspack integration sends your app code to Rspack to use modern bundler features. Meteor then uses Rspack’s output to handle Meteor-specific tasks (like Atmosphere package compilation) and create the final bundle.
@@ -980,6 +1217,19 @@ If you run into issues, try `meteor reset` or delete the `.meteor/local` and `_b
 For help or to report issues, post on [GitHub](https://github.com/meteor/meteor/issues) or the [Meteor forums](https://forums.meteor.com). We're focused on making Meteor faster and your feedback helps.
 
 You can compare performance before and after enabling `modern` by running [`meteor profile`](../../cli/index.md#meteorprofile). Share your results to show progress to others.
+
+### Startup Panics and Cache Recovery
+
+If Rspack exits, cannot start, or panics before its first compilation, Meteor stops the build promptly instead of waiting indefinitely. Inspect the Rspack output immediately above the error first, since it usually contains the underlying cause.
+
+If the output points to a stale or incompatible persistent cache, remove only the Rspack cache and retry:
+
+```bash
+rm -rf ./node_modules/.cache/rspack
+meteor run
+```
+
+If the targeted cleanup does not resolve the problem, run `meteor reset` and try again.
 
 ### Memory Crashes
 

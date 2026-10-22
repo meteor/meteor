@@ -22,6 +22,12 @@ Every app and skeleton goes through these phases (unless skipped):
 
 Default assertions on every run phase: build artifacts exist, page title matches, body styles render, `__rspack__` script tag is present.
 
+### Package dependency regression
+
+| What is covered | Test |
+|-----------------|------|
+| Packed `@meteorjs/rspack` consumer installs its runtime dependencies, applies `npm audit fix`, and reports zero critical production vulnerabilities | `rspack-audit.test.js` |
+
 ---
 
 ## Apps
@@ -45,6 +51,9 @@ Core React integration with custom Meteor local directory.
 | Unplugin transform + buildDependencies tracking in production | Prod |
 | Custom rspack config (`rspack.config.cjs`) | All |
 | HMR works in dev, disabled in prod | Run, Prod |
+| Rspack devserver port is released after `SIGTERM` (`regressions/port-cleanup.test.js`) | Run |
+| Client test Node compatibility (`Buffer`, `buffer`, `crypto`, `timers/promises`) | Test |
+| Cordova bundle stays modern when `meteor.modern` is unset (`regressions/cordova-modern-default.test.js`) | Build |
 
 ### react-router
 
@@ -62,6 +71,7 @@ Full-featured React Router app with custom packages, Less, and advanced rspack c
 | Default + custom package loading | Run |
 | `resolve.extensions` loading (`.jsx`) | Run |
 | `rspack.config.override.js` custom plugin loading | Run, Test, Build |
+| User-level `devServer.onListening` composed with meteor-rspack default | Run |
 | React + TSX environment detection | Run, Prod, Test, Build |
 | Full-app test mode (`--full-app`) | Test |
 | Static assets in bundle (png, md) | Build |
@@ -76,14 +86,39 @@ Blaze templating engine integration.
 | Blaze environment detection (`isBlazeEnabled`) | Run, Prod, Test, Build |
 | HMR disabled (incompatible with Blaze) | Run, Prod |
 
+### blaze-router
+
+Focused Blaze and Galvanized Iron Router fixture that exercises the standard E2E lifecycle and reproduces the `meteor test --full-app` regression in [issue #14561](https://github.com/meteor/meteor/issues/14561). It keeps templates and styles in top-level client files; nested eager HTML/CSS coverage remains scoped to [PR #14637](https://github.com/meteor/meteor/pull/14637). FlowRouter Extra remains covered by the existing `full-blaze` fixture because the two routers are alternatives and should not share one runtime app.
+
+| What is covered | Phase |
+|----------------|-------|
+| Shared app lifecycle, including initialization, client/server rebuilds, build, and cache reset | All |
+| Full-app test mode (`--full-app`) with separate client and server test modules | Test, Test once |
+| Generated test client wrapper imports the Rspack bundle after eager Blaze HTML imports | Test, Test once |
+| Rspack client boot marker and rendered Blaze template | Run, Prod, Test |
+| Galvanized Iron Router named route matrix registration | Run, Prod, Test, Test once |
+| Shared Blaze layout and route rendering | Run, Prod, Test |
+| Client-side link navigation preserves the page instance | Run, Prod, Test |
+| ES-module `RouteController` registry with path, query, and hash parameters | Run, Prod, Test |
+| Dynamic deep-link reload and browser history restore the controller route | Run, Prod, Test |
+| Route-scoped `onBeforeAction` hook and template data context | Run, Prod, Test |
+| Programmatic navigation renders the configured not-found template | Run, Prod, Test |
+| Client-side app test executes instead of reporting a false zero-test success | Test once |
+| Rspack client boot marker is packaged in the deployable browser program | Build |
+| Concurrent development and full-app test commands preserve the development `.cjs` bundle | Run, Test |
+| Normal and full-app tests use isolated `_build/test` and `_build/app-test` module directories in both startup orders | Test |
+| Full-app tests build and execute the app client with no `testModule` or a server-only `testModule` | Test |
+
 ### full-blaze
 
-Full Blaze app (with `imports/` structure for tests).
+Full Blaze app with an `imports/` structure and regular `meteor test` coverage. It validates FlowRouter Extra during normal application runs, but does not reproduce issue #14561 because it does not use `--full-app`; that scenario remains additive in `blaze-router`.
 
 | What is covered | Phase |
 |----------------|-------|
 | Blaze environment detection | Run, Prod, Test, Build |
 | `imports/api/` test path structure | Test |
+| Regular test mode (`meteor test`, without `--full-app`) | Test, Test once |
+| FlowRouter Extra route renders the Blaze home template | Run, Prod |
 | HMR disabled (incompatible with Blaze) | Run, Prod |
 
 ### typescript
@@ -105,6 +140,7 @@ TypeScript with SCSS, type checking, `.ts` rspack config, and `.ts` SWC config.
 | `.meteor/local/types` directory generated | Run |
 | Separate client/server test files | Test |
 | CI: removes TsCheckerRspackPlugin (resource limits) | Init |
+| Persistent cache dependency scanner parses TypeScript configs without errors | All |
 | HMR works in dev, disabled in prod | Run, Prod |
 
 ### babel
@@ -166,14 +202,23 @@ Svelte framework integration.
 
 ### monorepo
 
-Monorepo structure with app in subdirectory.
+Monorepo structure with app in subdirectory, service worker, and PWA manifest.
 
 | What is covered | Phase |
 |----------------|-------|
 | Monorepo layout (`app/` subdirectory) | All |
 | Custom rspack config (`rspack.config.cjs`) | All |
 | `rspack.config.override.cjs` custom plugin loading | Run, Test, Build |
-| Static assets in bundle (png, md) | Build |
+| Static assets in bundle (png, md, icon, manifest) | Build |
+| Service worker in production build (`sw.js` found in bundle tree) | Build |
+| Service worker file served (`/sw.js`) | Run |
+| Service worker registers, activates, controls page | Run |
+| Service worker runtime caching (images) | Run |
+| Service worker precaching (`/icon.png` via `additionalManifestEntries`) | Run |
+| Service worker stability (`sw.js` not rewritten on rebuild) | Run |
+| Service worker regenerated on restart (`sw.js` changed between runs) | Run, Prod |
+| PWA manifest linked and fields validated | Run |
+| Meta tags (`theme-color`) | Run |
 | HMR works in dev, disabled in prod | Run, Prod |
 
 ### server-only
@@ -185,6 +230,31 @@ Server-only app (no client entry point).
 | No client bundle (client skipped) | All |
 | No client tests (test client skipped) | Test |
 | Server entry loads (`server/main.js loaded`) | Run |
+| Server Rspack process exits before first compilation and Meteor fails promptly | Run |
+
+### Focused server runtime regressions
+
+`server-runtime.test.js` reuses isolated temporary copies of the
+`server-only` fixture without modifying its normal lifecycle coverage.
+
+| What is covered | Phase |
+|----------------|-------|
+| Absolute external `METEOR_LOCAL_DIR` outside the app | Run |
+| `Assets` and `Npm` wrapper globals visible to server bundle code | Run |
+| Development server bundle stays outside Meteor's linked `app.js` payload | Run |
+| Delayed server import of a previously unused Meteor package | Run |
+| CommonJS development server bundle under a `type: module` app | Run |
+| Node Inspector attach, pauses, breakpoint, source map, and mapped stack | Run |
+
+### tla
+
+Minimal top-level await fixture.
+
+| What is covered | Phase |
+|----------------|-------|
+| `meteor test --full-app --once` waits for macrotask top-level await before running server app tests | Test once |
+| Exit-code-zero `0 passing` regression is rejected by explicit `1 passing` assertion | Test once |
+| Absolute project paths containing a `private` segment still discover eager tests ([#14688](https://github.com/meteor/meteor/issues/14688)) | Test once |
 
 ---
 
@@ -205,8 +275,9 @@ Tested via `skeleton.test.js` using `meteor create --<skeleton>`. Each skeleton 
 | react | 3205 | JSX | Custom body styles (Inter font, padding) |
 | solid | 3206 | JS | |
 | svelte | 3207 | JS | |
-| tailwind | 3208 | TypeScript | Tailwind `bg-gray-100` styles (dev + prod color formats) |
-| typescript | 3209 | TypeScript | CI: removes TsCheckerRspackPlugin |
+| tailwind | 3208 | JSX | Tailwind `bg-gray-100` styles (dev + prod color formats) |
+| typescript | 3209 | TypeScript | TypeScript 7; native `tsgo` checker loading, diagnostic, and watch behavior |
+| typescript-tailwind | 3221 | TypeScript | TypeScript 7, native `tsgo`, Tailwind 4, and PostCSS |
 | vue | 3210 | JS | |
 
 ---
@@ -233,11 +304,12 @@ Several apps import specific npm packages to verify that Meteor + Rspack handles
 | `node:buffer` | `imports/api/links.js` | Node.js built-in via `node:` protocol in shared client/server code — must be ignored on client without errors |
 | `@react-email/components` | `imports/emails/TestEmail.jsx` | JSX-heavy ESM package with many subpath exports |
 
-### react (`apps/react/plugins/demo-unplugin.js`)
+### react (`apps/react/`)
 
-| Package | Reason |
-|---------|--------|
-| `unplugin` | Unplugin transform hook integration — validates rspack cache tracks plugin dependency files (#14031) |
+| Package | File | Reason |
+|---------|------|--------|
+| `unplugin` | `plugins/demo-unplugin.js` | Unplugin transform hook integration validates rspack cache tracks plugin dependency files (#14031) |
+| `meteor-node-stubs` (`buffer`, `crypto`) and `isomorphic-timers-promises` | `tests/main.js` | Browser implementations and global `Buffer` support for client tests |
 
 ### babel (`apps/babel/server/apollo.js`)
 
@@ -252,7 +324,7 @@ Several apps import specific npm packages to verify that Meteor + Rspack handles
 | Package | Reason |
 |---------|--------|
 | `node:module` (`createRequire`) | Node.js built-in in a `.ts` config file — tests CJS interop via `createRequire(import.meta.url)` in an ESM context |
-| `@swc/core` | Type-only import (`import type { Config }`) — provides typings for `swc.config.ts`, stripped at compile time |
+| `@swc/core`, `@rspack/core` | Type-only import (`import type { Config }`, `import type { Configuration }`) — provides typings for configs, verifies the cache dependency scanner correctly parses TS syntax |
 
 ---
 
@@ -268,25 +340,35 @@ Where each feature is tested across apps and skeletons.
 | Custom rspack config | react (.cjs), react-router, babel (.mjs), monorepo (.cjs), typescript (.ts) | |
 | Custom SWC config (.ts) | typescript | |
 | Config override file | react-router, monorepo | |
+| User-level `devServer.onListening` composition | react-router | |
 | Custom build dir | react, typescript | |
 | Custom asset/chunk context dirs | typescript | |
-| Custom env vars | react (METEOR_LOCAL_DIR), react-router (METEOR_PACKAGE_DIRS) | |
-| Static asset bundling | react-router, monorepo | |
+| Custom env vars | react (METEOR_LOCAL_DIR), react-router (METEOR_PACKAGE_DIRS), server-only regression (absolute external METEOR_LOCAL_DIR) | |
+| Static asset bundling | react-router, monorepo (png, md, icon, manifest) | |
 | Less styles | react-router | |
 | SCSS styles | typescript | |
 | Tailwind CSS | vue (PostCSS) | tailwind |
 | Image asset loading | react | |
-| 404 routing | react-router | |
-| Meta tags | react-router | |
+| 404 routing | react-router, blaze-router | |
+| Meta tags | react-router, monorepo | |
 | Babel compiler plugin | react-router | |
-| TypeScript type checking | typescript | |
+| TypeScript type checking | typescript | typescript (`tsgo` loading, diagnostic, watch), typescript-tailwind (`tsgo`) |
 | Meteor.disablePlugins | react | |
 | Unplugin transform with cache (#14031) | react | |
 | Custom package dirs | react-router | |
 | CoffeeScript compilation | coffeescript | coffeescript |
 | Server-only (no client) | server-only | |
+| Rspack process cleanup | react | |
+| Server bundle excluded from Meteor linker payload | server-only regression | |
+| `Assets`/`Npm` server globals in the dev bundle | server-only regression | |
+| Delayed server Meteor package import | server-only regression | |
+| First-compilation process failure | server-only | |
 | Monorepo layout | monorepo | |
-| Full-app test mode | react-router | |
+| Full-app test mode | react-router, blaze-router, tla | |
+| Concurrent Rspack mode isolation | blaze-router | |
+| Full-app client without a client test module | blaze-router | |
+| Blaze router compatibility | blaze-router (Galvanized Iron Router routes, controllers, hooks, and layout), full-blaze (FlowRouter Extra) | |
+| Top-level await in full-app tests | tla | |
 | Module rules override | babel | |
 | Custom NODE_ENV compilation | babel | |
 | Portable build (no isDev/isProd defines) | typescript | |
@@ -303,3 +385,10 @@ Where each feature is tested across apps and skeletons.
 | `node:` protocol imports | monorepo, typescript | |
 | Untranspiled npm deps (`compileWithRspack`) | monorepo | |
 | Worker resolution (`compileWithMeteor`) | monorepo | |
+| Service worker (Workbox GenerateSW) | monorepo | |
+| Service worker stability (no rewrite on rebuild) | monorepo | |
+| Service worker regenerated on restart | monorepo | |
+| Service worker in production build | monorepo | |
+| Service worker runtime caching (images) | monorepo | |
+| Service worker precaching (`additionalManifestEntries`) | monorepo | |
+| PWA manifest | monorepo | |

@@ -297,7 +297,7 @@ If you run `meteor create` without arguments, Meteor will launch an interactive 
 | `--package` | Create a new package instead of an application |
 
 ::: warning Prototype Mode
-The `--prototype` option adds packages that make development faster but shouldn't be used in production. See the [security checklist](/tutorials/security/security#checklist).
+The `--prototype` option adds packages that make development faster but shouldn't be used in production. See the [security checklist](/tutorials/security/security#security-checklist).
 :::
 
 ### Included Packages
@@ -397,13 +397,13 @@ meteor create my-app --from https://github.com/fredmaiaarantes/simpletasks
 To extract a specific subdirectory from a repository, use `--from-dir`. You can also pin to a specific branch, tag, or commit SHA with `--from-branch`:
 
 ```bash
-meteor create my-app --from https://github.com/meteor/examples --from-branch migrate-examples --from-dir parties
+meteor create my-app --from https://github.com/meteor/examples --from-branch main --from-dir parties
 ```
 
 `--from` also accepts browser-style tree/src URLs from GitHub, GitLab, and Bitbucket. When you paste one, Meteor auto-detects the branch and subdirectory from the URL, so `--from-branch` and `--from-dir` become optional:
 
 ```bash
-meteor create my-app --from https://github.com/meteor/examples/tree/migrate-examples/parties
+meteor create my-app --from https://github.com/meteor/examples/tree/main/parties
 ```
 
 Supported URL patterns:

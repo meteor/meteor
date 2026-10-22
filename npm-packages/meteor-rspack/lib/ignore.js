@@ -85,14 +85,24 @@ function createIgnoreGlobConfig(entries = []) {
 /**
  * Creates a regex pattern to match the specified glob patterns.
  * Converts glob patterns with * and ** into regex equivalents.
- * 
+ *
  * @param {string[]} globPatterns - Array of glob patterns from createIgnoreGlobConfig
+ * @param {string} [rootPath] - Absolute root that matched paths must belong to
  * @returns {RegExp} - Regex pattern to match the specified patterns
  */
-function createIgnoreRegex(globPatterns) {
+function createIgnoreRegex(globPatterns, rootPath) {
   if (!Array.isArray(globPatterns) || globPatterns.length === 0) {
     throw new Error('globPatterns must be a non-empty array');
   }
+
+  // Rspack applies context exclusions to absolute module paths. Anchor rooted
+  // patterns here so matching starts inside the app, not in a parent folder.
+  const pathPrefix = rootPath
+    ? `^${rootPath
+        .replace(/\\/g, '/')
+        .replace(/\/+$/, '')
+        .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=/|$)`
+    : '(?:^|/)';
 
   // Process each glob pattern and convert to regex
   const regexPatterns = globPatterns.map(pattern => {
@@ -115,9 +125,7 @@ function createIgnoreRegex(globPatterns) {
     // Convert the ** placeholder to its regex equivalent (any number of characters including /)
     regexPattern = regexPattern.replace(new RegExp(DOUBLE_ASTERISK_PLACEHOLDER, 'g'), '.*');
 
-    // For absolute paths, we don't want to force the pattern to match from the beginning
-    // but we still want to ensure it matches to the end of the path segment
-    regexPattern = '(?:^|/)' + regexPattern;
+    regexPattern = pathPrefix + regexPattern;
 
     return regexPattern;
   }).filter(pattern => pattern !== null);

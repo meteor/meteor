@@ -51,7 +51,7 @@ describe('Examples /', () => {
       await runMeteorCommand(
         'create', [
           '--from', 'https://github.com/meteor/examples',
-          '--from-branch', 'migrate-examples',
+          '--from-branch', 'main',
           '--from-dir', 'parties',
           appName
         ], os.tmpdir(),
@@ -69,7 +69,7 @@ describe('Examples /', () => {
       await expect(runMeteorCommand(
         'create', [
           '--from', 'https://github.com/meteor/examples',
-          '--from-branch', 'migrate-examples',
+          '--from-branch', 'main',
           '--from-dir', 'this-dir-does-not-exist',
           appName
         ], os.tmpdir(),
@@ -101,7 +101,7 @@ describe('Examples /', () => {
     try {
       await runMeteorCommand(
         'create', [
-          '--from', 'https://github.com/meteor/examples/tree/migrate-examples/parties',
+          '--from', 'https://github.com/meteor/examples/tree/main/parties',
           appName
         ], os.tmpdir(),
         { checkExitCode: true }

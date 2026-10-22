@@ -258,7 +258,7 @@ If you have customized the URL, you will need to add a new route to your router 
 
 When the user submits the form, you need to call the appropriate function to commit their change to the database. Both functions are callback-based; wrap them in a `Promise` to use with `async/await`:
 
-1. [`Accounts.resetPassword(token, newPassword, callback)`](/api/accounts#Accounts-resetPassword) — use this both for resetting the password and enrolling a new user; it accepts both kinds of tokens. Logs in the user after a successful reset (unless 2FA is enabled — see [Two-Factor Authentication](#two-factor-authentication-accounts-2fa)).
+1. [`Accounts.resetPassword(token, newPassword, callback)`](/api/accounts#Accounts-resetPassword) — use this both for resetting the password and enrolling a new user; it accepts both kinds of tokens. Logs in the user after a successful reset (unless 2FA is enabled — see [Two-Factor Authentication](#two-factor-authentication)).
 2. [`Accounts.verifyEmail(token, callback)`](/api/accounts#Accounts-verifyEmail) — logs in the user after a successful verification (unless 2FA is enabled).
 
 After you have called one of the two functions above or the user has cancelled the process, call the `done` function you got in the link callback.
@@ -341,7 +341,7 @@ await new Promise((resolve, reject) =>
 );
 ```
 
-If the user has [Two-Factor Authentication](#two-factor-authentication-accounts-2fa) enabled, use the 2FA variant instead:
+If the user has [Two-Factor Authentication](#two-factor-authentication) enabled, use the 2FA variant instead:
 
 ```js
 await new Promise((resolve, reject) =>
@@ -501,7 +501,7 @@ try {
 
 There are a few points to know about configuring OAuth login:
 
-1. **Client ID and secret.** It's best to keep your OAuth secret keys outside of your source code, and pass them in through Meteor.settings. Read how in the [Security article](/tutorials/security/security#api-keys).
+1. **Client ID and secret.** It's best to keep your OAuth secret keys outside of your source code, and pass them in through Meteor.settings. Read how in the [Security article](/tutorials/security/security#securing-api-keys).
 2. **Redirect URL.** On the OAuth provider's side, you'll need to specify a _redirect URL_. The URL will look like: `https://www.example.com/_oauth/facebook`. Replace `facebook` with the name of the service you are using. Note that you will need to configure two URLs - one for your production app, and one for your development environment, where the URL might be something like `http://localhost:3000/_oauth/facebook`.
 3. **Permissions.** Each login service provider should have documentation about which permissions are available. If you want additional permissions to the user's data when they log in, pass some of these strings in the `requestPermissions` option.
 
@@ -554,6 +554,46 @@ const fbAccessToken = user.services.facebook.accessToken;
 ```
 
 Now that you have the access token, you can use the `fetch` API or an npm package to access the service's API directly.
+
+## Login lifecycle hooks
+
+Regardless of which login method your users go through (password, passwordless, OAuth, 2FA), you can react to login events with three hooks: `Accounts.onLogin`, `Accounts.onLoginFailure`, and `Accounts.onLogout`. Since Meteor 3.5, the client-side variants accept `async` callbacks and the surrounding login/logout flow waits for them before resolving.
+
+```js
+import { Accounts } from "meteor/accounts-base";
+
+// onLogin runs after a user is successfully logged in
+Accounts.onLogin(async ({ user }) => {
+  await Meteor.callAsync("activity.recordSession", { userId: user._id });
+});
+
+// onLoginFailure runs after a denied login attempt
+Accounts.onLoginFailure(async ({ error }) => {
+  console.warn("Login failed:", error.reason);
+});
+
+// onLogout runs after a user is logged out — registration returns a stop handle
+const handle = Accounts.onLogout(async ({ user }) => {
+  await Meteor.callAsync("activity.recordLogout", { userId: user?._id });
+});
+
+// Later, to unregister:
+handle.stop();
+```
+
+::: warning
+Anything you `await` inside a client hook delays the originating call. Avoid slow network round-trips inside `onLogin` — fire-and-forget those, or move them to a server-side hook such as [`Accounts.validateLoginAttempt`](/api/accounts#AccountsServer-validateLoginAttempt) where appropriate.
+:::
+
+To sign a user out of every device they're logged in on (for example, from a "sign out everywhere" button in account settings), call `Meteor.logoutAllClients()`:
+
+```js
+import { Meteor } from "meteor/meteor";
+
+await Meteor.logoutAllClients();
+```
+
+This was added in Meteor 3.5. Use [`Meteor.logoutOtherClients`](/api/accounts#Meteor-logoutOtherClients) instead if you want to keep the current device logged in.
 
 ## Loading and displaying user data
 

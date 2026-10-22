@@ -1,8 +1,39 @@
-var semver = Npm.require("semver");
 var JSON5 = Npm.require("json5");
-var SWC = Npm.require("@meteorjs/swc-core");
-const reifyCompile = Npm.require("@meteorjs/reify/lib/compiler").compile;
-const reifyAcornParse = Npm.require("@meteorjs/reify/lib/parsers/acorn").parse;
+
+// Loaded lazily on first use: the SWC native binding takes hundreds of
+// milliseconds to load, and every build-plugin image that includes
+// babel-compiler would otherwise pay that cost at plugin initialization
+// even if it never transpiles anything (e.g. minifier plugins).
+// A failure to load one of these dependencies is an installation problem,
+// not a compilation problem, so it must not be swallowed by the
+// SWC-to-Babel fallback in processOneFileForTarget.
+function requireCompilerDependency(name) {
+  try {
+    return Npm.require(name);
+  } catch (error) {
+    error.compilerDependencyLoadFailure = true;
+    throw error;
+  }
+}
+
+let SWC = null;
+function getSWC() {
+  return SWC || (SWC = requireCompilerDependency("@meteorjs/swc-core"));
+}
+
+let reifyCompile = null;
+function getReifyCompile() {
+  return reifyCompile ||
+    (reifyCompile =
+      requireCompilerDependency("@meteorjs/reify/lib/compiler").compile);
+}
+
+let reifyAcornParse = null;
+function getReifyAcornParse() {
+  return reifyAcornParse ||
+    (reifyAcornParse =
+      requireCompilerDependency("@meteorjs/reify/lib/parsers/acorn").parse);
+}
 var fs = Npm.require('fs');
 var path = Npm.require('path');
 var vm = Npm.require('vm');
@@ -43,10 +74,6 @@ BCp.isVerbose = function(config = getMeteorConfig()) {
   return !!this.extraFeatures?.verbose;
 };
 
-// There's no way to tell the current Meteor version, but we can infer
-// whether it's Meteor 1.4.4 or earlier by checking the Node version.
-var isMeteorPre144 = semver.lt(process.version, "4.8.1");
-
 var enableClientTLA = process.env.METEOR_ENABLE_CLIENT_TOP_LEVEL_AWAIT === 'true';
 
 function compileWithBabel(source, babelOptions, cacheOptions) {
@@ -58,13 +85,13 @@ function compileWithBabel(source, babelOptions, cacheOptions) {
 function compileWithSwc(source, swcOptions = {}, { features }) {
   return profile('SWC.compile', function () {
     // Perform SWC transformation.
-    const transformed = SWC.transformSync(source, swcOptions);
+    const transformed = getSWC().transformSync(source, swcOptions);
 
     let content = transformed.code;
 
     // Preserve Meteor-specific features: reify modules, nested imports, and top-level await support.
-    const result = reifyCompile(content, {
-      parse: reifyAcornParse,
+    const result = getReifyCompile()(content, {
+      parse: getReifyAcornParse(),
       generateLetDeclarations: false,
       ast: false,
       // Enforce reify options for proper compatibility.
@@ -351,7 +378,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
 
       var swcOptions = {
         jsc: {
-          ...(!isLegacyWebArch && { target: 'es2015' }),
+          ...(!isLegacyWebArch && { target: isNodeTarget ? 'es2022' : 'es2015' }),
           parser: {
             syntax: isTypescriptSyntax ? 'typescript' : 'ecmascript',
             jsx: hasJSXSupport,
@@ -448,10 +475,17 @@ BCp.processOneFileForTarget = function (inputFile, source) {
                 transpConfig?.excludePackages || [],
               )));
 
+        // Segregate cache by target/arch: server (es2022), modern web (es2015),
+        // and legacy web (env.targets) all produce different SWC output. Without
+        // this, whichever arch compiles first poisons the cache for the others.
+        const swcTarget = isLegacyWebArch
+          ? 'legacy'
+          : (isNodeTarget ? 'es2022' : 'es2015');
+
         const cacheKey = [
           toBeAdded.hash,
           lastModifiedSwcConfigTime,
-          isLegacyWebArch ? 'legacy' : '',
+          swcTarget,
           hasSwcHelpersAvailable,
         ]
           .filter(Boolean)
@@ -510,6 +544,11 @@ BCp.processOneFileForTarget = function (inputFile, source) {
             });
           }
         } catch (e) {
+          if (e.compilerDependencyLoadFailure) {
+            // A broken SWC/reify installation should fail loudly rather
+            // than silently falling back to Babel for every file.
+            throw e;
+          }
           this._swcIncompatible[cacheKey] = true;
           // If SWC fails, fall back to Babel
 
@@ -550,19 +589,6 @@ BCp.processOneFileForTarget = function (inputFile, source) {
       }
 
       return null;
-    }
-
-    if (isMeteorPre144) {
-      // Versions of meteor-tool earlier than 1.4.4 do not understand that
-      // module.importSync is synonymous with the deprecated module.import
-      // and thus fail to register dependencies for importSync calls.
-      // This string replacement may seem a bit hacky, but it will tide us
-      // over until everyone has updated to Meteor 1.4.4.
-      // https://github.com/meteor/meteor/issues/8572
-      result.code = result.code.replace(
-        /\bmodule\.importSync\b/g,
-        "module.import"
-      );
     }
 
     toBeAdded.data = result.code;

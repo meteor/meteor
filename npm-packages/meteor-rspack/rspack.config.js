@@ -3,7 +3,6 @@ const fs = require('fs');
 const { inspect } = require('node:util');
 const path = require('path');
 const { merge } = require('webpack-merge');
-const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
 
 const { cleanOmittedPaths, mergeSplitOverlap } = require("./lib/mergeRulesSplitOverlap.js");
 const { getMeteorAppSwcConfig } = require('./lib/swc.js');
@@ -24,11 +23,13 @@ const {
   disablePlugins,
   outputMeteorRspack,
   enablePortableBuild,
+  persistDevFiles,
+  createPersistCallback,
 } = require('./lib/meteorRspackHelpers.js');
 const { loadUserAndOverrideConfig } = require('./lib/meteorRspackConfigHelpers.js');
 const { prepareMeteorRspackConfig } = require("./lib/meteorRspackConfigFactory");
 const { extractLocalDependencies } = require('./lib/localDependenciesHelpers.js');
-
+const { createTestClientNodePolyfillConfig } = require("./lib/testClientNodePolyfills.js");
 
 // Safe require that doesn't throw if the module isn't found
 function safeRequire(moduleName) {
@@ -100,8 +101,13 @@ function createCacheStrategy(
         type: "persistent",
         storage: {
           type: "filesystem",
+          // Include the mode in the directory (not just the version):
+          // rspack invalidates a persistent cache on version mismatch, so
+          // sharing one directory between development and production would
+          // wipe the cache on every `meteor run` <-> `meteor build` switch
+          // instead of keeping both warm. See meteor/meteor#14568.
           directory: `node_modules/.cache/rspack/${
-            [buildContext, side].filter(Boolean).join('-') || 'default'
+            [buildContext, side, mode].filter(Boolean).join('-') || 'default'
           }`,
         },
         ...(buildDependencies.length > 0 && {
@@ -125,15 +131,13 @@ function createSwcConfig({
 }) {
   const defaultConfig = {
     jsc: {
-      baseUrl: process.cwd(),
-      paths: { '/*': ['*', '/*'] },
       parser: {
         syntax: isTypescriptEnabled ? 'typescript' : 'ecmascript',
         ...(isTsxEnabled && { tsx: true }),
         ...(isJsxEnabled && { jsx: true }),
         ...(isAngularEnabled && { decorators: true }),
       },
-      target: 'es2015',
+      target: isClient ? 'es2015' : 'es2022',
       ...(isReactEnabled && {
         transform: {
           react: {
@@ -348,6 +352,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       disablePlugins: matchers,
     });
   Meteor.enablePortableBuild = () => enablePortableBuild();
+  Meteor.persistDevFiles = (matchers) => persistDevFiles(matchers);
 
   // Add HtmlRspackPlugin function to Meteor
   Meteor.HtmlRspackPlugin = (options = {}) => {
@@ -401,7 +406,11 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   cacheStrategy = createCacheStrategy(
     mode,
     (Meteor.isClient && "client") || "server",
-    { projectConfigPath, configPath }
+    // buildContext must be passed here too: this reassignment is the
+    // effective cache strategy, and omitting it made the cache directory
+    // collide across build contexts (e.g. custom METEOR_LOCAL_DIR setups).
+    // See meteor/meteor#14568.
+    { projectConfigPath, configPath, buildContext }
   );
 
   // Determine run point
@@ -416,13 +425,14 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   const clientOutputDir = path.resolve(projectDir, "public");
   const serverOutputDir = path.resolve(projectDir, "private");
 
+
   // Get Meteor ignore entries
   const meteorIgnoreEntries = getMeteorIgnoreEntries(projectDir);
 
   // Additional ignore entries
   const additionalEntries = [
     "**/.meteor/local/**",
-    "**/dist/**",
+    path.join(projectDir, "dist", "**").replace(/\\/g, "/"),
     ...(isTest && isTestEager
       ? [`**/${buildContext}/**`, "**/.meteor/local/**", "node_modules/**"]
       : []),
@@ -487,7 +497,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     ...(Meteor.isBlazeEnabled && {
       externals: /\.html$/,
       isEagerImport: (module) => module.endsWith(".html"),
-      ...(isProd && {
+      ...((isProd || (isTest && isClient)) && {
         lastImports: [`./${outputFilename}`],
       }),
     }),
@@ -558,6 +568,43 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       ? path.resolve(process.cwd(), testEntry)
       : path.resolve(process.cwd(), buildContext, entryPath);
   const clientNameConfig = `[${(isTest && "test-") || ""}client-rspack]`;
+
+  // Default onListening provided by meteor-rspack. Kept as a named
+  // reference so we can detect a user-supplied override after merge
+  // and compose (run default first, then user's).
+  const meteorDefaultOnListening = function (devServer) {
+    if (!devServer) return;
+    const { host, port } = devServer.options;
+    const protocol =
+      devServer.options.server?.type === "https" ? "https" : "http";
+    const devServerUrl = `${protocol}://${host || "localhost"}:${port}`;
+    outputMeteorRspack({ devServerUrl });
+
+    // Windows-only: webpack-dev-server tracks accepted sockets
+    // but doesn't attach 'error'. On Windows, teardown of a
+    // closed proxy connection sends RST, producing an unhandled
+    // ECONNRESET that crashes the dev server. Unix peers send
+    // FIN and never hit this.
+    if (process.platform === "win32") {
+      const server = devServer.server;
+      if (!server || server.__meteorRspackErrorGuard) return;
+      server.__meteorRspackErrorGuard = true;
+
+      server.on("connection", (socket) => {
+        if (!socket || socket.__meteorRspackGuarded) return;
+        socket.__meteorRspackGuarded = true;
+        socket.on("error", (err) => {
+          if (err && err.code === "ECONNRESET") return;
+          console.warn(
+            `[meteor-rspack] dev server socket error: ${
+              err && (err.code || err.message)
+            }`
+          );
+        });
+      });
+    }
+  };
+
   // Base client config
   let clientConfig = {
     name: clientNameConfig,
@@ -609,7 +656,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         ...extraRules,
       ],
     },
-    resolve: { extensions, alias, fallback },
+    resolve: { extensions, alias, fallback, roots: [path.resolve(projectDir)] },
     externals,
     plugins: [
       ...[
@@ -650,17 +697,9 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         ...(Meteor.isBlazeEnabled && { hot: false }),
         port: devServerPort,
         devMiddleware: {
-          writeToDisk: (filePath) =>
-            /\.(html)$/.test(filePath) || filePath.endsWith('sw.js'),
+          writeToDisk: createPersistCallback({ once: ['sw.js'], always: ['.html'] }),
         },
-        onListening(devServer) {
-          if (!devServer) return;
-          const { host, port } = devServer.options;
-          const protocol =
-            devServer.options.server?.type === "https" ? "https" : "http";
-          const devServerUrl = `${protocol}://${host || "localhost"}:${port}`;
-          outputMeteorRspack({ devServerUrl });
-        },
+        onListening: meteorDefaultOnListening,
       },
     }),
     ...merge(cacheStrategy, { experiments: { css: true } }),
@@ -713,7 +752,22 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       runtimeChunk: false,
     },
     module: {
-      rules: [swcConfigRule, ...extraRules],
+      rules: [
+        swcConfigRule,
+        // Mirror the client rule: ignore .html so rspack doesn't try to
+        // parse them as JavaScript. Meteor's template compiler handles
+        // .html files separately, and RequireExternalsPlugin below wires
+        // the imports to Meteor's module system.
+        ...(Meteor.isBlazeEnabled
+          ? [
+              {
+                test: /\.html$/i,
+                loader: 'ignore-loader',
+              },
+            ]
+          : []),
+        ...extraRules,
+      ],
       parser: {
         javascript: {
           // Dynamic imports on the server are treated as bundled in the same chunk
@@ -726,6 +780,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       alias,
       modules: ["node_modules", path.resolve(projectDir)],
       conditionNames: ["import", "require", "node", "default"],
+      roots: [path.resolve(projectDir)],
     },
     externals,
     externalsPresets: { node: true },
@@ -760,8 +815,12 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       isDevEnvironment || isNative || isTest
         ? "source-map"
         : "hidden-source-map",
-    ...((isDevEnvironment || (isTest && !isTestEager) || isNative) &&
-      cacheStrategy),
+    // Apply the persistent cache to production builds too (the client
+    // config always has it); previously `meteor build` recompiled the
+    // entire server bundle cold every time. Eager server test builds are
+    // still excluded, since their generated entry changes on every run.
+    // See meteor/meteor#14568.
+    ...(!(isTest && isTestEager) && cacheStrategy),
     ...lazyCompilationConfig,
     ...loggingConfig,
   };
@@ -793,7 +852,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
           optimization: {
             splitChunks: false,
           },
-          plugins: [new NodePolyfillPlugin()],
+          ...createTestClientNodePolyfillConfig(),
         }
       : {};
 
@@ -822,6 +881,23 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     config = mergeSplitOverlap(config, nextOverrideConfig);
     if (nextOverrideConfig.stats != null) {
       statsOverrided = true;
+    }
+  }
+
+  // If the user or an override replaced devServer.onListening, compose
+  // so our default runs first (attaches the Windows socket guard and
+  // reports the dev server URL) and the user's hook runs second.
+  if (isClient && config.devServer) {
+    const finalOnListening = config.devServer.onListening;
+    if (
+      typeof finalOnListening === "function" &&
+      finalOnListening !== meteorDefaultOnListening
+    ) {
+      const userOnListening = finalOnListening;
+      config.devServer.onListening = function (devServer) {
+        meteorDefaultOnListening(devServer);
+        userOnListening(devServer);
+      };
     }
   }
 
