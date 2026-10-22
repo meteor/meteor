@@ -1,6 +1,32 @@
 import { Mongo } from 'meteor/mongo';
+import type { IdMap } from 'meteor/id-map';
 
 export type MinimongoId = string | Mongo.ObjectID;
+
+type MinimongoDistances = Pick<IdMap<MinimongoId, number>, 'get' | 'has'>;
+
+export type MinimongoInsertQuery<
+  T extends { _id: MinimongoId } = Record<string, unknown> & { _id: MinimongoId }
+> = {
+  projectionFn: (fields: Partial<T>) => Partial<T>;
+  added: (id: MinimongoId, fields: Partial<T>) => void | Promise<void>;
+} & (
+  | {
+      ordered: true;
+      results: T[];
+      sorter?: Sorter<T> | null;
+      distances?: MinimongoDistances | false;
+      addedBefore: (
+        id: MinimongoId,
+        fields: Partial<T>,
+        before: MinimongoId | null
+      ) => void | Promise<void>;
+    }
+  | {
+      ordered: false;
+      results: Pick<IdMap<MinimongoId, T>, 'set'>;
+    }
+);
 
 export interface MinimongoObserveCallbacks<T = Record<string, unknown>> {
   added?: (document: T) => void;
@@ -61,6 +87,10 @@ export class Cursor<T = Record<string, unknown>> {
 }
 
 export class LocalCollection<T = Record<string, unknown>> {
+  /** Internal query helpers used when restoring documents into live results. */
+  static _insertInResultsSync<T extends { _id: MinimongoId }>(query: MinimongoInsertQuery<T>, doc: T): void;
+  static _insertInResultsAsync<T extends { _id: MinimongoId }>(query: MinimongoInsertQuery<T>, doc: T): Promise<void>;
+
   constructor(name?: string);
 
   name: string | undefined;
@@ -131,7 +161,7 @@ export class Matcher<T = Record<string, unknown>> {
 export class Sorter<T = Record<string, unknown>> {
   constructor(spec: Mongo.SortSpecifier, collation?: object);
 
-  getComparator(options?: { distances?: Map<string, number> }): (a: T, b: T) => number;
+  getComparator(options?: { distances?: MinimongoDistances | false }): (a: T, b: T) => number;
 
   affectedByModifier(modifier: Mongo.Modifier<T>): boolean;
 }

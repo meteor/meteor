@@ -39,6 +39,10 @@ export class ChangeStreamObserveDriver {
     // events touched concurrently so the resync can let those events win instead
     // of racing them (see _resyncAfterHistoryLost / _flushPendingWrites).
     this._resyncLiveTouched = null;
+    // Set by SharedChangeStream on a non-resumable reopen and lifted when this
+    // driver's resync finishes: holds fence releases meanwhile (see
+    // _setLastProcessedOperationTime / _endResyncHold).
+    this._resyncPending = false;
 
     // Projection function similar to oplog driver.
     //
@@ -469,6 +473,11 @@ export class ChangeStreamObserveDriver {
 
   _setLastProcessedOperationTime(ts) {
     this._lastProcessedOperationTime = ts;
+    // During a non-resumable resync, an event on the reopened stream can be past
+    // a write whose own event was skipped (#14763). Releasing that write's fence
+    // before the resync reconciles it would send the method's `updated` ahead
+    // of its data, so waiters stay parked until _endResyncHold.
+    if (this._resyncPending) return;
     // Resolve any waiters whose target is <= current processed time
     while (this._catchingUpResolvers.length > 0) {
       const first = this._catchingUpResolvers[0];
@@ -654,8 +663,15 @@ export class ChangeStreamObserveDriver {
   //      and a doc deleted live is never re-added as a phantom.
   //   2. For everything else the live-event handlers are cache-guarded, so a doc
   //      the reopened cursor happens to redeliver is reconciled once, not twice.
-  async _resyncAfterHistoryLost() {
-    if (this._stopped || !this._isReady) return;
+  //
+  // caughtUpTo (optional) is an op time our query is known to cover (the shared
+  // stream pings it before reopening); fences waiting on writes up to it are
+  // released once the reconcile is done.
+  async _resyncAfterHistoryLost(caughtUpTo) {
+    if (this._stopped || !this._isReady) {
+      this._endResyncHold();
+      return;
+    }
 
     const collection = this._mongoHandle.rawCollection(
       this._cursorDescription.collectionName
@@ -679,6 +695,7 @@ export class ChangeStreamObserveDriver {
     // live events (applied via _flushPendingWrites) win over our snapshot.
     const liveTouched = new Set();
     this._resyncLiveTouched = liveTouched;
+    let reconciled = false;
     try {
       // Re-add or update every currently-matching document, tracking which ids
       // are still present so the rest can be removed below.
@@ -720,13 +737,32 @@ export class ChangeStreamObserveDriver {
           console.error(`[ChangeStream ${this._id}] resync remove failed:`, error);
         }
       }
+
+      // Events up to caughtUpTo may never be delivered (the reopened stream
+      // starts after it, e.g. skipping an oversized event, #14763), so a fence
+      // waiting on one would park until some unrelated later write. The
+      // reconcile above already reflects them, so release those fences now.
+      reconciled = true;
     } finally {
       // Only clear if still ours: a re-entrant resync should not happen (drivers
       // are resynced serially), but guard anyway so we never null a newer set.
       if (this._resyncLiveTouched === liveTouched) {
         this._resyncLiveTouched = null;
       }
+      this._endResyncHold(reconciled ? caughtUpTo : null);
     }
+  }
+
+  // Lift the resync hold and release fence waiters up to the later of the last
+  // delivered event and caughtUpTo. caughtUpTo is only passed once the reconcile
+  // completed, since only then does the cache reflect writes up to it.
+  _endResyncHold(caughtUpTo = null) {
+    this._resyncPending = false;
+    let ts = this._lastProcessedOperationTime;
+    if (caughtUpTo && (!ts || compareOperationTimes(caughtUpTo, ts) > 0)) {
+      ts = caughtUpTo;
+    }
+    if (ts) this._setLastProcessedOperationTime(ts);
   }
 
   async _waitUntilCaughtUp(fenceOverride) {
@@ -768,7 +804,7 @@ export class ChangeStreamObserveDriver {
       return;
     }
 
-    if (this._lastProcessedOperationTime && compareOperationTimes(this._lastProcessedOperationTime, targetTs) >= 0) {
+    if (!this._resyncPending && this._lastProcessedOperationTime && compareOperationTimes(this._lastProcessedOperationTime, targetTs) >= 0) {
       return;
     }
 

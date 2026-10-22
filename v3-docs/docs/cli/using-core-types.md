@@ -1,8 +1,9 @@
 # TypeScript Types for Meteor Packages
 
 Starting with Meteor 3.6, Meteor can generate TypeScript declarations for
-installed packages that publish type information. This is an explicit opt-in:
-run `meteor types` to write the declarations to `.meteor/types/`. Ordinary
+installed packages that publish type information. New TypeScript-based apps
+use native declarations by default, generated under `.meteor/types/` by
+`meteor create`. Existing apps opt in explicitly with `meteor types`. Ordinary
 commands such as `meteor run`, `meteor build`, `meteor test`, and `meteor lint`
 do not create, remove, or select native declarations.
 
@@ -23,7 +24,7 @@ editor/`tsc` resolution.
 | --- | --- |
 | Existing app using `@types/meteor` or `zodern:types` | Keep the current configuration if you do not want type changes during the Meteor 3.6 upgrade. |
 | App ready to adopt native declarations | Remove a direct `zodern:types` dependency, run `meteor types`, then stop loading `@types/meteor` and configure the native paths. |
-| New Meteor 3.6 TypeScript app | The template preserves `@types/meteor` and `zodern:types`; native declarations are only a fallback until you explicitly migrate. |
+| New TypeScript-based app | TypeScript, TypeScript + Tailwind, Svelte, and Angular templates use native declarations, generated automatically during `meteor create`. |
 | JavaScript app that wants Meteor IntelliSense | Add a `jsconfig.json`, configure the native paths, and run `meteor types`. |
 
 Native declarations follow the Meteor 3.6 runtime APIs more closely, but
@@ -142,32 +143,34 @@ Generated files are replaced by the next successful `meteor types` run. Do not
 edit or commit `.meteor/types/`; the generator writes a `.gitignore` inside the
 directory.
 
-## Existing Meteor 3.6 Templates
+## New TypeScript Apps
 
-Meteor 3.6 TypeScript templates retain the established provider order:
+The TypeScript, TypeScript + Tailwind, Svelte, and Angular templates select
+native declarations without a direct dependency on `@types/meteor` or
+`zodern:types`:
 
 ```json
 {
+  "files": ["./.meteor/types/packages.d.ts"],
   "compilerOptions": {
     "paths": {
-      "meteor/*": [
-        "./node_modules/@types/meteor/*",
-        "./.meteor/local/types/packages.d.ts",
-        "./.meteor/types/packages/*"
-      ]
+      "meteor/*": ["./.meteor/types/packages/*"]
     }
   }
 }
 ```
 
-The template also installs `zodern:types` directly. As a result, upgrading or
-creating an app does not silently replace its active declarations. The native
-path is only a fallback; follow the native setup above when you want to switch
-providers.
+`meteor create` generates the declarations before reporting that the app is
+ready. After cloning a project or changing its Meteor packages, run
+`meteor types` before type-checking to regenerate the ignored declarations.
+
+Existing projects, including those created with older Meteor 3.6 templates,
+keep their configured provider when upgrading. Follow the migration steps
+above when you want to switch them to native declarations.
 
 Core packages that already exposed declarations in Meteor 3.6 keep those
 legacy files unchanged for existing providers. Corrected native declarations
-are stored separately and only selected by `meteor types`.
+are stored separately and selected by the native provider.
 
 ## JavaScript Apps
 

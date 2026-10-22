@@ -343,7 +343,7 @@ CollectionPrototype._validatedUpdateAsync = async function(
   const mutatorKeys = Object.keys(mutator);
 
   // compute modified fields
-  const modifiedFields = {};
+  const modifiedFields = Object.create(null);
 
   if (mutatorKeys.length === 0) {
     throw new Meteor.Error(403, noReplaceError);

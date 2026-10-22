@@ -151,6 +151,14 @@ function compileGenerated(consumer, extraFiles = {}) {
     readFile(path) {
       return virtualFiles.get(path) ?? defaultHost.readFile(path);
     },
+    directoryExists(path) {
+      const prefix = `${path.replace(/\/$/, "")}/`;
+      return (
+        [...virtualFiles.keys()].some((filePath) =>
+          filePath.startsWith(prefix)
+        ) || defaultHost.directoryExists(path)
+      );
+    },
     getSourceFile(path, languageVersion, onError, shouldCreateNewSourceFile) {
       const source = virtualFiles.get(path);
       if (source !== undefined) {
@@ -439,9 +447,137 @@ describe("priority 1 – api.types() / isopack.typesEntry", () => {
     expect(perPkg).toContain(
       "require('meteor-package-types/random/declarations/index')"
     );
+    expect(writtenContentAt(`${PKGS_DIR}/random/declarations/index.d.ts`)).toBe(
+      CONTENT
+    );
+  });
+
+  test("preserves relative imports and nested submodule paths in file mode", async () => {
+    const isopack = makeIsopack({
+      typesEntry: "types/index.d.ts",
+      typesModules: { hooks: "types/client/hooks.d.ts" },
+      resources: [
+        makeResource("types/index.d.ts", "export { Shared } from './shared';"),
+        makeResource(
+          "types/shared.d.ts",
+          "export interface Shared { value: string; }"
+        ),
+        makeResource(
+          "types/client/hooks.d.ts",
+          [
+            "import type { Shared } from '../shared';",
+            "export declare function useShared(): Shared;",
+          ].join("\n")
+        ),
+      ],
+    });
+    await generateTypes({
+      isopackCache: makeIsopackCache({ pkg: isopack }),
+      packageMap: makePackageMap(["pkg"]),
+      projectMeteorDir: PROJECT_METEOR,
+    });
+
     expect(
-      writtenContentAt(`${PKGS_DIR}/random/declarations/index.d.ts`)
-    ).toBe(CONTENT);
+      writtenContentAt(`${PKGS_DIR}/pkg/declarations/types/shared.d.ts`)
+    ).toBe("export interface Shared { value: string; }");
+    expect(writtenContentAt(`${PKGS_DIR}/pkg/index.d.ts`)).toContain(
+      "meteor-package-types/pkg/declarations/types/index"
+    );
+    expect(writtenContentAt(`${PKGS_DIR}/pkg/module-hooks.d.ts`)).toContain(
+      "meteor-package-types/pkg/declarations/types/client/hooks"
+    );
+    expect(
+      compileGenerated(
+        [
+          "import type { Shared } from 'meteor/pkg';",
+          "import { useShared } from 'meteor/pkg/hooks';",
+          "const shared: Shared = useShared();",
+          "const value: string = shared.value;",
+        ].join("\n")
+      )
+    ).toEqual([]);
+  });
+
+  test("preserves ambient scripts with relative import type queries", async () => {
+    const ambient = [
+      "declare module 'meteor/pkg' {",
+      "  export type Shared = import('./shared').Shared;",
+      "}",
+    ].join("\n");
+    const isopack = makeIsopack({
+      typesEntry: "types/index.d.ts",
+      resources: [
+        makeResource("types/index.d.ts", ambient),
+        makeResource(
+          "types/shared.d.ts",
+          "export interface Shared { value: string; }"
+        ),
+      ],
+    });
+    const packageDir = `${PKGS_DIR}/pkg`;
+    const declarationsDir = `${packageDir}/declarations`;
+    const declarationsTypesDir = `${declarationsDir}/types`;
+    files.readdir.mockImplementation((path) => {
+      if (path === PKGS_DIR) return ["pkg"];
+      if (path === packageDir) return ["index.d.ts", "declarations"];
+      return [];
+    });
+    files.readdirWithTypes.mockImplementation((path) => {
+      if (path === declarationsDir) return [dirent("types", true)];
+      if (path === declarationsTypesDir) {
+        return [
+          dirent("index.d.ts"),
+          dirent("shared.d.ts"),
+          dirent("stale.d.ts"),
+        ];
+      }
+      return [];
+    });
+    await generateTypes({
+      isopackCache: makeIsopackCache({ pkg: isopack }),
+      packageMap: makePackageMap(["pkg"]),
+      projectMeteorDir: PROJECT_METEOR,
+    });
+
+    expect(writtenContentAt(`${PKGS_DIR}/pkg/index.d.ts`)).toBe(
+      '/// <reference path="./declarations/types/index.d.ts" />\n'
+    );
+    expect(
+      writtenContentAt(`${PKGS_DIR}/pkg/declarations/types/index.d.ts`)
+    ).toBe(ambient);
+    expect(files.unlink).toHaveBeenCalledWith(
+      `${declarationsTypesDir}/stale.d.ts`
+    );
+    expect(files.rm_recursive).not.toHaveBeenCalledWith(declarationsDir);
+    expect(
+      compileGenerated(
+        "import type { Shared } from 'meteor/pkg';\nconst value: string = ({} as Shared).value;"
+      )
+    ).toEqual([]);
+  });
+
+  test("does not preserve declaration paths that escape the package directory", async () => {
+    const isopack = makeIsopack({
+      typesEntry: "types/index.d.ts",
+      typesModules: { unsafe: "../unsafe.d.ts" },
+      resources: [
+        makeResource("types/index.d.ts", "export * from './shared';"),
+        makeResource("types/shared.d.ts", "export declare const shared: 1;"),
+        makeResource("../unsafe.d.ts", "export declare const unsafe: 1;"),
+      ],
+    });
+    await generateTypes({
+      isopackCache: makeIsopackCache({ pkg: isopack }),
+      packageMap: makePackageMap(["pkg"]),
+      projectMeteorDir: PROJECT_METEOR,
+    });
+
+    expect(
+      files.writeFile.mock.calls.some(([path]) => path.includes("../"))
+    ).toBe(false);
+    expect(
+      writtenContentAt(`${PKGS_DIR}/pkg/declarations/module-unsafe.d.ts`)
+    ).toBe("export declare const unsafe: 1;");
   });
 
   test("packages.d.ts references per-package file via triple-slash", async () => {
@@ -1665,6 +1801,67 @@ describe("pre-declared modules are used verbatim", () => {
             "}",
           ].join("\n"),
         }
+      )
+    ).toEqual([]);
+  });
+
+  test("detects indented top-level imports and exports", async () => {
+    const content = [
+      "  import type { Base } from 'base-types';",
+      "declare module 'meteor/other' {",
+      "  export interface Other { nested: true; }",
+      "}",
+      "  export declare function makeBase(): Base;",
+    ].join("\n");
+    await generateTypes({
+      isopackCache: makeIsopackCache({
+        pkg: makeIsopack({
+          typesEntry: "pkg.d.ts",
+          resources: [makeResource("pkg.d.ts", content)],
+        }),
+      }),
+      packageMap: makePackageMap(["pkg"]),
+      projectMeteorDir: PROJECT_METEOR,
+    });
+
+    expect(writtenContentAt(`${PKGS_DIR}/pkg/index.d.ts`)).toContain(
+      "meteor-package-types/pkg/declarations/index"
+    );
+    expect(
+      compileGenerated(
+        "import { makeBase } from 'meteor/pkg';\nconst id: string = makeBase().id;",
+        {
+          "/proj/base-types.d.ts":
+            "declare module 'base-types' { export interface Base { id: string; } }",
+        }
+      )
+    ).toEqual([]);
+  });
+
+  test("ignores import and export text in comments and ambient module bodies", async () => {
+    const content = [
+      "/*",
+      "export { CommentOnly } from 'comment-only';",
+      "*/",
+      "declare module 'meteor/pkg' {",
+      "  export interface Value { id: string; }",
+      "}",
+    ].join("\n");
+    await generateTypes({
+      isopackCache: makeIsopackCache({
+        pkg: makeIsopack({
+          typesEntry: "pkg.d.ts",
+          resources: [makeResource("pkg.d.ts", content)],
+        }),
+      }),
+      packageMap: makePackageMap(["pkg"]),
+      projectMeteorDir: PROJECT_METEOR,
+    });
+
+    expect(writtenContentAt(`${PKGS_DIR}/pkg/index.d.ts`)).toBe(`${content}\n`);
+    expect(
+      compileGenerated(
+        "import type { Value } from 'meteor/pkg';\nconst id: string = ({} as Value).id;"
       )
     ).toEqual([]);
   });

@@ -7,7 +7,7 @@ meteor add disable-oplog
 ```
 
 ::: tip Since Meteor 3.5
-Change Streams — not the oplog — are the **default** reactivity mechanism (see the [Change Streams Observer Driver](../performance/change-streams-observer-driver.md) guide). Meteor picks a driver per query from the order `changeStreams → oplog → polling`. This package only removes the **oplog** step; it does **not** turn off Change Streams. On a Change Streams–capable deployment (MongoDB 6+ replica set or sharded cluster) most reactive queries keep using Change Streams, so the effective order simply becomes `changeStreams → polling`. To force polling, see [Forcing polling app-wide](#forcing-polling-app-wide).
+Change Streams — not the oplog — are the **default** reactivity mechanism (see the [Change Streams Observer Driver](../performance/change-streams-observer-driver.md) guide). Meteor picks a driver per query from the order `changeStreams → oplog → polling`. This package only removes the **oplog** step; it does **not** turn off Change Streams. On a Change Streams–capable deployment (MongoDB 6.0.9+ replica set or sharded cluster) most reactive queries keep using Change Streams, so the effective order simply becomes `changeStreams → polling`. To force polling, see [Forcing polling app-wide](#forcing-polling-app-wide).
 :::
 
 ## Usage
@@ -28,7 +28,7 @@ changeStreams → polling
 
 What that means in practice:
 
-- **Change Streams available** for the query (MongoDB 6+ replica set or sharded cluster, an unordered observer, no `skip`/`limit`, and a supported selector): the query uses Change Streams whether or not this package is installed — `disable-oplog` has **no effect** on it.
+- **Change Streams available** for the query (MongoDB 6.0.9+ replica set or sharded cluster, an unordered observer, no `skip`/`limit`, and a supported selector): the query uses Change Streams whether or not this package is installed — `disable-oplog` has **no effect** on it.
 - **Change Streams not available** for the query (standalone/older MongoDB, an ordered observer, `skip`/`limit`, or an unsupported selector): without the oplog fallback the query goes straight to **polling**.
 
 In other words, on a modern deployment `disable-oplog` no longer forces polling app-wide the way it did before Change Streams — it only drops the oplog fallback. Its remaining purpose is to stop Meteor from tailing the oplog at all: useful to avoid the extra oplog connection, or to keep Change Streams as the only push-based driver with polling as the sole fallback.
@@ -70,7 +70,7 @@ Like the package, per-query `disableOplog` only removes the **oplog** driver —
 
 ## Driver tradeoffs
 
-- **Change Streams** (default) push changes to reactive queries in realtime and work even where oplog access isn't available (managed/serverless MongoDB tiers). Requires MongoDB 6+ on a replica set or sharded cluster.
+- **Change Streams** (default) push changes to reactive queries in realtime and work even where oplog access isn't available (managed/serverless MongoDB tiers). Requires MongoDB 6.0.9+ on a replica set or sharded cluster.
 - **Oplog tailing** also pushes changes with low latency, but needs a configured oplog URL (e.g. `MONGO_OPLOG_URL`) and oplog read access.
 - **Polling** re-runs each reactive query periodically. Updates can lag by up to `pollingIntervalMs` (default **10 seconds**), and app-wide polling multiplies query load across every observer.
 

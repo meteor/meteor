@@ -37,10 +37,10 @@ those settings too. `HEADED=1` opens Chromium, and `RECORD=1` saves browser
 videos. Group runs share fixed app ports: run groups sequentially on one
 machine, or use isolated containers as CI does.
 
-By default, app tests install the dependencies of `npm-packages/meteor-rspack`
-and link that checkout into each app, including pnpm workspaces. This also works
-on a fresh checkout. Set `NPM_LINK_RSPACK=false` to test the published package;
-CI uses that setting on `release-*` branches.
+By default, app tests pack `npm-packages/meteor-rspack` and install the tarball
+into each app, including pnpm workspaces. This tests the published package layout
+with the current source and works on a fresh checkout. Set `NPM_LINK_RSPACK=false`
+to test the published package; CI uses that setting on `release-*` branches.
 
 Lifecycle tests reuse apps between phases. Prefer running a whole group or
 file; filtering an individual lifecycle test with `-t` can omit the creation
@@ -56,6 +56,28 @@ npm run test:e2e -- --runTestsByPath skeleton.test.js -t '^Meteor Skeletons / Re
 
 Confirm the intended cases ran; successful discovery or skipped cases do not
 establish executed coverage.
+
+## Workspace executable portability
+
+```sh
+METEOR_E2E_TEST_RETRIES=0 npm run test:e2e:group -- regressions --runTestsByPath workspace-bin-portability.test.js --runInBand
+```
+
+This focused POSIX regression installs a local command tarball and two external
+linked workspaces into a disposable app, then builds with `meteor build
+--directory`. It removes the source before checking relative and absolute
+workspace `.bin` links, including links from one workspace to the other, their
+executable modes, and package-relative resources.
+It repeats the checks after the built server's dependency install, boots with
+an owned bundled MongoDB, and requests `/portability` in Chromium. No Rspack or
+frontend framework is involved. Failures retain diagnostics in `test-results/`.
+Windows is skipped because these POSIX symlinks do not test Windows command shims.
+
+The dedicated [`workspace` fixture](apps/workspace) makes both linked workspaces,
+the command package, and HTTP endpoint explicit. Reusing `server-only` would require
+disabling its Rspack integration and generating those sources inside the test. This scenario also
+removes its source before booting, so it needs an independent lifecycle from
+the existing symlink-monorepo suite.
 
 ## Group definitions and CI
 

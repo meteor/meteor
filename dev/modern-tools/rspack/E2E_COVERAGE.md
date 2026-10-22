@@ -34,7 +34,7 @@ is available; those runs do not execute `afterRunBuiltApp` assertions.
 
 | What is covered | Test |
 |-----------------|------|
-| Packed `@meteorjs/rspack` consumer installs its runtime dependencies, applies `npm audit fix`, and reports zero critical production vulnerabilities | `rspack-audit.test.js` |
+| Packed `@meteorjs/rspack` consumer uses the React skeleton dependency graph, applies both `npm audit fix` and `npm audit fix --force`, retains compatible Rspack versions and valid peers, excludes the old elliptic polyfill chain, reports zero critical vulnerabilities, and builds and executes a bundle through the Rspack CLI (#14310) | `rspack-audit.test.js` |
 | Fresh `meteor create --package` output completes both client and server Tinytests with the default browser driver and no browser errors, without adding a separate jQuery dependency (#14735) | `regressions/test-in-browser.test.js` |
 
 ---
@@ -42,6 +42,23 @@ is available; those runs do not execute `afterRunBuiltApp` assertions.
 ## Apps
 
 Each app lives in `apps/<name>/` and has a matching `<name>.test.js`.
+
+### source-maps
+
+Small TypeScript fixture for source-map correctness (#14655); focused debugging and build checks replace the default lifecycle.
+
+| What is covered | Phase |
+|----------------|-------|
+| Original source paths, contents, and exact line/column mappings through an independent map consumer | Run, Build |
+| Chromium breakpoints, stepping, and mapped exception frames in modern and legacy browser programs | Run |
+| Lazy-loaded code and rebuilds that shift original source line numbers | Run |
+| Meteor and Rspack server breakpoints, stepping, and mapped error stacks | Run |
+| Debug maps for modern, legacy, and Cordova web programs, plus Rspack's emitted production maps | Build |
+| Babel and SWC legacy map composition; warm Meteor caches update maps when generated JavaScript is unchanged (Rspack cache cleared) | Build (debug) |
+| Debug and production bundles boot and execute eager and lazy browser code | Build |
+| App paths containing spaces and Unicode; inline and external map references accepted | All |
+
+A separate warm-Rspack-cache regression is skipped pending a fix for stale upstream maps after edits that only shift source locations; see the fixture README.
 
 ### react
 
@@ -63,6 +80,7 @@ Core React 19 integration with custom Meteor local directory.
 | Custom rspack config (`rspack.config.cjs`) | All |
 | HMR works in dev, disabled in prod | Run, Prod |
 | Rspack devserver port is released after `SIGTERM` (`regressions/port-cleanup.test.js`) | Run |
+| Rapid server edits during slow startup and shutdown preserve the dev server, apply the final edit, allow a later client refresh, and can replace an app that stops answering IPC (`regressions/rapid-server-restarts.test.js`, #14755) | Run |
 | `--port` with a host prefix derives a valid rspack devserver port (`regressions/host-prefixed-port.test.js`) | Run |
 | Client test Node compatibility (`Buffer`, `buffer`, `crypto`, `timers/promises`) | Test |
 | Cordova bundle stays modern when `meteor.modern` is unset (`regressions/cordova-modern-default.test.js`) | Build |
@@ -91,7 +109,7 @@ Full-featured React Router app with custom packages, Less, and advanced rspack c
 
 ### assets
 
-Minimal app with a local package testing asset resolution and bundling.
+Minimal app with a local package testing asset resolution and bundling. `regressions/rspack-static-assets.test.js` boots a temporary production variant to exercise static requests.
 
 | What is covered | Phase |
 |----------------|-------|
@@ -102,6 +120,12 @@ Minimal app with a local package testing asset resolution and bundling.
 | `skipTestClient: true` (ignores client mocha tests) | Test once |
 | Assets skipped by compiler source discovery (#14566) | All |
 | Boot built bundle (`node main.js`) to test assets | Build |
+| Missing Rspack chunks/assets return uncached 404s without growing shared manifests | Build |
+| Existing files and alternate URL spellings do not accumulate manifest entries | Build |
+| Emitted assets and lazy chunks preserve GET/HEAD, ETag, range, and cache behavior | Build |
+| Removed files, directories, and malformed/traversing paths; restored files become available again | Build |
+| Client rebuild pauses and existing inline static content are preserved | Build |
+| Files removed between stat and open return uncached 404s without stale response headers | Build |
 
 ### blaze
 
@@ -271,6 +295,20 @@ Meteor app inside a pnpm workspace monorepo, with shared code in `workspace:*` p
 | Built app boots; workspace packages + `color` tree imported in production bundle | Build |
 | HMR works in dev, disabled in prod | Run, Prod |
 
+### workspace
+
+Minimal Meteor app with two external npm workspaces and an internal command tarball;
+Build only, without Rspack. POSIX symlinks; Windows command shims are not covered.
+Covered by `workspace-bin-portability.test.js`.
+
+| What is covered | Phase |
+|----------------|-------|
+| npm installs the command as a real directory and both workspaces as external symlinks | Init |
+| Relative and absolute workspace `.bin` links resolve to the packaged command or copied second workspace after source removal | Build |
+| Commands retain executable mode and read their package-relative JSON resources | Build |
+| Links survive server runtime dependency installation | Build |
+| Built server invokes both workspace commands at request time and returns `portable:cross-portable` to Chromium | Build |
+
 ### server-only
 
 Server-only app (no client entry point).
@@ -281,6 +319,26 @@ Server-only app (no client entry point).
 | No client tests (test client skipped) | Test |
 | Server entry loads (`server/main.js loaded`) | Run |
 | Server Rspack process exits before first compilation and Meteor fails promptly | Run |
+| `.meteorignore` negation re-includes a test file an earlier pattern ignored (`regressions/meteorignore-negation.test.js`, [#14742](https://github.com/meteor/meteor/issues/14742)) | Test once |
+| User `METEOR_IGNORE` overrides file patterns in Rspack children with a root `test/` directory while internal root and per-entrypoint ignores stay in meteor-tool (`regressions/meteorignore-negation.test.js`) | Test once |
+
+### legacy
+
+Minimal app with separate modern, legacy, and Cordova entries. `legacy.test.js` runs the shared lifecycle; `regressions/architecture-entrypoints.test.js` covers the architecture configuration matrix. See the fixture README for manual use.
+
+| What is covered | Phase |
+|----------------|-------|
+| Shared lifecycle: development/production client and server rebuilds, watched tests, tests once, deployed bundle, and reset | All |
+| With a root `test/` data directory, separate legacy test module executes an alias configured only for `Meteor.isLegacy`, its loader, plugin constant, and async chunk, then reruns after a source edit | Test |
+| Full-app tests render each browser's app entry and pass its matching test module, including the legacy-only configuration, after running development mode | Test |
+| Distinct client entries in production/debug bundles, covering `client`, `modern`, `legacy`, `web.browser.legacy`, and `web.cordova` | Build |
+| Legacy TypeScript imports use an alias configured only for `Meteor.isLegacy`, a custom loader, DefinePlugin constant, and asynchronous chunk | Run, Prod, Build |
+| Legacy CSS and emitted SVG assets load from its Rspack output; legacy styles do not affect the modern page, including after switching from development to full-app tests | Run, Prod, Test, Build |
+| Raw legacy Rspack bundle/runtime, async chunks, and Meteor-linked application output parse as ES5 after compiling modern TypeScript syntax | Build |
+| Browser programs render the correct modern/legacy entry for each user agent, report `Meteor.isModern`, and exercise the legacy dependency's fallback without browser errors (Chromium) | Run, Prod, Build |
+| Explicit `false` architecture entries suppress app JavaScript; omitted entries fall back to the Rspack client | Build |
+| Development serves modern/legacy separately, reloads legacy after a source edit, and skips an excluded Cordova entry that cannot compile | Run |
+| Empty Rspack config with shared npm imports and `nodeModules.recompile`: production programs isolate the React app and legacy stub, and both pages render browser information after booting the bundle, including helpers introduced by Meteor's legacy recompilation | Build |
 
 ### Focused server runtime regressions
 
@@ -296,12 +354,23 @@ Server-only app (no client entry point).
 | CommonJS development server bundle under a `type: module` app | Run |
 | Node Inspector attach, pauses, breakpoint, source map, and mapped stack | Run |
 
+### Focused root-ignore regressions
+
+`regressions/root-ignore.test.js` creates a minimal Rspack app and runs in the
+`regressions` CI group.
+
+| What is covered | Phase |
+|----------------|-------|
+| A root `test/` data directory does not hide generated `_build/test/` entry points ([#14514](https://github.com/meteor/meteor/issues/14514)) | Test once |
+| Explicit client `testModule` and eager server discovery each execute a named test with `1 passing`, without `--full-app` | Test once |
+
 ### tla
 
 Minimal top-level await fixture.
 
 | What is covered | Phase |
 |----------------|-------|
+| `meteor run` waits for macrotask top-level await before running `Meteor.startup` hooks ([#14806](https://github.com/meteor/meteor/issues/14806)) | Run |
 | `meteor test --full-app --once` waits for macrotask top-level await before running server app tests | Test once |
 | Exit-code-zero `0 passing` regression is rejected by explicit `1 passing` assertion | Test once |
 | Absolute project paths containing a `private` segment still discover eager tests ([#14688](https://github.com/meteor/meteor/issues/14688)) | Test once |
@@ -322,13 +391,13 @@ Tested via `skeleton.test.js` using `meteor create --<skeleton>`. Each skeleton 
 | chakra-ui | 3203 | JSX | React 19.2 dependencies; no body style checks (custom UI library) |
 | coffeescript | 3211 | CoffeeScript | React 19.2 dependencies |
 | full | 3204 | JS | `imports/api/` test structure; wildcard 404 route renders with no deprecation notice in the console (Run) |
-| pnpm | 3222 | JS + TypeScript workspace package | pnpm workspace root with Meteor at `apps/app`; default auto-install behavior with no explicit `autoInstallDeps`; root install via Corepack/bundled npx fallback; automatic pnpm bump of an outdated Rspack dependency; `workspace:*` linking; transitive pnpm-store resolution; local `link:` dependency validation without false warnings; nested app lifecycle; built-app boot; workspace dependencies preserved by reset |
+| pnpm | 3222 | JS + TypeScript workspace package | pnpm workspace root with Meteor at `apps/app`; default auto-install behavior with no explicit `autoInstallDeps`; root install via Corepack/bundled npx fallback; automatic pnpm bump of an outdated Rspack dependency; `workspace:*` linking; transitive pnpm-store resolution; local tarball dependency validation without false warnings; nested app lifecycle; built-app boot; workspace dependencies preserved by reset |
 | pwa | 3214, 3215 | JS | Manifest link + templated `manifest.webmanifest`; skeleton's own service worker controlling the page across reload (dev `/sw.js?dev=1`, prod `/sw.js`); prod app shell loads with the server down; a data fetch to a navigation-cached URL reaches the network instead of the cached page (PRECACHE-only fallback); manifest, worker and offline checks repeated under a path-prefixed `ROOT_URL` (`/app`, port 3215, production only: the dev boilerplate injects the Rspack client script unprefixed) |
 | react | 3205 | JSX | React 19.2 dependencies, automatic JSX runtime via `.swcrc`, custom body styles |
 | solid | 3206 | JS | |
 | svelte | 3207 | JS | |
 | tailwind | 3208 | JSX | React 19.2 dependencies; Tailwind `bg-gray-100` styles (dev + prod color formats) |
-| typescript | 3209 | TypeScript | React 19.2 dependencies and type definitions; TypeScript 7 native `tsgo` checker loading, diagnostic, and watch behavior |
+| typescript | 3209 | TypeScript | React 19.2 dependencies and type definitions; TypeScript 7 native `tsgo` diagnostics; TSX edits preserve React state, the browser document, and server PID while server edits restart and execute new code (Run) |
 | typescript-tailwind | 3221 | TypeScript | React 19.2 dependencies and type definitions; TypeScript 7, native `tsgo`, Tailwind 4, and PostCSS |
 | vue | 3210 | JS | |
 
@@ -337,6 +406,16 @@ Tested via `skeleton.test.js` using `meteor create --<skeleton>`. Each skeleton 
 ## NPM Package Compatibility
 
 Several apps import specific npm packages to verify that Meteor + Rspack handles different module formats and edge cases without errors. The app boots successfully only if these imports resolve correctly.
+
+### legacy (`apps/legacy/`)
+
+These dependencies are installed only in the temporary variant used by `regressions/architecture-entrypoints.test.js`.
+
+| Package | File | Reason |
+|---------|------|--------|
+| `ua-parser-js` | `imports/browser-info.ts` | Shared npm import in separate modern/legacy compilations with the reporter's `nodeModules.recompile` setting; browser output is checked with default Rspack configuration |
+| `@datadog/browser-rum` | `client/npm-modern.tsx`, `client/npm-legacy.ts` | Browser SDK and its transitive imports execute in both entrypoints without initializing telemetry; exposes missing helper imports after Meteor recompiles the legacy bundle. Its BigInt syntax is outside the fixture's ES5 checks |
+| `react` + `react-dom/client` | `client/npm-modern.tsx` | The built modern page renders React while the legacy program excludes React DOM and renders its own stub |
 
 ### react-router (`apps/react-router/server/main.js`)
 
@@ -399,7 +478,7 @@ Where each feature is tested across apps and skeletons.
 
 | Feature | Apps | Skeletons |
 |---------|------|-----------|
-| HMR (dev) | react, react-router, babel, coffeescript, vue, solid, svelte, monorepo, pnpm-monorepo, typescript | |
+| HMR (dev) | react, react-router, babel, coffeescript, vue, solid, svelte, monorepo, pnpm-monorepo, typescript | typescript |
 | HMR disabled (prod) | all apps with HMR | |
 | HMR incompatible | blaze, full-blaze | |
 | Custom rspack config | react (.cjs), react-router, babel (.mjs), monorepo (.cjs), typescript (.ts) | |
@@ -428,11 +507,13 @@ Where each feature is tested across apps and skeletons.
 | Custom package dirs | react-router | |
 | CoffeeScript compilation | coffeescript | coffeescript |
 | Server-only (no client) | server-only | |
+| Architecture-specific entrypoints and legacy application syntax/runtime | legacy | |
 | Rspack process cleanup | react | |
 | Server bundle excluded from Meteor linker payload | server-only regression | |
 | `Assets`/`Npm` server globals in the dev bundle | server-only regression | |
 | Delayed server Meteor package import | server-only regression | |
 | Monorepo layout | monorepo, pnpm-monorepo | pnpm |
+| Source-independent workspace executable links (POSIX) | workspace | |
 | Workspace-aware Rspack dependency auto-install | monorepo (npm, Yarn Classic) | pnpm |
 | pnpm workspace (`workspace:*` packages, `corepack pnpm install`) | pnpm-monorepo | pnpm |
 | Transitive npm dependency resolution (pnpm store) | pnpm-monorepo | pnpm |
@@ -445,10 +526,12 @@ Where each feature is tested across apps and skeletons.
 | Module rules override | babel | |
 | Custom NODE_ENV compilation | babel | |
 | Portable build (no isDev/isProd defines) | typescript | |
+| Source-map paths, contents, exact breakpoint/step/exception locations, lazy code, and rebuilds | source-maps | |
+| Modern, legacy, and Cordova web source maps in built output | source-maps | |
 | `Meteor.extendSwcConfig` (path aliases) | typescript | |
 | CSS auto-delegation (entry folder filtering) | vue | |
 | `meteor.modules` config (preserve files for Meteor) | react-router, vue | |
-| `meteor reset` cleanup | all apps | all skeletons |
+| `meteor reset` cleanup | apps using the shared lifecycle tests | all skeletons |
 | Skeleton creation | | all 16 tested skeletons |
 | Body style assertions | | react, tailwind (custom); most others (default) |
 | Custom .gitignore entries | react | |
@@ -471,3 +554,4 @@ Where each feature is tested across apps and skeletons.
 | `skipTestClient: true` test helper option | assets | |
 | Assets skipped by compiler source discovery (#14566) | assets | |
 | Boot built bundle (`node main.js`) to test assets | assets | |
+| Rspack static-file failures and bounded manifest state | assets | |

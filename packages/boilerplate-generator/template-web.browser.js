@@ -41,6 +41,7 @@ export const headTemplate = ({
 
 // Template function for rendering the boilerplate html for browsers
 export const closeTemplate = ({
+  arch,
   meteorRuntimeConfig,
   meteorRuntimeHash,
   rootUrlPathPrefix,
@@ -77,7 +78,9 @@ export const closeTemplate = ({
         src: rootUrlPathPrefix + pathname,
       })
   )),
-  process.env.METEOR_APP_CUSTOM_SCRIPT_URL ?
+  process.env.METEOR_APP_CUSTOM_SCRIPT_URL &&
+  (!process.env.METEOR_APP_CUSTOM_SCRIPT_ARCHS ||
+    JSON.parse(process.env.METEOR_APP_CUSTOM_SCRIPT_ARCHS).includes(arch)) ?
     template("  <script type=\"text/javascript\" src=\"<%- src %>\"></script>")({
       src: rootUrlPathPrefix + process.env.METEOR_APP_CUSTOM_SCRIPT_URL
     })

@@ -6,11 +6,10 @@
 // so a careless override can never blow up a consumer.
 
 const DEFAULTS = { maxDepth: 4, maxKeys: 32, maxStringLength: 200, maxArrayLength: 32 };
+const dateGetTime = Date.prototype.getTime;
+const dateToISOString = Date.prototype.toISOString;
 
 const truncate = (str, max) => (str.length > max ? str.slice(0, max) + '…' : str);
-// Strings only; a non-string (e.g. a numeric Meteor.Error code) passes through.
-const capString = (value, max) => (typeof value === 'string' ? truncate(value, max) : value);
-
 // Reading a property of an application error can itself throw (getters), and
 // the reply path must survive that: degrade to a marker, never propagate.
 function safeGet(obj, key) {
@@ -21,8 +20,25 @@ function safeGet(obj, key) {
   }
 }
 
+function previewErrorWithState(error, opts, depth, seen) {
+  if (depth >= opts.maxDepth) return '[Error]';
+  if (seen.has(error)) return '[Circular]';
+  seen.add(error);
+
+  const out = {
+    name: walk(safeGet(error, 'name'), opts, depth + 1, seen),
+    message: walk(safeGet(error, 'message'), opts, depth + 1, seen),
+  };
+  const code = safeGet(error, 'error');
+  if (code !== undefined) out.error = walk(code, opts, depth + 1, seen);
+  const reason = safeGet(error, 'reason');
+  if (reason !== undefined) out.reason = walk(reason, opts, depth + 1, seen);
+
+  seen.delete(error);
+  return out;
+}
+
 export function previewError(error) {
-  const max = DEFAULTS.maxStringLength;
   let isError;
   try {
     isError = error instanceof Error;
@@ -36,16 +52,9 @@ export function previewError(error) {
     } catch (_ignored) {
       str = '[unstringifiable value]';
     }
-    return { name: 'Error', message: truncate(str, max) };
+    return { name: 'Error', message: truncate(str, DEFAULTS.maxStringLength) };
   }
-  // message/reason/error are bounded just like any other captured string, so a
-  // huge Meteor.Error('code', hugeReason) can't smuggle an unbounded payload in.
-  const out = { name: capString(safeGet(error, 'name'), max), message: capString(safeGet(error, 'message'), max) };
-  const code = safeGet(error, 'error');
-  if (code !== undefined) out.error = capString(code, max);     // Meteor.Error code
-  const reason = safeGet(error, 'reason');
-  if (reason !== undefined) out.reason = capString(reason, max); // Meteor.Error reason
-  return out;
+  return previewErrorWithState(error, DEFAULTS, 0, new WeakSet());
 }
 
 function walk(value, opts, depth, seen) {
@@ -59,10 +68,14 @@ function walk(value, opts, depth, seen) {
   if (t === 'function') return `[Function ${truncate(String(value.name || 'anonymous'), 50)}]`;
   if (t === 'symbol') return truncate(value.toString(), opts.maxStringLength);
   if (t === 'bigint') return truncate(`${value}n`, opts.maxStringLength);
-  if (value instanceof Error) return previewError(value);
+  if (value instanceof Error) return previewErrorWithState(value, opts, depth, seen);
   if (value instanceof Date) {
-    const ms = value.getTime();
-    return Number.isNaN(ms) ? '[Invalid Date]' : value.toISOString();
+    try {
+      const ms = dateGetTime.call(value);
+      return Number.isNaN(ms) ? '[Invalid Date]' : dateToISOString.call(value);
+    } catch (_ignored) {
+      return '[Invalid Date]';
+    }
   }
 
   if (depth >= opts.maxDepth) return Array.isArray(value) ? '[Array]' : '[Object]';
@@ -71,8 +84,26 @@ function walk(value, opts, depth, seen) {
 
   let out;
   if (Array.isArray(value)) {
-    out = value.slice(0, opts.maxArrayLength).map((v) => walk(v, opts, depth + 1, seen));
-    if (value.length > opts.maxArrayLength) out.push(`… +${value.length - opts.maxArrayLength} more`);
+    let arrayLength;
+    try {
+      arrayLength = value.length;
+    } catch (_ignored) {
+      seen.delete(value);
+      return '[Array]';
+    }
+    out = [];
+    const previewLength = Math.min(arrayLength, opts.maxArrayLength);
+    for (let index = 0; index < previewLength; index += 1) {
+      let item;
+      try {
+        item = value[index];
+      } catch (_ignored) {
+        out[index] = '[Getter threw]';
+        continue;
+      }
+      out[index] = walk(item, opts, depth + 1, seen);
+    }
+    if (arrayLength > opts.maxArrayLength) out[previewLength] = `… +${arrayLength - opts.maxArrayLength} more`;
   } else {
     out = {};
     const keys = Object.keys(value);

@@ -65,7 +65,13 @@ jobs:
     needs: groups
     name: ${{ matrix.category }}
     runs-on: oss-vm
-    timeout-minutes: 60
+    # Budget both longer Regressions attempts and environment preparation.
+    timeout-minutes: ${{ matrix.group == 'regressions' && 110 || 60 }}
+    env:
+      # SWC's native addon cache rejects parents owned by another user.
+      # Actions mounts the host-owned /github/home into this root container.
+      # Keep materialized addons in a private namespace on its own filesystem.
+      SWC_NATIVE_BINDING_CACHE: /tmp/meteor-swc-native
     container:
       image: node:22-bookworm
       # --init runs tini as PID 1 so orphaned processes get reaped. Without it
@@ -105,6 +111,8 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@v6
+        with:
+          submodules: recursive
 
       - name: Cache dependencies
         id: deps-cache
@@ -147,7 +155,7 @@ jobs:
       - name: Run tests for ${{ matrix.category }}
         id: test-run
         continue-on-error: true
-        timeout-minutes: 20
+        timeout-minutes: ${{ matrix.group == 'regressions' && 40 || 20 }}
         run: METEOR_ALLOW_SUPERUSER=1 npm run test:e2e:group -- "${{ matrix.group }}"
 
       - name: Clean up before retry
@@ -167,7 +175,7 @@ jobs:
 
       - name: Retry failed tests for ${{ matrix.category }}
         if: steps.test-run.outcome == 'failure'
-        timeout-minutes: 25
+        timeout-minutes: ${{ matrix.group == 'regressions' && 45 || 25 }}
         run: |
           echo "::warning::First attempt failed, retrying..."
           METEOR_ALLOW_SUPERUSER=1 npm run test:e2e:group -- "${{ matrix.group }}"

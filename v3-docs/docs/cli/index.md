@@ -388,6 +388,10 @@ If you run `meteor create` without arguments, Meteor will launch an interactive 
  | `--babel`        | React with Babel support | - |
 | `--angular`      | Angular + Typescript    | - |
 
+The TypeScript, TypeScript + Tailwind, Svelte, and Angular templates use
+[native Meteor package declarations](/cli/using-core-types) by default.
+`meteor create` generates `.meteor/types/` so editor types are ready immediately.
+
 ### Project Structure Options
 
 | Option | Description |
@@ -923,6 +927,20 @@ meteor deploy your-app.meteorapp.com
 | `--deploy-polling-timeout <ms>` | Time to wait for build/deploy (defaults to 15 minutes) |
 | `--no-wait` | Exit after code upload instead of waiting for deploy to complete |
 
+### Deploy Region
+
+`meteor deploy` finds the app's region by requesting `https://<site>/.well-known/meteor/deploy-url`, or the same address over HTTP when the site has no certificate yet. It only accepts a deploy server on Galaxy's deploy domain, `galaxy-deploy.meteor.com` (for example `eu-west-1.galaxy-deploy.meteor.com`). If the lookup gets no answer, the `us-east-1` region is used.
+
+To choose a region yourself, or to use any other deploy server, set `DEPLOY_HOSTNAME`:
+
+```bash
+DEPLOY_HOSTNAME=eu-west-1.galaxy-deploy.meteor.com meteor deploy your-app.com
+```
+
+::: warning
+The deploy server receives your Meteor account credentials, so only set `DEPLOY_HOSTNAME` to a server you trust.
+:::
+
 ### Free Deployment
 
 Deploy a free app with MongoDB using:
@@ -994,6 +1012,8 @@ This is necessary because the database provider doesn't have certificates instal
 ## meteor update
 
 Updates your Meteor application while maintaining compatibility.
+
+Before updating to Meteor 3.6 with an existing local database, follow the [MongoDB 7 to 8 preparation steps](/about/install#updating-local-database). Prepare the database while it is still running under the previous release.
 
 **Usage:**
 ```bash

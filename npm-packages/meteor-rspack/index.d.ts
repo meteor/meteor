@@ -18,6 +18,10 @@ type MeteorEnv = Record<string, any> & {
   isProduction: boolean;
   isClient: boolean;
   isServer: boolean;
+  /** Explicit client architecture, e.g. web.browser.legacy or web.cordova. */
+  arch?: string;
+  /** Whether this client compilation uses legacy (ES5) targets. */
+  isLegacy: boolean;
   isTest: boolean;
   isDebug: boolean;
   isRun: boolean;

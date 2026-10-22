@@ -1,16 +1,10 @@
 #!/usr/bin/env node
 
 /**
- * Links the local npm-packages/meteor-rspack into a Meteor app so it runs
- * against the latest dev version.
- *
- * Install the local package's dependencies and matching Rspack peers before
- * linking it into the app. pnpm's local directory links do not install the
- * linked package's dependencies, so this is required on a fresh checkout.
- * Then install the local package into the app before asking Meteor to sync
- * npm dependencies. This keeps pre-publication version bumps testable without
- * attempting to download the not-yet-published package from the registry.
- *
+ * Installs a tarball of the local npm-packages/meteor-rspack into a Meteor app.
+ * This exercises the published package layout: a repository symlink resolves
+ * app-owned plugins from the checkout instead of the app's dependency tree.
+ * Install before syncing dependencies so unpublished versions remain testable.
  */
 
 const path = require('path');
@@ -87,50 +81,41 @@ async function linkLocalRspack(appDir, { env, packageManager } = {}) {
     rsdoctorRspackPluginVersion,
   } = readRspackVersions();
 
-  if (rspackVersion) {
-    console.log(
-      `Installing local meteor-rspack dependencies with @rspack/core@${rspackVersion}, @rspack/cli@${rspackVersion}` +
-      `${rspackDevServerVersion ? `, and @rspack/dev-server@${rspackDevServerVersion}` : ''}...`
-    );
-    await execa(
-      'npm',
-      [
-        'install',
-        `@rspack/core@${rspackVersion}`,
-        `@rspack/cli@${rspackVersion}`,
-        ...(rspackDevServerVersion
-          ? [`@rspack/dev-server@${rspackDevServerVersion}`]
-          : []),
-        '--no-save',
-        '--no-package-lock',
-      ],
-      { cwd: RSPACK_PACKAGE_DIR, ...execOpts }
-    );
-  }
+  // Keep the tarball with the disposable app for later dependency installs.
+  // It must survive `meteor reset` and retry cleanup of .meteor/local.
+  const packDir = path.join(appDir, '.e2e-rspack');
+  fs.mkdirSync(packDir, { recursive: true });
+  const { stdout } = await execa(
+    'npm',
+    ['pack', RSPACK_PACKAGE_DIR, '--json', '--pack-destination', packDir],
+    { cwd: appDir, ...execOpts }
+  );
+  const [{ filename }] = JSON.parse(stdout);
+  const packageTarball = path.join(packDir, filename);
 
   if (pnpmProject) {
     const deps = [
       'ignore-loader',
-      RSPACK_PACKAGE_DIR,
+      packageTarball,
       rspackVersion && `@rspack/core@${rspackVersion}`,
       rspackVersion && `@rspack/cli@${rspackVersion}`,
       rspackDevServerVersion && `@rspack/dev-server@${rspackDevServerVersion}`,
       rsdoctorRspackPluginVersion && `@rsdoctor/rspack-plugin@${rsdoctorRspackPluginVersion}`,
     ].filter(Boolean);
 
-    console.log(`Installing/linking local meteor-rspack with pnpm in ${appDir}...`);
+    console.log(`Installing packed local meteor-rspack with pnpm in ${appDir}...`);
     await execa('corepack', ['pnpm', 'add', '-D', ...deps], {
       cwd: appDir,
       stdio: 'inherit',
       ...execOpts,
     });
 
-    console.log('Local meteor-rspack linked successfully.');
+    console.log('Local meteor-rspack installed successfully.');
     return;
   }
 
-  console.log(`Installing local meteor-rspack from ${RSPACK_PACKAGE_DIR}...`);
-  await execa('npm', ['install', '--save-dev', RSPACK_PACKAGE_DIR], {
+  console.log(`Installing local meteor-rspack from ${packageTarball}...`);
+  await execa('npm', ['install', '--save-dev', packageTarball], {
     cwd: appDir,
     ...execOpts,
   });
@@ -145,7 +130,7 @@ async function linkLocalRspack(appDir, { env, packageManager } = {}) {
   console.log('Installing ignore-loader in the app...');
   await execa('npm', ['install', 'ignore-loader', '--save'], { cwd: appDir });
 
-  console.log('Local meteor-rspack linked successfully.');
+  console.log('Local meteor-rspack installed successfully.');
 }
 
 module.exports = { linkLocalRspack, REPO_ROOT, METEOR_EXECUTABLE, RSPACK_PACKAGE_DIR };

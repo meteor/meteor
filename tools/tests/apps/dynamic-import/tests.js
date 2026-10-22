@@ -14,6 +14,13 @@ function assertDeepEqual(a, b) {
 describe("dynamic import(...)", function () {
   maybeClearDynamicImportCache();
 
+  function fetchDynamicImport(body) {
+    const url = Meteor.absoluteUrl("/__meteor__/dynamic-import/fetch", {
+      replaceLocalhost: true
+    });
+    return fetch(url, { method: "POST", body });
+  }
+
   it("ignores bad __meteor__/dynamic-import/fetch requests (#10147)", function () {
     // using localhost gives an issue on Windows
     // https://github.com/node-fetch/node-fetch/issues/1624
@@ -33,6 +40,108 @@ describe("dynamic import(...)", function () {
         assert.strictEqual(await res.json(), "Unexpected end of JSON input");
       }
     });
+  });
+
+  it("rejects oversized dynamic-import request bodies", async function () {
+    const body = JSON.stringify({
+      module: "x".repeat(1024 * 1024)
+    });
+    if (Meteor.isServer) {
+      // A 413 sent before node-fetch finishes writing the large body causes
+      // that client to report EPIPE. Send only the oversized Content-Length to
+      // verify that the app rejects the request before reading its body.
+      const url = new URL(Meteor.absoluteUrl(
+        "/__meteor__/dynamic-import/fetch"
+      ));
+      url.protocol = "http:";
+      url.hostname = "127.0.0.1";
+      url.port = process.env.PORT;
+
+      const status = await new Promise((resolve, reject) => {
+        const request = require("http").request(url, {
+          method: "POST",
+          headers: { "Content-Length": body.length }
+        }, response => {
+          response.resume();
+          response.on("end", () => resolve(response.statusCode));
+          response.on("error", reject);
+        });
+        request.on("error", reject);
+        request.end();
+      });
+      assert.strictEqual(status, 413);
+    } else {
+      const response = await fetchDynamicImport(body);
+      assert.strictEqual(response.status, 413);
+    }
+  });
+
+  it("rejects excessive dynamic-import tree depth and width", async function () {
+    if (Meteor.isClient) {
+      this.timeout(10000);
+    }
+
+    let deepTree = 1;
+    for (let depth = 0; depth < 65; depth += 1) {
+      deepTree = { module: deepTree };
+    }
+
+    const wideTree = {};
+    for (let index = 0; index < 1001; index += 1) {
+      wideTree[`module-${index}`] = 1;
+    }
+
+    const deepResponse = await fetchDynamicImport(JSON.stringify(deepTree));
+    const wideResponse = await fetchDynamicImport(JSON.stringify(wideTree));
+    assert.strictEqual(deepResponse.status, 400);
+    assert.strictEqual(wideResponse.status, 400);
+  });
+
+  it("rejects invalid dynamic-import leaves and path components", async function () {
+    const invalidLeaf = await fetchDynamicImport(JSON.stringify({
+      module: true
+    }));
+    const parentTraversal = await fetchDynamicImport(JSON.stringify({
+      "..": 1
+    }));
+    const embeddedSeparator = await fetchDynamicImport(JSON.stringify({
+      "directory/module": 1
+    }));
+
+    assert.strictEqual(invalidLeaf.status, 400);
+    assert.strictEqual(parentTraversal.status, 400);
+    assert.strictEqual(embeddedSeparator.status, 400);
+  });
+
+  it("bounds reads and logs for unreadable dynamic-import paths", async function () {
+    if (! Meteor.isServer) {
+      return;
+    }
+
+    const missingTree = {};
+    for (let folder = 0; folder < 10; folder += 1) {
+      const modules = missingTree[`missing-${folder}`] = {};
+      for (let index = 0; index < 998; index += 1) {
+        modules[`module-${index}.js`] = 1;
+      }
+    }
+
+    const originalError = console.error;
+    const errors = [];
+    console.error = (...args) => errors.push(args.join(" "));
+    try {
+      const response = await fetchDynamicImport(JSON.stringify(missingTree));
+      assert.strictEqual(response.status, 200);
+      assert.strictEqual(await response.json(), null);
+    } finally {
+      console.error = originalError;
+    }
+
+    const readErrors = errors.filter(line => line.includes("ENOENT"));
+    assert.strictEqual(readErrors.length, 1);
+    assert.ok(readErrors[0].includes(
+      "failed to read 100 requested module(s) and skipped 9880 more"
+    ));
   });
 
   it("import same module both statically and dynamically", function () {

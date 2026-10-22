@@ -1,6 +1,83 @@
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 
+selftest.define("entry module environment overrides preserve architectures", async function () {
+  const files = require('../fs/files');
+  const { MeteorConfig } = require('../project-context');
+  const { getMeteorConfig, setMeteorConfig } = require('../tool-env/meteor-config');
+  const appDirectory = files.mkdtemp('app-config-overrides');
+  const originalConfig = getMeteorConfig();
+  const envNames = [
+    'METEOR_CONFIG_CLIENT', 'METEOR_CONFIG_SERVER', 'METEOR_CONFIG_TEST',
+    'METEOR_CONFIG_TEST_CLIENT', 'METEOR_CONFIG_TEST_SERVER',
+    'METEOR_CONFIG_MAIN_MODULE', 'METEOR_CONFIG_TEST_MODULE',
+  ];
+  const originalEnv = Object.fromEntries(envNames.map(name => [name, process.env[name]]));
+  const mainModule = {
+    client: 'client.js',
+    server: 'server.js',
+    legacy: 'legacy.js',
+    'web.cordova': false,
+  };
+  const testModule = {
+    client: 'client-tests.js',
+    server: 'server-tests.js',
+    legacy: 'legacy-tests.js',
+    'web.cordova': false,
+  };
+
+  try {
+    files.writeFile(files.pathJoin(appDirectory, 'package.json'), JSON.stringify({
+      meteor: { mainModule, testModule },
+    }));
+
+    for (const overrides of [
+      {},
+      { METEOR_CONFIG_CLIENT: 'rspack-client.js' },
+      { METEOR_CONFIG_SERVER: 'rspack-server.js' },
+      { METEOR_CONFIG_TEST_CLIENT: 'rspack-tests.js' },
+      { METEOR_CONFIG_TEST_SERVER: 'rspack-tests.js' },
+      {
+        METEOR_CONFIG_MAIN_MODULE: JSON.stringify({
+          legacy: 'compiled-legacy.js', 'web.cordova': 'compiled-cordova.js',
+        }),
+        METEOR_CONFIG_TEST_MODULE: JSON.stringify({ legacy: false }),
+      },
+      {
+        METEOR_CONFIG_CLIENT: 'rspack-client.js',
+        METEOR_CONFIG_SERVER: 'rspack-server.js',
+        METEOR_CONFIG_TEST_CLIENT: 'rspack-client-tests.js',
+        METEOR_CONFIG_TEST_SERVER: 'rspack-server-tests.js',
+      },
+    ]) {
+      envNames.forEach(name => delete process.env[name]);
+      Object.assign(process.env, overrides);
+      const mainOverrides = JSON.parse(overrides.METEOR_CONFIG_MAIN_MODULE || '{}');
+      const testOverrides = JSON.parse(overrides.METEOR_CONFIG_TEST_MODULE || '{}');
+      const config = new MeteorConfig({ appDirectory });
+      await selftest.expectEqual(config.getMainModulesByArch(), {
+        web: overrides.METEOR_CONFIG_CLIENT || mainModule.client,
+        os: overrides.METEOR_CONFIG_SERVER || mainModule.server,
+        'web.browser.legacy': mainOverrides.legacy ?? mainModule.legacy,
+        'web.cordova': mainOverrides['web.cordova'] ?? false,
+      });
+      await selftest.expectEqual(config.getTestModulesByArch(), {
+        web: overrides.METEOR_CONFIG_TEST_CLIENT || testModule.client,
+        os: overrides.METEOR_CONFIG_TEST_SERVER || testModule.server,
+        'web.browser.legacy': testOverrides.legacy ?? testModule.legacy,
+        'web.cordova': false,
+      });
+    }
+  } finally {
+    for (const [name, value] of Object.entries(originalEnv)) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+    setMeteorConfig(originalConfig);
+    files.rm_recursive(appDirectory);
+  }
+});
+
 selftest.define("mainModule", async function () {
   const s = new Sandbox();
   await s.init();
