@@ -397,7 +397,7 @@ Tested via `skeleton.test.js` using `meteor create --<skeleton>`. Each skeleton 
 | solid | 3206 | JS | |
 | svelte | 3207 | JS | |
 | tailwind | 3208 | JSX | React 19.2 dependencies; Tailwind `bg-gray-100` styles (dev + prod color formats) |
-| typescript | 3209 | TypeScript | React 19.2 dependencies and type definitions; TypeScript 7 native `tsgo` diagnostics; TSX edits preserve React state, the browser document, and server PID while server edits restart and execute new code (Run) |
+| typescript | 3209 | TypeScript | React 19.2 dependencies and type definitions; TypeScript 7 native `tsgo` diagnostics; TSX edits preserve React state, the browser document, and server PID while server edits restart and execute new code (Run); installs the packed npm candidate for this unpublished output-tracker regression, including in the release lane; the TypeScript app fixture retains published-package coverage |
 | typescript-tailwind | 3221 | TypeScript | React 19.2 dependencies and type definitions; TypeScript 7, native `tsgo`, Tailwind 4, and PostCSS |
 | vue | 3210 | JS | |
 

@@ -711,6 +711,9 @@ describe('Meteor Skeletons /', () => {
     testMeteorSkeleton({
       skeletonName: 'typescript',
       port: 3209,
+      // The tsgo HMR regression exercises the candidate's output tracker.
+      // typescript.test.js retains the published-package release lane.
+      forceLocalRspack: true,
       filePaths: {
         client: 'client/main.tsx',
         server: 'server/main.ts',

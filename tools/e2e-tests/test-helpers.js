@@ -62,8 +62,9 @@ const SETUP_HOOK_TIMEOUT_MS = isCI ? 600_000 : 300_000;
 const { linkLocalRspack: _linkLocalRspack } = require('./scripts/link-rspack');
 
 export async function linkLocalRspack(appDir, options = {}) {
-  if (!npmLinkLocalRspack) return;
-  await _linkLocalRspack(appDir, options);
+  const { forceLocal = false, ...installOptions } = options;
+  if (!npmLinkLocalRspack && !forceLocal) return;
+  await _linkLocalRspack(appDir, installOptions);
 }
 
 export async function setupMeteorRspackApp({
@@ -341,6 +342,15 @@ export function testMeteorRspackBundler(options) {
 
       // Install packed local meteor-rspack so the app picks up the latest dev version
       await linkLocalRspack(appDir, { packageManager });
+
+      // Manual-install fixtures still need their build dependencies when the
+      // release lane uses the published package instead of our local tarball.
+      const packageJson = await fs.readJson(path.join(appDir, 'package.json'));
+      if (!npmLinkLocalRspack && packageJson.meteor?.autoInstallDeps === false) {
+        await runMeteorCommand('update', ['--npm'], appDir, {
+          checkExitCode: true,
+        });
+      }
 
       // Set meteor.modern.verbose to true
       if (verbose) {
@@ -1064,6 +1074,7 @@ export function testMeteorRspackBundler(options) {
  * @param {boolean} options.checkAppTitle - Whether to check the Meteor app title (default: true)
  * @param {Object} options.bodyStyles - Expected CSS styles for the body
  * @param {boolean} options.skipTestClient - Whether to skip client-side tests (default: false)
+ * @param {boolean} options.forceLocalRspack - Test an unpublished Rspack regression with the packed candidate, including on release branches
  * @param {string[]} options.checkBundleFilePaths - Array of file paths to check for existence in the bundle
  * @param {Function} options.beforeAllBehavior - Additional behavior to run in beforeAll
  * @param {Function} options.afterAllBehavior - Additional behavior to run in afterAll
@@ -1076,6 +1087,7 @@ export function testMeteorSkeleton(options) {
     port,
     meteorAppPath = ".",
     packageManager = "npm",
+    forceLocalRspack = false,
     // Rspack dev server port. Defaults to 18080 to avoid colliding with dev servers
     // that some skeletons bundle on :8080 (e.g. Angular CLI's webpack-dev-server).
     devServerPort = 18080,
@@ -1215,7 +1227,7 @@ export function testMeteorSkeleton(options) {
       expect(packageJsonExists).toBe(true);
 
       // Install packed local meteor-rspack so the app picks up the latest dev version
-      await linkLocalRspack(appDir, { packageManager });
+      await linkLocalRspack(appDir, { packageManager, forceLocal: forceLocalRspack });
 
       // Run custom assertions if provided
       if (customAssertions.afterCreate) {
@@ -1321,7 +1333,7 @@ export function testMeteorSkeleton(options) {
           stdio: "inherit"
         });
       }
-      await linkLocalRspack(appDir, { packageManager });
+      await linkLocalRspack(appDir, { packageManager, forceLocal: forceLocalRspack });
 
       // Run tests once for the app
       const result = await runMeteorTests(appDir, port, {
