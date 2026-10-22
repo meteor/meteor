@@ -18,3 +18,9 @@ Package.onUse(function(api) {
 
   api.export('Autoupdate');
 });
+
+Package.onTest(function(api) {
+  api.use(['ecmascript', 'tinytest']);
+  api.use('autoupdate');
+  api.addFiles('autoupdate_client_tests.js', 'client');
+});
