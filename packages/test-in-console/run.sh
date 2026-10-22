@@ -27,6 +27,9 @@ export METEOR_PACKAGE_DIRS='packages/deprecated'
 exec 3< <(./meteor test-packages --driver-package test-in-console --extra-packages jquery -p "$TEST_PORT" --exclude "${TEST_PACKAGES_EXCLUDE:-}" $1)
 EXEC_PID=$!
 cleanup() {
+  if [ -n "${LOG_PID:-}" ]; then
+    kill "$LOG_PID" 2>/dev/null || true
+  fi
   pkill -TERM -P "$EXEC_PID" 2>/dev/null || true
   kill "$EXEC_PID" 2>/dev/null || true
 }
@@ -47,6 +50,11 @@ if [ "$READY" != true ]; then
   echo "Meteor exited before the test driver became ready" >&2
   exit 1
 fi
+
+# Keep draining server output after readiness. Otherwise a verbose test suite
+# can fill this pipe and block the server while the browser waits for it.
+cat <&3 &
+LOG_PID=$!
 
 # The driver can announce readiness before the HTTP port is bound.
 echo "Waiting for test server at $URL..."
