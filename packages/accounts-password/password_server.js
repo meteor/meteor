@@ -310,19 +310,72 @@ const passwordValidator = Match.OneOf(
 //
 // Note that neither password option is secure without SSL.
 //
-Accounts.registerLoginHandler("password", async options => {
+/** An invalid context is dropped. `localStorage.getItem` returns null when nothing is stored. */
+const clientContextOrNull = value =>
+  Accounts._isValid2faClientContext?.(value) ? value : null;
+
+/**
+ * Ask accounts-2fa to enforce the second factor. Falls back to the historical
+ * synchronous check when an older accounts-2fa (without `_enforce2faOnLogin`) is installed.
+ * The fallback throws. The new path returns a Meteor.Error so the caller can keep `userId`,
+ * but only after the app opts in. Otherwise the error is thrown, as before.
+ */
+const enforceSecondFactor = async (user, code, method, context) => {
+  if (Accounts._enforce2faOnLogin) {
+    const twoFactorError = await Accounts._enforce2faOnLogin({ user, code, method, context });
+    if (twoFactorError && !Accounts._2faPolicyOptedIn?.()) {
+      throw twoFactorError;
+    }
+    return twoFactorError;
+  }
+  if (!Accounts._check2faEnabled?.(user)) {
+    return undefined;
+  }
+  if (!code) {
+    Accounts._handleError('2FA code must be informed', true, 'no-2fa-code');
+  }
+  if (
+    !Accounts._isTokenValid(
+      user.services.twoFactorAuthentication.secret,
+      code
+    )
+  ) {
+    Accounts._handleError('Invalid 2FA code', true, 'invalid-2fa-code');
+  }
+  return undefined;
+};
+
+const secondFactorBlocksSession = async (user, connection, loginMethod) => {
+  if (Accounts._is2faRequired) {
+    const decision = await Accounts._is2faRequired(user, {
+      loginMethod,
+      connection,
+      clientContext: null,
+    });
+    return decision.required;
+  }
+  return !!Accounts._check2faEnabled?.(user);
+};
+
+Accounts.registerLoginHandler("password", async function (options) {
   if (!options.password)
     return undefined; // don't handle
 
   check(options, {
     user: Accounts._userQueryValidator,
     password: passwordValidator,
-    code: Match.Optional(Match.NonEmptyString),
+    code: Match.Optional(Match.Where(value => {
+      const pattern = Accounts._2faCodeMatch || Match.NonEmptyString;
+      return Match.test(value, pattern);
+    })),
+    twoFactorMethod: Match.Optional(Match.OneOf('otp', 'email')),
+    twoFactorContext: Match.Optional(Match.Any),
   });
 
 
   const user = await Accounts._findUserByQuery(options.user, {fields: {
     services: 1,
+    emails: 1,
     ...Accounts._checkPasswordUserFields,
   }});
   if (!user) {
@@ -334,22 +387,22 @@ Accounts.registerLoginHandler("password", async options => {
   }
 
   const result = await checkPasswordAsync(user, options.password);
-  // This method is added by the package accounts-2fa
-  // First the login is validated, then the code situation is checked
-  if (
-    !result.error &&
-    Accounts._check2faEnabled?.(user)
-  ) {
-    if (!options.code) {
-      Accounts._handleError('2FA code must be informed', true, 'no-2fa-code');
-    }
-    if (
-      !Accounts._isTokenValid(
-        user.services.twoFactorAuthentication.secret,
-        options.code
-      )
-    ) {
-      Accounts._handleError('Invalid 2FA code', true, 'invalid-2fa-code');
+  // Once the app opts in, returning { userId, error } (instead of throwing) lets
+  // validateLoginAttempt see the user, so an account lockout still applies
+  // during the second factor. Without an opt-in, enforceSecondFactor throws.
+  if (!result.error) {
+    const twoFactorError = await enforceSecondFactor(
+      user,
+      options.code,
+      options.twoFactorMethod,
+      {
+        loginMethod: 'password',
+        connection: this.connection,
+        clientContext: clientContextOrNull(options.twoFactorContext),
+      }
+    );
+    if (twoFactorError) {
+      result.error = twoFactorError;
     }
   }
 
@@ -859,7 +912,11 @@ Meteor.methods(
             // password should invalidate existing sessions).
             await Accounts._clearAllLoginTokens(user._id);
 
-            if (Accounts._check2faEnabled?.(user)) {
+            if (await secondFactorBlocksSession(
+              user,
+              this.connection,
+              isEnroll ? 'enrollAccount' : 'resetPassword'
+            )) {
               return {
                 userId: user._id,
                 error: Accounts._handleError(
@@ -971,16 +1028,17 @@ Meteor.methods(
               $pull: { 'services.email.verificationTokens': { address: tokenRecord.address } }
             });
 
-          if (Accounts._check2faEnabled?.(user)) {
-        return {
-          userId: user._id,
-          error: Accounts._handleError(
-            'Email verified, but user not logged in because 2FA is enabled',
-            false,
-            '2fa-enabled'
-          ),
-        };
-      }return { userId: user._id };
+          if (await secondFactorBlocksSession(user, this.connection, 'verifyEmail')) {
+            return {
+              userId: user._id,
+              error: Accounts._handleError(
+                'Email verified, but user not logged in because 2FA is enabled',
+                false,
+                '2fa-enabled'
+              ),
+            };
+          }
+          return { userId: user._id };
         }
       );
     }
