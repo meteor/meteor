@@ -16,6 +16,7 @@ Meteor = {
   isClient: false,
   isServer: true,
   isCordova: false,
+  isTauri: false,
   // Server code runs in Node 8+, which is decidedly "modern" by any
   // reasonable definition.
   isModern: true
