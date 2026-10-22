@@ -411,7 +411,7 @@ against the nested `apps/app` project. The root `start` and `test` scripts route
 to that application; `meteor npm` is only used above to invoke the root script.
 
 ::: warning Prototype Mode
-The `--prototype` option adds packages that make development faster but shouldn't be used in production. See the [security checklist](/tutorials/security/security#checklist).
+The `--prototype` option adds packages that make development faster but shouldn't be used in production. See the [security checklist](/tutorials/security/security#security-checklist).
 :::
 
 ### Included Packages
