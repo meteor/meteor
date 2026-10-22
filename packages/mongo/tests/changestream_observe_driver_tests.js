@@ -3113,6 +3113,59 @@ const fenceKey = (collectionName, connection) =>
   `${(connection || defaultMongo())._csConnectionId}\u0000${collectionName}`;
 
 Tinytest.addAsync(
+  'changestream - queued fence commits do not deadlock the multiplexer (#14564)',
+  async function (test) {
+    const c = makeCollection();
+    const handle = await c.find({}).observeChanges({ added: function () { } });
+    test.isTrue(isChangeStreamDriver(handle));
+
+    const driver = handle._multiplexer._observeDriver;
+    const originalMultiplexer = driver._multiplexer;
+    const queue = new Meteor._AsynchronousQueue();
+    const isolatedMultiplexer = {
+      onFlush: async callback => {
+        await queue.runTask(async () => {
+          await callback();
+        });
+      },
+    };
+    let reentrantFlushCompleted = false;
+
+    driver._multiplexer = isolatedMultiplexer;
+
+    try {
+      driver._writesToCommitWhenReady.push({
+        committed: async () => {
+          await isolatedMultiplexer.onFlush(() => {
+            reentrantFlushCompleted = true;
+          });
+        },
+      });
+
+      const flushResult = await Promise.race([
+        driver._flushWritesToCommit().then(() => 'resolved'),
+        new Promise(resolve =>
+          Meteor.setTimeout(() => resolve('timed-out'), 500)
+        ),
+      ]);
+
+      test.equal(
+        flushResult,
+        'resolved',
+        'committing a fence write must not hold the multiplexer queue'
+      );
+      test.isTrue(
+        await waitFor(() => reentrantFlushCompleted, 1000),
+        'the fence callback must be able to re-enter the multiplexer queue'
+      );
+    } finally {
+      driver._multiplexer = originalMultiplexer;
+      await handle.stop();
+    }
+  }
+);
+
+Tinytest.addAsync(
   'changestream - insertAsync annotates fence with per-collection ts',
   async function (test) {
     const c = makeCollection();
