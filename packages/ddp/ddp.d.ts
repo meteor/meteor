@@ -28,6 +28,9 @@ export namespace DDP {
   }
 
   function connect(url: string): DDPStatic;
+
+  declare const _CurrentMethodInvocation: Meteor.EnvironmentVariable<DDPCommon.MethodInvocation>;
+  declare const _CurrentPublicationInvocation: Meteor.EnvironmentVariable<DDPCommon.MethodInvocation>;
 }
 
 export namespace DDPCommon {
