@@ -6,6 +6,7 @@ name: Lint workflows
 # catches duplicate keys and other structural/parse errors before merge.
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - '.github/workflows/**'
@@ -33,7 +34,7 @@ jobs:
           curl -sSfL -o actionlint.tar.gz \
             "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
           tar -xzf actionlint.tar.gz actionlint
-          # shellcheck/pyflakes are disabled on purpose: this guard's job is to catch
+          # Shell/Python style checks are disabled: this guard's job is to catch
           # structural/parse errors that make GitHub dispatch 0 jobs (duplicate keys,
           # invalid YAML), not run-script style. The pre-existing-issue baseline lives
           # in .github/actionlint.yaml (paths.ignore) so this stays green on devel.

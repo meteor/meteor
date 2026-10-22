@@ -39,7 +39,7 @@ jobs:
   test:
     runs-on: windows-2019-meteor
     concurrency:
-      group: ${{ github.event_name == 'workflow_dispatch' && format('manual-{0}', github.ref_name) || github.head_ref }}-meteor-selftest-windows
+      group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: true
 
     steps:
@@ -57,7 +57,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24.x
+          node-version: 24.22.1
 
       - name: Cache dependencies
         id: meteor-cache
