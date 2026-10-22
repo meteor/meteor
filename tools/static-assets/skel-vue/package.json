@@ -28,7 +28,7 @@
     "@types/meteor": "^2.9.7",
     "@tailwindcss/vite": "^4.1.11",
     "@vitejs/plugin-vue": "^5.2.1",
-    "meteor-vite": "^3.2.1",
+    "meteor-vite": "3.8.0",
     "tailwindcss": "^4.1.11",
     "vite": "^6.0.11"
   }
