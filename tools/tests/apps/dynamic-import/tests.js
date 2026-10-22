@@ -77,6 +77,11 @@ describe("dynamic import(...)", function () {
   });
 
   it("rejects excessive dynamic-import tree depth and width", async function () {
+    if (Meteor.isClient) {
+      // Two sequential HTTP requests can exceed Mocha's 2s default on Windows CI.
+      this.timeout(10000);
+    }
+
     let deepTree = 1;
     for (let depth = 0; depth < 65; depth += 1) {
       deepTree = { module: deepTree };

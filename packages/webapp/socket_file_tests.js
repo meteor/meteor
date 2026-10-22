@@ -57,7 +57,16 @@ const getWritableGroupName = () => {
     process.getgroups().forEach((groupId) => gidsToTry.add(groupId));
   }
 
-  return getCurrentGroupName() || 'root';
+  for (const groupId of gidsToTry) {
+    const groupName = getGroupNameForGid(groupId);
+    if (groupName) {
+      return groupName;
+    }
+  }
+
+  if (Boolean(process.env.TRAVIS)) return 'travis';
+  if (isMacOS()) return 'staff';
+  return uid === 0 ? 'root' : null;
 };
 
 const removeTestSocketFile = () => {

@@ -1149,11 +1149,12 @@ export function testMeteorSkeleton(options) {
     });
 
     test(`"meteor test --once" / should run tests once for the ${skeletonName} app`, async () => {
-      // Install playwright as a dev dependency
-      console.log("Installing playwright as a dev dependency...");
+      // Reuse the browser binaries installed for the E2E runner.
+      const playwrightVersion = require('playwright/package.json').version;
+      console.log(`Installing playwright@${playwrightVersion} as a dev dependency...`);
       const repoRoot = path.resolve(process.cwd(), "..", "..");
       const meteorBin = path.join(repoRoot, "meteor");
-      await execa.command(`${meteorBin} npm i --save-dev playwright`, {
+      await execa.command(`${meteorBin} npm i --save-dev playwright@${playwrightVersion}`, {
         cwd: tempDir,
         stdio: "inherit",
         shell: true
