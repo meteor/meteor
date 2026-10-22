@@ -245,7 +245,7 @@
     // Wrap code that reassigns argument variables in a separate function than
     // the one that accesses `arguments.length` to avoid a perf hit. (#1991)
     var reducer = function(obj, iteratee, memo, initial) {
-      var keys = !isArrayLike(obj) && _.keys(obj),
+      var keys = !looksLikeArray(obj) && _.keys(obj),
         length = (keys || obj).length,
         index = dir > 0 ? 0 : length - 1;
       if (!initial) {
@@ -274,7 +274,7 @@
 
   // Return the first value which passes a truth test. Aliased as `detect`.
   _.find = _.detect = function(obj, predicate, context) {
-    var keyFinder = isArrayLike(obj) ? _.findIndex : _.findKey;
+    var keyFinder = looksLikeArray(obj) ? _.findIndex : _.findKey;
     var key = keyFinder(obj, predicate, context);
     if (key !== void 0 && key !== -1) return obj[key];
   };
@@ -398,7 +398,7 @@
     var result = Infinity, lastComputed = Infinity,
       value, computed;
     if (iteratee == null || typeof iteratee == 'number' && typeof obj[0] != 'object' && obj != null) {
-      obj = isArrayLike(obj) ? obj : _.values(obj);
+      obj = looksLikeArray(obj) ? obj : _.values(obj);
       for (var i = 0, length = obj.length; i < length; i++) {
         value = obj[i];
         if (value != null && value < result) {
@@ -432,7 +432,7 @@
       if (!looksLikeArray(obj)) obj = _.values(obj);
       return obj[_.random(obj.length - 1)];
     }
-    var sample = isArrayLike(obj) ? _.clone(obj) : _.values(obj);
+    var sample = looksLikeArray(obj) ? slice.call(obj) : _.values(obj);
     var length = getLength(sample);
     n = Math.max(Math.min(n, length), 0);
     var last = length - 1;
@@ -610,11 +610,11 @@
     var seen = [];
     for (var i = 0, length = array.length; i < length; i++) {
       var value = array[i];
+      var computed = iteratee ? iteratee(value, i, array) : value;
       if (isSorted && !iteratee) {
         if (!i || seen !== computed) result.push(value);
         seen = computed;
       } else if (iteratee) {
-        var computed = iteratee(value, i, array);
         if (_.indexOf(seen, computed) < 0) {
           seen.push(computed);
           result.push(value);
@@ -1585,9 +1585,9 @@
   // JavaScript micro-templating, similar to John Resig's implementation.
   // Underscore templating handles arbitrary delimiters, preserves whitespace,
   // and correctly escapes quotes within interpolated code.
-  // NB: `oldSettings` only exists for backwards compatibility.
-  _.template = function(text, settings, oldSettings) {
-    if (!settings && oldSettings) settings = oldSettings;
+  // METEOR CHANGE: preserve the 1.6 template(text, data, settings) API.
+  // Pass null for data to compile a template with custom settings.
+  _.template = function(text, data, settings) {
     settings = _.defaults({}, settings, _.templateSettings);
 
     // Combine delimiters into one regular expression via alternation.
@@ -1640,7 +1640,7 @@
     var argument = settings.variable || 'obj';
     template.source = 'function(' + argument + '){\n' + source + '}';
 
-    return template;
+    return data ? template(data) : template;
   };
 
   // Add a "chain" function. Start chaining a wrapped Underscore object.
