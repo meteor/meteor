@@ -161,6 +161,8 @@ Following the same logic from the previous package, if the 2FA is enabled, an er
 [`Meteor.passwordlessLoginWithToken`](./accounts-passwordless.md#Meteor-passwordlessLoginWithToken),
  then you can redirect the user to a place where they can provide a code.
 
+This flow applies to both email codes and user-level tokens delivered through `Accounts.onCreateLoginToken`; see the [passwordless token guidance](./accounts-passwordless.md#enabling-2fa).
+
 Here is an example:
 
 ```js

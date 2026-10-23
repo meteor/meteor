@@ -10,6 +10,8 @@ If the user is signing up you can pass in the `userData` object like in [Account
 <ApiBox name="Meteor.passwordlessLoginWithToken" />
 The second step in the passwordless flow. Like all the other `loginWith` functions call this method to login the user with the token they have inputted.
 
+Meteor-generated login tokens are single-use. A successful passwordless login consumes the user-level token provided to `Accounts.onCreateLoginToken` and the email codes from the same request. User-level tokens do not verify an email address.
+
 <ApiBox name="Accounts.sendLoginTokenEmail"  from="accounts-base" />
 Use this function if you want to manually send the email to users to login with token from the server. Do note that you will need to create the token/sequence and save it in the DB yourself. This is good if you want to change how the tokens look or are generated, but unless you are sure of what you are doing we don't recommend it.
 
@@ -37,3 +39,5 @@ sendLoginToken: {
 
 You can add 2FA to your login flow by using the package [accounts-2fa](./accounts-2fa.md).
 You can find an example showing how this would look like [here](./accounts-2fa.md#working-with-accounts-passwordless).
+
+These requirements apply to both email codes and user-level tokens delivered through `Accounts.onCreateLoginToken`. If login returns `no-2fa-code`, prompt for the authenticator code and retry with `Meteor.passwordlessLoginWithTokenAnd2faCode(selector, token, code, callback)`. A missing or invalid 2FA code does not consume an otherwise-valid login token; after a successful passwordless login, request a new token instead of reusing it.

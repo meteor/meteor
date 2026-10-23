@@ -8,6 +8,63 @@
 
 [//]: # (go to meteor/docs/generators/changelog/docs)
 
+## v3.3.4, 2026-10-23
+
+### Highlights
+
+- Enforce single-use email-verification and Meteor-generated passwordless login tokens, including concurrent attempts, and require configured two-factor authentication for user-level passwordless tokens. [Security fixes](https://github.com/meteor/meteor/commit/fcab7e3c6a00adf0b027ac11e84549aa187abfd3)
+- Handle fields such as `__proto__` safely in EJSON, change detection, Minimongo, Meteor's MongoDB integration, and DDP method/publication registries. [Security fixes](https://github.com/meteor/meteor/commit/fcab7e3c6a00adf0b027ac11e84549aa187abfd3)
+- Remove the extra MongoDB startup connection that disabled certificate verification, and omit connection strings from invalid-URL warnings. [Security fixes](https://github.com/meteor/meteor/commit/fcab7e3c6a00adf0b027ac11e84549aa187abfd3)
+- Upgrade to Node.js 22.23.4 and npm 10.9.9. [Bundle update](https://github.com/meteor/meteor/commit/6ff430591e812c217ad296228f7674c887d1d4e1)
+- Pin the Solid and Vue application templates to jorgenvatle:vite 1.5.4 and meteor-vite 3.8.0. [Solid template](https://github.com/meteor/meteor/commit/a265772c3b21f8ab7c4dcbade0a9f18ddb55ab92), [Vue template](https://github.com/meteor/meteor/commit/9f6ebfe08d56d9924f543144de2def55ef298530)
+- Make `test-in-console` wait for browser readiness and exit unsuccessfully on runner errors, with support for locally installed Puppeteer. [Console runner](https://github.com/meteor/meteor/commit/c81cd51b08fb32e62fd4dba50d4c36af38b2bcb2)
+
+#### Breaking Changes
+
+- `accounts-passwordless`: Custom login flows using the user-level token exposed through `Accounts.onCreateLoginToken` now require a valid two-factor code when the account has two-factor authentication enabled.
+
+#### Internal API changes
+
+- DDP method and publication registries now have null prototypes. Extensions inspecting these internal tables must not rely on inherited object methods.
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+meteor update --release 3.3.4
+```
+
+- For custom user-level passwordless token flows, handle `no-2fa-code` by prompting for the authenticator code and retrying with `Meteor.passwordlessLoginWithTokenAnd2faCode(selector, token, code, callback)`. A missing or invalid two-factor code does not consume the token; a successful login does.
+- Review extensions accessing internal DDP method or publication registries for reliance on inherited object properties.
+
+#### Bumped Meteor Packages
+
+- accounts-password@3.2.1_1
+- accounts-passwordless@3.0.3
+- ddp-server@3.1.4
+- diff-sequence@1.1.4
+- ejson@1.1.6
+- minimongo@2.0.4_1
+- mongo@2.1.5
+- npm-mongo@6.17.0
+- test-in-console@2.1.0
+- meteor-tool@3.3.4
+
+#### Bumped NPM Packages
+
+- npm@10.9.9
+- meteor-vite@3.8.0
+
+#### Special thanks to
+
+✨✨✨
+
+- [@italojs](https://github.com/italojs), for consolidating the security fixes and updating the templates and console runner.
+- [@nachocodoner](https://github.com/nachocodoner), for preparing the Node.js/npm update and reviewing and validating the security fixes.
+- [@Grubba27](https://github.com/Grubba27), for reviewing and validating the authentication fixes.
+
+✨✨✨
 ## v3.3.3, 2026-10-13
 
 ### Highlights
