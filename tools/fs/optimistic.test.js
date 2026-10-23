@@ -1,4 +1,5 @@
 const fs = require("node:fs");
+const crypto = require("node:crypto");
 const os = require("node:os");
 const path = require("node:path");
 
@@ -26,6 +27,9 @@ jest.mock("./files", () => ({
       throw error;
     }
   },
+  open: fs.openSync,
+  read: fs.readSync,
+  close: fs.closeSync,
   lstat: fs.lstatSync,
   readFile: fs.readFileSync,
   readdir: fs.readdirSync,
@@ -33,7 +37,8 @@ jest.mock("./files", () => ({
   findAppDir: () => null,
 }));
 
-const { optimisticReadMeteorIgnore } = require("./optimistic.ts");
+const { optimisticReadMeteorIgnore, optimisticHashOrNull } = require("./optimistic.ts");
+const { readAndWatchFileWithHash, WatchSet } = require("./watch.ts");
 const files = require("./files");
 
 let appDir;
@@ -106,4 +111,47 @@ test("does not reuse a matcher after its environment patterns change", () => {
   expect(after.ignores("user.js")).toBe(false);
   expect(after.ignores("other.js")).toBe(true);
   expect(before.ignores("root.js")).toBe(true);
+});
+
+
+test("hash-only watches track map edits and missing files without reading contents", () => {
+  const mapPath = path.join(appDir, "bundle.js.map");
+  const contents = Buffer.from("map contents\n".repeat(10000));
+  fs.writeFileSync(mapPath, contents);
+  const watchSet = new WatchSet();
+  const read = jest.spyOn(files, "readFile");
+  const expectedHash = crypto.createHash("sha1").update(contents).digest("hex");
+
+  expect(readAndWatchFileWithHash(watchSet, mapPath, { hashOnly: true }))
+    .toEqual({ contents: null, hash: expectedHash });
+  expect(watchSet.files[mapPath]).toBe(expectedHash);
+  expect(read).not.toHaveBeenCalled();
+
+  fs.writeFileSync(mapPath, "changed map");
+  const changed = readAndWatchFileWithHash(new WatchSet(), mapPath, { hashOnly: true });
+  expect(changed.hash).not.toBe(expectedHash);
+  fs.unlinkSync(mapPath);
+  const missingWatch = new WatchSet();
+  expect(readAndWatchFileWithHash(missingWatch, mapPath, { hashOnly: true }))
+    .toEqual({ contents: null, hash: null });
+  expect(missingWatch.files).toHaveProperty([mapPath], null);
+});
+
+test("watcher hash rechecks do not cache large file contents", () => {
+  const mapPath = path.join(appDir, "large.js.map");
+  const contents = Buffer.alloc(16 * 1024 * 1024 + 1, "a");
+  fs.writeFileSync(mapPath, contents);
+  const read = jest.spyOn(files, "readFile");
+  const expectedHash = crypto.createHash("sha1").update(contents).digest("hex");
+  expect(optimisticHashOrNull(mapPath)).toBe(expectedHash);
+  expect(read).not.toHaveBeenCalled();
+
+  // A content change with the same size must still invalidate the watch.
+  contents[0] = 98;
+  fs.writeFileSync(mapPath, contents);
+  optimisticHashOrNull.dirty(mapPath);
+  expect(optimisticHashOrNull(mapPath)).toBe(
+    crypto.createHash("sha1").update(contents).digest("hex"),
+  );
+  expect(read).not.toHaveBeenCalled();
 });

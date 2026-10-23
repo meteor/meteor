@@ -3,7 +3,7 @@ import { wrap, OptimisticWrapperFunction, dep } from "optimism";
 import ignore from "ignore";
 import { Profile } from "../tool-env/profile";
 import { watch, SafeWatcher } from "./safe-watcher";
-import { sha1, readFile as readFileOrNull } from "./watch";
+import { sha1, hashFile, readFile as readFileOrNull } from "./watch";
 import {
   pathSep,
   pathBasename,
@@ -280,6 +280,11 @@ export const optimisticHashOrNull = makeOptimistic("hashOrNull", (
   options?: Parameters<typeof optimisticReadFile>[1],
 ) => {
   try {
+    // Watcher rechecks must not retain a large source map in the read cache.
+    // Preserve the existing decoded-content behavior when an encoding is given.
+    if (options === undefined && (statOrNull(path)?.size || 0) > 16 * 1024 * 1024) {
+      return hashFile(path);
+    }
     return sha1(optimisticReadFile(path, options)) as string;
 
   } catch (e: any) {

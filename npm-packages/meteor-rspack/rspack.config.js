@@ -126,8 +126,13 @@ function createSwcConfig({
   isClient,
   isLegacy,
   isAngularEnabled,
+  legacyCompatibleClient,
 }) {
   const defaultConfig = {
+    // ES5 compilation also covers CommonJS dependencies. Infer each file's
+    // module type so external helpers use require instead of turning it into
+    // an ES module with incompatible exports.
+    isModule: 'unknown',
     jsc: {
       parser: {
         syntax: isTypescriptEnabled ? 'typescript' : 'ecmascript',
@@ -135,7 +140,7 @@ function createSwcConfig({
         ...(isJsxEnabled && { jsx: true }),
         ...(isAngularEnabled && { decorators: true }),
       },
-      target: isLegacy ? 'es5' : isClient ? 'es2015' : 'es2024',
+      target: isLegacy || legacyCompatibleClient ? 'es5' : isClient ? 'es2015' : 'es2024',
       ...(isReactEnabled && {
         transform: {
           react: {
@@ -163,7 +168,10 @@ function createSwcConfig({
   const swcConfig = merge(defaultConfig, cleanedCustomConfig);
   return {
     test: /\.(?:[mc]?js|jsx|[mc]?ts|tsx)$/i,
-    exclude: /node_modules|\.meteor\/local/,
+    // core-js ships its own legacy syntax and must not be recompiled by SWC.
+    exclude: legacyCompatibleClient
+      ? /\.meteor\/local|[\\/]node_modules[\\/]core-js[\\/]/
+      : /node_modules|\.meteor\/local/,
     loader: "builtin:swc-loader",
     options: swcConfig,
   };
@@ -214,6 +222,67 @@ function keepOutsideBuild() {
     const isInBuildRoot = /\/build(\/|$)/.test(normalized);
     const isInBuildStar = /\/build-[^/]+(\/|$)/.test(normalized);
     return !(isInBuildRoot || isInBuildStar);
+  };
+}
+
+const LEGACY_COMPATIBLE_MARKER = '\n/* meteor-rspack-legacy-compatible */';
+const CLIENT_SCRIPT_EXTENSIONS = ['js', 'mjs', 'cjs', 'jsx', 'ts', 'tsx'];
+
+function canMarkLegacyCompatible(config) {
+  if (!Array.isArray(config.target) ||
+      config.target.length !== 2 ||
+      !config.target.includes('web') ||
+      !config.target.includes('es5')) {
+    return false;
+  }
+
+  const rules = config.module?.rules || [];
+  const scriptRules = rules.filter(rule =>
+    CLIENT_SCRIPT_EXTENSIONS.some(extension =>
+      rule.test instanceof RegExp && rule.test.test(`module.${extension}`))
+  );
+
+  if (scriptRules.length !== 1) return false;
+
+  const [rule] = scriptRules;
+  const dependencyPath = path.join(process.cwd(), 'node_modules', 'example', 'index.js');
+
+  return rule.loader === 'builtin:swc-loader' &&
+    rule.options?.jsc?.target === 'es5' &&
+    rule.exclude instanceof RegExp &&
+    !rule.exclude.test(dependencyPath) &&
+    CLIENT_SCRIPT_EXTENSIONS.every(extension => rule.test.test(`module.${extension}`));
+}
+
+/**
+ * Mark an emitted ES5 client bundle without moving its source-map positions.
+ * A trailing comment lets older adapters keep their normal legacy compiler
+ * path while the Meteor compiler can recognize this output safely.
+ */
+function createLegacyCompatibilityPlugin(outputFile, compatible) {
+  return {
+    apply(compiler) {
+      compiler.hooks.done.tap('MeteorLegacyCompatibilityPlugin', stats => {
+        if (stats.hasErrors()) return;
+
+        const marker = Buffer.from(LEGACY_COMPATIBLE_MARKER);
+        const descriptor = fs.openSync(outputFile, 'r+');
+
+        try {
+          const size = fs.fstatSync(descriptor).size;
+          const tail = Buffer.alloc(Math.min(size, marker.length));
+          fs.readSync(descriptor, tail, 0, tail.length, size - tail.length);
+
+          if (compatible && !tail.equals(marker)) {
+            fs.writeSync(descriptor, marker, 0, marker.length, size);
+          } else if (!compatible && tail.equals(marker)) {
+            fs.ftruncateSync(descriptor, size - marker.length);
+          }
+        } finally {
+          fs.closeSync(descriptor);
+        }
+      });
+    },
   };
 }
 
@@ -334,6 +403,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     isClient,
     isLegacy,
     isAngularEnabled,
+    legacyCompatibleClient: isClient && !isNative &&
+      !(isRun && initialIsDev && !isTest && !arch),
   });
   Meteor.swcConfigOptions = swcConfigRule.options;
 
@@ -457,6 +528,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   }
 
   const isDevEnvironment = isRun && isDev && !isTest && !isNative && !arch;
+  const legacyCompatibleClient = isClient && !isNative && !isDevEnvironment;
   swcConfigRule = createSwcConfig({
     isTypescriptEnabled,
     isReactEnabled,
@@ -467,6 +539,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     isClient,
     isLegacy,
     isAngularEnabled,
+    legacyCompatibleClient,
   });
   Meteor.swcConfigOptions = swcConfigRule.options;
 
@@ -475,6 +548,14 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     ...(isReactEnabled ? [/^react$/, /^react-dom$/] : []),
     ...(isServer ? [/^bcrypt$/] : []),
   ];
+  const alias = {
+    // Linked dependencies must use the host app's SWC helper runtime.
+    ...(enableSwcExternalHelpers && {
+      "@swc/helpers": path.dirname(
+        require.resolve("@swc/helpers/package.json", { paths: [projectDir] })
+      ),
+    }),
+  };
   const fallback = {
     ...(isClient && makeWebNodeBuiltinsAlias()),
   };
@@ -615,7 +696,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   // Base client config
   let clientConfig = {
     name: clientNameConfig,
-    target: isLegacy ? ["web", "es5"] : "web",
+    target: isLegacy || legacyCompatibleClient ? ["web", "es5"] : "web",
     mode,
     entry: clientEntry,
     output: {
@@ -673,6 +754,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     },
     resolve: {
       extensions,
+      alias,
       fallback,
       roots: [path.resolve(projectDir)],
     },
@@ -1007,7 +1089,14 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       };
     },
   });
-  config.plugins = [meteorRspackOutputPlugin, ...(config.plugins || [])];
+  config.plugins = [
+    ...(legacyCompatibleClient ? [createLegacyCompatibilityPlugin(
+      path.resolve(projectDir, buildContext, outputPath),
+      canMarkLegacyCompatible(config),
+    )] : []),
+    meteorRspackOutputPlugin,
+    ...(config.plugins || []),
+  ];
 
   return [config];
 }

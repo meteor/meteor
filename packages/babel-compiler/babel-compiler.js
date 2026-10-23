@@ -55,6 +55,9 @@ BabelCompiler = function BabelCompiler(extraFeatures, modifyConfig) {
 var BCp = BabelCompiler.prototype;
 var excludedFileExtensionPattern = /\.(es5|min)\.js$/i;
 var hasOwn = Object.prototype.hasOwnProperty;
+// The adapter appends this marker only when its client bundle targets ES5.
+// Older Rspack adapters still need Meteor's legacy transpilation path.
+var rspackLegacyCompatibleMarker = '\n/* meteor-rspack-legacy-compatible */';
 
 function getMeteorConfig() {
   return Plugin?.getMeteorConfig() || {};
@@ -75,6 +78,8 @@ BCp.isVerbose = function(config = getMeteorConfig()) {
 };
 
 var enableClientTLA = process.env.METEOR_ENABLE_CLIENT_TOP_LEVEL_AWAIT === 'true';
+var useLegacySourceMapEngine =
+  process.env.METEOR_USE_LEGACY_SOURCE_MAP_ENGINE === 'true';
 
 function compileWithBabel(source, babelOptions, cacheOptions) {
   return profile('Babel.compile', function () {
@@ -269,23 +274,36 @@ BCp.processOneFileForTarget = function (inputFile, source) {
   let inputSourceMap;
   if (isRspackOutput) {
     try {
-      const mapFile = inputFile.readAndWatchFileWithHash(
-        path.resolve(inputFilePath + '.map')
-      );
-      if (mapFile.contents) {
-        inputSourceMap = JSON.parse(mapFile.contents.toString('utf8'));
-        // Original locations can change while generated JavaScript stays the
-        // same. Invalidate both compiler and linker caches when the map changes.
+      // Marked bundles already have legacy syntax, including their dependencies.
+      // Older adapters still need a transform composed with the original map.
+      const canReuseOutput = !isLegacyWebArch ||
+        source.endsWith(rspackLegacyCompatibleMarker);
+      const useFileBackedMap = canReuseOutput && arch.startsWith('web.') &&
+        !useLegacySourceMapEngine &&
+        typeof Plugin.rspackHelpers.createFileBackedSourceMap === 'function';
+      const mapPath = path.resolve(inputFilePath + '.map');
+      const mapFile = inputFile.readAndWatchFileWithHash(mapPath, {
+        hashOnly: useFileBackedMap,
+      });
+      if (mapFile.hash !== null) {
+        if (useFileBackedMap) {
+          toBeAdded.sourceMap =
+            Plugin.rspackHelpers.createFileBackedSourceMap(mapPath);
+          toBeAdded.sourceMap.hash = mapFile.hash;
+        } else {
+          inputSourceMap = JSON.parse(mapFile.contents.toString('utf8'));
+        }
+        // Map-only edits must invalidate compiler and linker caches too.
         toBeAdded.hash = crypto.createHash('sha1')
           .update(toBeAdded.hash)
           .update(mapFile.hash)
           .digest('hex');
       }
 
-      // Rspack already transpiled this output. Legacy targets still need a
-      // further transform, which must compose with the original source map.
-      if (!isLegacyWebArch) {
-        toBeAdded.sourceMap = inputSourceMap || null;
+      if (canReuseOutput) {
+        if (!useFileBackedMap) {
+          toBeAdded.sourceMap = inputSourceMap || null;
+        }
         if (this.isVerbose()) {
           logTranspilation({
             usedRspack: true,

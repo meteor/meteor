@@ -840,10 +840,33 @@ export function readAndWatchDirectory(
   return contents;
 }
 
+// Hash file contents with bounded memory, including when a watcher rechecks
+// a large file-backed source map.
+export function hashFile(absPath: string): string {
+  const descriptor = files.open(absPath, "r");
+  try {
+    const hash = createHash("sha1");
+    const buffer = Buffer.allocUnsafe(64 * 1024);
+    let bytesRead;
+    while ((bytesRead = files.read(descriptor, buffer, 0, buffer.length, null))) {
+      hash.update(buffer.subarray(0, bytesRead));
+    }
+    return hash.digest("hex");
+  } finally {
+    files.close(descriptor);
+  }
+}
+
 // Calculating the sha hash can be expensive for large files.  By
 // returning the calculated hash along with the file contents, the
 // hash doesn't need to be calculated again for static files.
-export function readAndWatchFileWithHash(watchSet: WatchSet, absPath: string) {
+// hashOnly keeps file-backed source maps out of V8 while recording the same
+// watch dependency as an ordinary compiler input.
+export function readAndWatchFileWithHash(
+  watchSet: WatchSet,
+  absPath: string,
+  { hashOnly = false } = {},
+) {
   const result: {
     contents: string | Buffer | null;
     hash: string | null;
@@ -853,7 +876,11 @@ export function readAndWatchFileWithHash(watchSet: WatchSet, absPath: string) {
   };
 
   try {
-    result.contents = files.readFile(absPath);
+    if (hashOnly) {
+      result.hash = hashFile(absPath);
+    } else {
+      result.contents = files.readFile(absPath);
+    }
   } catch (e: any) {
     if (e && e.code === "EISDIR") {
       // Avoid adding directories to the watchSet as files.

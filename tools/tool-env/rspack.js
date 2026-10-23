@@ -2,6 +2,9 @@
 const files = require('../fs/files');
 const path = require('path');
 const { getMeteorConfig } = require("./meteor-config");
+const {
+  createFileBackedSourceMap,
+} = require("../utils/file-backed-source-map");
 
 const config = getMeteorConfig();
 
@@ -33,6 +36,19 @@ exports.rspackFilePattern = rspackFilePattern;
 // Function to check if a file is a Rspack output file
 exports.isRspackOutputFile = function(filePath) {
   return rspackFilePattern.test(filePath);
+};
+
+/**
+ * Keeps large Rspack source maps out of V8 while preserving the existing
+ * addJavaScript({ sourceMap }) hand-off shape.
+ */
+exports.createFileBackedSourceMap = function(mapPath) {
+  const absolutePath = files.pathResolve(mapPath);
+
+  return createFileBackedSourceMap({
+    path: absolutePath,
+    byteLength: files.stat(absolutePath).size,
+  });
 };
 
 // Function to get the rspack resources contexts

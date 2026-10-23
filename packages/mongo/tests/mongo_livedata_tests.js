@@ -4358,61 +4358,65 @@ if (Meteor.isServer) {
   });
 }
 
-testAsyncMulti(
+Tinytest.addAsync(
   'mongo-livedata - maintained isomorphism on collection operations for both client and server',
-  [
-    function (test, expect) {
-      this.collectionName = Random.id();
+  async function (test) {
+    const collectionName = `maintained_col_op_iso${test.runId()}`;
+    let subscription;
 
+    // Optimistic documents otherwise disappear when the server rejects writes
+    // to a collection that only exists on the client.
+    if (Meteor.isClient) {
+      await Meteor.callAsync('createInsecureCollection', collectionName);
+      subscription = Meteor.subscribe('c-' + collectionName);
+    }
+
+    const collection = new Mongo.Collection(collectionName, { resolverType: 'stub' });
+
+    const awaitMutation = async (mutation) => {
+      await mutation;
+
+      // Awaiting a stub does not wait for its server acknowledgement.
       if (Meteor.isClient) {
-        Meteor.call('createInsecureCollection', this.collectionName);
-        Meteor.subscribe('c-' + this.collectionName, expect());
+        await mutation.serverPromise;
       }
-    },
-    async function (test) {
-      const Collection = new Mongo.Collection(this.collectionName, {
-        resolverType: 'stub',
-      });
+    };
 
-      await Collection.insertAsync({ _id: 'a' });
-      await Collection.insertAsync({ _id: 'b' });
+    try {
+      if (subscription) {
+        await waitUntil(() => subscription.ready(), {
+          description: 'isomorphism test collection subscription',
+        });
+      }
 
-      let items = await Collection.find().fetchAsync();
-      let itemIds = items.map(_item => _item._id);
+      await awaitMutation(collection.insertAsync({ _id: 'a' }));
+      await awaitMutation(collection.insertAsync({ _id: 'b' }));
 
-      test.equal(itemIds, ['a', 'b']);
+      const cursor = collection.find({}, { sort: { _id: 1 } });
+      let items = await cursor.fetchAsync();
 
-      await Collection.updateAsync({ _id: 'a' }, { $set: { num: 1 } });
-      await Collection.updateAsync({ _id: 'b' }, { $set: { num: 2 } });
+      test.equal(items.map(item => item._id), ['a', 'b']);
 
-      if (Meteor.isClient) {
-        await waitUntil(async () => {
-          items = await Collection.find().fetchAsync();
-          itemIds = items.map(_item => _item.num);
-          return itemIds.length === 2 && itemIds[0] === 1 && itemIds[1] === 2;
-        }, { description: 'client sees both async updates' });
+      await awaitMutation(collection.updateAsync({ _id: 'a' }, { $set: { num: 1 } }));
+      await awaitMutation(collection.updateAsync({ _id: 'b' }, { $set: { num: 2 } }));
+
+      items = await cursor.fetchAsync();
+
+      test.equal(items.map(item => item.num), [1, 2]);
+
+      await awaitMutation(collection.removeAsync({ _id: 'a' }));
+      await awaitMutation(collection.removeAsync({ _id: 'b' }));
+
+      test.equal(await cursor.fetchAsync(), []);
+    } finally {
+      if (subscription) {
+        subscription.stop();
+        await Meteor.callAsync('dropInsecureCollection', collectionName);
       } else {
-        items = await Collection.find().fetchAsync();
-        itemIds = items.map(_item => _item.num);
+        await collection.dropCollectionAsync();
       }
-
-      test.equal(itemIds, [1, 2]);
-
-      await Collection.removeAsync({ _id: 'a' });
-      await Collection.removeAsync({ _id: 'b' });
-
-      if (Meteor.isClient) {
-        await waitUntil(async () => {
-          items = await Collection.find().fetchAsync();
-          return items.length === 0;
-        }, { description: 'client sees async removals' });
-      } else {
-        items = await Collection.find().fetchAsync();
-      }
-
-      test.equal(items, []);
-    },
-  ],
+    }
+  },
 );
 
 testAsyncMulti(
