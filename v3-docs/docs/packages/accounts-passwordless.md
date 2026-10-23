@@ -37,3 +37,7 @@ sendLoginToken: {
 
 You can add 2FA to your login flow by using the package [accounts-2fa](./accounts-2fa.md).
 You can find an example showing how this would look like [here](./accounts-2fa.md#working-with-accounts-passwordless).
+
+User-level tokens provided to `Accounts.onCreateLoginToken` follow the same two-factor authentication flow as email codes when 2FA is enabled for the user. A missing or invalid 2FA code does not consume the passwordless token, so you can retry with a valid code while the token remains valid.
+
+A user-level token is single-use and does not verify an email address. A successful passwordless login consumes the current passwordless tokens, including the email codes from the same issuance; request a new token instead of reusing a consumed one.

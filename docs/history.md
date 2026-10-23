@@ -8,6 +8,60 @@
 
 [//]: # (go to meteor/docs/generators/changelog/docs)
 
+## v3.4.3, 2026-10-23
+
+### Highlights
+
+- Prevent concurrent reuse of email-verification and Meteor-generated passwordless login tokens, and enforce configured two-factor authentication for user-level passwordless tokens. [Security backports](https://github.com/meteor/meteor/commit/38eb8accd85b429f8c5207039d8950a67c9f2a3e).
+- Preserve prototype-named fields as ordinary data through EJSON, Minimongo, change notifications and Meteor's MongoDB integration, including projections, authorization checks and oplog replacements. [Field-boundary fixes](https://github.com/meteor/meteor/commit/b3c82cec8ca27146db0f2cc0448d803f7f457cfc), [oplog replacement fix](https://github.com/meteor/meteor/commit/30a830c7fa7955889c2a8ed149a0835f08fbad96).
+- Reject inherited, unregistered DDP method and publication names while preserving explicitly registered names. [Security backports](https://github.com/meteor/meteor/commit/38eb8accd85b429f8c5207039d8950a67c9f2a3e).
+- Remove the extra MongoDB startup connection that bypassed certificate validation, and keep connection strings out of invalid-URL warnings. [Security backports](https://github.com/meteor/meteor/commit/38eb8accd85b429f8c5207039d8950a67c9f2a3e).
+- Upgrade the dev bundle to Node.js 22.23.4 and npm 10.9.9. [Bundle update](https://github.com/meteor/meteor/commit/ab47fc787dd1a461a2dc8abe5d55dd5611aa3821).
+
+#### Breaking Changes
+
+- `accounts-passwordless`: Custom login flows using user-level tokens from `Accounts.onCreateLoginToken` must now provide a valid second-factor code when 2FA is enabled for the user.
+
+#### Internal API changes
+
+- DDP method and publication registries now have null prototypes. Extensions accessing these internal tables must not rely on inherited object methods; use `Object.prototype.hasOwnProperty.call(registry, name)` instead of `registry.hasOwnProperty(name)`.
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+meteor update --release 3.4.3
+```
+
+- If you use user-level tokens delivered through `Accounts.onCreateLoginToken`, ensure custom login flows supply a valid two-factor code when 2FA is enabled. These tokens are single-use and do not verify an email address. Successful use also invalidates the email codes from the same issuance; request a new token after it has been consumed.
+- Check extensions accessing internal DDP method or publication registries for inherited-object assumptions.
+
+#### Bumped Meteor Packages
+
+- accounts-password@3.2.4
+- accounts-passwordless@3.1.0_1
+- ddp-server@3.2.2
+- diff-sequence@1.1.4
+- ejson@1.1.6
+- minimongo@2.1.1
+- mongo@2.3.1
+- npm-mongo@6.17.0
+- meteor-tool@3.4.3
+
+#### Bumped NPM Packages
+
+- npm@10.9.9
+
+#### Special thanks to
+
+✨✨✨
+
+- [@italojs](https://github.com/italojs), for implementing and adapting the security fixes.
+- [@nachocodoner](https://github.com/nachocodoner), for the Node.js and npm bundle update, reproductions and substantive review.
+- [@Grubba27](https://github.com/Grubba27), for testing and reviewing the account-token fixes and release consolidation.
+
+✨✨✨
 ## v3.4.2, 2026-10-13
 
 ### Highlights
