@@ -1,3 +1,87 @@
+Tinytest.add('minimongo - modifiers only traverse own document fields', test => {
+  const marker = 'meteorModifierPrototypeMarker';
+  try {
+    for (const prefix of ['__proto__', 'constructor.prototype', 'nested.__proto__', 'items.0.__proto__']) {
+      const doc = {_id: 'safe', items: [{}]};
+      LocalCollection._modify(doc, {$set: {[`${prefix}.${marker}`]: 7}});
+      test.isFalse(Object.prototype.hasOwnProperty.call(Object.prototype, marker));
+      test.equal(Object.getPrototypeOf(doc), Object.prototype);
+      test.equal(prefix.split('.').reduce((value, key) => value[key], doc)[marker], 7);
+    }
+
+    // Non-creating operators must not read or mutate inherited fields.
+    const doc = {_id: 'safe', kept: 1};
+    Object.prototype[marker] = 3;
+    LocalCollection._modify(doc, {$unset: {[`__proto__.${marker}`]: 1}});
+    test.equal(Object.prototype[marker], 3);
+    delete Object.prototype[marker];
+    LocalCollection._modify(doc, {$rename: {constructor: 'copied'}});
+    test.isFalse(Object.prototype.hasOwnProperty.call(doc, 'copied'));
+    test.equal(typeof Object.prototype.toString, 'function');
+
+    LocalCollection._modify(doc, {$rename: {kept: `__proto__.${marker}`}});
+    test.equal(doc.__proto__[marker], 1);
+    test.isFalse(Object.prototype.hasOwnProperty.call(Object.prototype, marker));
+  } finally {
+    delete Object.prototype[marker];
+  }
+});
+
+Tinytest.add('minimongo - prototype names remain ordinary own fields', test => {
+  for (const field of ['__proto__', 'constructor', 'toString']) {
+    for (const [operator, argument, expected] of [
+      ['$set', {safe: true}, {safe: true}],
+      ['$inc', 2, 2], ['$mul', 2, 0], ['$min', 2, 2], ['$max', 2, 2],
+      ['$push', 2, [2]], ['$pushAll', [2], [2]], ['$addToSet', 2, [2]],
+    ]) {
+      const doc = {_id: 'safe'};
+      LocalCollection._modify(doc, {[operator]: {[field]: argument}});
+      test.isTrue(Object.prototype.hasOwnProperty.call(doc, field));
+      test.equal(doc[field], expected);
+      test.equal(Object.getPrototypeOf(doc), Object.prototype);
+    }
+  }
+  const replacement = JSON.parse('{"__proto__":{"safe":true},"_id":"safe"}');
+  const doc = {_id: 'safe'};
+  LocalCollection._modify(doc, replacement);
+  test.isTrue(Object.prototype.hasOwnProperty.call(doc, '__proto__'));
+  test.equal(Object.getPrototypeOf(doc), Object.prototype);
+  LocalCollection._modify(doc, {$set: {'__proto__.safe': false}});
+  test.equal(doc.__proto__.safe, false);
+  LocalCollection._modify(doc, {$set: {items: [{n: 1}]}});
+  LocalCollection._modify(doc, {$inc: {'items.$.n': 2}}, {arrayIndices: [0]});
+  test.equal(doc.items, [{n: 3}]);
+});
+
+Tinytest.add('minimongo - id fast path requires an own id field', test => {
+  const inheritedId = Object.create({_id: 'inherited'});
+  inheritedId.name = 'not-an-id-selector';
+  test.isFalse(LocalCollection._selectorIsIdPerhapsAsObject(inheritedId));
+  test.isTrue(LocalCollection._selectorIsIdPerhapsAsObject({_id: 'own'}));
+  test.isTrue(LocalCollection._selectorIsIdPerhapsAsObject('shorthand'));
+  test.isFalse(LocalCollection._selectorIsIdPerhapsAsObject({_id: 'own', name: 'extra'}));
+  test.isFalse(Boolean(LocalCollection._selectorIsIdPerhapsAsObject(null)));
+});
+
+Tinytest.add('minimongo - non-creating array modifiers ignore inherited fields', test => {
+  const marker = 'meteorModifierInheritedArray';
+  const inherited = [1, 2, 3];
+  Object.prototype[marker] = inherited;
+  try {
+    for (const [operator, argument] of [['$pop', 1], ['$pull', 2], ['$pullAll', [2]]]) {
+      for (const prefix of ['', '__proto__.']) {
+        const doc = {_id: 'safe'};
+        LocalCollection._modify(doc, {[operator]: {[prefix + marker]: argument}});
+        test.equal(inherited, [1, 2, 3]);
+        test.isFalse(Object.prototype.hasOwnProperty.call(doc, marker));
+        test.isFalse(Object.prototype.hasOwnProperty.call(doc, '__proto__'));
+      }
+    }
+  } finally {
+    delete Object.prototype[marker];
+  }
+});
+
 Tinytest.add('minimongo - wrapTransform', test => {
   const wrap = LocalCollection.wrapTransform;
 

@@ -9,7 +9,7 @@
 
 Package.describe({
   summary: "Adaptor for using MongoDB and Minimongo over DDP",
-  version: '2.5.2-rc360.0',
+  version: '2.5.2-rc360.1',
 });
 
 Npm.depends({
