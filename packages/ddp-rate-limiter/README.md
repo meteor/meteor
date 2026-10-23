@@ -14,12 +14,12 @@ For example usage, check out
 ### Pre-defined Defaults
 
 If the `accounts-base` package is added to your
-project, there are default rules added to limit logins, new user registration
-and password resets calls to a limit of 5 requests per 10 seconds per
-connection.
-These provide a basic solution to dictionary attacks where a malicious user
-attempts to guess the passwords of legitimate users by attempting all possible
-passwords. To remove the default rule, a user can add
+project, there are default rules added to limit logins, new user registration,
+passwordless login token requests and password resets calls to a limit of 5
+requests per 10 seconds per connection.
+These provide basic abuse protection by slowing repeated credential-guessing
+attempts and repeated passwordless login token requests. To remove the default
+rule, a user can add
 `Accounts.removeDefaultRateLimit()` to any server side code and the default
 rate limit will be removed.
 

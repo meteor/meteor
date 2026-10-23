@@ -8,10 +8,23 @@ Before moving production traffic to Change Streams, validate that your MongoDB d
 
 ## Requirements and Limitations
 
-- MongoDB 6+ on a replica set or sharded cluster (Change Streams are not available on standalone or some shared-tier deployments).
+- MongoDB 6.0.9+ or 7+ on a replica set or sharded cluster (Change Streams are not available on standalone or some shared-tier deployments).
 - Works only for unordered observers. Publications that rely on ordered callbacks (`addedBefore`, `movedBefore`) will keep using another driver.
 - Selectors must compile with `Minimongo.Matcher`. Unsupported selectors fall back to the next configured driver.
+- Cursors with `skip` or `limit`, projections Minimongo cannot apply, or `$where`/`$near` selectors are handed to the next configured driver. Live change events are re-matched locally by Minimongo, which cannot evaluate `$where`/`$near` the way MongoDB does; oplog tailing declines those selectors for the same reason.
 - If Change Streams are unavailable, Meteor automatically moves to the next driver in your configured order.
+
+## Large Change Events
+
+The driver uses `$changeStreamSplitLargeEvent` to receive events larger than
+MongoDB's 16 MB BSON limit. It reassembles all fragments before notifying
+observers or releasing write fences. If the cursor reconnects between fragments,
+it keeps the partial event and resumes after the last received fragment.
+
+Non-resumable errors, such as lost change-stream history, still reopen the stream
+and resynchronize observers against the collection. Write fences wait for that
+reconciliation to finish. A residual `BSONObjectTooLarge` error that cannot be
+resolved by splitting uses this same recovery path.
 
 ## Choosing the Reactivity Driver Order
 

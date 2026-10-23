@@ -1029,9 +1029,15 @@ export default class ImportScanner {
   ): Promise<Record<string, ImportInfo>> {
     const fileHash = file.hash instanceof Promise ? await file.hash : file.hash;
 
-    // Ignore rspack output files
+    // Unmarked legacy output can gain imports during Meteor's final transform.
+    // Marked output already includes its helpers; parsing it again can exhaust
+    // the heap for large Rspack bundles.
     if (rspackHelpers.isRspackOutputFile(file.sourcePath)) {
-      return {};
+      if (this.bundleArch !== "web.browser.legacy" ||
+          (await this.getDataString(file)).endsWith(
+            '\n/* meteor-rspack-legacy-compatible */')) {
+        return {};
+      }
     }
 
     if (IMPORT_SCANNER_CACHE.has(fileHash)) {

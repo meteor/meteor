@@ -105,7 +105,10 @@ function compileWithSwc(source, swcOptions = {}, { features }) {
       dynamicImport: true,
       ...(features.topLevelAwait && { topLevelAwait: true }),
       ...(features.compileForShell && { moduleAlias: 'module' }),
-      ...((features.modernBrowsers || features.nodeMajorVersion >= 8) && {
+      // Target check, not a version check: nodeMajorVersion is only set for
+      // Node targets and modernBrowsers only for modern web targets, so
+      // legacy web builds keep the conservative defaults above.
+      ...((features.modernBrowsers || features.nodeMajorVersion) && {
         avoidModernSyntax: false,
         generateLetDeclarations: true,
       }),
@@ -266,42 +269,53 @@ BCp.processOneFileForTarget = function (inputFile, source) {
   };
   const arch = inputFile.getArch();
   const isLegacyWebArch = arch.includes('legacy');
+  const isRspackOutput = Plugin?.rspackHelpers?.isRspackOutputFile(inputFilePath);
 
-  // Check if the file is a Rspack output file
-  // Bypass whole-file transpilation when Rspack produced the target syntax.
-  // Legacy requires an explicit marker from an ES5-capable adapter.
-  if (Plugin?.rspackHelpers?.isRspackOutputFile(inputFilePath) &&
-      (!isLegacyWebArch || source.endsWith(rspackLegacyCompatibleMarker))) {
+  let inputSourceMap;
+  if (isRspackOutput) {
     try {
-      // Get the full path to the file
-      const fullPath = inputFile.getPathInPackage();
-      // Read the file directly
-      toBeAdded.data = source;
-
-      // Try to read the corresponding map file
-      const mapPath = fullPath + '.map';
-      if (fs.existsSync(mapPath)) {
-        if (arch.startsWith('web.') && !useLegacySourceMapEngine &&
-            typeof Plugin.rspackHelpers.createFileBackedSourceMap === 'function') {
+      // Marked bundles already have legacy syntax, including their dependencies.
+      // Older adapters still need a transform composed with the original map.
+      const canReuseOutput = !isLegacyWebArch ||
+        source.endsWith(rspackLegacyCompatibleMarker);
+      const useFileBackedMap = canReuseOutput && arch.startsWith('web.') &&
+        !useLegacySourceMapEngine &&
+        typeof Plugin.rspackHelpers.createFileBackedSourceMap === 'function';
+      const mapPath = path.resolve(inputFilePath + '.map');
+      const mapFile = inputFile.readAndWatchFileWithHash(mapPath, {
+        hashOnly: useFileBackedMap,
+      });
+      if (mapFile.hash !== null) {
+        if (useFileBackedMap) {
           toBeAdded.sourceMap =
             Plugin.rspackHelpers.createFileBackedSourceMap(mapPath);
+          toBeAdded.sourceMap.hash = mapFile.hash;
         } else {
-          toBeAdded.sourceMap = JSON.parse(fs.readFileSync(mapPath, 'utf8'));
+          inputSourceMap = JSON.parse(mapFile.contents.toString('utf8'));
         }
+        // Map-only edits must invalidate compiler and linker caches too.
+        toBeAdded.hash = crypto.createHash('sha1')
+          .update(toBeAdded.hash)
+          .update(mapFile.hash)
+          .digest('hex');
       }
 
-      if (this.isVerbose()) {
-        const arch = inputFile.getArch();
-        logTranspilation({
-          usedRspack: true,
-          inputFilePath,
-          packageName,
-          cacheHit: true,
-          arch,
-        });
-      }
+      if (canReuseOutput) {
+        if (!useFileBackedMap) {
+          toBeAdded.sourceMap = inputSourceMap || null;
+        }
+        if (this.isVerbose()) {
+          logTranspilation({
+            usedRspack: true,
+            inputFilePath,
+            packageName,
+            cacheHit: true,
+            arch,
+          });
+        }
 
-      return toBeAdded;
+        return toBeAdded;
+      }
     } catch (e) {
       // If there's an error reading the file or map, log it and continue with normal processing
       console.error('Error reading Rspack file:', e);
@@ -323,8 +337,6 @@ BCp.processOneFileForTarget = function (inputFile, source) {
 
     const isNodeTarget = arch.startsWith("os.");
     if (isNodeTarget) {
-      // Start with a much simpler set of Babel presets and plugins if
-      // we're compiling for Node 8.
       features.nodeMajorVersion = parseInt(process.versions.node, 10);
     } else if (arch === "web.browser") {
       features.modernBrowsers = true;
@@ -371,6 +383,9 @@ BCp.processOneFileForTarget = function (inputFile, source) {
 
       babelOptions.sourceMaps = true;
       babelOptions.filename = babelOptions.sourceFileName = filename;
+      if (inputSourceMap) {
+        babelOptions.inputSourceMap = inputSourceMap;
+      }
 
       this.inferExtraBabelOptions(inputFile, babelOptions, cacheOptions.cacheDeps);
 
@@ -395,7 +410,9 @@ BCp.processOneFileForTarget = function (inputFile, source) {
             jsx: hasJSXSupport,
             tsx: hasTSXSupport,
           },
-          ...(hasSwcHelpersAvailable &&
+          // Rspack output is already bundled; helpers added by this final
+          // legacy transform must not introduce new npm imports.
+          ...(hasSwcHelpersAvailable && !isRspackOutput &&
             !isNodeTarget &&
             (packageName == null ||
               !['core-runtime', 'modules', 'modules-runtime'].includes(
@@ -409,6 +426,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
         sourceMaps: true,
         filename,
         sourceFileName: filename,
+        ...(inputSourceMap && { inputSourceMap: JSON.stringify(inputSourceMap) }),
         ...(isLegacyWebArch && {
           env: {
             targets: {
@@ -603,7 +621,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
     }
 
     toBeAdded.data = result.code;
-    toBeAdded.hash = result.hash;
+    toBeAdded.hash = result.hash || toBeAdded.hash;
 
     // The babelOptions.sourceMapTarget option was deprecated in Babel
     // 7.0.0-beta.41: https://github.com/babel/babel/pull/7500
@@ -1060,6 +1078,13 @@ function packageNameFromTopLevelModuleId(id) {
 
 const SwcCacheContext = '.swc-cache';
 
+function isIgnorableSwcCacheWriteError(error) {
+  return error && (
+    error.code === 'ENOENT' ||
+    error.code === 'ENOTDIR'
+  );
+}
+
 BCp.readFromSwcCache = function({ cacheKey }) {
   // Check in-memory cache.
   let compilation = this._swcCache[cacheKey];
@@ -1085,16 +1110,20 @@ BCp.writeToSwcCache = function({ cacheKey, compilation }) {
   // If file system caching is enabled, write asynchronously.
   if (this.cacheDirectory) {
     const cacheFilePath = path.join(this.cacheDirectory, SwcCacheContext, `${cacheKey}.json`);
-    try {
-      const writeFileCache = async () => {
-        await fs.promises.mkdir(path.dirname(cacheFilePath), { recursive: true });
-        await fs.promises.writeFile(cacheFilePath, JSON.stringify(compilation), 'utf8');
-      };
-      // Invoke without blocking the main flow.
-      writeFileCache();
-    } catch (err) {
-      // If writing fails, ignore the error.
-    }
+    const writeFileCache = async () => {
+      await fs.promises.mkdir(path.dirname(cacheFilePath), { recursive: true });
+      await fs.promises.writeFile(cacheFilePath, JSON.stringify(compilation), 'utf8');
+    };
+    // This cache is best-effort, some test flows remove temp app directories
+    // before the async write finishes.
+    writeFileCache().catch((error) => {
+      if (isIgnorableSwcCacheWriteError(error)) {
+        return;
+      }
+      if (this.isVerbose()) {
+        console.warn('SWC cache write failed:', error);
+      }
+    });
   }
 };
 

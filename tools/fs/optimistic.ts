@@ -3,7 +3,7 @@ import { wrap, OptimisticWrapperFunction, dep } from "optimism";
 import ignore from "ignore";
 import { Profile } from "../tool-env/profile";
 import { watch, SafeWatcher } from "./safe-watcher";
-import { sha1 } from "./watch";
+import { sha1, hashFile, readFile as readFileOrNull } from "./watch";
 import {
   pathSep,
   pathBasename,
@@ -280,6 +280,11 @@ export const optimisticHashOrNull = makeOptimistic("hashOrNull", (
   options?: Parameters<typeof optimisticReadFile>[1],
 ) => {
   try {
+    // Watcher rechecks must not retain a large source map in the read cache.
+    // Preserve the existing decoded-content behavior when an encoding is given.
+    if (options === undefined && (statOrNull(path)?.size || 0) > 16 * 1024 * 1024) {
+      return hashFile(path);
+    }
     return sha1(optimisticReadFile(path, options)) as string;
 
   } catch (e: any) {
@@ -338,23 +343,34 @@ makeOptimistic("readJsonOrNull", (
   }
 });
 
-export const optimisticReadMeteorIgnore = wrap((dir: string) => {
-  const meteorIgnorePath = pathJoin(dir, ".meteorignore");
-  const meteorIgnoreStat = optimisticStatOrNull(meteorIgnorePath);
+export function optimisticReadMeteorIgnore(
+  meteorIgnorePath: string | null,
+  customMeteorIgnore?: string,
+  rootMeteorIgnore?: string
+) {
+  // Another directory can trigger a rebuild before this file's watcher fires.
+  // Read listed ignore files fresh; a null path needs no filesystem access.
+  const contents = meteorIgnorePath !== null &&
+      statOrNull(meteorIgnorePath)?.isFile()
+    ? readFileOrNull(meteorIgnorePath)?.toString("utf8") ?? null
+    : null;
 
-  let ignoreConfig = null;
-  if (meteorIgnoreStat &&
-      meteorIgnoreStat.isFile()) {
-    ignoreConfig = ignore().add(
-        optimisticReadFile(meteorIgnorePath).toString("utf8")
-    );
-  }
+  return optimisticParseMeteorIgnore(contents, customMeteorIgnore, rootMeteorIgnore);
+}
 
-  const customMeteorIgnore = process.env.METEOR_IGNORE;
-  if (customMeteorIgnore != null) {
-    ignoreConfig = ignoreConfig || ignore();
-    const allCustomMeteorIgnores = customMeteorIgnore.trim().split(/\s+/);
-    ignoreConfig = ignoreConfig.add(allCustomMeteorIgnores);
+const optimisticParseMeteorIgnore = wrap((
+  contents: string | null,
+  customMeteorIgnore?: string,
+  rootMeteorIgnore?: string
+) => {
+  let ignoreConfig = contents === null ? null : ignore().add(contents);
+
+  // Explicit arguments also keep environment changes in the cache key.
+  for (const patterns of [customMeteorIgnore, rootMeteorIgnore]) {
+    if (patterns != null) {
+      ignoreConfig = ignoreConfig || ignore();
+      ignoreConfig = ignoreConfig.add(patterns.trim().split(/\s+/));
+    }
   }
 
   return ignoreConfig;
