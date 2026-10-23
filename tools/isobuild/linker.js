@@ -25,12 +25,13 @@ function countNewlines(s) {
   return n;
 }
 
-// @zodern/source-maps concatenates flat v3 maps only, no indexed/`sections`.
+// Flat v3 maps only. It drops `sourceRoot`, so maps carrying one fall back.
 function isZodernSupportedMap(m) {
   return !m || (
     m.version === 3 &&
     typeof m.mappings === "string" &&
     !m.sections &&
+    !m.sourceRoot &&
     Array.isArray(m.sources)
   );
 }
