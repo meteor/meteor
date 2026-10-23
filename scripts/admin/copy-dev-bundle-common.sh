@@ -78,9 +78,15 @@ copy_dev_bundle() {
         return 1
     fi
 
+    local status
     while IFS= read -r artifact; do
-        if aws s3 ls "$target$artifact" >/dev/null; then
+        status=0
+        aws s3 ls "$target$artifact" >/dev/null || status=$?
+        if [ "$status" -eq 0 ]; then
             echo "$target$artifact already exists (maybe from another branch?)" >&2
+            return 1
+        elif [ "$status" -ne 1 ]; then
+            echo "Cannot check $target$artifact (aws exit code $status)" >&2
             return 1
         fi
     done <<< "$selected_artifacts"

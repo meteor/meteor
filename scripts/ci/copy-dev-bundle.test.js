@@ -15,7 +15,8 @@ afterEach(() => {
 });
 
 function runCopy({ arm = false, ambiguous = false, incomplete = false,
-  existing = false, listFailure = false, production = true, older = false } = {}) {
+  existing = false, listFailure = false, destinationListFailure = false,
+  production = true, older = false } = {}) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-bundle-copy-'));
   fixtures.push(directory);
   const scripts = path.join(directory, 'scripts/admin');
@@ -45,6 +46,7 @@ function runCopy({ arm = false, ambiguous = false, incomplete = false,
     },
     existing,
     listFailure,
+    destinationListFailure,
   };
   fs.writeFileSync(path.join(directory, 'scenario.json'), JSON.stringify(scenario));
   const logPath = path.join(directory, 'calls.jsonl');
@@ -66,6 +68,10 @@ if (args[0] === 's3' && args[1] === 'ls' && args.length === 3) {
     if (!scenario.directories[name]) process.exit(2);
     for (const file of scenario.directories[name]) console.log('2026-10-23 13:00:00 100 ' + file);
   } else if (uri.startsWith('s3://com.meteor.static/')) {
+    if (scenario.destinationListFailure) {
+      console.error('AccessDenied: destination listing failed');
+      process.exit(255);
+    }
     process.exit(scenario.existing ? 0 : 1);
   } else process.exit(2);
 } else if (args[0] === 's3' && args[1] === 'cp') {
@@ -141,4 +147,11 @@ test('stops when the source listing fails', () => {
   expect(result.status).not.toBe(0);
   expect(result.stderr).toMatch(/AccessDenied/);
   expect(copies).toEqual([]);
+});
+
+test.each([false, true])('stops when the destination listing fails (ARM: %s)', arm => {
+  const { result, copies } = runCopy({ arm, destinationListFailure: true });
+  expect(copies).toEqual([]);
+  expect(result.status).not.toBe(0);
+  expect(result.stderr).toMatch(/Cannot check .*aws exit code 255/);
 });
