@@ -67,7 +67,7 @@ copy_dev_bundle() {
         expected="dev_bundle_Darwin_arm64_${bundle_version}.tar.gz"
     else
         expected=$(
-            for platform in Darwin_x86_64 Linux_aarch64 Linux_x86_64 Windows_x86_64; do
+            for platform in Darwin_x86_64 Linux_aarch64 Linux_x86_64 windows_x64; do
                 printf 'dev_bundle_%s_%s.tar.gz\n' "$platform" "$bundle_version"
             done | LC_ALL=C sort
         )

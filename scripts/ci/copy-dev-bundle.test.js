@@ -34,7 +34,7 @@ function runCopy({ arm = false, ambiguous = false, incomplete = false,
   const oldDirectory = `dev-bundle-2026-10-22--${buildId}${suffix}`;
   const newDirectory = `dev-bundle-2026-10-23--${buildId}${suffix}`;
   const platforms = arm ? ['Darwin_arm64'] : [
-    'Darwin_x86_64', 'Linux_aarch64', 'Linux_x86_64', 'Windows_x86_64',
+    'Darwin_x86_64', 'Linux_aarch64', 'Linux_x86_64', 'windows_x64',
   ];
   const tarballs = v => platforms.map(p => `dev_bundle_${p}_${v}.tar.gz`);
   const scenario = {
