@@ -3563,8 +3563,11 @@ async function doBenchmarkCommand(options) {
       "meteor profile is not supported on Windows: the profiling suite relies on bash scripts.\n\n" +
       "Alternatives:\n" +
       "  - Run meteor profile inside WSL (Windows Subsystem for Linux).\n" +
-      "  - Set METEOR_PROFILE=1 when running `meteor run` or `meteor build` to print build timings.\n" +
-      "  - Set METEOR_INSPECT (e.g. METEOR_INSPECT=bundler.bundle) to capture CPU profiles of build steps."
+      "  - Set METEOR_PROFILE to 1, then run `meteor run` or `meteor build` to print build timings.\n" +
+      "  - Set METEOR_INSPECT (e.g. to bundler.bundle) to capture CPU profiles of build steps.\n\n" +
+      "Set the variable before running the command:\n" +
+      "  cmd:        set METEOR_PROFILE=1\n" +
+      "  PowerShell: $env:METEOR_PROFILE = \"1\""
     );
     throw new main.ExitWithCode(1);
   }

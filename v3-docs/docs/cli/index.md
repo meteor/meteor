@@ -176,7 +176,19 @@ This command is available from Meteor 3.2 and newer.
 :::
 
 ::: warning Windows
-`meteor profile` is not supported on Windows, because the profiling suite relies on bash scripts. Run it inside [WSL](https://learn.microsoft.com/windows/wsl/), or use [`METEOR_PROFILE`](./environment-variables.md#meteor-profile) and `METEOR_INSPECT` (which writes `.cpuprofile` files) with `meteor run` or `meteor build` to measure build performance natively.
+`meteor profile` is not supported on Windows, because the profiling suite relies on bash scripts. Run it inside [WSL](https://learn.microsoft.com/windows/wsl/), or use [`METEOR_PROFILE`](./environment-variables.md#meteor-profile) and `METEOR_INSPECT` (which writes `.cpuprofile` files) with `meteor run` or `meteor build` to measure build performance natively. Set the variable before running the command:
+
+```bat
+:: cmd
+set METEOR_PROFILE=1
+meteor run
+```
+
+```powershell
+# PowerShell
+$env:METEOR_PROFILE = "1"
+meteor run
+```
 :::
 
 ### Usage
