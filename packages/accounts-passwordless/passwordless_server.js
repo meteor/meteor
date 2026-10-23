@@ -57,7 +57,9 @@ Accounts.registerLoginHandler('passwordless', async options => {
   });
   const { verifiedEmail, error } = result;
 
-  if (!error && verifiedEmail) {
+  // The user-level token (the one given to Accounts.onCreateLoginToken) is
+  // subject to the same 2FA check and single use as the email code.
+  if (!error) {
     // This method is added by the package accounts-2fa
     if (Accounts._check2faEnabled?.(user)) {
       if (!options.code) {
@@ -77,15 +79,25 @@ Accounts.registerLoginHandler('passwordless', async options => {
     // It's necessary to make sure we don't remove the token if the user has 2fa enabled
     // otherwise, it would be necessary to generate a new one if this method is called without
     // a 2fa code
-    await Meteor.users.updateAsync(
-      { _id: user._id, 'emails.address': verifiedEmail },
+    const consumed = await Meteor.users.updateAsync(
       {
-        $set: {
-          'emails.$.verified': true,
-        },
+        _id: user._id,
+        ...(verifiedEmail && { 'emails.address': verifiedEmail }),
+        'services.passwordless.token': user.services.passwordless.token,
+      },
+      {
+        // The user-level token is not sent to an email address, so it
+        // verifies none.
+        ...(verifiedEmail && { $set: { 'emails.$.verified': true } }),
         $unset: { 'services.passwordless': 1 },
       }
     );
+    if (consumed !== 1) {
+      return {
+        userId: user._id,
+        error: Accounts._handleError('Expired token', false),
+      };
+    }
   }
 
   return result;

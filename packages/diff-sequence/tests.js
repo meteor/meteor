@@ -1,3 +1,57 @@
+Tinytest.add("diff-sequence - own prototype field changes remain data", function (test) {
+  for (const name of ["__proto__", "constructor", "toString", "ordinary"]) {
+    for (const [before, after] of [
+      [{}, { [name]: { value: 1 } }],
+      [{ [name]: { value: 1 } }, { [name]: { value: 2 } }],
+      [{ [name]: { value: 1 } }, {}],
+    ]) {
+      const changes = DiffSequence.makeChangedFields(after, before);
+      test.isTrue(Object.prototype.hasOwnProperty.call(changes, name), name);
+      test.equal(
+        changes[name],
+        Object.prototype.hasOwnProperty.call(after, name) ? after[name] : undefined,
+      );
+      test.isTrue(Object.getPrototypeOf(changes) === Object.prototype);
+      // Copy own fields without invoking setters or depending on EJSON.clone.
+      const target = { ...before };
+      const prototype = Object.getPrototypeOf(target);
+      // Independently construct the update so applyChanges is tested even if
+      // makeChangedFields drops the field.
+      DiffSequence.applyChanges(target, {
+        [name]: Object.prototype.hasOwnProperty.call(after, name) ? after[name] : undefined,
+      });
+      test.isTrue(Object.getPrototypeOf(target) === prototype);
+      test.equal(Object.keys(target), Object.keys(after));
+      if (Object.prototype.hasOwnProperty.call(after, name)) {
+        test.isTrue(Object.prototype.hasOwnProperty.call(target, name));
+        test.equal(target[name], after[name]);
+      }
+    }
+  }
+});
+
+Tinytest.add("diff-sequence - own prototype field application preserves prototypes", function (test) {
+  for (const doc of [{}, Object.create(null)]) {
+    const prototype = Object.getPrototypeOf(doc);
+    DiffSequence.applyChanges(doc, JSON.parse('{"__proto__":{"owner":"nested"},"ordinary":2}'));
+    test.isTrue(Object.getPrototypeOf(doc) === prototype);
+    test.isTrue(Object.prototype.hasOwnProperty.call(doc, "__proto__"));
+    test.equal(doc.__proto__.owner, "nested");
+    test.isUndefined(doc.owner);
+    test.equal(doc.ordinary, 2);
+    for (const value of [null, 1]) {
+      DiffSequence.applyChanges(doc, { ["__proto__"]: value });
+      test.isTrue(Object.getPrototypeOf(doc) === prototype);
+      test.isTrue(Object.prototype.hasOwnProperty.call(doc, "__proto__"));
+      test.equal(doc.__proto__, value);
+    }
+    DiffSequence.applyChanges(doc, { ["__proto__"]: undefined });
+    test.isFalse(Object.prototype.hasOwnProperty.call(doc, "__proto__"));
+    test.isTrue(Object.getPrototypeOf(doc) === prototype);
+    test.equal(doc.ordinary, 2);
+  }
+});
+
 Tinytest.add("diff-sequence - diff changes ordering", function (test) {
   const makeDocs = function (ids) {
     return ids.map(function (id) {

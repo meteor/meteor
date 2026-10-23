@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'No-password login/sign-up support for accounts',
-  version: '3.1.2-rc360.0',
+  version: '3.1.2-rc360.1',
 });
 
 Package.onUse(api => {
@@ -38,6 +38,10 @@ Package.onTest(function (api) {
     'sha',
   ]);
 
+  api.use('accounts-2fa', 'server');
+  api.addFiles('passwordless_user_token_tests.js', 'server');
+  api.addFiles('passwordless_login_race_tests.js', 'server');
+  api.addFiles('compatibility_runtime_tests.js', 'server');
   api.addFiles('server_utils.js', 'server');
   api.mainModule('server_tests.js', 'server');
 });
