@@ -1196,6 +1196,10 @@ it uses the server and client entrypoints specified in your package.json.
 
 Use METEOR_LOG_DIR=<path-to-directory> to set a custom log directory.
 
+This command is not supported on Windows, because the profiling suite relies on bash
+scripts. Run it inside WSL instead, or use METEOR_PROFILE=1 / METEOR_INSPECT with
+'meteor run' or 'meteor build'.
+
 Options:
   --size         monitor both bundle runtime and size
   --size-only    monitor only the bundle size
