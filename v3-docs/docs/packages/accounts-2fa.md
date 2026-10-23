@@ -177,6 +177,8 @@ This method can fail throwing one of the following errors:
 
 ## Working with accounts-passwordless {#working-with-accounts-passwordless}
 
+This flow applies to both email codes and user-level tokens delivered through `Accounts.onCreateLoginToken`; see the [passwordless token guidance](./accounts-passwordless.md#enabling-2fa).
+
 Following the same logic from the previous package, if the 2FA is enabled, an error will be returned to the callback of the function
 [`Meteor.passwordlessLoginWithToken`](./accounts-passwordless.md#Meteor-passwordlessLoginWithToken),
  then you can redirect the user to a place where they can provide a code.

@@ -9,6 +9,63 @@ This is a complete history of changes for Meteor releases.
 [//]: # (If you want to change something in this file)
 
 [//]: # (go to meteor/v3-docs/docs/generators/changelog/versions)
+## v3.5.4, 2026-10-23
+
+### Highlights
+
+- Consume email-verification and passwordless tokens atomically to prevent concurrent reuse, and enforce two-factor authentication for user-level passwordless tokens. [Changes](https://github.com/meteor/meteor/commit/9e6e2e4712e2205ac3b226802b8e888be28c6f8c)
+- Preserve document fields such as `__proto__` as own data throughout EJSON conversion, document diffs, Minimongo updates, and MongoDB replication, and prevent update paths from traversing inherited properties. [Changes](https://github.com/meteor/meteor/commit/ff00a31642435a3d60475e7899cd83b73a2c8beb)
+- Preserve document ownership fields when processing oplog replacement events. [Changes](https://github.com/meteor/meteor/commit/2c04b6a948491ba803fe5b1a027612202d3d8763)
+- Prevent inherited object properties from being treated as registered DDP methods or publications. [Changes](https://github.com/meteor/meteor/commit/9e6e2e4712e2205ac3b226802b8e888be28c6f8c)
+- Report the remote client address correctly with the `uws` DDP transport, including connections forwarded through Meteor's local WebSocket proxy. [Changes](https://github.com/meteor/meteor/commit/9e6e2e4712e2205ac3b226802b8e888be28c6f8c)
+- Avoid an extra credential-bearing MongoDB connection during startup, and omit the connection URL from malformed `MONGO_URL` warnings. [Changes](https://github.com/meteor/meteor/commit/9e6e2e4712e2205ac3b226802b8e888be28c6f8c)
+- Update the bundled Node.js runtime to 24.22.1 and npm to 11.19.1. [Changes](https://github.com/meteor/meteor/commit/9fa589f12983647c7697cbebaec19b9569f331ab)
+
+#### Breaking Changes
+
+- `accounts-passwordless`: Custom login integrations using user-level tokens delivered to `Accounts.onCreateLoginToken` must now supply a two-factor authentication code when two-factor authentication is enabled. These flows can no longer bypass that check.
+
+#### Internal API changes
+
+- `ddp-server`: Method and publication handler registries now have null prototypes. Extensions that inspect these internal registries must not depend on inherited `Object.prototype` members.
+- `npm-mongo`: Startup validation parses `MONGO_URL` without opening an additional connection. Actual database connectivity is established through the normal MongoDB connection path.
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+meteor update --release 3.5.4
+```
+
+- **Passwordless integrations:** Supply the required two-factor authentication code when signing in with a user-level token for an account with two-factor authentication enabled. Treat login tokens as single-use credentials and request a fresh token after one has been consumed.
+- **uWS deployments:** Review custom IP-based rate limits or access checks that use `clientAddress`. For deployments behind external proxies, keep `HTTP_FORWARDED_COUNT` consistent with the trusted proxy chain; do not add a hop for Meteor's internal uWS connection. See [HTTP_FORWARDED_COUNT](https://docs.meteor.com/cli/environment-variables#http-forwarded-count).
+
+#### Bumped Meteor Packages
+
+- accounts-password@3.3.2
+- accounts-passwordless@3.1.2
+- ddp-server@3.5.0
+- diff-sequence@1.2.0
+- ejson@1.2.1
+- meteor-tool@3.5.4
+- minimongo@2.2.1
+- mongo@2.5.2
+- npm-mongo@6.18.0
+
+#### Bumped NPM Packages
+
+- npm@11.19.1
+
+#### Special thanks to
+
+✨✨✨
+
+- [@italojs](https://github.com/italojs), for implementing and integrating the security fixes.
+- [@nachocodoner](https://github.com/nachocodoner), for updating the runtime bundle and validating passwordless token races.
+- [@Grubba27](https://github.com/Grubba27), for reviewing and testing account-token fixes.
+
+✨✨✨
 ## v3.5.3, 2026-10-13
 
 ### Highlights
