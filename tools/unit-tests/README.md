@@ -27,5 +27,9 @@ npm run test:unit -- tools/path/to/file.test.js
 npm run test:unit -- tools/unit-tests/rspack/proxy.test.js
 
 # Run tests matching a name pattern
-npm run test:unit -- -t "my test name"
+npm --prefix tools/unit-tests test -- tools/path/to/file.test.js -t "my test name"
 ```
+
+Use the direct `--prefix` invocation for Jest options so the nested npm command
+in `test:unit` does not consume flags such as `-t`. Confirm the expected cases
+ran: this runner allows an empty selection to exit successfully.

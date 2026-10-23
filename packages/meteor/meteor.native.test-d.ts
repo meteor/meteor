@@ -1,5 +1,6 @@
 import { expectTypeOf } from "expect-type";
 import { Meteor } from "./meteor.native";
+import { DDP } from "meteor/ddp-client";
 import type { global_Error, Subscription } from "./meteor.native";
 
 expectTypeOf(Meteor).toBeObject();
@@ -48,7 +49,10 @@ expectTypeOf<Meteor.UserEmail>().toBeObject();
 expectTypeOf<Meteor.UserProfile>().toBeObject();
 expectTypeOf<Meteor.User>().toBeObject();
 declare const legacyUser: Meteor.User;
-expectTypeOf(legacyUser.services).toEqualTypeOf<Record<string, unknown> | undefined>();
+expectTypeOf(legacyUser.services).toEqualTypeOf<Meteor.UserServices | undefined>();
+// Without augmentation, services stays assignable to Record<string, unknown>.
+expectTypeOf<Meteor.UserServices>().toMatchTypeOf<Record<string, unknown>>();
+expectTypeOf<Meteor.UserServices>().toHaveProperty("anyService").toBeUnknown();
 expectTypeOf(Meteor.user).toBeFunction();
 expectTypeOf(Meteor.user()).toEqualTypeOf<
   Meteor.User | null | undefined | Promise<Meteor.User | undefined>
@@ -130,6 +134,22 @@ expectTypeOf(Meteor.EnvironmentVariable).not.toBeAny();
 expectTypeOf<Meteor.SubscriptionHandle>().toBeObject();
 expectTypeOf<Meteor.LiveQueryHandle>().toBeObject();
 expectTypeOf(Meteor.subscribe).toBeFunction();
+
+const handle = Meteor.subscribe("subscription-handle-fixture");
+expectTypeOf(handle).toEqualTypeOf<Meteor.SubscriptionHandleWithId>();
+expectTypeOf(handle.subscriptionId).toEqualTypeOf<string>();
+
+const connectionHandle = DDP.connect("http://localhost:3000")
+  .subscribe("subscription-handle-fixture");
+expectTypeOf(connectionHandle).toEqualTypeOf<Meteor.SubscriptionHandleWithId>();
+expectTypeOf(connectionHandle.subscriptionId).toEqualTypeOf<string>();
+
+const _customHandle: Meteor.SubscriptionHandle = { ready: () => false, stop() {} };
+// @ts-expect-error Actual DDP handles require their subscription ID.
+const _missingId: Meteor.SubscriptionHandleWithId = { ready: () => false, stop() {} };
+// @ts-expect-error The public handle property is subscriptionId, not id.
+void handle.id;
+
 expectTypeOf(Meteor.publish).toBeFunction();
 Meteor.publish("owned", function (ownerId: string) {
   ownerId.toUpperCase();
@@ -163,3 +183,14 @@ expectTypeOf(Meteor.disconnect).toBeFunction();
 expectTypeOf(Meteor.status).toBeFunction();
 expectTypeOf<Meteor.Connection>().toBeObject();
 expectTypeOf(Meteor.onConnection).toBeFunction();
+
+// --- User services augmentation ---
+// REGRESSION: apps must be able to declare their login services (#14812).
+declare module "meteor/meteor" {
+  namespace Meteor {
+    interface UserServices {
+      google?: { accessToken?: string };
+    }
+  }
+}
+expectTypeOf(legacyUser.services?.google?.accessToken).toEqualTypeOf<string | undefined>();

@@ -1594,6 +1594,9 @@ on an OS X system.");
     });
   }
 
+  // Share selected architectures with compilers, as run and test already do.
+  global.includedWebArchs = webArchs || baseWebArchs;
+
   var buildDir = projectContext.getProjectLocalDirectory('build_tar');
   var outputPath = files.pathResolve(options.args[0]); // get absolute path
 

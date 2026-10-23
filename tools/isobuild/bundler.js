@@ -2668,6 +2668,10 @@ class JsImage {
           // will be copied to the destination directory. A little bit of
           // overcopying vastly simplifies the job of the filter.
           copyOptions.filter = prodPackagePredicate;
+          // The predicate cannot recognize a .bin symlink into another
+          // workspace by its resolved path. Builder can retain it when that
+          // target is also present in the copied production bundle.
+          copyOptions.preserveCopiedExternalLinks = true;
         }
 
         await builder.copyNodeModulesDirectory(copyOptions);
@@ -3598,8 +3602,11 @@ async function bundle({
   };
 }
 
-// Used as a catch handler for pauseClient and refreshClient above.
-function ignoreHarmlessErrors(error) {
+// Used for client IPC notifications when the app may be restarting.
+export function ignoreHarmlessErrors(error) {
+  if (error && (error.code === "EPIPE" || error.code === "ERR_IPC_CHANNEL_CLOSED")) {
+    return;
+  }
   switch (error && error.message) {
   case "process exited":
   case "channel closed":

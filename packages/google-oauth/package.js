@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Google OAuth flow",
-  version: '1.4.5',
+  version: '1.4.6-rc360.0',
 });
 
 Cordova.depends({
@@ -27,6 +27,7 @@ Package.onUse(api => {
 
 Package.onTest(function(api) {
   api.use('google-oauth');
-  api.use(['tinytest', 'ecmascript', 'test-helpers', 'oauth', 'oauth2', 'service-configuration']);
+  api.use(['tinytest', 'ecmascript', 'test-helpers', 'oauth', 'oauth2', 'service-configuration', 'random']);
+  api.use('accounts-base', 'server');
   api.addFiles('google-oauth_tests.js');
 });

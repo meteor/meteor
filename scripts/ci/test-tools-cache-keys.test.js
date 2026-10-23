@@ -7,6 +7,18 @@ const workflow = fs.readFileSync(
   path.join(__dirname, '../../.github/workflows/test-tools.yml'),
   'utf8',
 );
+const ddpWorkflow = fs.readFileSync(
+  path.join(__dirname, '../../.github/workflows/test-ddp-transport.yml'),
+  'utf8',
+);
+const packagesWorkflow = fs.readFileSync(
+  path.join(__dirname, '../../.github/workflows/test-packages.yml'),
+  'utf8',
+);
+const windowsWorkflow = fs.readFileSync(
+  path.join(__dirname, '../../.github/workflows/windows-selftest.yml'),
+  'utf8',
+);
 
 function matchingCacheBlocks(cachePath) {
   return workflow
@@ -54,7 +66,7 @@ test('package npm caches use dependency keys without fallback restores', () => {
   for (const block of cacheBlocks) {
     assert.match(
       block,
-      /^\s*key: \$\{\{ runner\.os \}\}-node-24-pkg-npm-\$\{\{ hashFiles\('packages\/\*\*\/package\.js', 'packages\/\*\*\/npm-shrinkwrap\.json'\) \}\}$/m,
+      /^\s*key: \$\{\{ runner\.os \}\}-node-26-pkg-npm-\$\{\{ hashFiles\('packages\/\*\*\/package\.js', 'packages\/\*\*\/npm-shrinkwrap\.json'\) \}\}$/m,
     );
     assert.doesNotMatch(block, /^\s*restore-keys:/m);
   }
@@ -71,15 +83,58 @@ test('dev bundle caches use dependency keys with fallback restores', () => {
   for (const block of cacheBlocks) {
     assert.match(
       block,
-      /^[ \t]*key: \$\{\{ runner\.os \}\}-node-24-meteor-tools-\$\{\{ hashFiles\('meteor', 'package-lock\.json'\) \}\}$/m,
+      /^[ \t]*key: \$\{\{ runner\.os \}\}-node-26-meteor-tools-\$\{\{ hashFiles\('meteor', 'package-lock\.json'\) \}\}$/m,
     );
     assert.doesNotMatch(block, /tools\/package(?:-lock)?\.json/);
     assert.deepEqual(
       restoreKeys(block),
       [
-        '${{ runner.os }}-node-24-meteor-tools-',
-        '${{ runner.os }}-node-24-meteor-',
+        '${{ runner.os }}-node-26-meteor-tools-',
+        '${{ runner.os }}-node-26-meteor-',
       ],
     );
   }
+});
+
+test('Node 26 workflows do not restore caches created by older Node majors', () => {
+  assert.match(
+    ddpWorkflow,
+    /key: \$\{\{ runner\.os \}\}-node-26-\$\{\{ hashFiles\('meteor', '\*\*\/package-lock\.json'\) \}\}/,
+  );
+  assert.match(ddpWorkflow, /\$\{\{ runner\.os \}\}-node-26-/);
+  assert.doesNotMatch(ddpWorkflow, /\$\{\{ runner\.os \}\}-node-24-/);
+
+  assert.match(
+    packagesWorkflow,
+    /key: \$\{\{ runner\.os \}\}-node-26-meteor-\$\{\{ hashFiles\('meteor', '\*\*\/package-lock\.json'\) \}\}/,
+  );
+  assert.match(packagesWorkflow, /\$\{\{ runner\.os \}\}-node-26-meteor-/);
+  assert.doesNotMatch(packagesWorkflow, /\$\{\{ runner\.os \}\}-node-24-meteor-/);
+
+  const windowsCacheBlock = windowsWorkflow
+    .split(/(?=^      - name: )/m)
+    .find(block => block.includes('\n            dev_bundle/\n'));
+
+  assert.ok(windowsCacheBlock, 'expected the Windows dependency cache');
+  assert.match(
+    windowsCacheBlock,
+    /key: \$\{\{ runner\.os \}\}-node-26-meteor-\$\{\{ hashFiles\('meteor', 'meteor\.bat'\) \}\}/,
+  );
+  assert.deepEqual(
+    restoreKeys(windowsCacheBlock),
+    ['${{ runner.os }}-node-26-meteor-'],
+  );
+});
+
+test('Windows preparation retries transient get-ready failures', () => {
+  assert.match(windowsWorkflow, /\$maxAttempts = 3/);
+  assert.match(
+    windowsWorkflow,
+    /for \(\$attempt = 1; \$attempt -le \$maxAttempts; \$attempt\+\+\)/,
+  );
+  assert.match(windowsWorkflow, /if \(\$LASTEXITCODE -eq 0\)/);
+  assert.match(
+    windowsWorkflow,
+    /if \(\$attempt -eq \$maxAttempts\) \{\s*throw /,
+  );
 });

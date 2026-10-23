@@ -16,3 +16,4 @@ Meetup.requestCredential(() => {}, () => {});
 
 expectTypeOf(Meetup.retrieveCredential).parameters.toEqualTypeOf<[string, (string | null)?]>();
 expectTypeOf(Meetup.retrieveCredential).returns.toMatchTypeOf<Promise<unknown>>();
+expectTypeOf(Meetup.retrieveCredential).returns.resolves.extract<Error>().toEqualTypeOf<Error>();

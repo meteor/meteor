@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Send email messages",
-  version: "3.2.0",
+  version: "3.2.1-rc360.0",
 });
 
 Npm.depends({

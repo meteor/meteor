@@ -1904,22 +1904,29 @@ export class MeteorConfig {
     const customMeteorConfigTest = process.env.METEOR_CONFIG_TEST;
     const customMeteorConfigTestClient = process.env.METEOR_CONFIG_TEST_CLIENT;
     const customMeteorConfigTestServer = process.env.METEOR_CONFIG_TEST_SERVER;
+    const customMainModule = process.env.METEOR_CONFIG_MAIN_MODULE;
+    const customTestModule = process.env.METEOR_CONFIG_TEST_MODULE;
     this._config =
         customMeteorConfigClient != null ||
         customMeteorConfigServer != null ||
         customMeteorConfigTest != null ||
         customMeteorConfigTestClient != null ||
-        customMeteorConfigTestServer != null ? {
+        customMeteorConfigTestServer != null ||
+        customMainModule != null || customTestModule != null ? {
           ...this._config || {},
           mainModule: {
-            client: process.env.METEOR_CONFIG_CLIENT || this._config.mainModule.client,
-            server: process.env.METEOR_CONFIG_SERVER || this._config.mainModule.server,
+            ...(typeof this._config?.mainModule === "object" && this._config.mainModule),
+            client: customMeteorConfigClient || this._config?.mainModule?.client,
+            server: customMeteorConfigServer || this._config?.mainModule?.server,
+            ...(customMainModule && JSON.parse(customMainModule)),
           },
           ...customMeteorConfigTest && {testModule: customMeteorConfigTest},
-          ...((customMeteorConfigTestClient || customMeteorConfigTestServer) && {
+          ...((customMeteorConfigTestClient || customMeteorConfigTestServer || customTestModule) && {
             testModule: {
-              client: customMeteorConfigTestClient || this._config.testModule.client,
-              server: customMeteorConfigTestServer || this._config.testModule.server,
+              ...(typeof this._config?.testModule === "object" && this._config.testModule),
+              client: customMeteorConfigTestClient || this._config?.testModule?.client,
+              server: customMeteorConfigTestServer || this._config?.testModule?.server,
+              ...(customTestModule && JSON.parse(customTestModule)),
             },
           }),
         } : this._config;
