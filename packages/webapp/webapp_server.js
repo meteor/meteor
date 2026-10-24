@@ -1,14 +1,12 @@
-import assert from 'assert';
-import { readFileSync, chmodSync, chownSync } from 'fs';
-import { createServer } from 'http';
-import { userInfo } from 'os';
-import { join as pathJoin, dirname as pathDirname } from 'path';
-import { createHash } from 'crypto';
+import assert from 'node:assert';
+import { readFileSync, chmodSync, chownSync } from 'node:fs';
+import { createServer } from 'node:http';
+import { userInfo } from 'node:os';
+import { join as pathJoin, dirname as pathDirname } from 'node:path';
+import { createHash } from 'node:crypto';
 import express from 'express';
 import compress from 'compression';
 import cookieParser from 'cookie-parser';
-import qs from 'qs';
-import parseRequest from 'parseurl';
 import { lookup as lookupUserAgent } from 'useragent-ng';
 import { isModern } from 'meteor/modern-browsers';
 import send from 'send';
@@ -16,30 +14,32 @@ import {
   removeExistingSocketFile,
   registerSocketFileCleanup,
 } from './socket_file.js';
-import cluster from 'cluster';
-import { execSync } from 'child_process';
+import cluster from 'node:cluster';
+import { execSync } from 'node:child_process';
+import { URL } from 'node:url';
+import qs from 'qs';
+import { RoutePolicy } from 'meteor/routepolicy';
 import { onMessage } from 'meteor/inter-process-messaging';
 
-var SHORT_SOCKET_TIMEOUT = 5 * 1000;
-var LONG_SOCKET_TIMEOUT = 120 * 1000;
+const SHORT_SOCKET_TIMEOUT = 5 * 1000;
+const LONG_SOCKET_TIMEOUT = 120 * 1000;
 
 const createExpressApp = () => {
   const app = express();
-  // Security and performace headers
+  // Security and performance headers
   // these headers come from these docs: https://expressjs.com/en/api.html#app.settings.table
   app.set('x-powered-by', false);
   app.set('etag', false);
   app.set('query parser', qs.parse);
   return app;
-}
+};
 export const WebApp = {};
 export const WebAppInternals = {};
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
-
 WebAppInternals.NpmModules = {
-  express : {
+  express: {
     version: Npm.require('express/package.json').version,
     module: express,
   }
@@ -164,7 +164,7 @@ WebApp.categorizeRequest = function(req) {
   const path =
     typeof req.pathname === 'string'
       ? req.pathname
-      : parseRequest(req).pathname;
+      : new URL(req.url, Meteor.absoluteUrl()).pathname;
 
   const categorized = {
     browser,
@@ -217,13 +217,13 @@ WebApp.categorizeRequest = function(req) {
 var htmlAttributeHooks = [];
 var getHtmlAttributes = function(request) {
   var combinedAttributes = {};
-  (htmlAttributeHooks || []).forEach(function(hook) {
+  for (const hook of htmlAttributeHooks || []) {
     var attributes = hook(request);
-    if (attributes === null) return;
+    if (attributes === null) continue;
     if (typeof attributes !== 'object')
       throw Error('HTML attribute hook must return null or object');
     Object.assign(combinedAttributes, attributes);
-  });
+  }
   return combinedAttributes;
 };
 
@@ -316,9 +316,9 @@ WebApp._timeoutAdjustmentRequestCallback = function(req, res) {
   res.on('finish', function() {
     res.setTimeout(SHORT_SOCKET_TIMEOUT);
   });
-  Object.values(finishListeners).forEach(function(l) {
+  for(const l of Object.values(finishListeners) || []) {
     res.on('finish', l);
-  });
+  }
 };
 
 // Will be updated by main before we listen.
@@ -562,7 +562,7 @@ async function getBoilerplateAsync(request, arch, response) {
   let madeChanges = false;
   let promise = Promise.resolve();
 
-  Object.keys(boilerplateDataCallbacks).forEach(key => {
+  for (const key of Object.keys(boilerplateDataCallbacks)) {
     promise = promise
       .then(() => {
         const callback = boilerplateDataCallbacks[key];
@@ -574,7 +574,7 @@ async function getBoilerplateAsync(request, arch, response) {
           madeChanges = true;
         }
       });
-  });
+  }
 
   return promise.then(() => ({
     stream: boilerplate.toHTMLStream(data),
@@ -687,7 +687,7 @@ WebAppInternals.staticFilesMiddleware = async function(
   res,
   next
 ) {
-  var pathname = parseRequest(req).pathname;
+  var pathname = new URL(req.url, Meteor.absoluteUrl()).pathname;
   try {
     pathname = decodeURIComponent(pathname);
   } catch (e) {
@@ -923,9 +923,9 @@ async function runWebAppServer() {
         configJson.clientArchs || Object.keys(configJson.clientPaths);
 
       try {
-        clientArchs.forEach(arch => {
+        for (const arch of clientArchs) {
           generateClientProgram(arch, staticFilesByArch);
-        });
+        }
         WebAppInternals.staticFilesByArch = staticFilesByArch;
       } catch (e) {
         Log.error('Error reloading the client program: ' + e.stack);
@@ -994,7 +994,7 @@ async function runWebAppServer() {
     const staticFiles = (staticFilesByArch[arch] = Object.create(null));
 
     const { manifest } = programJson;
-    manifest.forEach(item => {
+    for (const item of manifest) {
       if (item.url && item.where === 'client') {
         staticFiles[getItemPathname(item.url)] = {
           absolutePath: pathJoin(clientDir, item.path),
@@ -1014,7 +1014,7 @@ async function runWebAppServer() {
           };
         }
       }
-    });
+    }
 
     const { PUBLIC_SETTINGS } = __meteor_runtime_config__;
     const configOverrides = {
@@ -1131,7 +1131,9 @@ async function runWebAppServer() {
     // the device's server, it is important to set the DDP url to the actual
     // Meteor server accepting DDP connections and not the device's file server.
     await syncQueue.runTask(function() {
-      Object.keys(WebApp.clientPrograms).forEach(generateBoilerplateForArch);
+      for (const arch of Object.keys(WebApp.clientPrograms)) {
+        generateBoilerplateForArch(arch);
+      }
     });
   };
 
@@ -1158,14 +1160,15 @@ async function runWebAppServer() {
   await WebAppInternals.reloadClientPrograms();
 
   // webserver
-  var app = createExpressApp()
+  const app = createExpressApp();
 
   // Packages and apps can add handlers that run before any other Meteor
   // handlers via WebApp.rawExpressHandlers.
-  var rawExpressHandlers = createExpressApp()
+  const rawExpressHandlers = createExpressApp();
   app.use(rawExpressHandlers);
 
   // Auto-compress any json, javascript, or text.
+  // TODO We should consider adding configuration options for people to adjust compression options
   app.use(compress({ filter: shouldCompress }));
 
   // parse cookies into an object
@@ -1283,7 +1286,7 @@ async function runWebAppServer() {
    */
   // Packages and apps can add handlers to this via WebApp.expressHandlers.
   // They are inserted before our default handler.
-  var packageAndAppHandlers = createExpressApp()
+  var packageAndAppHandlers = createExpressApp();
   app.use(packageAndAppHandlers);
 
   let suppressExpressErrors = false;
@@ -1319,7 +1322,7 @@ async function runWebAppServer() {
       };
 
       if (shuttingDown) {
-        headers['Connection'] = 'Close';
+        headers.Connection = 'Close';
       }
 
       var request = WebApp.categorizeRequest(req);
@@ -1509,9 +1512,9 @@ async function runWebAppServer() {
             }
             const callbacks = onListeningCallbacks;
             onListeningCallbacks = null;
-            callbacks?.forEach(callback => {
+            for (const callback of callbacks || []) {
               callback();
-            });
+            }
           },
           e => {
             console.error('Error listening:', e);

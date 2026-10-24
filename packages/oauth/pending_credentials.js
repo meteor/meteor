@@ -68,31 +68,26 @@ OAuth._storePendingCredential =
     });
   };
 
-
 // Retrieves and removes a credential from the _pendingCredentials collection
 //
 // @param key {string}
 // @param credentialSecret {string}
 //
-OAuth._retrievePendingCredential =
-  async (key, credentialSecret = null) => {
-    check(key, String);
+OAuth._retrievePendingCredential = async (key, credentialSecret = null) => {
+  check(key, String);
 
-    const pendingCredential = await OAuth._pendingCredentials.findOneAsync({
-      key,
-      credentialSecret,
-    });
-    if (pendingCredential) {
-      await OAuth._pendingCredentials.removeAsync({ _id: pendingCredential._id });
-      if (pendingCredential.credential.error)
-        return recreateError(pendingCredential.credential.error);
-      else
-        return OAuth.openSecret(pendingCredential.credential);
-    } else {
-      return undefined;
-    }
-  };
-
+  const pendingCredential = await OAuth._pendingCredentials.findOneAsync({
+    key,
+    credentialSecret,
+  });
+  if (pendingCredential) {
+    await OAuth._pendingCredentials.removeAsync({ _id: pendingCredential._id });
+    if (pendingCredential.credential.error)
+      return recreateError(pendingCredential.credential.error);
+    return OAuth.openSecret(pendingCredential.credential);
+  }
+  return undefined;
+};
 
 // Convert an Error into an object that can be stored in mongo
 // Note: A Meteor.Error is reconstructed as a Meteor.Error
@@ -100,12 +95,12 @@ OAuth._retrievePendingCredential =
 // TODO: Can we do this more simply with EJSON?
 const storableError = error => {
   const plainObject = {};
-  Object.getOwnPropertyNames(error).forEach(
-    key => plainObject[key] = error[key]
-  );
+  for (const key of Object.getOwnPropertyNames(error)) {
+    plainObject[key] = error[key];
+  }
 
   // Keep track of whether it's a Meteor.Error
-  if(error instanceof Meteor.Error) {
+  if (error instanceof Meteor.Error) {
     plainObject['meteorError'] = true;
   }
 
@@ -123,9 +118,9 @@ const recreateError = errorDoc => {
     error = new Error();
   }
 
-  Object.getOwnPropertyNames(errorDoc).forEach(key =>
-    error[key] = errorDoc[key]
-  );
+  for (const key of Object.getOwnPropertyNames(errorDoc)) {
+    error[key] = errorDoc[key];
+  }
 
   return error;
 };

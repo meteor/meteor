@@ -74,6 +74,20 @@ Object.assign(Roles, {
   GLOBAL_GROUP: null,
 
   /**
+   * Throw an exception if `roleName` is an invalid role name.
+   *
+   * @method _checkRoleName
+   * @param {String} roleName A role name to match against.
+   * @private
+   * @static
+   */
+  _checkRoleName: function (roleName) {
+    if (!roleName || typeof roleName !== 'string' || roleName.trim() !== roleName) {
+      throw new Error('Invalid role name \'' + roleName + '\'.')
+    }
+  },
+
+  /**
    * @summary Create a new role.
    * @memberof Roles
    * @locus Anywhere
