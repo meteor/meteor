@@ -1,6 +1,6 @@
 const originalEmitWarning = process.emitWarning;
 
-process.emitWarning = function (message) {
+process.emitWarning = function (warning, ...args) {
   /*
    * A warning was introduced in Node 22:
    *
@@ -15,8 +15,10 @@ process.emitWarning = function (message) {
    *
    * This warning was, besides being annoying, breaking our tests.
    */
-  if (message.includes("punycode")) {
+  // `warning` can be a string or an Error.
+  const message = typeof warning === "string" ? warning : warning?.message;
+  if (typeof message === "string" && message.includes("punycode")) {
     return;
   }
-  return originalEmitWarning(message);
+  return originalEmitWarning(warning, ...args);
 };
