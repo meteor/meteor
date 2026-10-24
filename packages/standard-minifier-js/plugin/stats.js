@@ -24,6 +24,7 @@ const meteorInstallRegExp = new RegExp([
 export function extractModuleSizesTree(source) {
   const match = meteorInstallRegExp.exec(source);
   if (match) {
+    let ast;
     try {
       ast = acorn.parse(source, {
         ecmaVersion: 'latest',
@@ -35,11 +36,19 @@ export function extractModuleSizesTree(source) {
         checkPrivateFields: false
       });
     }
-    catch(e){
-      console.log(`Error while parsing with acorn. Falling back to babel minifier. ${e}`);
-      ast = Babel.parse(source);
+    catch(acornError){
+      // The module-size tree only feeds optional bundle stats
+      // (bundle-visualizer). If neither parser can handle the minified source,
+      // skip the tree instead of aborting the whole production build.
+      try {
+        console.log(`Error while parsing with acorn. Falling back to babel. ${acornError}`);
+        ast = Babel.parse(source);
+      } catch (babelError) {
+        console.log(`Error while parsing bundle for module sizes; skipping stats. ${babelError}`);
+        return;
+      }
     }
-    
+
     let meteorInstallName = "meteorInstall";
     // The minifier may have renamed meteorInstall to something shorter.
     match.some((name, i) => (i > 0 && (meteorInstallName = name)));
