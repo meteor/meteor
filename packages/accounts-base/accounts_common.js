@@ -254,7 +254,7 @@ export class AccountsCommon {
       // message, but there's no trivial way to do this.
       Meteor._debug(
         'Accounts.config was called on the client but not on the ' +
-          'server; some configuration options may not take effect.'
+          'server; some configuration options may not take effect.',
       );
     }
 
