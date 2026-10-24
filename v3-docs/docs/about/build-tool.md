@@ -385,4 +385,4 @@ Writing a build plugin is a very advanced task that only the most advanced Meteo
 
 ### Caching
 
-The best way to make your build plugin fast is to use caching anywhere you can - the best way to save time is to do less work! Check out the [documentation about CachingCompiler](/api/package#caching-compiler) to learn more. It's used in all of the above examples, so you can see how to use it by looking at them.
+The best way to make your build plugin fast is to use caching anywhere you can - the best way to save time is to do less work! Check out the [documentation about CachingCompiler](/api/package#build-plugin-caching-compiler) to learn more. It's used in all of the above examples, so you can see how to use it by looking at them.

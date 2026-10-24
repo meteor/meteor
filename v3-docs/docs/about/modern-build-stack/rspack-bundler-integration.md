@@ -148,7 +148,7 @@ Among the compatible plugins:
 - [`zodern:types`](https://packosphere.com/zodern/types). Still compatible, automatically providing Meteor types for core and community packages.
 
 For others, please refer to the migration topics.
-- [CSS, Less, and SCSS](#css-less-and-scss) (when using [`less`](https://packosphere.com/meteor/less), [`fourseven:scss`](https://packosphere.com/fourseven/scss))
+- [CSS, Less, and SCSS](#css) (when using [`less`](https://packosphere.com/meteor/less), [`fourseven:scss`](https://packosphere.com/fourseven/scss))
 - [Coffeescript](#coffeescript) (when using [`coffeescript`](https://packosphere.com/meteor/coffeescript))
 - [Svelte](#svelte) (when using [`zodern:melte`](https://packosphere.com/zodern/melte))
 
@@ -291,7 +291,7 @@ If you need Meteor to handle CSS or HTML files outside the main entry folder, ad
 }
 ```
 
-With this, Meteor will process these files, merge stylesheets, generate the final HTML, and support files a Meteor plugin may use, except for JS or script code now handled by Rspack. You can also process CSS and HTML files directly with Rspack using loaders from imports in your app code, as mentioned in ["CSS, Less and SCSS"](#css-less-and-scss) or ["HtmlRspackPlugin"](#htmlrspackplugin). If you prefer Meteor's loading approach, you can still rely on it.
+With this, Meteor will process these files, merge stylesheets, generate the final HTML, and support files a Meteor plugin may use, except for JS or script code now handled by Rspack. You can also process CSS and HTML files directly with Rspack using loaders from imports in your app code, as mentioned in ["CSS, Less and SCSS"](#css) or ["HtmlRspackPlugin"](#htmlrspackplugin). If you prefer Meteor's loading approach, you can still rely on it.
 
 Keep in mind: compiling styles with the Meteor compilers triggers Meteor HMR, which is slower than Rspack HMR. Migrating to compile styles with Rspack as part of the app code ensures the fastest HMR for style changes in development.
 
@@ -1016,7 +1016,7 @@ For more details on strategies and matchers, see the [Persist Dev Files](#persis
 
 ### Dev Server
 
-You can customize the Rspack dev server much like you would when using meteor run. Any [devServer option listed in the official Rspack guide](https://rspack.rs/config/dev-server) can be applied in your app’s [`rspack.config.js`](./rspack-bundler-integration.md#custom-rspackconfigjs).
+You can customize the Rspack dev server much like you would when using meteor run. Any [devServer option listed in the official Rspack guide](https://rspack.rs/config/dev-server) can be applied in your app’s [`rspack.config.js`](./rspack-bundler-integration.md#custom-rspack-config-js).
 
 The only exception is the port configuration. To set a specific port for the Rspack dev server, use the `RSPACK_DEVSERVER_PORT` environment variable:
 
@@ -1128,7 +1128,7 @@ PORT=3000 METEOR_LOCAL_DIR=.meteor/local-1 meteor run
 PORT=3001 METEOR_LOCAL_DIR=.meteor/local-2 meteor run
 ```
 
-For more details on how this variable affects Rspack, see the [`METEOR_LOCAL_DIR`](../../cli/environment-variables.md#meteor_local_dir) documentation.
+For more details on how this variable affects Rspack, see the [`METEOR_LOCAL_DIR`](../../cli/environment-variables.md#meteor-local-dir) documentation.
 
 Rspack also separates command-mode output within each build context. Development,
 normal test, and full-app test builds use distinct module directories such as
