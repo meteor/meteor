@@ -36,7 +36,10 @@ if (process.env.DDP_TRANSPORT === 'uws') {
           });
           const headers = { 'x-address-test': marker };
           if (forwarded !== undefined) headers['x-forwarded-for'] = forwarded;
-          const stream = new ClientStream(Meteor.absoluteUrl(), {
+          const url = new URL(Meteor.absoluteUrl());
+          // Match the IPv4 source binding even when localhost resolves to ::1.
+          url.hostname = '127.0.0.1';
+          const stream = new ClientStream(url.toString(), {
             retry: false,
             headers,
             npmFayeOptions: { net: { localAddress: peer } },
