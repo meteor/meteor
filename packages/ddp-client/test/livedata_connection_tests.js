@@ -2899,7 +2899,8 @@ Tinytest.add(
   function (test) {
     // Precondition: every already-tracked connection is fully ready, so
     // this test's connection is the only thing that can flip the answer.
-    test.isTrue(DDP._allSubscriptionsReady());
+    test.isTrue(DDP._allSubscriptionsReady(),
+      'previous test connections must not leave pending subscriptions');
 
     // DDP.connect registers in the allConnections registry (the object
     // form of `url` is the standard test-stream hook).
@@ -2914,7 +2915,8 @@ Tinytest.add(
     // Closing the connection must deregister it — a closed connection can
     // never become ready and would otherwise be consulted forever.
     conn.close();
-    test.isTrue(DDP._allSubscriptionsReady());
+    test.isTrue(DDP._allSubscriptionsReady(),
+      'closing must remove this connection from subscription readiness tracking');
   }
 );
 

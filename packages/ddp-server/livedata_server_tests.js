@@ -381,7 +381,7 @@ Tinytest.addAsync(
       onSubscription[serverConn.id] = function (subscription) {
         delete onSubscription[serverConn.id];
         test.equal(subscription.connection.id, serverConn.id);
-        clientConn.disconnect();
+        clientConn.close();
         onComplete();
       };
       clientConn.subscribe("livedata_server_test_sub", serverConn.id);
@@ -396,7 +396,7 @@ Tinytest.addAsync(
       onSubscription[serverConn.id] = function (id) {
         delete onSubscription[serverConn.id];
         test.equal(id, serverConn.id);
-        clientConn.disconnect();
+        clientConn.close();
         onComplete();
       };
       clientConn.subscribe("livedata_server_test_sub_method", serverConn.id);
@@ -420,7 +420,7 @@ Tinytest.addAsync(
         test.isNotUndefined(publicationInvocation, "Should have been defined");
         if (this.userId === userId && fromOnStop) {
           delete onSubscription[serverConn.id];
-          clientConn.disconnect();
+          clientConn.close();
           onComplete();
         }
       };
@@ -463,10 +463,11 @@ Tinytest.addAsync(
     makeTestConnection(test, function (clientConn, serverConn) {
       let testsLength = 0;
 
-      onSubscriptions = function (subscription) {
-        clientConn.disconnect();
+      onSubscriptions = function () {
         testsLength++;
-        if (testsLength == 3) {
+        if (testsLength === 3) {
+          onSubscriptions = null;
+          clientConn.close();
           onComplete();
         }
       };
@@ -530,6 +531,7 @@ Tinytest.addAsync(
         handlers.map((sub) => sub.ready()).filter((o) => o).length === 1,
         true
       );
+      clientConn.close();
       onComplete();
     })
 );
@@ -1286,6 +1288,7 @@ Tinytest.addAsync(
       'Async onStop callback should have completed on disconnect'
     );
 
+    clientConn.close();
     delete asyncCleanupTracker[trackerId];
   }
 );

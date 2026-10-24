@@ -5,6 +5,7 @@
 const http = Npm.require('http');
 const net = Npm.require('net');
 const { ClientStream } = require('meteor/socket-stream-client');
+const { WebApp } = require('meteor/webapp');
 
 const disableSockJS = !!process.env.DISABLE_SOCKJS ||
   (process.env.DDP_TRANSPORT && process.env.DDP_TRANSPORT !== 'sockjs');
@@ -15,7 +16,34 @@ if (process.env.DDP_TRANSPORT === 'uws') {
     // Linux routes the entire loopback range. A distinct source address proves
     // that the internal uWS proxy's 127.0.0.1 address does not replace the peer.
     const peer = process.platform === 'linux' ? '127.0.0.2' : '127.0.0.1';
+    const target = new URL(Meteor.absoluteUrl());
+    // Bypass the development tool's extra proxy hop, but still exercise the
+    // application's HTTP listener and its production uWS proxy.
+    target.port = WebApp.httpServer.address().port;
+    const sockets = new Set();
+    // Faye rejects the net option. Bind the source of a real TCP relay instead,
+    // so the application receives the distinct peer without changing headers.
+    const relay = net.createServer(socket => {
+      const upstream = net.connect({
+        host: '127.0.0.1',
+        port: Number(target.port) || 80,
+        localAddress: peer,
+      });
+      for (const connection of [socket, upstream]) {
+        sockets.add(connection);
+        connection.on('close', () => sockets.delete(connection));
+        connection.on('error', () => {
+          socket.destroy();
+          upstream.destroy();
+        });
+      }
+      socket.pipe(upstream).pipe(socket);
+    });
     try {
+      await new Promise((resolve, reject) => {
+        relay.once('error', reject);
+        relay.listen(0, '127.0.0.1', resolve);
+      });
       for (const [count, forwarded, expected] of [
         ['0', '192.0.2.42', peer],
         ['1', '192.0.2.42', '192.0.2.42'],
@@ -36,13 +64,12 @@ if (process.env.DDP_TRANSPORT === 'uws') {
           });
           const headers = { 'x-address-test': marker };
           if (forwarded !== undefined) headers['x-forwarded-for'] = forwarded;
-          const url = new URL(Meteor.absoluteUrl());
-          // Match the IPv4 source binding even when localhost resolves to ::1.
+          const url = new URL(target);
           url.hostname = '127.0.0.1';
+          url.port = relay.address().port;
           const stream = new ClientStream(url.toString(), {
             retry: false,
             headers,
-            npmFayeOptions: { net: { localAddress: peer } },
           });
           client = DDP.connect(stream, { retry: false });
           const connection = await accepted;
@@ -53,12 +80,14 @@ if (process.env.DDP_TRANSPORT === 'uws') {
         } finally {
           Meteor.clearTimeout(timer);
           if (hook) hook.stop();
-          if (client) client.disconnect();
+          if (client) client.close();
         }
       }
     } finally {
       if (previousCount === undefined) delete process.env.HTTP_FORWARDED_COUNT;
       else process.env.HTTP_FORWARDED_COUNT = previousCount;
+      for (const socket of sockets) socket.destroy();
+      if (relay.listening) await new Promise(resolve => relay.close(resolve));
     }
   });
 }
