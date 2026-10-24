@@ -81,14 +81,17 @@ client). By default the server publishes `username`, `emails`, and
 `profile` (writable by user). See [`Meteor.users`](#Meteor-users) for more on
 the fields used in user documents.
 
-On the server, this will fetch the record from the database. To improve the
+On the server, calling `Meteor.user()` is deprecated: it logs a warning and,
+when a user is logged in, returns a promise (it fetches the record with
+`findOneAsync`) rather than the user document. Use
+[`Meteor.userAsync`](#Meteor-userAsync) on the server instead. To improve the
 latency of a method that uses the user document multiple times, save the
-returned record to a variable instead of re-calling `Meteor.user()`.
+awaited record to a variable instead of re-fetching it.
 
 Fetching the full user document can cause unnecessary database usage on the
 server and over-reactivity on the client, particularly if you store lots of
 custom data on it. Therefore it is recommended to use the `options`
-parameter to only fetch the fields you need:
+parameter to only fetch the fields you need. On the client:
 
 ```js
 import { Meteor } from "meteor/meteor";
@@ -944,14 +947,14 @@ address verification and password recovery emails.
 
 ### Password encryption and security
 
-Starting from `accounts-password:4.0.0`, you can choose which algorithm is used by the Meteor server to store passwords : either [bcrypt](http://en.wikipedia.org/wiki/Bcrypt) or
+Starting from `accounts-password:3.1.0` (included in Meteor 3.2), you can choose which algorithm is used by the Meteor server to store passwords : either [bcrypt](http://en.wikipedia.org/wiki/Bcrypt) or
 [Argon2](http://en.wikipedia.org/wiki/Argon2) algorithm. Both are robust and contribute to
 protect against embarrassing password leaks if the server's database is
 compromised.
 
-Before version 4.0.0, `bcrypt` was the only available option. argon2 has been introduced because it is  considered the most secure option. This algorithm is specifically designed to resist GPU-based brute force attacks. For more details, see the [OWASP Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html).
+Before version 3.1.0, `bcrypt` was the only available option. argon2 has been introduced because it is  considered the most secure option. This algorithm is specifically designed to resist GPU-based brute force attacks. For more details, see the [OWASP Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html).
 
-As of January 2025, **`bcrypt` is still the default option** to enable a smooth transition. In the future, `argon2` will replace `bcrypt` as default and `bcrypt` option will be deprecated.
+As of Meteor 3.5, **`bcrypt` is still the default option** to enable a smooth transition. In the future, `argon2` will replace `bcrypt` as default and `bcrypt` option will be deprecated.
 
 Passwords are hashed on the client using **SHA-256** algorithm before being sent to the server. This ensures that sensitive data is never transmitted in plain text. Once received by the server, the hashed value is further encrypted and securely stored in the `Meteor.users` collection.
 

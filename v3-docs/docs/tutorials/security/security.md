@@ -311,7 +311,7 @@ Meteor.publish('list', function (listId) {
 
 In the first example, if the `userId` property on the selected list changes, the query in the publication will still return the data, since the security check in the beginning will not re-run. In the second example, we have fixed this by putting the security check in the returned query itself.
 
-Unfortunately, not all publications are as simple to secure as the example above. For more tips on how to use `reywood:publish-composite` to handle reactive changes in publications, see the [data loading article](/tutorials/data-loading/data-loading#complex-auth).
+Unfortunately, not all publications are as simple to secure as the example above. For more tips on how to use `reywood:publish-composite` to handle reactive changes in publications, see the [data loading article](/tutorials/data-loading/data-loading#reactive-joins-with-reywood-publish-composite).
 
 ### Passing options
 

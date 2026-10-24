@@ -281,7 +281,7 @@ Similar to `cursor.count`, but returns a `Promise`. For a faster version, see `e
 
 <ApiBox name= "Mongo.Collection#estimatedDocumentCount" instanceName="Collection"/>
 
-Returns a `Promise` that resolves to the number of documents in the cursor's result set. The count is an estimate and not guaranteed to be exact.
+Returns a `Promise` that resolves to an estimate of the total number of documents in the collection, computed from collection metadata (no selector is applied). Fast but not guaranteed to be exact — use `countDocuments` for a filtered or exact count.
 
 <ApiBox name="Mongo.Collection#insert" instanceName="Collection"/>
 

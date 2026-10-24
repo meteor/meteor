@@ -18,7 +18,7 @@ As of version 1.3, Meteor ships with full support for [ES2015 modules](https://d
 
 In ES2015, you can make variables available outside a file using the `export` keyword. To use the variables somewhere else, you must `import` them using the path to the source. Files that export some variables are called "modules", because they represent a unit of reusable code. Explicitly importing the modules and packages you use helps you write your code in a modular way, avoiding the introduction of global symbols and "action at a distance".
 
-You can read about the module system in detail in the [`modules` package README](https://docs.meteor.com/#/full/modules). This package is automatically included in every new Meteor app as part of the [`ecmascript` meta-package](https://docs.meteor.com/#/full/ecmascript), so most apps won't need to do anything to start using modules right away.
+You can read about the module system in detail in the [`modules` package README](/packages/modules). This package is automatically included in every new Meteor app as part of the [`ecmascript` meta-package](/packages/ecmascript), so most apps won't need to do anything to start using modules right away.
 
 ### Introduction to using `import` and `export`
 
@@ -44,11 +44,11 @@ export default new Collection('lists');             // default export
 
 ### Importing from packages
 
-In Meteor, it is also simple and straightforward to use the `import` syntax to load npm packages on the client or server and access the package's exported symbols as you would with any other module. You can also import from Meteor Atmosphere packages, but the import path must be prefixed with `meteor/` to avoid conflict with the npm package namespace. For example, to import `moment` from npm and `HTTP` from Atmosphere:
+In Meteor, it is also simple and straightforward to use the `import` syntax to load npm packages on the client or server and access the package's exported symbols as you would with any other module. You can also import from Meteor Atmosphere packages, but the import path must be prefixed with `meteor/` to avoid conflict with the npm package namespace. For example, to import `moment` from npm and `EJSON` from Atmosphere:
 
 ```js
 import moment from 'moment';          // default import from npm
-import { HTTP } from 'meteor/http';   // named import from Atmosphere
+import { EJSON } from 'meteor/ejson';  // named import from Atmosphere
 ```
 
 For more details using `imports` with packages see [Using Packages](../../packages/#using-atmosphere-packages) tutorial.
@@ -247,7 +247,7 @@ By default, any JavaScript files in your Meteor application folder are bundled a
 
   Any directory named `server/` is not loaded on the client. Similar to wrapping your code in `if (Meteor.isServer) { ... }`, except the client never even receives the code. Any sensitive code that you don't want served to the client, such as code containing passwords or authentication mechanisms, should be kept in the `server/` directory.
 
-  Meteor gathers all your JavaScript files, excluding anything under the `client`, `public`, and `private` subdirectories, and loads them into a Node.js server instance. In Meteor, your server code runs in a single thread per request, not in the asynchronous callback style typical of Node.
+  Meteor gathers all your JavaScript files, excluding anything under the `client`, `public`, and `private` subdirectories, and loads them into a Node.js server instance. In Meteor 3, your server code runs on the standard Node.js event loop, and asynchronous operations use `async`/`await` (the Fibers model of earlier Meteor versions, which allowed synchronous-style server code, was removed in Meteor 3.0).
 
 - **public**
 

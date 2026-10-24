@@ -10,18 +10,30 @@ projects can start writing TypeScript with no extra setup.
 
 > [!NOTE]
 > This page describes the classic (isobuild) build stack. Apps using the
-> modern build stack transpile `.ts`/`.tsx` with SWC via
-> [Rspack](https://rspack.dev) instead, and this package's compiler plugin is
-> bypassed for app source. The type-checking notes below still apply, since
-> neither stack type-checks at build time.
+> modern build stack bundle with [Rspack](https://rspack.dev), and this
+> package's compiler plugin is bypassed for app source. The type-checking
+> notes below still apply, since neither stack type-checks at build time.
 
 ## Usage
 
 The `typescript` package registers a compiler plugin that transpiles
-TypeScript to plain ECMAScript, which is then compiled by [Babel](https://babeljs.io/)
-for each of Meteor's build targets (server, modern browsers, legacy
-browsers, and Cordova). Because the official TypeScript compiler runs
-before Babel, this plugin does not suffer from the
+TypeScript to plain ECMAScript for each of Meteor's build targets
+(server, modern browsers, legacy browsers, and Cordova). By default,
+`.ts`/`.tsx` files are transpiled with [SWC](https://swc.rs)
+(`@meteorjs/swc-core`), the modern transpiler introduced in Meteor 3.3:
+new apps enable it via `"meteor": { "modern": true }` in `package.json`,
+and since Meteor 3.5.1 it defaults on even when `package.json` has no
+`meteor.modern` setting.
+
+The previous pipeline — the official TypeScript compiler
+(`transpileModule`) followed by [Babel](https://babeljs.io/) — is used
+only when the modern transpiler is turned off (`"meteor": { "modern": false }`
+or `"meteor": { "modern": { "transpiler": false } }`), when a file or
+package is excluded via the transpiler's exclude options (`excludeApp`,
+`excludePackages`, `excludeNodeModules`, `excludeLegacy`), or as an
+automatic per-file fallback when SWC fails to compile a file. When that
+pipeline is active, the TypeScript compiler runs before Babel, so it
+does not suffer from the
 [caveats](https://babeljs.io/docs/babel-plugin-transform-typescript#caveats)
 that affect Babel's standalone TypeScript transform — for example,
 `namespace` declarations are fully supported.
@@ -124,17 +136,19 @@ knowing about:
 
 - **No type checking during build** — see [Type checking](#type-checking)
   above.
-- **Per-module compilation.** Modules are compiled individually with
-  TypeScript's `transpileModule`, so features that need cross-file
-  analysis are limited. In particular, `export const enum Status { … }` is not
+- **Per-module compilation.** Modules are compiled individually — by SWC,
+  or by TypeScript's `transpileModule` when the modern transpiler is
+  turned off — so features that need cross-file analysis are limited. In
+  particular, `export const enum Status { … }` is not
   fully supported, though a plain `const enum Status { … }` works when confined to
   a single module. If you need whole-program compilation, consider the
   [`adornis:typescript`](https://atmospherejs.com/adornis/typescript)
   community package.
 - **`.d.ts` files are not compiled.** Declaration files are detected and
   skipped, so they will not cause build errors.
-- **TypeScript parses first.** Because the TypeScript compiler runs before
-  Babel, syntax that TypeScript doesn't understand (such as experimental
+- **TypeScript parses first (TypeScript-then-Babel pipeline).** When the
+  modern transpiler is turned off, the TypeScript compiler runs before
+  Babel, so syntax that TypeScript doesn't understand (such as experimental
   ECMAScript proposals) will be rejected even if Babel could handle it. You
   can use `.babelrc` files to configure Babel, but TypeScript still has to
   accept the code first.

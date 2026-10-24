@@ -78,15 +78,16 @@ SERVER_WEBSOCKET_COMPRESSION='{"threshold": 1536, "level": 3, "memLevel": 4}'
 
 ## Verifying Compression Status
 
-You can check if compression is enabled through the Meteor shell:
+**In the browser**: open DevTools > Network, filter by WS, and select the WebSocket upgrade request for `/websocket` (or `/sockjs/.../websocket`). Inspect the *response* headers of the `101 Switching Protocols` response:
 
-```javascript
-Meteor.server.stream_server.server.options.faye_server_options.extensions
-```
+- A `Sec-WebSocket-Extensions: permessage-deflate` response header means compression is enabled.
+- No such response header means compression is disabled. (The *request* header only shows what the client offered, not what the server accepted.)
 
-Results interpretation:
-- `[]` (empty array): Compression is disabled
-- `[{}]` (array with object): Compression is enabled
+**On the server**: compression is enabled when `SERVER_WEBSOCKET_COMPRESSION` is unset or set to JSON that parses to a truthy value, and disabled when it is set to `false` (or any falsy JSON value).
+
+::: info
+These compression settings apply only to the default SockJS transport. The opt-in `uws` transport does not use permessage-deflate, so this verification and the `SERVER_WEBSOCKET_COMPRESSION` options do not apply to it. See [DDP Transport](/performance/ddp-transport).
+:::
 
 ## Performance Considerations
 

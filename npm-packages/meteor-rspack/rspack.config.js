@@ -2,7 +2,7 @@ const { DefinePlugin, BannerPlugin, NormalModuleReplacementPlugin } = require('@
 const fs = require('fs');
 const { inspect } = require('node:util');
 const path = require('path');
-const { merge } = require('webpack-merge');
+const { merge } = require('rspack-merge');
 
 const { cleanOmittedPaths, mergeSplitOverlap } = require("./lib/mergeRulesSplitOverlap.js");
 const { getMeteorAppSwcConfig } = require('./lib/swc.js');
@@ -94,26 +94,22 @@ function createCacheStrategy(
   ].filter(Boolean);
 
   return {
-    cache: true,
-    experiments: {
-      cache: {
-        version: `cache-${mode}${(side && `-${side}`) || ""}`,
-        type: "persistent",
-        storage: {
-          type: "filesystem",
-          // Include the mode in the directory (not just the version):
-          // rspack invalidates a persistent cache on version mismatch, so
-          // sharing one directory between development and production would
-          // wipe the cache on every `meteor run` <-> `meteor build` switch
-          // instead of keeping both warm. See meteor/meteor#14568.
-          directory: `node_modules/.cache/rspack/${
-            [buildContext, side, mode].filter(Boolean).join('-') || 'default'
-          }`,
-        },
-        ...(buildDependencies.length > 0 && {
-          buildDependencies: buildDependencies,
-        })
+    cache: {
+      version: `cache-${mode}${(side && `-${side}`) || ""}`,
+      type: "persistent",
+      storage: {
+        type: "filesystem",
+        // Rspack invalidates a persistent cache on version mismatch. Keep
+        // development and production in separate directories so switching
+        // between `meteor run` and `meteor build` leaves both caches warm.
+        // See meteor/meteor#14568.
+        directory: `node_modules/.cache/rspack/${
+          [buildContext, side, mode].filter(Boolean).join('-') || 'default'
+        }`,
       },
+      ...(buildDependencies.length > 0 && {
+        buildDependencies: buildDependencies,
+      })
     },
   };
 }
@@ -468,9 +464,6 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     ...(isReactEnabled ? [/^react$/, /^react-dom$/] : []),
     ...(isServer ? [/^bcrypt$/] : []),
   ];
-  const alias = {
-    "/": path.resolve(process.cwd()),
-  };
   const fallback = {
     ...(isClient && makeWebNodeBuiltinsAlias()),
   };
@@ -491,6 +484,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   const reactRefreshModule = isReactEnabled
     ? safeRequire("@rspack/plugin-react-refresh")
     : null;
+  const ReactRefreshRspackPlugin =
+    reactRefreshModule?.ReactRefreshRspackPlugin || reactRefreshModule;
 
   const requireExternalsPlugin = new RequireExternalsPlugin({
     filePath: path.join(buildContext, runPath),
@@ -626,7 +621,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         if (isMainChunk) return `../${buildContext}/${outputPath}`;
         return chunkSuffix;
       },
-      libraryTarget: "commonjs2",
+      library: { type: "commonjs2" },
       publicPath: "/",
       chunkFilename: `${chunksContext}/[id]${isProd ? ".[chunkhash]" : ""}.js`,
       assetModuleFilename,
@@ -653,15 +648,27 @@ module.exports = async function (inMeteor = {}, argv = {}) {
               },
             ]
           : []),
+        { test: /\.css$/, type: "css/auto" },
         ...extraRules,
       ],
+      parser: {
+        javascript: {
+          // Relax Rspack 2.0 strict ESM linking; SWC-stripped TS type re-exports otherwise fail the build.
+          exportsPresence: "warn",
+        },
+      },
     },
-    resolve: { extensions, alias, fallback, roots: [path.resolve(projectDir)] },
+    resolve: {
+      extensions,
+      fallback,
+      roots: [path.resolve(projectDir)],
+    },
     externals,
+    externalsType: "commonjs2",
     plugins: [
       ...[
-        ...(isReactEnabled && reactRefreshModule && isDevEnvironment
-          ? [new reactRefreshModule()]
+        ...(isReactEnabled && ReactRefreshRspackPlugin && isDevEnvironment
+          ? [new ReactRefreshRspackPlugin()]
           : []),
         requireExternalsPlugin,
         assetExternalsPlugin,
@@ -697,12 +704,15 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         ...(Meteor.isBlazeEnabled && { hot: false }),
         port: devServerPort,
         devMiddleware: {
-          writeToDisk: createPersistCallback({ once: ['sw.js'], always: ['.html'] }),
+          writeToDisk: createPersistCallback({
+            once: ["sw.js"],
+            always: [".html"],
+          }),
         },
         onListening: meteorDefaultOnListening,
       },
     }),
-    ...merge(cacheStrategy, { experiments: { css: true } }),
+    ...cacheStrategy,
     ...lazyCompilationConfig,
     ...loggingConfig,
   };
@@ -741,7 +751,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     output: {
       path: serverOutputDir,
       filename: () => `../${buildContext}/${outputPath}`,
-      libraryTarget: "commonjs2",
+      library: { type: "commonjs2" },
       chunkFilename: `${chunksContext}/[id]${isProd ? ".[chunkhash]" : ""}.js`,
       assetModuleFilename,
       ...(isProd && { clean: { keep: keepOutsideBuild() } }),
@@ -772,17 +782,19 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         javascript: {
           // Dynamic imports on the server are treated as bundled in the same chunk
           dynamicImportMode: "eager",
+          // Relax Rspack 2.0 strict ESM linking; SWC-stripped TS type re-exports otherwise fail the build.
+          exportsPresence: "warn",
         },
       },
     },
     resolve: {
       extensions,
-      alias,
       modules: ["node_modules", path.resolve(projectDir)],
       conditionNames: ["import", "require", "node", "default"],
       roots: [path.resolve(projectDir)],
     },
     externals,
+    externalsType: "commonjs2",
     externalsPresets: { node: true },
     plugins: [
       new DefinePlugin(
@@ -832,7 +844,18 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         devServer: { port: devServerPort },
         stats: { preset: "normal" },
         infrastructureLogging: { level: "info" },
-        ...(isProd && isClient && { output: { module: false } }),
+        ...(isProd &&
+          isClient && {
+            output: {
+              // Nx Angular config emits ESM chunks in production by default.
+              // Meteor serves and minifies classic browser bundles here.
+              module: false,
+              scriptType: false,
+              chunkFormat: "array-push",
+              chunkLoading: "jsonp",
+              workerChunkLoading: "import-scripts",
+            },
+          }),
       }
     : {};
 

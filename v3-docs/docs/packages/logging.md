@@ -56,7 +56,7 @@ will turn into:
 E20200519-17:57:41.655(9) [DESKTOP] (main.js:36) warning {"error":{"property1":"foo","property2":"bar","property3":{"foo":"bar"}}}
 ```
 
-The display of each log is color coded. Info is `blue`, warn is `magenta`, debug is `green` and error is in `red`.
+The display of each log is color coded. Warn is `magenta`, debug is `green`, error is `red`, and info uses the terminal's default color; the metadata prefix (level initial, timestamp, app, file:line) is `blue`.
 
 ### Log.debug
 
