@@ -70,3 +70,40 @@ Tinytest.add("underscore-tests - wrap", function (test) {
 Tinytest.add("underscore-tests - keys", function (test) {
   test.equal(_.keys(list[0]), ["test","num","even"]);
 });
+
+
+Tinytest.add("underscore-tests - Meteor collection compatibility", function (test) {
+  const doc = { length: 2, name: 'x' };
+  test.equal(_.reduce(doc, function (memo, value) { return memo.concat(value); }, []), [2, 'x']);
+  test.equal(_.reduceRight(doc, function (memo, value) { return memo.concat(value); }, []), ['x', 2]);
+  test.equal(_.find(doc, function (value) { return value === 'x'; }), 'x');
+  const values = { length: 2, first: -3, second: 8 };
+  test.equal(_.min(values), -3);
+  test.equal(_.max(values), 8);
+  test.equal(_.sample(doc, 2).sort(), [2, 'x']);
+  test.equal(_.shuffle(doc).sort(), [2, 'x']);
+  (function () {
+    test.equal(_.shuffle(arguments).sort(), [1, 2, 3]);
+  })(3, 1, 2);
+  const arrayLike = Object.create({});
+  arrayLike[0] = 'a';
+  arrayLike[1] = 'b';
+  arrayLike.length = 2;
+  // A NodeList-like object has a non-Object constructor.
+  arrayLike.constructor = function NodeList() {};
+  test.equal(_.sample(arrayLike, 2).sort(), ['a', 'b']);
+});
+
+Tinytest.add("underscore-tests - sorted uniq", function (test) {
+  test.equal(_.uniq([1, 1, 2, 3], true), [1, 2, 3]);
+  test.equal(_.uniq([1, 2, 3], true, function (value) { return Math.floor(value / 2); }), [1, 2]);
+});
+
+Tinytest.add("underscore-tests - template compatibility", function (test) {
+  test.equal(_.template('Hello <%= name %>', { name: 'Ada' }), 'Hello Ada');
+  test.equal(_.template('literal', {}), 'literal');
+  test.equal(_.template('<%= variable %>', { variable: 'data, not settings' }), 'data, not settings');
+  test.equal(_.template('Hello <%= name %>')({ name: 'Ada' }), 'Hello Ada');
+  test.equal(_.template('Hello {{ name }}', { name: 'Ada' }, { interpolate: /{{([\s\S]+?)}}/g }), 'Hello Ada');
+  test.equal(_.template('<%= data.name %>', null, { variable: 'data' })({ name: 'Ada' }), 'Ada');
+});

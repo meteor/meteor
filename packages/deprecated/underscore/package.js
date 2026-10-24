@@ -1,12 +1,12 @@
 
 Package.describe({
-  summary: "Collection of small helpers: _.map, _.each, ...",
-  version: '1.6.4',
+  summary: "JavaScript's utility _ belt",
+  version: '1.9.2',
   deprecated: true
 });
 
 Npm.depends({
-  '@types/underscore': '1.11.9',
+  '@types/underscore': '1.8.20',
 });
 Package.onUse(function (api) {
   api.export('_');
