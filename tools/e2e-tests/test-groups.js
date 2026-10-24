@@ -1,3 +1,13 @@
+// Share these suite boundaries with the remaining regressions' exclusion.
+const BUNDLING_REGRESSION_SUITES = [
+  'Source Maps',
+  'Architecture-specific entrypoints',
+  'Legacy npm dependencies',
+  'Legacy production EJSON',
+  'CordovaModernDefault',
+  'Rspack static assets',
+].join('|');
+
 const EXPLICIT_TEST_GROUPS = Object.freeze({
   cli: {
     label: 'CLI',
@@ -18,6 +28,10 @@ const EXPLICIT_TEST_GROUPS = Object.freeze({
   blaze: {
     label: 'Blaze',
     pattern: '^(?:BasicBlaze App Bundling /|Blaze Router Integration /|Full Blaze App Bundling /|Meteor Skeletons / Blaze Skeleton /)',
+  },
+  bundling_regressions: {
+    label: 'Bundling Regressions',
+    pattern: `^Regressions / (?:${BUNDLING_REGRESSION_SUITES}) /`,
   },
   full_pwa_skeleton: {
     label: 'Full & PWA Skeletons',
@@ -53,7 +67,7 @@ const EXPLICIT_TEST_GROUPS = Object.freeze({
   },
   regressions: {
     label: 'Regressions',
-    pattern: '^(?:Regressions / (?!Server Runtime)|Regression /|Rspack bundle probe)',
+    pattern: `^(?:Regressions / (?!Server Runtime|(?:${BUNDLING_REGRESSION_SUITES}) /)|Regression /|Rspack bundle probe)`,
   },
   solid_svelte: {
     label: 'Solid & Svelte',
