@@ -303,3 +303,58 @@ Tinytest.addAsync(
     }
   },
 );
+
+Tinytest.add(
+  'tools-core - installed dependency checks do not trust package declarations',
+  function (test) {
+    withTempApp({ devDependencies: { foo: '^1.2.3' } }, (cwd) => {
+      const dependencies = [{ name: 'foo', version: '1.0.0', dev: true }];
+      test.equal(detectMissingOrOutdatedDeps(dependencies, { cwd })[0].status, 'ok');
+      test.equal(detectMissingOrOutdatedDeps(dependencies, {
+        cwd, checkNodeModules: true,
+      })[0].status, 'missing');
+      const installed = path.join(cwd, 'node_modules', 'foo');
+      fs.mkdirSync(installed, { recursive: true });
+      fs.writeFileSync(path.join(installed, 'package.json'), JSON.stringify({
+        name: 'foo', version: '0.9.0',
+      }));
+      test.equal(detectMissingOrOutdatedDeps(dependencies, {
+        cwd, checkNodeModules: true,
+      })[0].status, 'outdated');
+    });
+  },
+);
+
+Tinytest.addAsync(
+  'tools-core - provider dependency checks retain local specs and installation opt-out',
+  async function (test) {
+    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'tools-core-provider-deps-'));
+    try {
+      fs.writeFileSync(path.join(cwd, 'package.json'), JSON.stringify({
+        devDependencies: { 'local-runner': 'file:../runner' },
+        meteor: { autoInstallDeps: true },
+      }));
+      const result = await ensurePackageDependencies({
+        packageId: `provider-local-specs-${path.basename(cwd)}`,
+        packageLabel: 'Test provider',
+        dependencies: [
+          { name: 'local-runner', version: '1.0.0', dev: true },
+          { name: 'override-runner', version: '1.0.0', spec: 'file:../override', dev: true },
+        ],
+        cwd,
+        checkNodeModules: true,
+        includeDevDependencies: true,
+        autoInstall: false,
+      });
+      test.equal(result.mode, 'manual-warning');
+      test.isFalse(result.installed);
+      test.equal(result.changes.map(change => change.installSpec), [
+        'file:../runner', 'file:../override',
+      ]);
+      test.isTrue(result.installCommands[0].includes('local-runner@file:../runner'));
+      test.isTrue(result.installCommands[0].includes('override-runner@file:../override'));
+    } finally {
+      fs.rmSync(cwd, { recursive: true, force: true });
+    }
+  },
+);

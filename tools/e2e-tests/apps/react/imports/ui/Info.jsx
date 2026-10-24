@@ -1,4 +1,3 @@
-import React from 'react';
 import { useFind, useSubscribe } from 'meteor/react-meteor-data';
 import { LinksCollection } from '../api/links';
 

@@ -4,10 +4,26 @@ on:
     paths:
       - 'packages/**'
       - 'npm-packages/meteor-installer/**'
+      - 'npm-packages/meteor-rstest/**'
+      - '.fmtignore'
+      - '.oxlintignore'
+      - '.oxfmtrc.json'
+      - '.oxlintrc.json'
+      - '.github/workflows/check-code-style.yml'
+      - 'package.json'
+      - 'package-lock.json'
   pull_request:
     paths:
       - 'packages/**'
       - 'npm-packages/meteor-installer/**'
+      - 'npm-packages/meteor-rstest/**'
+      - '.fmtignore'
+      - '.oxlintignore'
+      - '.oxfmtrc.json'
+      - '.oxlintrc.json'
+      - '.github/workflows/check-code-style.yml'
+      - 'package.json'
+      - 'package-lock.json'
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true

@@ -16,6 +16,28 @@ const MongoRunner = require('./run-mongo.js').MongoRunner;
 const HMRServer = require('./run-hmr').HMRServer;
 const Updater = require('./run-updater').Updater;
 
+function combineTestRunnerExitCode(executionExitCode, completionResult) {
+  if (executionExitCode === 0 && completionResult?.exitCode !== undefined) {
+    return completionResult.exitCode;
+  }
+  return executionExitCode;
+}
+
+function completionContextForRunResult(result, once) {
+  if (once && result.outcome === 'terminated') {
+    if (result.signal) {
+      return { exitCode: 255, outcome: 'aborted' };
+    }
+    if (typeof result.code === 'number') {
+      return {
+        exitCode: result.code,
+        outcome: result.code === 0 ? 'completed' : 'failed',
+      };
+    }
+  }
+  return { exitCode: 254, outcome: 'failed' };
+}
+
 class Runner {
   constructor(options) {
     const self = this;
@@ -84,9 +106,11 @@ class Runner {
       ignoredUrls: [HMRPath]
     });
 
-    await buildmessage.capture(async function () {
-      await self.projectContext.resolveConstraints();
-    });
+    if (!self.projectContext.packageMap) {
+      await buildmessage.capture(async function () {
+        await self.projectContext.resolveConstraints();
+      });
+    }
 
     const packageMap = self.projectContext.packageMap;
     const hasMongoDevServerPackage =
@@ -247,6 +271,21 @@ class Runner {
         runLog.log("Started Selenium.", { arrow: true });
       }
     }
+    if (self.options.testRunnerSession && !self.stopped) {
+      try {
+        await buildmessage.enterJob({ title: 'starting test runner provider' }, async function () {
+          return self.options.testRunnerSession.startHost({
+            url: self.rootUrl,
+            log: message => runLog.log(message),
+            updateMetadata: self.options.updateTestRunnerMetadata,
+          });
+        });
+      } catch (error) {
+        Console.error(error && error.stack || error);
+        await self.options.onFailure();
+        return;
+      }
+    }
 
     // XXX It'd be nice to (cosmetically) handle failure better. Right
     // now we overwrite the "starting foo..." message with the
@@ -271,14 +310,31 @@ class Runner {
     }
 
     self.stopped = true;
-    await self.proxy.stop();
-    await self.updater.stop();
-    await self.mongoRunner && self.mongoRunner.stop();
-    await self.appRunner.stop();
-    await (self.selenium && self.selenium.stop());
-    // XXX does calling this 'finish' still make sense now that runLog is a
-    // singleton?
-    runLog.finish();
+    if (self.options.testRunnerSession) {
+      let firstError;
+      const stopResource = async callback => {
+        try {
+          await callback();
+        } catch (error) {
+          firstError ||= error;
+        }
+      };
+      await stopResource(() => self.options.testRunnerSession.stop());
+      await stopResource(() => self.selenium && self.selenium.stop());
+      await stopResource(() => self.appRunner.stop());
+      await stopResource(() => self.mongoRunner && self.mongoRunner.stop());
+      await stopResource(() => self.updater.stop());
+      await stopResource(() => self.proxy.stop());
+      runLog.finish();
+      if (firstError) throw firstError;
+    } else {
+      await self.proxy.stop();
+      await self.updater.stop();
+      await self.mongoRunner && self.mongoRunner.stop();
+      await self.appRunner.stop();
+      await (self.selenium && self.selenium.stop());
+      runLog.finish();
+    }
   }
 
   // Call this whenever you want to regenerate the app's port (if it is not
@@ -349,19 +405,32 @@ exports.run = async function (options) {
   var once = runOptions.once;
   var onBuilt = runOptions.onBuilt;
 
+  var failureInProgress = false;
   var promise = new Promise(function (resolve) {
     runOptions.onFailure = async function () {
+      if (failureInProgress) {
+        return;
+      }
+      failureInProgress = true;
       // Ensure that runner stops now. You might think this is unnecessary
       // because the runner is stopped immediately after promise.await(), but if
       // the failure happens while runner.start() is still running, we want the
       // rest of start to stop, and it's not like resolve() magically makes
       // us jump to a promise.await() that hasn't happened yet!.
-      await runner.stop();
+      try {
+        await runner.stop();
+      } catch (error) {
+        Console.error(error && error.stack || error);
+      }
       resolve({ outcome: 'failure' });
     };
 
     runOptions.onRunEnd = function (result) {
+      if (failureInProgress) {
+        return false;
+      }
       if (once ||
+          result.outcome === "test-runner-failure" ||
           result.outcome === "conflicting-versions" ||
           result.outcome === "wrong-release" ||
           result.outcome === "outdated-cordova-platforms" ||
@@ -410,15 +479,51 @@ exports.run = async function (options) {
 
   var runner = new Runner(runOptions);
   await runner.init();
+  if (runOptions.testRunnerProcess) {
+    runOptions.testRunnerProcess.completion.then(code => {
+      if (!runner.stopped) {
+        Console.error(`Test runner provider process exited with status ${code}.`);
+        return runOptions.onFailure();
+      }
+    }, error => {
+      if (!runner.stopped) {
+        Console.error(error && error.stack || error);
+        return runOptions.onFailure();
+      }
+    });
+  }
   // don't wait this on to finish
   if (runOptions.open) {
     await runner.start();
   } else {
-    setTimeout(() => runner.start(), 0);
+    setTimeout(() => {
+      runner.start().catch(error => {
+        Console.error(error && error.stack || error);
+        return runOptions.onFailure();
+      });
+    }, 0);
   }
   onBuilt && onBuilt();
   var result = await promise;
-  await runner.stop();
+  let completionResult;
+  let completionError;
+  if (runOptions.testRunnerSession) {
+    try {
+      completionResult = await runOptions.testRunnerSession.completeRun(
+        completionContextForRunResult(result, once)
+      );
+    } catch (error) {
+      completionError = error;
+      Console.error(error && error.stack || error);
+    }
+  }
+  let stopError;
+  try {
+    await runner.stop();
+  } catch (error) {
+    stopError = error;
+    Console.error(error && error.stack || error);
+  }
 
   if (result.outcome === "conflicting-versions") {
     Console.error(
@@ -463,7 +568,9 @@ exports.run = async function (options) {
     return 254;
   }
 
-  if (result.outcome === "failure" ||
+  if (completionError || stopError ||
+      result.outcome === "failure" ||
+      result.outcome === "test-runner-failure" ||
       (result.outcome === "terminated" &&
        result.signal === undefined && result.code === undefined)) {
     // Fatal problem with something other than the app process. An
@@ -484,7 +591,7 @@ exports.run = async function (options) {
     } else if (typeof result.code === "number") {
       // We used to print 'Your application is exiting' here, but that
       // seems unnecessarily chatty? once mode is otherwise silent
-      return result.code;
+      return combineTestRunnerExitCode(result.code, completionResult);
     } else {
       // If there is neither a code nor a signal, it means that we
       // failed to start the process. We logged the reason. Probably a
@@ -495,3 +602,5 @@ exports.run = async function (options) {
 
   throw new Error("unexpected outcome " + result.outcome);
 };
+
+exports.combineTestRunnerExitCode = combineTestRunnerExitCode;

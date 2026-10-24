@@ -7,12 +7,25 @@ const { logError } = require("./log");
 // Module identifiers must use '/' regardless of OS.
 const toPosix = (p) => p.replace(/\\/g, '/');
 
+// Scoped to this tools-core package image, including the compiler helpers that
+// import it. Build plugins set this explicitly when compiling a temporary host.
+let meteorAppDir;
+
 /**
- * Returns the current working directory of the Meteor application.
+ * Sets this package image's application root for a compiler host.
+ * Pass undefined when starting an ordinary application build to clear it.
+ * @param {string|undefined} appDir The application directory.
+ */
+export function setMeteorAppDir(appDir) {
+  meteorAppDir = appDir || undefined;
+}
+
+/**
+ * Returns the configured application root, or the current working directory.
  * @returns {string} The absolute path to the Meteor application directory.
  */
 export function getMeteorAppDir() {
-  return process.cwd();
+  return meteorAppDir || process.cwd();
 }
 
 /**

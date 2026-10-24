@@ -17,6 +17,7 @@ Package.onUse(function (api) {
 
   api.addFiles([
     'babel.js',
+    'test-runner-transforms.js',
     'babel-compiler.js',
     'versions.js',
   ], 'server');
