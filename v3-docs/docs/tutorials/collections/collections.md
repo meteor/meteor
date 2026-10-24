@@ -141,7 +141,7 @@ Then the `validate()` call will throw a `ValidationError` which contains details
 
 ### The `ValidationError`
 
-What is a [`ValidationError`](https://github.com/meteor/validation-error/)? It's a special error that is used in Meteor to indicate a user-input based error in modifying a collection. Typically, the details on a `ValidationError` are used to mark up a form with information about what inputs don't match the schema. In the [Methods article](/tutorials/methods/methods#validation-error), we'll see more about how this works.
+What is a [`ValidationError`](https://github.com/meteor/validation-error/)? It's a special error that is used in Meteor to indicate a user-input-based error in modifying a collection. Typically, the details on a `ValidationError` are used to mark up a form with information about what inputs don't match the schema. In the [Methods article](/tutorials/methods/methods#validationerror-for-argument-validation-errors), we'll see more about how this works.
 
 ## Designing your data schema
 

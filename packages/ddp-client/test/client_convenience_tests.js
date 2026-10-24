@@ -76,14 +76,32 @@ Tinytest.add(
   }
 );
 
+// A page served over http can only reach a ws:// endpoint on its own host:
+// deriving wss:// from ROOT_URL points at a port that terminates no TLS.
 Tinytest.add(
-  'ddp-client - client convenience fallback keeps protocol from absoluteUrl',
+  'ddp-client - client convenience fallback keeps the page protocol over ROOT_URL',
   function(test) {
     const ddpUrl = _calculateDDPUrl({
       absoluteUrl: 'https://example.com/',
       runtimeConfig: Object.create(null),
       browserHost: 'example.net',
       browserProtocol: 'http:',
+    });
+
+    test.equal(ddpUrl, 'http://example.net/');
+  }
+);
+
+// ...and the reverse: an https page cannot open a ws:// socket (mixed content),
+// so the page protocol wins in both directions.
+Tinytest.add(
+  'ddp-client - client convenience fallback keeps the page protocol when ROOT_URL is insecure',
+  function(test) {
+    const ddpUrl = _calculateDDPUrl({
+      absoluteUrl: 'http://example.com/',
+      runtimeConfig: Object.create(null),
+      browserHost: 'example.net',
+      browserProtocol: 'https:',
     });
 
     test.equal(ddpUrl, 'https://example.net/');

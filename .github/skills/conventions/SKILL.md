@@ -163,15 +163,20 @@ api.use('tools-core');
 // In implementation
 import {
   logProgress,
-  checkNpmDependencyExists,
-  getMeteorAppConfig,
+  ensurePackageDependencies,
+  getMeteorAppDir,
   spawnProcess
 } from 'meteor/tools-core';
 
-// Check and install dependencies
-if (!checkNpmDependencyExists('@rspack/core')) {
-  installNpmDependency(['@rspack/core@^1.7.1']);
-}
+// Declare host-app dependencies. The shared engine handles auto-install versus
+// manual instructions; do not gate it on meteor.autoInstallDeps yourself.
+await ensurePackageDependencies({
+  packageId: 'my-compiler',
+  packageLabel: 'My Compiler',
+  dependencies: [
+    { name: '@rspack/core', version: '1.7.1', semverCondition: 'gte', dev: true }
+  ]
+});
 
 // Spawn external process
 const proc = spawnProcess('npx', ['rspack', 'build'], {

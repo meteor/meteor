@@ -22,7 +22,7 @@
     "modern": true
   },
   "devDependencies": {
-    "@meteorjs/rspack": "^2.1.0",
+    "@meteorjs/rspack": "^2.2.0",
     "@rspack/cli": "^1.4.8",
     "@rspack/core": "^1.4.8",
     "babel-loader": "10.0.0",

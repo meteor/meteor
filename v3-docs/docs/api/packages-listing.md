@@ -15,6 +15,7 @@
 ### [react-packages](https://github.com/meteor/react-packages) {#react-packages}
 ### [accounts-2fa](https://github.com/meteor/meteor/tree/devel/packages/accounts-2fa) {#accounts-2fa}
 ### [accounts-base](https://github.com/meteor/meteor/tree/devel/packages/accounts-base) {#accounts-base}
+### [accounts-express](https://github.com/meteor/meteor/tree/devel/packages/accounts-express) {#accounts-express}
 ### [accounts-facebook](https://github.com/meteor/meteor/tree/devel/packages/accounts-facebook) {#accounts-facebook}
 ### [accounts-github](https://github.com/meteor/meteor/tree/devel/packages/accounts-github) {#accounts-github}
 ### [accounts-google](https://github.com/meteor/meteor/tree/devel/packages/accounts-google) {#accounts-google}
