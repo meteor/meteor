@@ -1178,6 +1178,35 @@ Callbacks may be async functions. When any reconnect callback returns a promise,
 Meteor waits for those promises to settle before re-sending outstanding method
 messages.
 
+## DDP serialization {#ddp-serialization}
+
+DDP messages are encoded for the wire by a serializer shared by `ddp-client` and `ddp-server`. The default serializer is EJSON and produces the JSON text Meteor has always sent. Since Meteor 3.6, an application can install another serializer, for example a more compact text encoding, as long as it implements the same interface:
+
+```js
+import { DDPCommon } from "meteor/ddp-common";
+
+DDPCommon.setSerializer({
+  name: "compact",
+  wireFormat: "text", // the only frame type the DDP transports deliver today
+  serialize(msg) {
+    // `msg` is the DDP message. Cleared fields are `undefined` values in
+    // `msg.fields`; toWireMessage() moves them into the `cleared` array of
+    // the wire format. Do not mutate `msg`.
+    return encode(DDPCommon.toWireMessage(msg));
+  },
+  deserialize(raw) {
+    // Throw on invalid input: the frame is then discarded.
+    return DDPCommon.fromWireMessage(decode(raw));
+  },
+});
+```
+
+A serializer is responsible for the EJSON values carried by `fields`, `params` and `result`, such as dates and binary data. The default serializer converts them with `EJSON.toJSONValue` and `EJSON.fromJSONValue`. `DDPCommon.createEJSONSerializer()` returns that default serializer and `DDPCommon.getSerializer()` returns the active one.
+
+::: warning
+The serializer is process-wide and is not negotiated per connection. The server and every client connecting to it must install the same serializer before any connection is opened, typically from code loaded on both sides. With mismatched serializers the connection fails silently: frames the other side cannot decode are discarded, the DDP handshake never completes, and hot code push cannot reach those clients.
+:::
+
 ## Timers { #timers }
 
 Meteor maintains contextual values — such as the current request's
