@@ -30,27 +30,30 @@ Tinytest.add("diff-sequence - own prototype field changes remain data", function
   }
 });
 
-Tinytest.add("diff-sequence - own prototype field application preserves prototypes", function (test) {
-  for (const doc of [{}, Object.create(null)]) {
-    const prototype = Object.getPrototypeOf(doc);
-    DiffSequence.applyChanges(doc, JSON.parse('{"__proto__":{"owner":"nested"},"ordinary":2}'));
-    test.isTrue(Object.getPrototypeOf(doc) === prototype);
-    test.isTrue(Object.prototype.hasOwnProperty.call(doc, "__proto__"));
-    test.equal(doc.__proto__.owner, "nested");
-    test.isUndefined(doc.owner);
-    test.equal(doc.ordinary, 2);
-    for (const value of [null, 1]) {
-      DiffSequence.applyChanges(doc, { ["__proto__"]: value });
+Tinytest.add(
+  "diff-sequence - own prototype field application preserves prototypes",
+  function (test) {
+    for (const doc of [{}, Object.create(null)]) {
+      const prototype = Object.getPrototypeOf(doc);
+      DiffSequence.applyChanges(doc, JSON.parse('{"__proto__":{"owner":"nested"},"ordinary":2}'));
       test.isTrue(Object.getPrototypeOf(doc) === prototype);
       test.isTrue(Object.prototype.hasOwnProperty.call(doc, "__proto__"));
-      test.equal(doc.__proto__, value);
+      test.equal(doc.__proto__.owner, "nested");
+      test.isUndefined(doc.owner);
+      test.equal(doc.ordinary, 2);
+      for (const value of [null, 1]) {
+        DiffSequence.applyChanges(doc, { ["__proto__"]: value });
+        test.isTrue(Object.getPrototypeOf(doc) === prototype);
+        test.isTrue(Object.prototype.hasOwnProperty.call(doc, "__proto__"));
+        test.equal(doc.__proto__, value);
+      }
+      DiffSequence.applyChanges(doc, { ["__proto__"]: undefined });
+      test.isFalse(Object.prototype.hasOwnProperty.call(doc, "__proto__"));
+      test.isTrue(Object.getPrototypeOf(doc) === prototype);
+      test.equal(doc.ordinary, 2);
     }
-    DiffSequence.applyChanges(doc, { ["__proto__"]: undefined });
-    test.isFalse(Object.prototype.hasOwnProperty.call(doc, "__proto__"));
-    test.isTrue(Object.getPrototypeOf(doc) === prototype);
-    test.equal(doc.ordinary, 2);
-  }
-});
+  },
+);
 
 Tinytest.add("diff-sequence - diff changes ordering", function (test) {
   const makeDocs = function (ids) {
