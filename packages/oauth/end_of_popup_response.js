@@ -16,11 +16,25 @@
       window.location.hash = credentialString;
     }
 
-    if (window.opener && window.opener.Package &&
-          window.opener.Package.oauth) {
-      window.opener.Package.oauth.OAuth._handleCredentialSecret(
-        credentialToken, credentialSecret);
-    } else {
+    var handledByOpener = false;
+
+    try {
+      if (window.opener && window.opener.Package &&
+            window.opener.Package.oauth) {
+        window.opener.Package.oauth.OAuth._handleCredentialSecret(
+          credentialToken, credentialSecret);
+        handledByOpener = true;
+      }
+    } catch (err) {
+      // Reading `Package` off the opener throws a SecurityError when the
+      // opener is on a different origin, which happens when the login service
+      // sends this popup to a host other than the one that opened it. Without
+      // this catch the error aborts the script, so we never reach the
+      // localStorage fallback below or window.close(), and the popup hangs
+      // open forever while the login silently never completes. See #12418.
+    }
+
+    if (! handledByOpener) {
       try {
         localStorage[config.storagePrefix + credentialToken] = credentialSecret;
       } catch (err) {

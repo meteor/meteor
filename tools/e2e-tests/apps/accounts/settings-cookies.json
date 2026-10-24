@@ -1,4 +1,9 @@
 {
+  "packages": {
+    "accounts": {
+      "useHttpOnlyCookies": true
+    }
+  },
   "public": {
     "packages": {
       "accounts": {

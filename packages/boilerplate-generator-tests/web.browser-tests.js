@@ -75,3 +75,28 @@ Tinytest.addAsync(
     );
   }
 );
+
+// https://github.com/meteor/meteor/issues/14716
+Tinytest.addAsync(
+  "boilerplate-generator-tests - web.browser - custom script url under " +
+    "rootUrlPathPrefix",
+  async function (test) {
+    const previousUrl = process.env.METEOR_APP_CUSTOM_SCRIPT_URL;
+    process.env.METEOR_APP_CUSTOM_SCRIPT_URL = '/__rspack__/client-rspack.js';
+    try {
+      const html = await generateHTMLForArch("web.browser", false);
+
+      // the custom script is served under the prefix like every other script
+      test.matches(
+        html,
+        /<script[^<>]*src="rootUrlPathPrefix\/__rspack__\/client-rspack\.js">/
+      );
+    } finally {
+      if (previousUrl === undefined) {
+        delete process.env.METEOR_APP_CUSTOM_SCRIPT_URL;
+      } else {
+        process.env.METEOR_APP_CUSTOM_SCRIPT_URL = previousUrl;
+      }
+    }
+  }
+);

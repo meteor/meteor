@@ -3,9 +3,94 @@
 // the transport mode (SockJS or raw WebSocket).
 
 const http = Npm.require('http');
+const net = Npm.require('net');
+const { ClientStream } = require('meteor/socket-stream-client');
+const { WebApp } = require('meteor/webapp');
 
 const disableSockJS = !!process.env.DISABLE_SOCKJS ||
   (process.env.DDP_TRANSPORT && process.env.DDP_TRANSPORT !== 'sockjs');
+
+if (process.env.DDP_TRANSPORT === 'uws') {
+  Tinytest.addAsync('stream server - uws preserves the peer and respects forwarded address trust', async test => {
+    const previousCount = process.env.HTTP_FORWARDED_COUNT;
+    // Linux routes the entire loopback range. A distinct source address proves
+    // that the internal uWS proxy's 127.0.0.1 address does not replace the peer.
+    const peer = process.platform === 'linux' ? '127.0.0.2' : '127.0.0.1';
+    const target = new URL(Meteor.absoluteUrl());
+    // Bypass the development tool's extra proxy hop, but still exercise the
+    // application's HTTP listener and its production uWS proxy.
+    target.port = WebApp.httpServer.address().port;
+    const sockets = new Set();
+    // Faye rejects the net option. Bind the source of a real TCP relay instead,
+    // so the application receives the distinct peer without changing headers.
+    const relay = net.createServer(socket => {
+      const upstream = net.connect({
+        host: '127.0.0.1',
+        port: Number(target.port) || 80,
+        localAddress: peer,
+      });
+      for (const connection of [socket, upstream]) {
+        sockets.add(connection);
+        connection.on('close', () => sockets.delete(connection));
+        connection.on('error', () => {
+          socket.destroy();
+          upstream.destroy();
+        });
+      }
+      socket.pipe(upstream).pipe(socket);
+    });
+    try {
+      await new Promise((resolve, reject) => {
+        relay.once('error', reject);
+        relay.listen(0, '127.0.0.1', resolve);
+      });
+      for (const [count, forwarded, expected] of [
+        ['0', '192.0.2.42', peer],
+        ['1', '192.0.2.42', '192.0.2.42'],
+        ['1', '192.0.2.42, 192.0.2.43', null],
+        ['0', undefined, peer],
+      ]) {
+        process.env.HTTP_FORWARDED_COUNT = count;
+        const marker = Random.id();
+        let client;
+        let hook;
+        let timer;
+        try {
+          const accepted = new Promise((resolve, reject) => {
+            timer = Meteor.setTimeout(() => reject(new Error('uWS DDP connection did not arrive')), 10000);
+            hook = Meteor.onConnection(connection => {
+              if (connection.httpHeaders['x-address-test'] === marker) resolve(connection);
+            });
+          });
+          const headers = { 'x-address-test': marker };
+          if (forwarded !== undefined) headers['x-forwarded-for'] = forwarded;
+          const url = new URL(target);
+          url.hostname = '127.0.0.1';
+          url.port = relay.address().port;
+          const stream = new ClientStream(url.toString(), {
+            retry: false,
+            headers,
+          });
+          client = DDP.connect(stream, { retry: false });
+          const connection = await accepted;
+          const address = connection.clientAddress;
+          test.equal(typeof address === 'string' ? address.replace(/^::ffff:/, '') : address,
+            expected, 'forwarded count ' + count + ', header ' + forwarded);
+          test.equal(await client.callAsync('livedata_server_test_inner'), connection.id);
+        } finally {
+          Meteor.clearTimeout(timer);
+          if (hook) hook.stop();
+          if (client) client.close();
+        }
+      }
+    } finally {
+      if (previousCount === undefined) delete process.env.HTTP_FORWARDED_COUNT;
+      else process.env.HTTP_FORWARDED_COUNT = previousCount;
+      for (const socket of sockets) socket.destroy();
+      if (relay.listening) await new Promise(resolve => relay.close(resolve));
+    }
+  });
+}
 
 // Helper: make an HTTP GET request to the given URL, return { statusCode, headers, body }
 function httpGet(url) {
@@ -117,8 +202,10 @@ if (disableSockJS) {
         test.isTrue(typeof conn.id === 'string');
         test.isTrue(typeof conn.close === 'function');
         test.isTrue(typeof conn.onClose === 'function');
-        test.isNotUndefined(conn.clientAddress,
-          'connection should have clientAddress');
+        test.isTrue(
+          net.isIP(conn.clientAddress) > 0,
+          `connection should expose a valid clientAddress, got ${conn.clientAddress}`
+        );
       });
 
       makeTestConnection(

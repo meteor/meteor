@@ -1,6 +1,222 @@
 import has from 'lodash.has';
 
 if (Meteor.isServer) {
+  Tinytest.add('collection - BSON prototype field conversion preserves ordinary values and identity', test => {
+    const {replaceTypes, replaceMeteorAtomWithMongo, replaceMongoAtomWithMeteor} = require('meteor/mongo/mongo_common');
+    for (const value of [null, 'text', [], {safe: true}]) {
+      const unchanged = {['__proto__']: value, public: 'visible'};
+      for (const convert of [replaceMeteorAtomWithMongo, replaceMongoAtomWithMeteor]) {
+        test.isTrue(replaceTypes(unchanged, convert) === unchanged);
+        const input = {['__proto__']: value, token: convert === replaceMeteorAtomWithMongo
+          ? new Mongo.ObjectID() : new NpmModuleMongodb.ObjectId()};
+        const result = replaceTypes(input, convert);
+        test.isTrue(Object.prototype.hasOwnProperty.call(result, '__proto__'));
+        test.equal(result.__proto__, value);
+        test.equal(Object.getPrototypeOf(result), Object.prototype);
+        test.equal(Object.getPrototypeOf(input), Object.prototype);
+      }
+    }
+  });
+
+  Tinytest.addAsync("collection - BSON conversion preserves own prototype fields and custom values", async test => {
+    const collection = new Mongo.Collection('bson_data_boundary_' + Random.id());
+    const typeName = 'prototype_data_' + Random.id();
+    class CustomValue {
+      constructor(value) { this.value = value; }
+      typeName() { return typeName; }
+      toJSONValue() { return this.value; }
+    }
+    EJSON.addType(typeName, value => new CustomValue(value));
+    try {
+      const objectId = new Mongo.ObjectID();
+      const id = await collection.insertAsync({['__proto__']: objectId, nested: {['__proto__']: objectId}});
+      const doc = await collection.findOneAsync(id);
+      for (const value of [doc, doc.nested]) {
+        test.isTrue(Object.prototype.hasOwnProperty.call(value, '__proto__'));
+        test.equal(Object.getPrototypeOf(value), Object.prototype);
+        test.isTrue(value.__proto__ instanceof Mongo.ObjectID);
+        test.equal(value.__proto__.toHexString(), objectId.toHexString());
+      }
+      const customId = await collection.insertAsync({custom: new CustomValue(JSON.parse('{"__proto__":{"safe":true},"public":"visible"}'))});
+      const custom = (await collection.findOneAsync(customId)).custom;
+      test.isTrue(custom instanceof CustomValue);
+      test.isTrue(Object.prototype.hasOwnProperty.call(custom.value, '__proto__'));
+      test.equal(Object.getPrototypeOf(custom.value), Object.prototype);
+      test.equal(custom.value.__proto__, {safe: true});
+      test.equal(custom.value.public, 'visible');
+    } finally {
+      await collection.removeAsync({});
+    }
+  });
+
+  Tinytest.addAsync("collection - BSON prototype fields cannot introduce inherited authorization", async test => {
+    const name = "stored_ownership_boundary_" + Random.id();
+    const collection = new Mongo.Collection(name);
+    const seen = [];
+    const owns = (userId, doc) => {
+      seen.push(doc);
+      return doc.owner === userId;
+    };
+    collection.allow({update: owns, remove: owns});
+    const invoke = (method, id) => Meteor.server.method_handlers['/' + name + '/' + method].apply(
+      {userId: 'actor', isSimulation: false},
+      method.startsWith('update') ? [{_id: id}, {$set: {changed: true}}, {}] : [{_id: id}]
+    );
+    try {
+      for (const suffix of ['', 'Async']) {
+        const id = new Mongo.ObjectID();
+        const raw = JSON.parse('{"__proto__":{"owner":"actor"},"public":"visible"}');
+        // Insert directly through the driver to test decoding of stored BSON,
+        // with an ObjectId that forces replaceTypes to clone the document.
+        raw._id = new NpmModuleMongodb.ObjectId(id.toHexString());
+        await collection.rawCollection().insertOne(raw);
+        const stored = await collection.findOneAsync(id);
+        test.isTrue(Object.prototype.hasOwnProperty.call(stored, '__proto__'));
+        test.equal(Object.getPrototypeOf(stored), Object.prototype);
+        test.isUndefined(stored.owner);
+        for (const method of ['update', 'remove']) {
+          let error;
+          try { await invoke(method + suffix, id); } catch (caught) { error = caught; }
+          test.equal(error && error.error, 403, method + suffix);
+          const remaining = await collection.findOneAsync(id);
+          test.isTrue(!!remaining);
+          if (remaining) test.isUndefined(remaining.changed);
+        }
+      }
+      test.equal(seen.length, 4);
+      for (const suffix of ['', 'Async']) {
+        const id = await collection.insertAsync({owner: 'actor', public: 'visible', token: new Mongo.ObjectID()});
+        test.equal(await invoke('update' + suffix, id), 1);
+        test.isTrue((await collection.findOneAsync(id)).changed);
+        test.equal(await invoke('remove' + suffix, id), 1);
+      }
+    } finally {
+      await collection.removeAsync({});
+    }
+  });
+
+  Tinytest.addAsync("collection - EJSON cannot introduce inherited authorization fields", async test => {
+    const name = "ownership_boundary_" + Random.id();
+    const collection = new Mongo.Collection(name);
+    collection.allow({
+      insert: (userId, doc) => doc.owner === userId,
+      update: (userId, doc) => doc.owner === userId,
+      remove: (userId, doc) => doc.owner === userId,
+    });
+    const context = { userId: "actor", isSimulation: false };
+    const invoke = (method, ...args) =>
+      Meteor.server.method_handlers["/" + name + "/" + method].apply(context, args);
+    const rejected = async (method, ...args) => {
+      let error;
+      try {
+        await invoke(method, ...args);
+      } catch (caught) {
+        error = caught;
+      }
+      test.equal(error && error.error, 403, method);
+    };
+    try {
+      await collection.insertAsync({ _id: "actor-record", owner: "actor", group: "shared" });
+      await collection.insertAsync({ _id: "other-record", owner: "other", group: "shared" });
+      for (const suffix of ["", "Async"]) {
+        const selector = EJSON._adjustTypesFromJSONValue(JSON.parse(
+          '{"$escape":{"__proto__":{"_id":"inherited"},"group":"shared"}}'
+        ));
+        await rejected("update" + suffix, selector, { $set: { changed: true } }, { multi: true });
+        await rejected("remove" + suffix, selector);
+        const doc = JSON.parse('{"_id":"inherited-owner","__proto__":{"owner":"actor"}}');
+        await rejected("insert" + suffix, doc);
+      }
+      test.equal(await collection.find().countAsync(), 2);
+      test.isTrue((await collection.findOneAsync("other-record")).changed === undefined);
+      test.equal(await invoke("updateAsync", { _id: "actor-record" }, { $set: { changed: true } }, {}), 1);
+      test.isTrue((await collection.findOneAsync("actor-record")).changed);
+      test.equal(await invoke("removeAsync", { _id: "actor-record" }), 1);
+      test.equal(await collection.find().countAsync(), 1);
+      test.equal((await collection.findOneAsync("other-record")).owner, "other");
+    } finally {
+      await collection.removeAsync({});
+    }
+  });
+
+  Tinytest.addAsync("collection - untrusted update and remove require a single own _id", async test => {
+    // Decode exactly as DDP does for method params.
+    const decode = json => EJSON._adjustTypesFromJSONValue(JSON.parse(json));
+    for (const idGeneration of ["STRING", "MONGO"]) {
+      for (const insecure of [false, true]) {
+        const name = "single_id_boundary_" + Random.id();
+        const collection = new Mongo.Collection(name, { idGeneration });
+        if (insecure) {
+          collection._insecure = true;
+        } else {
+          // Permissive rules: only the selector check protects other records.
+          collection.allow({ update: () => true, remove: () => true });
+        }
+        const context = { userId: "actor", isSimulation: false };
+        const invoke = (method, ...args) =>
+          Meteor.server.method_handlers["/" + name + "/" + method].apply(context, args);
+        try {
+          const actorId = await collection.insertAsync({ owner: "actor", group: "shared" });
+          const otherId = await collection.insertAsync({ owner: "other", group: "shared" });
+          const actor = EJSON.stringify(actorId);
+          const other = EJSON.stringify(otherId);
+          const selectors = [
+            `{"$escape":{"__proto__":{"_id":${actor}},"group":"shared"}}`,
+            `{"$escape":{"__proto__":{"_id":${actor}},"$or":[{"group":"shared"}]}}`,
+            `{"__proto__":{"_id":${actor}},"group":"shared"}`,
+            `{"_id":${actor},"group":"shared"}`,
+            `{"_id":{"$ne":null}}`,
+            `{"_id":{"$in":[${actor},${other}]}}`,
+            `{"_id":{"$escape":{"$gt":""}}}`,
+            `{"_id":[${actor}]}`,
+            `{"_id":{"$date":0}}`,
+            `{"_id":{"$binary":""}}`,
+            `{"$or":[{"_id":${actor}},{"group":"shared"}]}`,
+            `{"$and":[{"_id":${actor}}]}`,
+            `{"_id":${actor},"$or":[{"group":"shared"}]}`,
+          ];
+          for (const json of selectors) {
+            for (const suffix of ["", "Async"]) {
+              for (const [method, args] of [
+                ["update", [{ $set: { changed: true } }, { multi: true }]],
+                ["remove", []],
+              ]) {
+                let error;
+                try {
+                  await invoke(method + suffix, decode(json), ...args);
+                } catch (caught) {
+                  error = caught;
+                }
+                test.equal(error && error.error, 403, `${idGeneration} insecure=${insecure} ${method}${suffix} ${json}`);
+              }
+            }
+          }
+          test.equal(await collection.find().countAsync(), 2);
+          test.equal(await collection.find({ changed: true }).countAsync(), 0);
+
+          const foreignId = idGeneration === "MONGO" ? actorId.toHexString() : new Mongo.ObjectID();
+          test.equal(await invoke("removeAsync", { _id: foreignId }), 0);
+          // Both method variants must still accept decoded, own scalar IDs.
+          for (const suffix of ["", "Async"]) {
+            const controlId = suffix === "" ? actorId :
+              await collection.insertAsync({ owner: "actor", group: "shared" });
+            const control = EJSON.stringify(controlId);
+            test.equal(await invoke("update" + suffix, decode(`{"_id":${control}}`),
+              { $set: { changed: true } }, {}), 1);
+            test.isTrue((await collection.findOneAsync(controlId)).changed);
+            test.equal(await invoke("remove" + suffix,
+              decode(`{"$escape":{"_id":${control}}}`)), 1);
+            test.isUndefined(await collection.findOneAsync(controlId));
+          }
+          test.equal(await collection.find().countAsync(), 1);
+          test.isUndefined((await collection.findOneAsync(otherId)).changed);
+        } finally {
+          await collection.removeAsync({});
+        }
+      }
+    }
+  });
+
   // Set up allow/deny rules for test collections
 
   var allowCollections = {};
@@ -220,6 +436,57 @@ if (Meteor.isServer) {
     }
 
     return cursors;
+  });
+}
+
+if (Meteor.isServer) {
+  Tinytest.addAsync('collection - allow/deny accounts for __proto__ fields', async test => {
+    let updateCalls = 0;
+    const profileOnly = (_userId, _doc, fields) =>
+      fields.length === 1 && fields[0] === 'profile';
+    const collection = {
+      _validators: {
+        update: { allow: [profileOnly], deny: [] },
+        fetch: [],
+        fetchAllFields: true,
+      },
+      _collection: {
+        findOneAsync: async () => ({ _id: 'document-id', profile: {} }),
+        updateAsync: async () => {
+          updateCalls += 1;
+          return 1;
+        },
+      },
+    };
+
+    const maliciousModifier = JSON.parse(
+      '{"$set":{"profile.name":"allowed","__proto__.isAdmin":true}}'
+    );
+    let rejected = false;
+    try {
+      await Mongo.Collection.prototype._validatedUpdateAsync.call(
+        collection,
+        'user-id',
+        'document-id',
+        maliciousModifier,
+        {}
+      );
+    } catch (error) {
+      rejected = true;
+      test.equal(error.error, 403);
+    }
+    test.isTrue(rejected, '__proto__ must be visible to the allow rule');
+    test.equal(updateCalls, 0, 'rejected modifier must not reach MongoDB');
+
+    const result = await Mongo.Collection.prototype._validatedUpdateAsync.call(
+      collection,
+      'user-id',
+      'document-id',
+      { $set: { 'profile.name': 'allowed' } },
+      {}
+    );
+    test.equal(result, 1, 'ordinary profile-only updates still pass');
+    test.equal(updateCalls, 1);
   });
 }
 
