@@ -156,6 +156,9 @@ Focused Blaze and Galvanized Iron Router fixture that exercises the standard E2E
 | Client-side app test executes instead of reporting a false zero-test success | Test once |
 | Rspack client boot marker is packaged in the deployable browser program | Build |
 | Concurrent development and full-app test commands preserve the development `.cjs` bundle | Run, Test |
+| A concurrent regular test run preserves the rebuilt development scaffold and its lazy-package HTTP route | Run, Test once |
+| Transient test drivers leave the app's `.meteor/versions` unchanged while the development server stays responsive | Run, Test, Test once |
+| A shared source edit reruns watch-mode tests and updates the concurrent app response without rewriting `.meteor/versions` | Run, Test |
 | Normal and full-app tests use isolated `_build/test` and `_build/app-test` module directories in both startup orders | Test |
 | Full-app tests build and execute the app client with no `testModule` or a server-only `testModule` | Test |
 
