@@ -1,0 +1,230 @@
+name: npm dependency autofix
+
+# Finds advisories published against the npm dependencies this repo ships and
+# opens pull requests that fix them, without waiting for anyone to notice.
+# Runs daily and on demand. Companion to npm-dependency-audit.yml, which gates
+# pull requests that change dependencies.
+#
+#   fix-npm-packages    `socket fix` in CI mode over npm-packages/*. Socket
+#                       computes the upgrades (direct and transitive, with
+#                       overrides when needed) and opens one PR per advisory on
+#                       branches named socket/fix/<GHSA>. Those PRs are gated
+#                       by the normal checks like any other.
+#   fix-meteor-packages Meteor core packages declare deps in package.js via
+#                       Npm.depends, which no fixer can edit. The generated
+#                       manifests from scripts/npm-deps-audit are fixed with
+#                       `socket fix` in local mode, the resulting version
+#                       changes are written back into package.js, and one PR
+#                       is opened (branch socket/fix/meteor-packages, updated
+#                       in place on later runs). Transitive-only fixes that
+#                       would need npm `overrides` are listed in the PR body
+#                       for a maintainer, since Npm.depends cannot express them.
+#   submit-snapshot     Pushes the generated packages/* lockfiles to GitHub's
+#                       dependency graph so Dependabot alerts cover Npm.depends
+#                       like any lockfile.
+#
+# Secrets and settings (core team): SOCKET_CLI_API_TOKEN with scopes
+# full-scans:create, fixes:list and packages:list; SOCKET_ORG variable; and
+# "Allow GitHub Actions to create and approve pull requests" enabled under
+# Settings → Actions → General, or the PR steps fail.
+#
+# Package versions are not bumped by these PRs. The release tooling bumps every
+# changed package when a release branch is cut (.github/skills/version-bump).
+
+on:
+  schedule:
+    - cron: '17 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+env:
+  GENERATED_DIR: npm-deps-generated
+  SOCKET_CLI_VERSION: 1.10.1
+  # Refuse upgrade targets younger than this; gives maintainers time to pull a
+  # compromised release before we adopt it.
+  MIN_RELEASE_AGE: 7d
+  FIX_BRANCH: socket/fix/meteor-packages
+  GIT_USER_NAME: github-actions[bot]
+  GIT_USER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+
+jobs:
+  generate:
+    name: Generate manifests for packages/*
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      - name: Parse packages/*/package.js and generate lockfiles
+        run: node scripts/npm-deps-audit/cli.js generate --out "$GENERATED_DIR"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: npm-deps-generated
+          path: ${{ env.GENERATED_DIR }}
+          retention-days: 7
+          if-no-files-found: error
+
+  fix-npm-packages:
+    name: Socket fix for npm-packages/*
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      SOCKET_CLI_API_TOKEN: ${{ secrets.SOCKET_CLI_API_TOKEN }}
+      SOCKET_ORG: ${{ vars.SOCKET_ORG }}
+    steps:
+      - name: Require the Socket token
+        if: ${{ env.SOCKET_CLI_API_TOKEN == '' }}
+        run: |
+          echo "::error::SOCKET_CLI_API_TOKEN is not set. Add a Socket API token (scopes full-scans:create, fixes:list, packages:list) as a repository secret and the org slug as the SOCKET_ORG variable."
+          exit 1
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      - name: Open fix pull requests with socket fix
+        env:
+          # CI mode: Socket commits on branches and opens PRs with this token.
+          CI: 'true'
+          SOCKET_CLI_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SOCKET_CLI_GIT_USER_NAME: ${{ env.GIT_USER_NAME }}
+          SOCKET_CLI_GIT_USER_EMAIL: ${{ env.GIT_USER_EMAIL }}
+        run: |
+          set -euo pipefail
+          args=(
+            fix
+            --all
+            --include 'npm-packages/*'
+            --exclude-paths 'npm-packages/*/tests,npm-packages/eslint-plugin-meteor/scripts'
+            --minimum-release-age "$MIN_RELEASE_AGE"
+            --range-style preserve
+            --pr-limit 10
+            --markdown
+          )
+          if [ -n "$SOCKET_ORG" ]; then
+            args+=(--org "$SOCKET_ORG")
+          fi
+          npx --yes "socket@${SOCKET_CLI_VERSION}" "${args[@]}" | tee -a "$GITHUB_STEP_SUMMARY"
+
+  fix-meteor-packages:
+    name: Socket fix for packages/* (Npm.depends)
+    needs: generate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      SOCKET_CLI_API_TOKEN: ${{ secrets.SOCKET_CLI_API_TOKEN }}
+      SOCKET_ORG: ${{ vars.SOCKET_ORG }}
+    steps:
+      - name: Require the Socket token
+        if: ${{ env.SOCKET_CLI_API_TOKEN == '' }}
+        run: |
+          echo "::error::SOCKET_CLI_API_TOKEN is not set. Add a Socket API token (scopes full-scans:create, fixes:list, packages:list) as a repository secret and the org slug as the SOCKET_ORG variable."
+          exit 1
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-deps-generated
+          path: ${{ env.GENERATED_DIR }}
+
+      - name: Compute and apply fixes to the generated manifests (local mode)
+        run: |
+          set -euo pipefail
+          args=(
+            fix
+            --all
+            --minimum-release-age "$MIN_RELEASE_AGE"
+            --range-style pin
+            --output-file "$RUNNER_TEMP/socket-fixes.json"
+            --markdown
+          )
+          if [ -n "$SOCKET_ORG" ]; then
+            args+=(--org "$SOCKET_ORG")
+          fi
+          # Unset CI and GitHub tokens so socket fix edits files instead of
+          # opening PRs against the generated directory.
+          env -u CI -u GITHUB_TOKEN -u SOCKET_CLI_GITHUB_TOKEN \
+            npx --yes "socket@${SOCKET_CLI_VERSION}" "${args[@]}" "$GENERATED_DIR" \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Write version changes back into package.js
+        id: apply
+        run: |
+          node scripts/npm-deps-audit/cli.js apply-fixes \
+            --out "$GENERATED_DIR" \
+            --summary "$RUNNER_TEMP/fix-summary.md" \
+            --socket-report "$RUNNER_TEMP/socket-fixes.json"
+          {
+            echo "## packages/* fixes"
+            echo ""
+            cat "$RUNNER_TEMP/fix-summary.md"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Open or update the fix pull request
+        if: ${{ steps.apply.outputs.changed == 'true' }}
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: ${{ env.FIX_BRANCH }}
+          base: devel
+          delete-branch: true
+          add-paths: packages/*/package.js
+          commit-message: |
+            fix(deps): update vulnerable npm dependencies in core packages
+
+            Computed by `socket fix` on manifests generated from Npm.depends.
+            See the pull request body for the advisories addressed.
+          author: ${{ env.GIT_USER_NAME }} <${{ env.GIT_USER_EMAIL }}>
+          committer: ${{ env.GIT_USER_NAME }} <${{ env.GIT_USER_EMAIL }}>
+          title: 'fix(deps): update vulnerable npm dependencies in core packages'
+          body-path: ${{ runner.temp }}/fix-summary.md
+          labels: dependencies
+
+  submit-snapshot:
+    name: Submit packages/* dependencies to the dependency graph
+    needs: generate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-deps-generated
+          path: ${{ env.GENERATED_DIR }}
+
+      - name: Submit dependency snapshot
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/npm-deps-audit/cli.js submit --out "$GENERATED_DIR"

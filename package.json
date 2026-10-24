@@ -57,7 +57,8 @@
     "test:self-hosted-runner-cleanup": "node --test scripts/ci/__tests__/self-hosted-runner-cleanup.node-test.js",
     "checkout:pr": "node scripts/checkout-pr.js",
     "ts-coverage": "typescript-coverage-report",
-    "ts-coverage:ci": "type-coverage --at-least 80"
+    "ts-coverage:ci": "type-coverage --at-least 80",
+    "test:npm-deps-audit": "node --test scripts/npm-deps-audit/__tests__/lib.node-test.js"
   },
   "jshintConfig": {
     "esversion": 11
