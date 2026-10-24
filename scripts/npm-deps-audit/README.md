@@ -1,7 +1,7 @@
 # npm-deps-audit
 
 Makes the npm dependencies of Meteor core packages visible to
-[Socket](https://socket.dev) and to GitHub's dependency graph. Core packages
+[Socket](https://socket.dev). Core packages
 declare them with `Npm.depends({...})` in `packages/*/package.js` (build
 plugins with `npmDependencies`), so there is no `package.json` or lockfile for
 any scanner to read. This tool parses each `package.js` statically, writes a
@@ -17,13 +17,17 @@ its own, and nothing from `package.js` is ever executed.
 |---|---|---|---|
 | **Socket GitHub App** | every real manifest in the repo, on all PRs incl. forks | per Socket policy, as a check run | Socket dashboard; `socket.yml` for paths |
 | **`socket` job** | `npm-packages/*` + generated `packages/*` manifests | yes, `socket scan create --report` exits non-zero on policy violations | Socket dashboard |
-| **`submit-dependency-snapshot` job** | generated `packages/*` lockfiles → GitHub dependency graph | no, feeds Dependabot alerts | GitHub Security tab |
 
 Socket reports CVEs and, beyond them, malware, typosquats, install scripts,
 network/shell/filesystem access, obfuscated code, unmaintained or deprecated
 packages, git dependencies and license problems. Which of those block, warn or
 are ignored is the org security policy in the Socket dashboard. There is no
 second policy in this repo.
+
+This workflow runs when a change touches dependencies (pull requests, pushes to
+`devel`). Detecting advisories published later against unchanged dependencies,
+and opening fix pull requests for them, is the job of
+`.github/workflows/npm-dependency-autofix.yml`.
 
 ### Pull requests from forks
 
@@ -63,9 +67,6 @@ node scripts/npm-deps-audit/cli.js generate --out /tmp/npm-deps
 # Scan the same inputs Socket scans in CI (needs `socket login` or SOCKET_CLI_API_TOKEN).
 # Targets must be under --cwd; CI generates into ./npm-deps-generated for that reason.
 npx socket scan create --report npm-packages /tmp/npm-deps
-
-# Submit the generated lockfiles to GitHub's Dependency Submission API.
-node scripts/npm-deps-audit/cli.js submit --out /tmp/npm-deps --dry-run
 ```
 
 Tests: `npm run test:npm-deps-audit`.
@@ -92,5 +93,3 @@ Tests: `npm run test:npm-deps-audit`.
   ships. Socket's own policy decides how to treat dev scope.
 - The meteor-tool dev bundle (`scripts/dev-bundle-tool-package.js`) is out of
   scope; it needs code changes rather than pin bumps and is tracked separately.
-- The `submit` step needs `contents: write`, which pull requests do not get, so
-  snapshots are submitted only on pushes to `devel` and on schedule.

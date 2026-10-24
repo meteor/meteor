@@ -1,7 +1,8 @@
 name: npm dependency audit
 
 # Socket (socket.dev) scan of the npm dependencies of everything this repo
-# publishes, plus GitHub dependency-graph coverage for Meteor core packages.
+# publishes, run when a change touches them. Detection of advisories published
+# later and automatic fix PRs live in npm-dependency-autofix.yml.
 #
 #   - npm-packages/*            real package.json + package-lock.json
 #   - packages/* (Npm.depends)  manifests generated at run time from package.js
@@ -15,9 +16,8 @@ name: npm dependency audit
 #              generated manifests. Fails when the scan violates the org's
 #              Socket security policy (malware, typosquats, install scripts,
 #              network/shell access, unmaintained packages, licenses, CVEs).
-#   submit     push the generated packages/* lockfiles to GitHub's dependency
-#              graph on devel pushes and daily, so Dependabot alerts cover
-#              Npm.depends like any lockfile.
+#              Pushes to devel also set Socket's default-branch head scan,
+#              the baseline PR scans are compared against.
 #
 # Secrets. The socket job needs SOCKET_CLI_API_TOKEN (scope full-scans:create)
 # and the SOCKET_ORG variable. Pull requests from forks do not receive secrets,
@@ -54,8 +54,6 @@ on:
       - 'scripts/npm-deps-audit/**'
       - 'socket.yml'
       - '.github/workflows/npm-dependency-audit.yml'
-  schedule:
-    - cron: '17 5 * * *'
   workflow_dispatch:
 
 permissions:
@@ -196,36 +194,3 @@ jobs:
           npx --yes "socket@${SOCKET_CLI_VERSION}" "${args[@]}" \
             "$SOURCE_DIR/npm-packages" "$GENERATED_DIR" \
             | tee -a "$GITHUB_STEP_SUMMARY"
-
-  submit-dependency-snapshot:
-    name: Submit packages/* dependencies to the dependency graph
-    # Runs even when the scan fails so Dependabot alerts reflect reality.
-    # Never on pull requests: the graph should describe devel, not a proposal.
-    if: >-
-      always() &&
-      needs.generate.result == 'success' &&
-      github.event_name != 'pull_request' &&
-      github.event_name != 'pull_request_target'
-    needs:
-      - generate
-      - socket
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22.x
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: npm-deps-generated
-          path: ${{ env.GENERATED_DIR }}
-
-      - name: Submit dependency snapshot
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/npm-deps-audit/cli.js submit --out "$GENERATED_DIR"

@@ -11,9 +11,7 @@
 //      (nothing from package.js is executed, so this is safe to run against
 //      pull-request content in a job that holds secrets),
 //   2. writes a throwaway package.json per package and generates a lockfile,
-//      which the Socket CLI then scans alongside npm-packages/*,
-//   3. converts the lockfiles into a dependency-graph snapshot for GitHub's
-//      Dependency Submission API so Dependabot alerts cover packages/* too.
+//      which the Socket CLI then scans alongside npm-packages/*.
 //
 // No npm dependencies on purpose: this runs in CI before any install step.
 
@@ -312,115 +310,6 @@ function readIndex(outDir) {
   return JSON.parse(fs.readFileSync(file, 'utf8')).packages;
 }
 
-// ---------------------------------------------------------------------------
-// 3. Dependency Submission API snapshot
-// ---------------------------------------------------------------------------
-
-function purl(name, version) {
-  // pkg:npm/%40scope/name@1.2.3 — the scope's "@" is percent-encoded.
-  const encoded = name.startsWith('@') ? '%40' + name.slice(1) : name;
-  return `pkg:npm/${encoded}@${version}`;
-}
-
-function nameFromNodePath(nodePath) {
-  const i = nodePath.lastIndexOf('node_modules/');
-  return nodePath.slice(i + 'node_modules/'.length);
-}
-
-// Resolve `depName` as Node would from a package installed at `fromPath`.
-function resolveChild(packages, fromPath, depName) {
-  let base = fromPath;
-  for (;;) {
-    const candidate = base ? `${base}/node_modules/${depName}` : `node_modules/${depName}`;
-    if (packages[candidate]) return candidate;
-    if (!base) return null;
-    const i = base.lastIndexOf('node_modules/');
-    base = i <= 0 ? '' : base.slice(0, i - 1);
-  }
-}
-
-// Convert a lockfileVersion 2/3 package-lock.json into the `resolved` map of a
-// snapshot manifest.
-function lockfileToResolved(lock) {
-  const packages = lock.packages || {};
-  const root = packages[''] || {};
-  const direct = new Set(Object.keys(root.dependencies || {}));
-  const resolved = {};
-  for (const [nodePath, entry] of Object.entries(packages)) {
-    if (!nodePath.startsWith('node_modules/') || !entry.version || entry.link) continue;
-    const name = nameFromNodePath(nodePath);
-    const children = [];
-    for (const depName of Object.keys({
-      ...(entry.dependencies || {}),
-      ...(entry.optionalDependencies || {}),
-    })) {
-      const childPath = resolveChild(packages, nodePath, depName);
-      if (childPath && packages[childPath].version) {
-        children.push(purl(depName, packages[childPath].version));
-      }
-    }
-    resolved[nodePath] = {
-      package_url: purl(name, entry.version),
-      relationship: nodePath === `node_modules/${name}` && direct.has(name) ? 'direct' : 'indirect',
-      scope: entry.dev ? 'development' : 'runtime',
-      dependencies: children,
-    };
-  }
-  return resolved;
-}
-
-function buildSnapshot(entries, env = process.env, now = new Date()) {
-  const manifests = {};
-  for (const entry of entries) {
-    if (!entry.lockfile || !fs.existsSync(entry.lockfile)) continue;
-    const lock = JSON.parse(fs.readFileSync(entry.lockfile, 'utf8'));
-    manifests[entry.sourcePath] = {
-      name: entry.sourcePath,
-      file: { source_location: entry.sourcePath },
-      metadata: { generator: DETECTOR_NAME },
-      resolved: lockfileToResolved(lock),
-    };
-  }
-  return {
-    version: 0,
-    sha: env.GITHUB_SHA,
-    ref: env.GITHUB_REF,
-    job: {
-      correlator: `${env.GITHUB_WORKFLOW || 'local'}/${env.GITHUB_JOB || DETECTOR_NAME}`,
-      id: env.GITHUB_RUN_ID || String(Date.now()),
-      html_url:
-        env.GITHUB_SERVER_URL && env.GITHUB_REPOSITORY && env.GITHUB_RUN_ID
-          ? `${env.GITHUB_SERVER_URL}/${env.GITHUB_REPOSITORY}/actions/runs/${env.GITHUB_RUN_ID}`
-          : undefined,
-    },
-    detector: { name: DETECTOR_NAME, version: DETECTOR_VERSION, url: DETECTOR_URL },
-    scanned: now.toISOString(),
-    manifests,
-  };
-}
-
-async function submitSnapshot(snapshot, env = process.env) {
-  for (const key of ['GITHUB_REPOSITORY', 'GITHUB_TOKEN', 'GITHUB_SHA', 'GITHUB_REF']) {
-    if (!env[key]) throw new Error(`${key} is required to submit a snapshot`);
-  }
-  const apiUrl = env.GITHUB_API_URL || 'https://api.github.com';
-  const res = await fetch(`${apiUrl}/repos/${env.GITHUB_REPOSITORY}/dependency-graph/snapshots`, {
-    method: 'POST',
-    headers: {
-      Accept: 'application/vnd.github+json',
-      Authorization: `Bearer ${env.GITHUB_TOKEN}`,
-      'X-GitHub-Api-Version': '2022-11-28',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(snapshot),
-  });
-  const body = await res.text();
-  if (res.status !== 201) {
-    throw new Error(`Dependency submission failed: HTTP ${res.status}\n${body}`);
-  }
-  return JSON.parse(body);
-}
-
 function defaultOutDir() {
   return path.join(os.tmpdir(), 'meteor-npm-deps-audit');
 }
@@ -435,10 +324,6 @@ module.exports = {
   generateLockfile,
   generateAll,
   readIndex,
-  purl,
-  lockfileToResolved,
-  buildSnapshot,
-  submitSnapshot,
   defaultOutDir,
   mapConcurrent,
 };

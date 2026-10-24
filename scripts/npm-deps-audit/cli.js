@@ -4,17 +4,12 @@
 //
 // Usage:
 //   node scripts/npm-deps-audit/cli.js generate [--out <dir>] [--repo-root <dir>] [--concurrency N]
-//   node scripts/npm-deps-audit/cli.js submit   [--out <dir>] [--dry-run]
 //
 // `generate` statically parses <repo-root>/packages/*/package.js for
 // Npm.depends / npmDependencies, writes a package.json per package under <out>
 // and generates a package-lock.json for each. Nothing from package.js runs.
 // Exits 1 if any package.js cannot be parsed or resolved, so a non-literal
 // Npm.depends can never be silently skipped.
-//
-// `submit` posts the generated lockfiles to GitHub's Dependency Submission API
-// so Dependabot alerts cover packages/*. Needs GITHUB_TOKEN with contents:write
-// plus the standard GITHUB_* Actions variables.
 //
 // The generated directory is what the Socket CLI scans in
 // .github/workflows/npm-dependency-audit.yml. See README.md in this directory.
@@ -29,7 +24,7 @@ const DEFAULT_REPO_ROOT = path.resolve(__dirname, '..', '..');
 
 function usage(exitCode) {
   const text = require('fs').readFileSync(__filename, 'utf8').split('\n')
-    .slice(2, 20).map((l) => l.replace(/^\/\/ ?/, '')).join('\n');
+    .slice(2, 15).map((l) => l.replace(/^\/\/ ?/, '')).join('\n');
   (exitCode ? console.error : console.log)(text);
   process.exit(exitCode);
 }
@@ -65,31 +60,10 @@ async function cmdGenerate(argv) {
   }
 }
 
-async function cmdSubmit(argv) {
-  const { values } = parse(argv, {
-    out: { type: 'string', default: lib.defaultOutDir() },
-    'dry-run': { type: 'boolean', default: false },
-  });
-  const entries = lib.readIndex(path.resolve(values.out));
-  const snapshot = lib.buildSnapshot(entries);
-  const manifestCount = Object.keys(snapshot.manifests).length;
-  const depCount = Object.values(snapshot.manifests)
-    .reduce((n, m) => n + Object.keys(m.resolved).length, 0);
-  if (values['dry-run']) {
-    console.log(JSON.stringify(snapshot, null, 2));
-    console.error(`\nDry run: ${manifestCount} manifest(s), ${depCount} resolved package(s). Nothing submitted.`);
-    return;
-  }
-  const res = await lib.submitSnapshot(snapshot);
-  console.log(`Submitted snapshot ${res.id}: ${manifestCount} manifest(s), ${depCount} resolved package(s).`);
-  console.log(res.message || res.result || '');
-}
-
 async function main() {
   const [command, ...rest] = process.argv.slice(2);
   switch (command) {
     case 'generate': return cmdGenerate(rest);
-    case 'submit': return cmdSubmit(rest);
     case '-h': case '--help': case 'help': case undefined: return usage(command ? 0 : 2);
     default:
       console.error(`Unknown command: ${command}\n`);
