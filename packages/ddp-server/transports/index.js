@@ -1,9 +1,11 @@
 import { createSockJSTransport } from './sockjs.js';
 import { createUwsTransport } from './uws.js';
+import { createBunTransport } from './bun.js';
 
 const TRANSPORTS = {
   sockjs: createSockJSTransport,
   uws: createUwsTransport,
+  bun: createBunTransport,
 };
 
 const VALID_NAMES = Object.keys(TRANSPORTS);
@@ -13,7 +15,8 @@ const VALID_NAMES = Object.keys(TRANSPORTS);
  *   1. Meteor.settings.packages['ddp-server'].transport
  *   2. DDP_TRANSPORT env var
  *   3. DISABLE_SOCKJS=1 → 'uws' (backward compat)
- *   4. default: 'sockjs'
+ *   4. Bun runtime auto-detect → 'bun'
+ *   5. default: 'sockjs'
  *
  * Also sets __meteor_runtime_config__.DDP_TRANSPORT so the client
  * knows whether to load SockJS or use native WebSocket.
@@ -47,11 +50,16 @@ function resolveTransportName() {
     return process.env.DDP_TRANSPORT;
   }
 
-  // 3. Backward compat: DISABLE_SOCKJS=1 → uws
+  // 3. Bun runtime: SockJS and uws are not available
+  if (typeof Bun !== 'undefined') {
+    return 'bun';
+  }
+
+  // 4. Backward compat: DISABLE_SOCKJS=1 → uws
   if (process.env.DISABLE_SOCKJS) {
     return 'uws';
   }
 
-  // 4. Default
+  // 5. Default
   return 'sockjs';
 }

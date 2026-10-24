@@ -9,6 +9,7 @@ Npm.depends({
   "permessage-deflate2": "0.1.8",
   sockjs: "0.3.24",
   "lodash.once": "4.1.1",
+  ws: "8.18.0",
   "lodash.isempty": "4.4.0",
   "lodash.isstring": "4.0.1",
   "lodash.isobject": "3.0.2"
@@ -54,6 +55,7 @@ Package.onUse(function (api) {
   api.addFiles("transports/raw_connection.js", "server");
   api.addFiles("transports/sockjs.js", "server");
   api.addFiles("transports/uws.js", "server");
+  api.addFiles("transports/bun.js", "server");
   api.addFiles("transports/index.js", "server");
   api.addFiles("stream_server.js", "server");
 
@@ -84,5 +86,6 @@ Package.onTest(function (api) {
   api.addFiles("crossbar_tests.js", ["server"]);
   api.addFiles("raw_websocket_tests.js", "server");
   api.addFiles("transports/uws_tests.js", "server");
+  api.addFiles("transports/bun_tests.js", "server");
   api.addFiles("transports/sockjs_tests.js", "server");
 });

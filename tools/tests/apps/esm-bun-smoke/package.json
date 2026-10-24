@@ -1,0 +1,12 @@
+{
+  "name": "esm-bun-smoke",
+  "private": true,
+  "dependencies": {
+    "@babel/runtime": "^7.23.5"
+  },
+  "meteor": {
+    "mainModule": {
+      "server": "server/main.js"
+    }
+  }
+}
