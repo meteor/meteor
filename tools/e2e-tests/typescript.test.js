@@ -116,6 +116,12 @@ describe('TypeScript App Bundling /', () => {
           { negate: true }
         );
       },
+      afterRunBuiltApp: async () => {
+        // SCSS styles must survive the production build
+        await assertBodyStyles({
+          'white-space': 'break-spaces',
+        });
+      },
     }
   }));
 });

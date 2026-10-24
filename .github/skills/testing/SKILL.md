@@ -31,7 +31,9 @@ PUPPETEER_DOWNLOAD_PATH=~/.npm/chromium ./packages/test-in-console/run.sh
 # E2E tests (Jest + Playwright)
 npm run install:e2e                          # Install dependencies
 npm run test:e2e                             # Run all E2E tests
-npm run test:e2e -- -t="React"               # Run specific test
+npm run test:e2e:groups                      # List groups (same source as CI)
+npm run test:e2e:group -- react               # Run a CI group locally
+npm run test:e2e:groups:audit                 # Audit all groups, including Accounts
 
 # Native mobile smoke tests (Maestro)
 npm run install:native                       # Install deps, verify Maestro CLI on PATH
@@ -42,6 +44,14 @@ npm run test:native:ios                       # Run iOS smoke flow
 ## E2E Tests (`tools/e2e-tests/`)
 
 Jest + Playwright suite for verifying bundler integrations (rspack). Tests cover framework skeletons, command modes, routing, top-level await, and build/watch regressions.
+
+**Group selection:** `tools/e2e-tests/test-groups.js` owns group patterns and
+workflow assignments. CI generates its matrix from this module. The audit
+runs without browsers, rejects missing/overlapping coverage and empty named
+groups, and warns about tests assigned to the automatic `uncategorized`
+fallback. Accounts runs through `npm run test:e2e:group -- accounts` in its
+own workflow. Run groups sequentially locally because they share ports.
+See `tools/e2e-tests/README.md` for the full workflow and file-filter examples.
 
 **Test apps:** `tools/e2e-tests/apps/`. Use
 `dev/modern-tools/rspack/E2E_COVERAGE.md` as the authoritative app-to-feature
