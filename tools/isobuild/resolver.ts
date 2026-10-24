@@ -49,6 +49,12 @@ export type Resolution = {
   id?: string;
 } | "missing" | null
 
+type ExportTarget = {
+  key: string,
+  value: string,
+  resolved?: string
+};
+
 export default class Resolver {
   static getOrCreate = wrap(function (options: ResolverOptions) {
     return new Resolver(options);
@@ -63,6 +69,7 @@ export default class Resolver {
   private extensions: string[];
   private nodeModulesPaths: string[];
   private mainFields: string[];
+  private conditions: string[];
 
   public statOrNull = optimisticStatOrNull as (path: string) => Stats | BigIntStats | null | undefined;
 
@@ -108,8 +115,11 @@ export default class Resolver {
       } else {
         this.mainFields = ["browser", "module", "main"];
       }
+      // TODO: add development/production conditions
+      this.conditions = ['module', 'browser', 'default']
     } else {
       this.mainFields = ["main"];
+      this.conditions = ['node-addons', 'node', 'import', 'require', 'module-sync', 'default'];
     }
   }
 
@@ -123,6 +133,28 @@ export default class Resolver {
 
   static getNativeStubId(id: string) {
     return nativeModulesMap[id] || null;
+  }
+
+  static parsePackageId(id: string) {
+    let packageName;
+    let packageSubpath;
+
+    if (['/', '.'].includes(id.charAt(0))) {
+      // This isn't an import for a package
+      packageName = '';
+      packageSubpath = id;
+    } else if (!id.includes('/')) {
+      packageName = id;
+    } else if (id.startsWith('@')) {
+      // everything before second "/"
+      let secondIndex = id.indexOf('/', id.indexOf('/') + 1);
+      packageName = secondIndex === -1 ? id : id.substring(0, secondIndex);
+    } else {
+      packageName = id.substring(0, id.indexOf('/'));
+    }
+
+    packageSubpath = `.${id.substring(packageName.length)}`
+    return { packageName, packageSubpath };
   }
 
   // Resolve the given module identifier to an object { path, stat } or
@@ -146,6 +178,7 @@ export default class Resolver {
     }
 
     let packageJsonMap = null;
+    const { packageName, packageSubpath } = Resolver.parsePackageId(id);
 
     while (resolved && resolved.stat && resolved.stat.isDirectory()) {
       let dirPath = resolved.path;
@@ -158,26 +191,46 @@ export default class Resolver {
         _seenDirPaths.add(dirPath);
 
         const found = this.getPkgJsonSubsetForDir(dirPath);
-        const foundPkgJsonMain = found && this.mainFields.some(name => {
-          const value = found.pkg[name];
-          if (isString(value)) {
-            // The "main" field of package.json does not have to begin with ./
-            // to be considered relative, so first we try simply appending it
-            // to the directory path before falling back to a full resolve,
-            // which might return a package from a node_modules directory.
-            resolved = this.joinAndStat(dirPath, value) ||
-              this.resolve(value, found.path, _seenDirPaths);
-            return resolved && typeof resolved === "object";
-          }
-          return false;
-        });
+        let matchingExport, foundPkgJsonMain, foundFile;
 
-        if (foundPkgJsonMain && found) {
+        if (found && found.exports) {
+          matchingExport = this.resolvePackageExports(packageSubpath, found.exports).find(result => {
+            resolved = this.joinAndStat(dirPath, result.resolved || result.value);
+            return resolved && typeof resolved === 'object';
+          });
+        } else if (found && (!packageName || packageSubpath === '.')) {
+          foundPkgJsonMain = this.mainFields.some(name => {
+            const value = found.pkg[name];
+            if (isString(value)) {
+              // The "main" field of package.json does not have to begin with ./
+              // to be considered relative, so first we try simply appending it
+              // to the directory path before falling back to a full resolve,
+              // which might return a package from a node_modules directory.
+              resolved = this.joinAndStat(dirPath, value) ||
+                this.resolve(value, found.path, _seenDirPaths);
+              return resolved && typeof resolved === "object";
+            }
+            return false;
+          });
+        } else if (packageSubpath.startsWith('./')) {
+          foundFile = resolved = this.joinAndStat(dirPath, packageSubpath);
+        }
+
+        if (found && resolved && (foundPkgJsonMain || matchingExport)) {
           if (! resolved.packageJsonMap) {
             resolved.packageJsonMap = Object.create(null);
           }
-
-          resolved.packageJsonMap![found.path] = found.pkg;
+          
+          if (matchingExport) {
+            let pkg = Object.assign({
+              exports: {
+                [matchingExport.key]: matchingExport.value
+              }
+            }, found.pkg);
+            resolved.packageJsonMap![found.path] = pkg;
+          } else {
+            resolved.packageJsonMap![found.path] = found.pkg;
+          }
 
           // The resolution above may have returned a directory, so we
           // merge resolved.packageJsonMap into packageJsonMap so that we
@@ -201,6 +254,12 @@ export default class Resolver {
         if (found) {
           packageJsonMap = packageJsonMap || Object.create(null);
           packageJsonMap[found.path] = found.pkg;
+        }
+
+        // Bypass adding `index.js` to the newly resolved path
+        // If it's still a folder, we'll add it next time
+        if (foundFile) {
+          continue
         }
       }
 
@@ -250,7 +309,7 @@ export default class Resolver {
 
     if (exactResult && exactStat && exactStat.isFile()) {
       result = exactResult;
-    } else {
+    } else if (!path.endsWith('/')) {
       // No point in trying alternate file extensions if the parent
       // directory does not exist.
       const parentDirStat = this.statOrNull(pathDirname(path));
@@ -300,6 +359,13 @@ export default class Resolver {
       return null;
     }
 
+    let { packageName } = Resolver.parsePackageId(id);
+
+    let parentPackageJson = this.findPkgJsonSubsetForPath(pathDirname(absParentPath));
+    if (parentPackageJson?.pkg.name === packageName && parentPackageJson.exports) {
+      return this.joinAndStat(pathDirname(parentPackageJson.path));
+    }
+
     let sourceRoot: string | undefined;
     if (containsPath(this.sourceRoot, absParentPath)) {
       // If the file is contained by this.sourceRoot, then it's safe to
@@ -329,7 +395,27 @@ export default class Resolver {
         dir = pathDirname(dir);
       }
 
-      while (! (resolved = this.joinAndStat(dir, "node_modules", id))) {
+      if (packageName.length < id.length) {
+        // Add a trailing slash to indicate a folder, in case there's also a file
+        // with the same name
+        packageName = `${packageName}/`;
+      }
+
+      while (true) {
+        resolved = this.joinAndStat(dir, "node_modules", packageName);
+        if (resolved) {
+          const pkg = this.getPkgJsonSubsetForDir(resolved.path)
+          if (pkg?.exports || pkg?.pkg.name === packageName) {
+            break;
+          }
+
+          // commonjs keeps checking parent directories until the id exists
+          resolved = this.joinAndStat(dir, "node_modules", id);
+          if (resolved) {
+            break;
+          }
+        }
+
         if (dir === sourceRoot) {
           break;
         }
@@ -348,7 +434,7 @@ export default class Resolver {
       // After checking any local node_modules directories, fall back to
       // the package NPM directory, if one was specified.
       this.nodeModulesPaths.some(path => {
-        return resolved = this.joinAndStat(path, id);
+        return resolved = this.joinAndStat(path, packageName);
       });
     }
 
@@ -382,18 +468,134 @@ export default class Resolver {
       pkgSubset.version = pkg.version;
     }
 
-    this.mainFields.forEach(name => {
-      const value = pkg[name];
-      if (isString(value) ||
-          isObject(value)) {
-        pkgSubset[name] = value;
-      }
-    });
+    let exports;
+
+    if (has(pkg, "exports")) {
+      exports = pkg.exports;
+    } else {
+      this.mainFields.forEach(name => {
+        const value = pkg[name];
+        if (isString(value) ||
+            isObject(value)) {
+          pkgSubset[name] = value;
+        }
+      });
+    }
 
     return {
       path: pkgJsonPath,
       pkg: pkgSubset,
+      exports
     };
+  }
+
+  // Implements the PACKAGE_EXPORTS_RESOLVE spec from
+  // https://nodejs.org/api/esm.html#resolution-and-loading-algorithm
+  // using the spec written for Node 23.4.0
+  // This implementation is missing many of the errors
+  // and assertions in the spec. Instead, those would be handled
+  // by the runtime implementation.
+  private resolvePackageExports(subPath: string, exports: any) {
+    let conditions = this.conditions;
+
+    if (subPath === '.') {
+      if (typeof exports === 'string') {
+        return createResult(subPath, exports);
+      } else if (typeof exports === 'object' && exports !== null && exports['.']) {
+        return createResult('.', exports['.']);
+      } else if (Object.keys(exports).every(key => !key.startsWith('.'))) {
+        // The spec has this step earlier, but doing it now is more performant
+        // and has no difference in the result
+        return createResult('.', exports);
+      }
+
+      return [];
+    }
+
+    // implements the PACKAGE_IMPORTS_EXPORTS_RESOLVE spec
+    if (typeof exports === 'object' && exports !== null) {
+      if (subPath in exports) {
+        // TODO: the spec makes sure matchKey does not contain '*'.
+        // Is that necessary here?
+        return createResult(subPath, exports[subPath]);
+      }
+
+      let expansionKeys = Object.keys(exports).filter(key => {
+        return key.includes('*');
+      }).sort((keyA, keyB) => {
+        // Implements PATTERN_KEY_COMPARE spec
+        var baseLengthA = keyA.indexOf('*');
+        var baseLengthB = keyB.indexOf('*');
+
+        if (baseLengthA !== baseLengthB) {
+          return baseLengthA > baseLengthB ? -1 : 1;
+        }
+
+        if (keyA.length !== keyB.length) {
+          return keyA.length > keyB.length ? -1 : 1;
+        }
+
+        return 0;
+      });
+
+      for(const expansionKey of expansionKeys) {
+        let patternBase = expansionKey.substring(0, expansionKey.indexOf('*'));
+        if (subPath !== patternBase && subPath.startsWith(patternBase)) {
+          let patternTrailer = expansionKey.substring(patternBase.length + 1);
+
+          if (
+            patternTrailer.length === 0 ||
+            subPath.endsWith(patternTrailer) && subPath.length >= expansionKey.length
+          ) {
+            let patternMatch = subPath.substring(patternBase.length, subPath.length - patternTrailer.length);
+            return createResult(expansionKey, exports[expansionKey], patternMatch);
+          }
+        }
+      }
+    }
+
+    return [];
+
+    function createResult(key: string, value: any, patternMatch?: string) {
+      return resolveTarget(key, value, patternMatch) || [];
+    }
+
+    // Implements the PACKAGE_TARGET_RESOLVE spec
+    function resolveTarget(key: string, value: any, patternMatch?: string): ExportTarget[] | undefined {
+      if (typeof value === 'string') {
+        if (!value.startsWith('./')) {
+          return undefined;
+        }
+        if (patternMatch === undefined) {
+          return [{ key, value }];
+        }
+
+        let resolved = value.replaceAll('*', patternMatch);
+        return [{ key, value, resolved }];
+      }
+
+
+      if (Array.isArray(value)) {
+        for(const targetItem of value) {
+          let result = resolveTarget(key, targetItem, patternMatch);
+
+          if (result !== undefined) {
+            return result;
+          }
+        }
+      }
+
+      if (typeof value === 'object' && value !== null) {
+        for(const prop of Object.keys(value)) {
+          if(conditions.includes(prop)) {
+            let result = resolveTarget(key, value[prop], patternMatch);
+            if (result !== undefined) {
+              return result;
+            }
+          }
+        }
+      }
+    }
   }
 
   private findPkgJsonSubsetForPath(
