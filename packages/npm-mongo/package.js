@@ -21,5 +21,6 @@ Package.onUse(function (api) {
 
 Package.onTest(function (api) {
   api.use(["npm-mongo", "tinytest"], "server");
+  api.addAssets("wrapper.js", "server");
   api.addFiles("wrapper-tests.js", "server");
 });

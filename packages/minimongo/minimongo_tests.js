@@ -1,3 +1,71 @@
+Tinytest.add('minimongo - projections preserve own prototype fields and exclude secrets', test => {
+  const collection = new LocalCollection();
+  collection.insert(JSON.parse('{"_id":"projection","profile":{"__proto__":{"secret":"hidden"},"public":"visible"},"items":[{"__proto__":{"secret":"hidden"},"public":"visible"}]}'));
+  for (const fields of [
+    {'profile.__proto__': 0, 'items.__proto__': 0},
+    {'profile.__proto__.secret': 0, 'items.__proto__.secret': 0},
+    {'profile.public': 1, 'items.public': 1},
+  ]) {
+    const result = collection.findOne('projection', {fields});
+    test.isFalse(EJSON.stringify(result).includes('hidden'));
+    test.equal(result.profile.public, 'visible');
+    test.equal(result.items[0].public, 'visible');
+    test.equal(Object.getPrototypeOf(result.profile), Object.prototype);
+    test.equal(Object.getPrototypeOf(result.items[0]), Object.prototype);
+  }
+  const included = collection.findOne('projection', {fields: {'profile.__proto__': 1}});
+  test.isTrue(Object.prototype.hasOwnProperty.call(included.profile, '__proto__'));
+  test.equal(included.profile.__proto__, {secret: 'hidden'});
+  test.equal(Object.getPrototypeOf(included.profile), Object.prototype);
+});
+
+Tinytest.add('minimongo - upserts preserve own prototype fields', test => {
+  for (const selector of [JSON.parse('{"__proto__":{"safe":true}}'), {'__proto__.safe': true}]) {
+    const collection = new LocalCollection();
+    collection.upsert(selector, {$set: {public: 'visible'}});
+    const doc = collection.findOne();
+    test.isTrue(Object.prototype.hasOwnProperty.call(doc, '__proto__'));
+    test.equal(doc.__proto__, {safe: true});
+    test.equal(Object.getPrototypeOf(doc), Object.prototype);
+    test.equal(doc.public, 'visible');
+  }
+  const collection = new LocalCollection();
+  collection.upsert({_id: 'replacement'}, JSON.parse('{"__proto__":{"safe":true},"public":"visible"}'));
+  const doc = collection.findOne('replacement');
+  test.isTrue(Object.prototype.hasOwnProperty.call(doc, '__proto__'));
+  test.equal(doc.__proto__, {safe: true});
+  test.equal(Object.getPrototypeOf(doc), Object.prototype);
+  test.equal(doc.public, 'visible');
+});
+
+Tinytest.addAsync('minimongo - observers deliver own prototype field changes', async test => {
+  const collection = new LocalCollection();
+  collection.insert({_id: 'observed', public: 'visible'});
+  const changes = [];
+  const handle = await collection.find().observeChangesAsync({
+    changed(id, fields) { changes.push({id, fields}); },
+  });
+  try {
+    await collection.updateAsync('observed', {$set: JSON.parse('{"__proto__":{"safe":true}}')});
+    test.equal(changes.length, 1);
+    if (changes.length) {
+      test.equal(changes[0].id, 'observed');
+      test.isTrue(Object.prototype.hasOwnProperty.call(changes[0].fields, '__proto__'));
+      test.equal(changes[0].fields.__proto__, {safe: true});
+      test.equal(Object.getPrototypeOf(changes[0].fields), Object.prototype);
+    }
+    await collection.updateAsync('observed', {$unset: JSON.parse('{"__proto__":1}')});
+    test.equal(changes.length, 2);
+    if (changes.length > 1) {
+      test.isTrue(Object.prototype.hasOwnProperty.call(changes[1].fields, '__proto__'));
+      test.isUndefined(changes[1].fields.__proto__);
+    }
+    test.equal(collection.findOne('observed').public, 'visible');
+  } finally {
+    await handle.stop();
+  }
+});
+
 Tinytest.add('minimongo - modifiers only traverse own document fields', test => {
   const marker = 'meteorModifierPrototypeMarker';
   try {

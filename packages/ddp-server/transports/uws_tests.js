@@ -1,4 +1,60 @@
+import {
+  createProxyAddressTracker,
+  decodeUwsAddress,
+} from './uws.js';
+
 const uws = Npm.require('uWebSockets.js');
+
+Tinytest.add('ddp-server/uws - proxy address correlation is exact and single-use', test => {
+  const addresses = createProxyAddressTracker();
+  const forget = addresses.record(
+    { localAddress: '127.0.0.1', localPort: 54321 },
+    '::1'
+  );
+
+  test.equal(
+    addresses.consume('127.0.0.2', 54321),
+    '127.0.0.2',
+    'the same port from a different peer must not consume the mapping'
+  );
+  test.equal(addresses.consume('127.0.0.1', 54321), '::1');
+  test.equal(
+    addresses.consume('127.0.0.1', 54321),
+    '127.0.0.1',
+    'a consumed mapping must not be replayable'
+  );
+
+  forget();
+});
+
+Tinytest.add('ddp-server/uws - proxy address cleanup cannot delete a reused key', test => {
+  const addresses = createProxyAddressTracker();
+  const socket = { localAddress: '127.0.0.1', localPort: 54322 };
+  const forgetOld = addresses.record(socket, '192.0.2.1');
+  addresses.record(socket, '192.0.2.2');
+
+  forgetOld();
+  test.equal(addresses.consume('127.0.0.1', 54322), '192.0.2.2');
+});
+
+Tinytest.add('ddp-server/uws - proxy address correlation normalizes IPv6', test => {
+  const addresses = createProxyAddressTracker();
+  addresses.record(
+    { localAddress: '::1', localPort: 54323 },
+    '2001:db8::42'
+  );
+
+  test.equal(
+    addresses.consume('0000:0000:0000:0000:0000:0000:0000:0001', 54323),
+    '2001:db8::42'
+  );
+});
+
+Tinytest.add('ddp-server/uws - native addresses decode for direct fallback', test => {
+  test.equal(decodeUwsAddress(Buffer.from('127.0.0.1')), '127.0.0.1');
+  test.equal(decodeUwsAddress(Buffer.from('2001:db8::1')), '2001:db8::1');
+});
+
 
 Tinytest.addAsync(
   'ddp-server/uws - LIBUS_LISTEN_EXCLUSIVE_PORT prevents SO_REUSEPORT collision',

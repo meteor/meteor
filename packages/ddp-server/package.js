@@ -73,6 +73,7 @@ Package.onTest(function (api) {
   api.use("livedata", ["client", "server"]);
   api.use("mongo", ["client", "server"]);
   api.use("test-helpers", ["client", "server"]);
+  api.use("socket-stream-client", "server");
   api.use([
     "tinytest",
     "random",
