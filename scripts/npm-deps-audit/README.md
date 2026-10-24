@@ -1,29 +1,41 @@
 # npm-deps-audit
 
-Makes the npm dependencies of Meteor core packages visible to dependency
-scanners. Core packages declare them with `Npm.depends({...})` in
-`packages/*/package.js` (build plugins with `npmDependencies`), so there is no
-`package.json` or lockfile for Socket, Dependabot or `npm audit` to read. This
-tool evaluates each `package.js` in a sandbox, writes a throwaway `package.json`
-per package, generates a lockfile, and then feeds those to the scanners.
+Makes the npm dependencies of Meteor core packages visible to
+[Socket](https://socket.dev) and to GitHub's dependency graph. Core packages
+declare them with `Npm.depends({...})` in `packages/*/package.js` (build
+plugins with `npmDependencies`), so there is no `package.json` or lockfile for
+any scanner to read. This tool parses each `package.js` statically, writes a
+throwaway `package.json` per package, generates a lockfile, and hands those to
+the scanners.
 
 Used by `.github/workflows/npm-dependency-audit.yml`. No npm dependencies of
-its own, so it runs before any install step.
+its own, and nothing from `package.js` is ever executed.
 
 ## How the pieces fit
 
-| Layer | Covers | Blocks? | Where policy lives |
+| Layer | Covers | Blocks? | Policy lives in |
 |---|---|---|---|
-| **Socket GitHub App** | every real manifest in the repo, on PRs, incl. forks | per Socket policy, as a check run | Socket dashboard (org security policy), `socket.yml` for paths |
-| **`socket` job** (CLI full scan) | `npm-packages/*` + generated `packages/*` manifests | yes, when `SOCKET_CLI_API_TOKEN` is available | Socket dashboard |
-| **`npm-audit` job** | same manifests, CVEs only | yes, at `failOn` in `.github/npm-audit-policy.json` | the policy JSON |
+| **Socket GitHub App** | every real manifest in the repo, on all PRs incl. forks | per Socket policy, as a check run | Socket dashboard; `socket.yml` for paths |
+| **`socket` job** | `npm-packages/*` + generated `packages/*` manifests | yes, `socket scan create --report` exits non-zero on policy violations | Socket dashboard |
 | **`submit-dependency-snapshot` job** | generated `packages/*` lockfiles → GitHub dependency graph | no, feeds Dependabot alerts | GitHub Security tab |
 
-Socket is the primary signal: beyond CVEs it flags malware, typosquats,
-install scripts, network/shell/filesystem access, obfuscated code, unmaintained
-or deprecated packages and license problems. The `npm audit` job is the
-deterministic fallback that needs no secrets, so pull requests from forks that
-change `packages/*/package.js` are still gated on known vulnerabilities.
+Socket reports CVEs and, beyond them, malware, typosquats, install scripts,
+network/shell/filesystem access, obfuscated code, unmaintained or deprecated
+packages, git dependencies and license problems. Which of those block, warn or
+are ignored is the org security policy in the Socket dashboard. There is no
+second policy in this repo.
+
+### Pull requests from forks
+
+Fork PRs do not receive repository secrets, so the `socket` job is skipped for
+them with a notice in the job summary. The Socket GitHub App still reviews
+changed real manifests. If a fork PR changes `Npm.depends`, a maintainer reads
+the diff and adds the **`socket-scan`** label; that triggers a
+`pull_request_target` run with the secret against the PR head. This is safe
+because the run executes nothing from the PR: `package.js` is parsed rather
+than evaluated, `npm install --package-lock-only --ignore-scripts` only fetches
+registry metadata, the Socket CLI only reads manifests, and the scripts always
+come from the base branch checkout.
 
 ## Setup (core team, once)
 
@@ -34,69 +46,51 @@ change `packages/*/package.js` are still gated on known vulnerabilities.
    Socket organization slug as the repository variable `SOCKET_ORG`.
 3. Review the org security policy in the Socket dashboard: which alert types
    block, warn or are ignored. That policy is what fails the `socket` job.
-4. Optionally make the Socket check and `npm audit (policy gate)` required via
+4. Create the `socket-scan` label.
+5. Optionally make the Socket check run and the `Socket scan` job required via
    branch protection on `devel`.
+
+Without the secret, the `socket` job fails on non-fork events rather than
+skipping, so an expired token cannot silently turn the check green.
 
 ## Commands
 
 ```bash
-# 1. Evaluate packages/*/package.js, write a package.json per package and
-#    generate a package-lock.json for each (default out dir: $TMPDIR/meteor-npm-deps-audit)
+# Parse packages/*/package.js, write a package.json per package and generate a
+# package-lock.json for each. Exits 1 if any package.js cannot be parsed.
 node scripts/npm-deps-audit/cli.js generate --out /tmp/npm-deps
 
-# 2. npm audit every generated lockfile, plus any real lockfile dirs given as arguments.
-#    Prints a markdown report (and appends to $GITHUB_STEP_SUMMARY in CI).
-#    Exits 1 when an advisory at/above policy.failOn is not allowlisted.
-node scripts/npm-deps-audit/cli.js audit --out /tmp/npm-deps npm-packages/*
+# Scan the same inputs Socket scans in CI (needs `socket login` or SOCKET_CLI_API_TOKEN).
+# Targets must be under --cwd; CI generates into ./npm-deps-generated for that reason.
+npx socket scan create --report npm-packages /tmp/npm-deps
 
-# 3. Submit the generated lockfiles to GitHub's Dependency Submission API so
-#    Dependabot alerts cover packages/*. Use --dry-run to print the snapshot.
+# Submit the generated lockfiles to GitHub's Dependency Submission API.
 node scripts/npm-deps-audit/cli.js submit --out /tmp/npm-deps --dry-run
-
-# Socket scan of the same inputs (needs `socket login` or SOCKET_CLI_API_TOKEN)
-npx socket scan create --report --cwd . npm-packages /tmp/npm-deps   # targets must be under --cwd; CI uses ./npm-deps-generated
 ```
 
 Tests: `npm run test:npm-deps-audit`.
 
-## npm audit policy file
-
-```json
-{
-  "failOn": "high",
-  "allow": [
-    {
-      "ghsa": "GHSA-xxxx-xxxx-xxxx",
-      "reason": "Why this is accepted and what the plan is",
-      "expires": "2027-01-31"
-    }
-  ]
-}
-```
-
-`failOn` is the lowest severity that fails the `npm-audit` job (`low`,
-`moderate`, `high`, `critical`, or `none` to report only). Allowlist entries
-need a GHSA id, a reason and an expiry date; after expiry the entry stops
-suppressing and is listed in the report so it gets revisited. Socket has its
-own triage flow for accepting alerts; keep the two in step.
-
 ## Caveats
 
-- Production dependencies only (`--omit=dev`). Dev-dependency findings in
-  `npm-packages/*` are noise for what ships and are not reported.
+- `Npm.depends` and `npmDependencies` must be object literals with string
+  values. Anything computed makes `generate` fail for that package, on purpose:
+  a dependency the audit cannot see is worse than a failing job. All current
+  core packages are literals.
 - `Npm.depends` pins exact versions, but transitive dependencies are resolved
   fresh when the lockfile is generated. That matches what `meteor publish`
   does, since `packages/**/.npm` shrinkwraps are not committed. A published
-  package may therefore differ slightly from what is audited here.
+  package may therefore differ slightly from what is scanned here.
 - Git and HTTP dependency specs (e.g. `uWebSockets.js` in `ddp-server`) cannot
-  be resolved by npm and are listed separately in the report. Socket flags git
-  dependencies as a supply-chain risk in their own right.
+  be resolved by npm and are left out of the generated manifest. Socket flags
+  git dependencies as a supply-chain risk in their own right when it sees them
+  in real manifests; for `packages/*` they are listed in the `generate` log.
 - In CI the generated manifests are written inside the workspace
   (`npm-deps-generated/`, deliberately not gitignored) because the Socket CLI
   only scans targets under its working directory and skips anything matched by
-  `.gitignore`. The directory only ever exists on the runner; locally, use a
-  directory outside the repo as in the examples above.
+  `.gitignore`. The directory only exists on the runner.
+- Production dependencies only; `npm-packages/*` dev dependencies are not what
+  ships. Socket's own policy decides how to treat dev scope.
 - The meteor-tool dev bundle (`scripts/dev-bundle-tool-package.js`) is out of
   scope; it needs code changes rather than pin bumps and is tracked separately.
-- The `submit` step needs `contents: write`, which fork pull requests do not
-  get, so snapshots are submitted only on pushes to `devel` and on schedule.
+- The `submit` step needs `contents: write`, which pull requests do not get, so
+  snapshots are submitted only on pushes to `devel` and on schedule.

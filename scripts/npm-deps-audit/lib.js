@@ -3,16 +3,16 @@
 // lib.js — shared helpers for scripts/npm-deps-audit
 //
 // Meteor core packages declare their npm dependencies with `Npm.depends({...})`
-// in package.js (and build plugins with `npmDependencies`). There is no
-// package.json or lockfile for them, so neither `npm audit`, Dependabot nor any
-// SaaS scanner can see them. This module:
+// in package.js (and build plugins with `npmDependencies: {...}`). There is no
+// package.json or lockfile for them, so neither Socket, Dependabot nor any
+// other scanner can see them. This module:
 //
-//   1. evaluates every packages/*/package.js in a sandbox and collects the
-//      declared npm dependencies,
+//   1. statically parses every packages/*/package.js for those object literals
+//      (nothing from package.js is executed, so this is safe to run against
+//      pull-request content in a job that holds secrets),
 //   2. writes a throwaway package.json per package and generates a lockfile,
-//   3. runs `npm audit` against those lockfiles (and any real lockfile dirs),
-//      applying the policy in .github/npm-audit-policy.json,
-//   4. converts the lockfiles into a dependency-graph snapshot for GitHub's
+//      which the Socket CLI then scans alongside npm-packages/*,
+//   3. converts the lockfiles into a dependency-graph snapshot for GitHub's
 //      Dependency Submission API so Dependabot alerts cover packages/* too.
 //
 // No npm dependencies on purpose: this runs in CI before any install step.
@@ -20,70 +20,146 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const vm = require('vm');
 const { spawn } = require('child_process');
 
-const SEVERITY_RANK = { info: 0, low: 1, moderate: 2, high: 3, critical: 4 };
-const SEVERITIES = ['critical', 'high', 'moderate', 'low'];
 const DETECTOR_NAME = 'meteor-packages-npm-deps';
-const DETECTOR_VERSION = '1.0.0';
+const DETECTOR_VERSION = '2.0.0';
 const DETECTOR_URL =
   'https://github.com/meteor/meteor/tree/devel/scripts/npm-deps-audit';
 
 // ---------------------------------------------------------------------------
-// 1. Extraction
+// 1. Static extraction
 // ---------------------------------------------------------------------------
 
+class ParseError extends Error {}
+
+function fail(src, i, message) {
+  const line = src.slice(0, i).split('\n').length;
+  throw new ParseError(`${message} (line ${line})`);
+}
+
+// Advance past whitespace and comments.
+function skip(src, i) {
+  for (;;) {
+    while (i < src.length && /\s/.test(src[i])) i++;
+    if (src.startsWith('//', i)) {
+      const nl = src.indexOf('\n', i);
+      i = nl === -1 ? src.length : nl + 1;
+    } else if (src.startsWith('/*', i)) {
+      const end = src.indexOf('*/', i + 2);
+      if (end === -1) fail(src, i, 'Unterminated block comment');
+      i = end + 2;
+    } else {
+      return i;
+    }
+  }
+}
+
+function readString(src, i) {
+  const quote = src[i];
+  if (quote !== '"' && quote !== "'" && quote !== '`') {
+    fail(src, i, 'Expected a string literal');
+  }
+  let value = '';
+  for (let j = i + 1; j < src.length; j++) {
+    const ch = src[j];
+    if (ch === '\\') {
+      value += src[j + 1];
+      j++;
+    } else if (ch === quote) {
+      return { value, end: j + 1 };
+    } else if (quote === '`' && src.startsWith('${', j)) {
+      fail(src, j, 'Template literals with ${} are not supported');
+    } else if (ch === '\n' && quote !== '`') {
+      fail(src, j, 'Unterminated string literal');
+    } else {
+      value += ch;
+    }
+  }
+  return fail(src, i, 'Unterminated string literal');
+}
+
+// Parse `{ key: "value", 'other-key': 'value', }` starting at the `{`.
+// Values must be string literals; anything else is rejected so the audit can
+// never silently miss a dependency that is computed at runtime.
+function parseStringObjectLiteral(src, i) {
+  i = skip(src, i);
+  if (src[i] !== '{') fail(src, i, 'Expected an object literal');
+  i++;
+  const obj = {};
+  for (;;) {
+    i = skip(src, i);
+    if (src[i] === '}') return { obj, end: i + 1 };
+    let key;
+    if (src[i] === '"' || src[i] === "'" || src[i] === '`') {
+      ({ value: key, end: i } = readString(src, i));
+    } else {
+      const m = /^[A-Za-z_$][\w$]*/.exec(src.slice(i));
+      if (!m) fail(src, i, 'Expected a property name');
+      key = m[0];
+      i += key.length;
+    }
+    i = skip(src, i);
+    if (src[i] !== ':') fail(src, i, `Expected ':' after property "${key}"`);
+    i = skip(src, i + 1);
+    if (src[i] !== '"' && src[i] !== "'" && src[i] !== '`') {
+      fail(src, i, `Dependency "${key}" must be a string literal`);
+    }
+    const { value, end } = readString(src, i);
+    obj[key] = value;
+    i = skip(src, end);
+    if (src[i] === ',') {
+      i++;
+    } else if (src[i] !== '}') {
+      fail(src, i, `Expected ',' or '}' after property "${key}"`);
+    }
+  }
+}
+
+// Collect every occurrence of `<pattern> {...}` in the source, skipping
+// matches inside comments and strings.
+function collectObjectLiterals(src, pattern) {
+  const results = [];
+  let i = 0;
+  while (i < src.length) {
+    i = skip(src, i);
+    if (i >= src.length) break;
+    const ch = src[i];
+    if (ch === '"' || ch === "'" || ch === '`') {
+      i = readString(src, i).end;
+      continue;
+    }
+    const m = pattern.exec(src.slice(i));
+    if (m && m.index === 0) {
+      const { obj, end } = parseStringObjectLiteral(src, i + m[0].length);
+      results.push(obj);
+      i = end;
+      continue;
+    }
+    i++;
+  }
+  return results;
+}
+
 // A dependency spec npm can resolve from the registry. Git, GitHub, http(s),
-// file: and link: specs cannot be audited and are reported separately.
+// file: and link: specs cannot be resolved and are reported separately.
 function isRegistrySpec(spec) {
   return typeof spec === 'string' && /^[\d^~>=<*xX\s|.-]+$/.test(spec.trim());
 }
 
-// Evaluate one package.js with stubbed Meteor build globals and return the npm
-// dependencies it declares. Nothing in package.js runs for real; `api.*`,
-// `Package.describe` etc. are no-ops.
-function extractNpmDepsFromPackageJs(source, filename) {
-  const deps = {};
-  const pluginDeps = {};
-  const noop = () => {};
-  const api = new Proxy({}, { get: () => noop });
-  const sandbox = {
-    Npm: {
-      depends: (d) => Object.assign(deps, d || {}),
-      strip: noop,
-      require: () => ({}),
-    },
-    Cordova: { depends: noop },
-    Package: {
-      describe: noop,
-      onUse: (fn) => {
-        try {
-          fn(api);
-        } catch (_e) {
-          // Package bodies may call helpers we do not stub; the Npm.depends
-          // call we care about is top-level and has already run.
-        }
-      },
-      onTest: noop,
-      includeTool: noop,
-      registerBuildPlugin: (opts) => {
-        if (opts && opts.npmDependencies) {
-          Object.assign(pluginDeps, opts.npmDependencies);
-        }
-      },
-    },
-    // Deliberately no `require` or `process`: package.js files only need the
-    // Meteor build globals, and this runs against pull-request content.
-    console: { log: noop, error: noop, warn: noop },
-  };
-  vm.runInNewContext(source, sandbox, { filename, timeout: 5000 });
-
+// Extract the npm dependencies one package.js declares, without executing it.
+function extractNpmDepsFromPackageJs(source) {
+  const literals = [
+    ...collectObjectLiterals(source, /^Npm\s*\.\s*depends\s*\(/),
+    ...collectObjectLiterals(source, /^npmDependencies\s*:/),
+  ];
   const dependencies = {};
   const unauditable = {};
-  for (const [name, spec] of Object.entries({ ...deps, ...pluginDeps })) {
-    if (isRegistrySpec(spec)) dependencies[name] = spec;
-    else unauditable[name] = spec;
+  for (const literal of literals) {
+    for (const [name, spec] of Object.entries(literal)) {
+      if (isRegistrySpec(spec)) dependencies[name] = spec;
+      else unauditable[name] = spec;
+    }
   }
   return { dependencies, unauditable };
 }
@@ -97,13 +173,10 @@ function collectMeteorPackageDeps(repoRoot) {
     const file = path.join(packagesDir, name, 'package.js');
     if (!fs.existsSync(file)) continue;
     const source = fs.readFileSync(file, 'utf8');
-    if (!/Npm\.depends|npmDependencies/.test(source)) continue;
+    if (!/Npm\s*\.\s*depends|npmDependencies/.test(source)) continue;
     const sourcePath = path.posix.join('packages', name, 'package.js');
     try {
-      const { dependencies, unauditable } = extractNpmDepsFromPackageJs(
-        source,
-        file
-      );
+      const { dependencies, unauditable } = extractNpmDepsFromPackageJs(source);
       if (!Object.keys(dependencies).length && !Object.keys(unauditable).length) {
         continue;
       }
@@ -114,7 +187,7 @@ function collectMeteorPackageDeps(repoRoot) {
         sourcePath,
         dependencies: {},
         unauditable: {},
-        error: e && e.message ? e.message : String(e),
+        error: `${sourcePath}: ${e.message}`,
       });
     }
   }
@@ -177,6 +250,8 @@ function writeManifest(outDir, pkg) {
 }
 
 async function generateLockfile(dir) {
+  // --ignore-scripts and --package-lock-only: only registry metadata is
+  // fetched, nothing from the dependencies runs.
   const res = await run(
     'npm',
     [
@@ -204,13 +279,13 @@ async function generateAll(repoRoot, outDir, { concurrency = 6, log = () => {} }
   const entries = await mapConcurrent(packages, concurrency, async (pkg) => {
     const entry = { ...pkg, dir: path.join(outDir, pkg.name) };
     if (pkg.error) {
-      log(`  ! ${pkg.name}: could not evaluate package.js: ${pkg.error}`);
+      log(`  ! ${pkg.name}: ${pkg.error}`);
       return entry;
     }
-    if (!Object.keys(pkg.dependencies).length) {
-      log(`  - ${pkg.name}: only unauditable specs, skipping lockfile`);
-      return entry;
+    for (const [name, spec] of Object.entries(pkg.unauditable)) {
+      log(`  - ${pkg.name}: ${name} -> ${spec} (not a registry version, skipped)`);
     }
+    if (!Object.keys(pkg.dependencies).length) return entry;
     writeManifest(outDir, pkg);
     try {
       await generateLockfile(entry.dir);
@@ -238,206 +313,7 @@ function readIndex(outDir) {
 }
 
 // ---------------------------------------------------------------------------
-// 3. Audit + policy
-// ---------------------------------------------------------------------------
-
-function loadPolicy(file) {
-  const policy = JSON.parse(fs.readFileSync(file, 'utf8'));
-  if (!Object.prototype.hasOwnProperty.call(SEVERITY_RANK, policy.failOn) && policy.failOn !== 'none') {
-    throw new Error(
-      `${file}: "failOn" must be one of ${Object.keys(SEVERITY_RANK).join(', ')} or "none"`
-    );
-  }
-  if (!Array.isArray(policy.allow)) throw new Error(`${file}: "allow" must be an array`);
-  for (const entry of policy.allow) {
-    if (!/^GHSA-[\w]{4}-[\w]{4}-[\w]{4}$/.test(entry.ghsa || '')) {
-      throw new Error(`${file}: allow entry has invalid ghsa id: ${JSON.stringify(entry)}`);
-    }
-    if (!entry.reason) throw new Error(`${file}: allow entry ${entry.ghsa} needs a "reason"`);
-    if (!entry.expires || Number.isNaN(Date.parse(entry.expires))) {
-      throw new Error(`${file}: allow entry ${entry.ghsa} needs an "expires" date (YYYY-MM-DD)`);
-    }
-  }
-  return policy;
-}
-
-function activeAllowlist(policy, now = new Date()) {
-  const active = new Map();
-  const expired = [];
-  for (const entry of policy.allow) {
-    if (Date.parse(entry.expires) < now.getTime()) expired.push(entry);
-    else active.set(entry.ghsa, entry);
-  }
-  return { active, expired };
-}
-
-async function runNpmAudit(dir) {
-  // npm audit exits 1 when it finds anything, so the exit code is not an error.
-  const res = await run('npm', ['audit', '--json', '--omit=dev'], { cwd: dir });
-  let report;
-  try {
-    report = JSON.parse(res.stdout);
-  } catch (_e) {
-    throw new Error(`npm audit produced no JSON in ${dir}:\n${res.stderr.trim()}`);
-  }
-  if (report.error) {
-    throw new Error(`npm audit failed in ${dir}: ${report.error.summary || report.error.code}`);
-  }
-  return report;
-}
-
-function ghsaFromVia(via) {
-  const m = /GHSA-[\w]{4}-[\w]{4}-[\w]{4}/.exec(via.url || '');
-  if (m) return m[0];
-  return via.source ? `npm-${via.source}` : `${via.name}@${via.range}`;
-}
-
-function describeFix(node) {
-  if (node.fixAvailable === true) return 'lockfile refresh';
-  if (node.fixAvailable && node.fixAvailable.name) {
-    return `bump ${node.fixAvailable.name} to ${node.fixAvailable.version}` +
-      (node.fixAvailable.isSemVerMajor ? ' (major)' : '');
-  }
-  return 'none available';
-}
-
-// Flatten an `npm audit --json` report into one row per advisory and classify
-// each row against the policy.
-function summarizeAudit(report, policy, now = new Date()) {
-  const { active, expired } = activeAllowlist(policy, now);
-  const threshold = policy.failOn === 'none' ? Infinity : SEVERITY_RANK[policy.failOn];
-  const byId = new Map();
-  for (const node of Object.values(report.vulnerabilities || {})) {
-    for (const via of node.via || []) {
-      if (typeof via !== 'object') continue; // a string is a transitive pointer
-      const id = ghsaFromVia(via);
-      const row = {
-        id,
-        severity: via.severity || node.severity,
-        title: via.title || '',
-        package: via.name || node.name,
-        range: via.range || node.range,
-        isDirect: !!node.isDirect,
-        fix: describeFix(node),
-        url: via.url || '',
-      };
-      const prev = byId.get(id);
-      if (!prev || SEVERITY_RANK[row.severity] > SEVERITY_RANK[prev.severity]) {
-        byId.set(id, row);
-      }
-    }
-  }
-  const advisories = [...byId.values()].sort(
-    (a, b) => SEVERITY_RANK[b.severity] - SEVERITY_RANK[a.severity] || a.package.localeCompare(b.package)
-  );
-  const counts = { critical: 0, high: 0, moderate: 0, low: 0 };
-  const allowlisted = [];
-  const blocking = [];
-  for (const row of advisories) {
-    if (active.has(row.id)) {
-      row.allow = active.get(row.id);
-      allowlisted.push(row);
-      continue;
-    }
-    if (counts[row.severity] !== undefined) counts[row.severity]++;
-    if (SEVERITY_RANK[row.severity] >= threshold) blocking.push(row);
-  }
-  return {
-    counts,
-    advisories,
-    allowlisted,
-    blocking,
-    expiredAllowEntries: expired,
-    totalDependencies: (report.metadata && report.metadata.dependencies && report.metadata.dependencies.total) || 0,
-  };
-}
-
-// results: [{ label, sourcePath, summary?, error?, unauditable? }]
-function renderMarkdown(results, policy) {
-  const lines = [];
-  const totals = { critical: 0, high: 0, moderate: 0, low: 0 };
-  let blockingTotal = 0;
-  lines.push(`Policy: fail on **${policy.failOn}** and above in production dependencies; ` +
-    `${policy.allow.length} allowlisted advisor${policy.allow.length === 1 ? 'y' : 'ies'}.`);
-  lines.push('');
-  lines.push('| Package | Critical | High | Moderate | Low | Deps | Status |');
-  lines.push('|---|---:|---:|---:|---:|---:|---|');
-  for (const r of results) {
-    if (r.error) {
-      lines.push(`| ${r.label} | – | – | – | – | – | ⚠️ ${r.error.split('\n')[0]} |`);
-      continue;
-    }
-    if (!r.summary) {
-      lines.push(`| ${r.label} | – | – | – | – | – | skipped (no lockfile) |`);
-      continue;
-    }
-    const s = r.summary;
-    for (const k of SEVERITIES) totals[k] += s.counts[k];
-    blockingTotal += s.blocking.length;
-    let status = s.blocking.length ? `❌ ${s.blocking.length} blocking` : '✅';
-    if (s.allowlisted.length) status += ` (${s.allowlisted.length} allowlisted)`;
-    lines.push(
-      `| ${r.label} | ${s.counts.critical} | ${s.counts.high} | ${s.counts.moderate} | ${s.counts.low} | ${s.totalDependencies} | ${status} |`
-    );
-  }
-  lines.push(`| **Total** | **${totals.critical}** | **${totals.high}** | **${totals.moderate}** | **${totals.low}** | | ${blockingTotal ? `❌ ${blockingTotal} blocking` : '✅'} |`);
-  lines.push('');
-
-  const blockingRows = results.flatMap((r) =>
-    (r.summary ? r.summary.blocking : []).map((row) => ({ ...row, label: r.label }))
-  );
-  if (blockingRows.length) {
-    lines.push('### Blocking advisories');
-    lines.push('');
-    lines.push('| Package | Severity | Advisory | Dependency | Fix |');
-    lines.push('|---|---|---|---|---|');
-    for (const row of blockingRows) {
-      const adv = row.url ? `[${row.id}](${row.url})` : row.id;
-      lines.push(`| ${row.label} | ${row.severity} | ${adv} ${row.title} | \`${row.package}@${row.range}\`${row.isDirect ? ' (direct)' : ''} | ${row.fix} |`);
-    }
-    lines.push('');
-  }
-
-  const allowRows = results.flatMap((r) =>
-    (r.summary ? r.summary.allowlisted : []).map((row) => ({ ...row, label: r.label }))
-  );
-  if (allowRows.length) {
-    lines.push('### Allowlisted advisories');
-    lines.push('');
-    lines.push('| Package | Severity | Advisory | Reason | Expires |');
-    lines.push('|---|---|---|---|---|');
-    for (const row of allowRows) {
-      lines.push(`| ${row.label} | ${row.severity} | ${row.id} | ${row.allow.reason} | ${row.allow.expires} |`);
-    }
-    lines.push('');
-  }
-
-  const expired = results.length && results.find((r) => r.summary)
-    ? results.find((r) => r.summary).summary.expiredAllowEntries
-    : [];
-  if (expired.length) {
-    lines.push('### Expired allowlist entries (no longer suppressing anything)');
-    lines.push('');
-    for (const e of expired) lines.push(`- ${e.ghsa} expired ${e.expires}: ${e.reason}`);
-    lines.push('');
-  }
-
-  const unauditable = results.filter((r) => r.unauditable && Object.keys(r.unauditable).length);
-  if (unauditable.length) {
-    lines.push('### Dependencies npm cannot audit (git/http specs)');
-    lines.push('');
-    for (const r of unauditable) {
-      for (const [name, spec] of Object.entries(r.unauditable)) {
-        lines.push(`- ${r.label}: \`${name}\` → \`${spec}\``);
-      }
-    }
-    lines.push('');
-  }
-  return lines.join('\n');
-}
-
-// ---------------------------------------------------------------------------
-// 4. Dependency Submission API snapshot
+// 3. Dependency Submission API snapshot
 // ---------------------------------------------------------------------------
 
 function purl(name, version) {
@@ -550,20 +426,15 @@ function defaultOutDir() {
 }
 
 module.exports = {
-  SEVERITY_RANK,
-  SEVERITIES,
+  ParseError,
   isRegistrySpec,
+  parseStringObjectLiteral,
   extractNpmDepsFromPackageJs,
   collectMeteorPackageDeps,
   writeManifest,
   generateLockfile,
   generateAll,
   readIndex,
-  loadPolicy,
-  activeAllowlist,
-  runNpmAudit,
-  summarizeAudit,
-  renderMarkdown,
   purl,
   lockfileToResolved,
   buildSnapshot,

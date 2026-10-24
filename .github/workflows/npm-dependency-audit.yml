@@ -1,23 +1,33 @@
 name: npm dependency audit
 
-# Audits the npm dependencies of everything this repo publishes:
+# Socket (socket.dev) scan of the npm dependencies of everything this repo
+# publishes, plus GitHub dependency-graph coverage for Meteor core packages.
 #
 #   - npm-packages/*            real package.json + package-lock.json
 #   - packages/* (Npm.depends)  manifests generated at run time from package.js
 #                               by scripts/npm-deps-audit, since Meteor core
-#                               packages have no manifest npm tooling can read
+#                               packages have no manifest scanners can read.
+#                               package.js is parsed, never executed.
 #
-# Three checks run on the same generated manifests:
+# Jobs
+#   generate   parse packages/*/package.js, generate lockfiles, upload artifact
+#   socket     `socket scan create --report` over npm-packages/* and the
+#              generated manifests. Fails when the scan violates the org's
+#              Socket security policy (malware, typosquats, install scripts,
+#              network/shell access, unmaintained packages, licenses, CVEs).
+#   submit     push the generated packages/* lockfiles to GitHub's dependency
+#              graph on devel pushes and daily, so Dependabot alerts cover
+#              Npm.depends like any lockfile.
 #
-#   socket      Socket (socket.dev) full scan: supply-chain risk, maintenance,
-#               license and CVE alerts. Blocks per the org's Socket security
-#               policy. Needs the SOCKET_CLI_API_TOKEN secret (scope
-#               full-scans:create), so it is skipped on pull requests from
-#               forks, where the Socket GitHub App still reviews real manifests.
-#   npm-audit   `npm audit` against .github/npm-audit-policy.json. Deterministic
-#               CVE gate that needs no secrets, so it covers fork PRs too.
-#   submit      pushes the generated packages/* lockfiles to GitHub's dependency
-#               graph so Dependabot alerts cover Npm.depends. devel + schedule.
+# Secrets. The socket job needs SOCKET_CLI_API_TOKEN (scope full-scans:create)
+# and the SOCKET_ORG variable. Pull requests from forks do not receive secrets,
+# so for them the job is skipped and a maintainer can run it by adding the
+# "socket-scan" label after reading the diff (pull_request_target). That is
+# safe because nothing from the PR executes: package.js is parsed statically,
+# `npm install --package-lock-only --ignore-scripts` only fetches registry
+# metadata, and the Socket CLI only reads manifests. The scripts themselves
+# always come from the base branch. The Socket GitHub App (socket.yml) reviews
+# real manifests on every PR independently of this workflow.
 #
 # Production dependencies only. Out of scope: the meteor-tool dev bundle
 # (scripts/dev-bundle-tool-package.js), tracked separately.
@@ -30,8 +40,10 @@ on:
       - 'npm-packages/*/package-lock.json'
       - 'scripts/npm-deps-audit/**'
       - 'socket.yml'
-      - '.github/npm-audit-policy.json'
       - '.github/workflows/npm-dependency-audit.yml'
+  pull_request_target:
+    types:
+      - labeled
   push:
     branches:
       - devel
@@ -41,7 +53,6 @@ on:
       - 'npm-packages/*/package-lock.json'
       - 'scripts/npm-deps-audit/**'
       - 'socket.yml'
-      - '.github/npm-audit-policy.json'
       - '.github/workflows/npm-dependency-audit.yml'
   schedule:
     - cron: '17 5 * * *'
@@ -51,29 +62,48 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 env:
   # Inside the workspace and NOT gitignored: the Socket CLI only accepts targets
   # under its working directory and skips anything matched by .gitignore.
   GENERATED_DIR: npm-deps-generated
+  # Where the code under audit is checked out. For pull_request_target this is
+  # the PR head; scripts always run from the base checkout at the workspace root.
+  SOURCE_DIR: source
   SOCKET_CLI_VERSION: 1.10.1
+  SOCKET_LABEL: socket-scan
 
 jobs:
   generate:
     name: Generate manifests for packages/*
+    # pull_request_target only runs when a maintainer applies the label.
+    if: >-
+      github.event_name != 'pull_request_target' ||
+      github.event.label.name == 'socket-scan'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out base (scripts)
+        uses: actions/checkout@v4
+
+      - name: Check out code under audit
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ env.SOURCE_DIR }}
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22.x
 
-      - name: Evaluate packages/*/package.js and generate lockfiles
-        run: node scripts/npm-deps-audit/cli.js generate --out "$GENERATED_DIR"
+      - name: Parse packages/*/package.js and generate lockfiles
+        run: |
+          node scripts/npm-deps-audit/cli.js generate \
+            --repo-root "$SOURCE_DIR" \
+            --out "$GENERATED_DIR"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -89,43 +119,57 @@ jobs:
     timeout-minutes: 20
     env:
       SOCKET_CLI_API_TOKEN: ${{ secrets.SOCKET_CLI_API_TOKEN }}
-      # Socket organization slug (repository variable). The CLI needs it in CI
-      # unless the token is scoped to exactly one org.
       SOCKET_ORG: ${{ vars.SOCKET_ORG }}
+      IS_FORK_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
     steps:
-      - name: Skip without a Socket token
-        if: ${{ env.SOCKET_CLI_API_TOKEN == '' }}
+      - name: Skip on pull requests from forks
+        if: ${{ env.IS_FORK_PR == 'true' }}
         run: |
           {
             echo "## Socket scan"
             echo ""
-            echo "Skipped: \`SOCKET_CLI_API_TOKEN\` is not available to this run"
-            echo "(pull requests from forks do not receive repository secrets)."
-            echo "The Socket GitHub App still reviews changed manifests on this PR;"
-            echo "packages/* changes are scanned by Socket once merged to devel."
+            echo "Skipped: pull requests from forks do not receive the \`SOCKET_CLI_API_TOKEN\` secret."
+            echo "A maintainer can run this scan by adding the \`${SOCKET_LABEL}\` label after reviewing the diff."
+            echo "The Socket GitHub App still reviews changed manifests on this PR."
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - uses: actions/checkout@v4
-        if: ${{ env.SOCKET_CLI_API_TOKEN != '' }}
+      - name: Require the Socket token
+        if: ${{ env.IS_FORK_PR != 'true' && env.SOCKET_CLI_API_TOKEN == '' }}
+        run: |
+          echo "::error::SOCKET_CLI_API_TOKEN is not set. Add a Socket API token (scope full-scans:create) as a repository secret and the org slug as the SOCKET_ORG variable."
+          exit 1
+
+      - name: Check out base (scripts)
+        if: ${{ env.IS_FORK_PR != 'true' }}
+        uses: actions/checkout@v4
+
+      - name: Check out code under audit
+        if: ${{ env.IS_FORK_PR != 'true' }}
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ env.SOURCE_DIR }}
 
       - uses: actions/setup-node@v4
-        if: ${{ env.SOCKET_CLI_API_TOKEN != '' }}
+        if: ${{ env.IS_FORK_PR != 'true' }}
         with:
           node-version: 22.x
 
       - uses: actions/download-artifact@v4
-        if: ${{ env.SOCKET_CLI_API_TOKEN != '' }}
+        if: ${{ env.IS_FORK_PR != 'true' }}
         with:
           name: npm-deps-generated
           path: ${{ env.GENERATED_DIR }}
 
       - name: Scan npm-packages/* and generated packages/* manifests
-        if: ${{ env.SOCKET_CLI_API_TOKEN != '' }}
+        if: ${{ env.IS_FORK_PR != 'true' }}
         env:
           EVENT_NAME: ${{ github.event_name }}
           REPO_NAME: ${{ github.event.repository.name }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-          BRANCH: ${{ github.head_ref || github.ref_name }}
+          BRANCH: ${{ github.event.pull_request.head.ref || github.ref_name }}
+          COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
@@ -136,8 +180,8 @@ jobs:
             --markdown
             --repo "$REPO_NAME"
             --branch "$BRANCH"
-            --commit-hash "$GITHUB_SHA"
-            --exclude-paths 'npm-packages/*/tests,npm-packages/eslint-plugin-meteor/scripts'
+            --commit-hash "$COMMIT"
+            --exclude-paths "$SOURCE_DIR/npm-packages/*/tests,$SOURCE_DIR/npm-packages/eslint-plugin-meteor/scripts"
           )
           if [ -n "$SOCKET_ORG" ]; then
             args+=(--org "$SOCKET_ORG")
@@ -145,47 +189,26 @@ jobs:
           if [ -n "$PR_NUMBER" ]; then
             args+=(--pull-request "$PR_NUMBER")
           fi
-          if [ "$EVENT_NAME" != "pull_request" ] && [ "$BRANCH" = "$DEFAULT_BRANCH" ]; then
+          if [ "$EVENT_NAME" = "push" ] && [ "$BRANCH" = "$DEFAULT_BRANCH" ]; then
             args+=(--default-branch)
           fi
           # Exit code is non-zero when the scan fails the org's Socket security policy.
-          npx --yes "socket@${SOCKET_CLI_VERSION}" "${args[@]}" npm-packages "$GENERATED_DIR" \
+          npx --yes "socket@${SOCKET_CLI_VERSION}" "${args[@]}" \
+            "$SOURCE_DIR/npm-packages" "$GENERATED_DIR" \
             | tee -a "$GITHUB_STEP_SUMMARY"
-
-  npm-audit:
-    name: npm audit (policy gate)
-    needs: generate
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22.x
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: npm-deps-generated
-          path: ${{ env.GENERATED_DIR }}
-
-      - name: Audit packages/* and npm-packages/*
-        run: |
-          node scripts/npm-deps-audit/cli.js audit \
-            --out "$GENERATED_DIR" \
-            --policy .github/npm-audit-policy.json \
-            npm-packages/*
 
   submit-dependency-snapshot:
     name: Submit packages/* dependencies to the dependency graph
-    # Runs even when the gates fail so Dependabot alerts reflect reality.
-    # Skipped on pull requests: fork PRs get a read-only token, and the graph
-    # should describe devel, not a proposed change.
-    if: ${{ always() && needs.generate.result == 'success' && github.event_name != 'pull_request' }}
+    # Runs even when the scan fails so Dependabot alerts reflect reality.
+    # Never on pull requests: the graph should describe devel, not a proposal.
+    if: >-
+      always() &&
+      needs.generate.result == 'success' &&
+      github.event_name != 'pull_request' &&
+      github.event_name != 'pull_request_target'
     needs:
       - generate
       - socket
-      - npm-audit
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
