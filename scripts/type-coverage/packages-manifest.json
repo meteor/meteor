@@ -43,6 +43,7 @@
     "meetup-oauth",
     "meteor",
     "meteor-developer-oauth",
+    "meteor-otel",
     "minimongo",
     "modern-browsers",
     "mongo",
