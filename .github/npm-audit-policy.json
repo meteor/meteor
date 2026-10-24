@@ -1,0 +1,5 @@
+{
+  "$comment": "Policy for the `npm audit (policy gate)` job in .github/workflows/npm-dependency-audit.yml. failOn: lowest severity that fails CI in production dependencies (low | moderate | high | critical | none). allow: advisories that are known and accepted; every entry needs a ghsa id, a reason and an expires date (YYYY-MM-DD) after which it stops suppressing. Socket alerts are governed separately by the org security policy in the Socket dashboard.",
+  "failOn": "high",
+  "allow": []
+}
