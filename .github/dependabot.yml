@@ -1,6 +1,32 @@
+# Routine dependency freshness. Security fixes are handled by Socket in
+# .github/workflows/npm-dependency-autofix.yml; Dependabot here keeps GitHub
+# Actions and the published npm packages' dependencies current so transitive
+# debt does not accumulate between advisories. Weekly, grouped per directory.
 version: 2
 updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    target-branch: "devel"
+
+  - package-ecosystem: "npm"
+    directories:
+      - "/"
+      - "/npm-packages/babel-preset-meteor"
+      - "/npm-packages/cordova-plugin-meteor-webapp"
+      - "/npm-packages/eslint-config-meteor"
+      - "/npm-packages/eslint-plugin-meteor"
+      - "/npm-packages/meteor-babel"
+      - "/npm-packages/meteor-installer"
+      - "/npm-packages/meteor-node-stubs"
+      - "/npm-packages/meteor-promise"
+      - "/npm-packages/meteor-rspack"
+    schedule:
+      interval: "weekly"
+    target-branch: "devel"
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
