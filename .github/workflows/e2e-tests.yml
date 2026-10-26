@@ -34,6 +34,7 @@ jobs:
         --cpus 6
         --memory 16g
         --security-opt seccomp=unconfined
+        --cap-add SYS_PTRACE
         -v /var/run/docker.sock:/var/run/docker.sock
 
     strategy:
@@ -105,15 +106,23 @@ jobs:
             scripts/ci/native-preparation-trace.c -o /tmp/native-preparation-trace.node
           cat /proc/sys/kernel/core_pattern
           ulimit -c unlimited
-          set -o pipefail
-          NODE_OPTIONS="$NODE_OPTIONS --require=/tmp/native-preparation-trace.node" \
-            ./meteor --get-ready --allow-superuser 2>&1 | tee /tmp/meteor-preparation.log
+          export NODE_OPTIONS="$NODE_OPTIONS --require=/tmp/native-preparation-trace.node"
+          set +e
+          python3 scripts/ci/trace-native-preparation.py node -e 'process.kill(process.pid, "SIGABRT")'
+          smoke_status=$?
+          set -e
+          test "$smoke_status" -eq 134
+          grep -q trace_native_signal /tmp/meteor-preparation.log
+          cp /tmp/meteor-preparation.log /tmp/native-trace-smoke.log
+          python3 scripts/ci/trace-native-preparation.py ./meteor --get-ready --allow-superuser
 
       - name: Save native preparation log
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: native-preparation-${{ strategy.job-index }}
-          path: /tmp/meteor-preparation.log
+          path: |
+            /tmp/meteor-preparation.log
+            /tmp/native-trace-smoke.log
           if-no-files-found: warn
           retention-days: 7
