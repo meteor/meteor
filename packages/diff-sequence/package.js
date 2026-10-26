@@ -5,8 +5,9 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
-  api.use('ecmascript');
-  api.use('ejson');
+  api.use('meteor@2.1.1');
+  api.use('ecmascript@0.16.13');
+  api.use('ejson@1.3.0');
   api.mainModule('diff.js');
   api.export('DiffSequence');
 });
