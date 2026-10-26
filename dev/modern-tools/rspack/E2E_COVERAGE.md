@@ -109,7 +109,7 @@ Full-featured React Router app with custom packages, Less, and advanced rspack c
 
 ### assets
 
-Minimal app with a local package testing asset resolution and bundling. `regressions/rspack-static-assets.test.js` boots a temporary production variant to exercise static requests.
+Minimal app with a local package testing asset resolution and bundling. `regressions/rspack-static-assets.test.js` boots a temporary production variant to exercise static requests. `regressions/output-cleanup.test.js` checks source preservation during production builds from ordinary, `build`, and `build-agent` parent directories.
 
 | What is covered | Phase |
 |----------------|-------|
@@ -120,6 +120,8 @@ Minimal app with a local package testing asset resolution and bundling. `regress
 | `skipTestClient: true` (ignores client mocha tests) | Test once |
 | Assets skipped by compiler source discovery (#14566) | All |
 | Boot built bundle (`node main.js`) to test assets | Build |
+| Source assets and other mode/local-directory contexts survive cleanup; built apps serve public assets and read private assets (#14871) | Build |
+| First-build cleanup preserves symlinks at asset-context roots and inside chunk directories, including external target contents, while removing stale generated chunks | Build |
 | Missing Rspack chunks/assets return uncached 404s without growing shared manifests | Build |
 | Existing files and alternate URL spellings do not accumulate manifest entries | Build |
 | Emitted assets and lazy chunks preserve GET/HEAD, ETag, range, and cache behavior | Build |
@@ -555,3 +557,4 @@ Where each feature is tested across apps and skeletons.
 | Assets skipped by compiler source discovery (#14566) | assets | |
 | Boot built bundle (`node main.js`) to test assets | assets | |
 | Rspack static-file failures and bounded manifest state | assets | |
+| Production cleanup preserves source assets, symlinks and other output contexts under `build` ancestors (#14871) | assets | |
