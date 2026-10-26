@@ -231,20 +231,20 @@ export function configureMeteorForRspack() {
   const testIgnorePaths = isTest
     ? [isTestFullApp ? normalTestIgnorePath : fullAppTestIgnorePath]
     : [normalTestIgnorePath, fullAppTestIgnorePath];
-  const otherMainIgnorePath =
-    (isMeteorAppDevelopment() &&
-      `${RSPACK_BUILD_CONTEXT}/${path.dirname(
-        getBuildFilePath({
-          isMain: true,
-          isProduction: true,
-        }),
-      )}/**`) ||
-    `${RSPACK_BUILD_CONTEXT}/${path.dirname(
-      getBuildFilePath({
-        isMain: true,
-        isDevelopment: true,
-      }),
-    )}/**`;
+  const mainIgnorePaths = [
+    { isDevelopment: true },
+    { isProduction: true },
+  ].flatMap(env => {
+    const context = `${RSPACK_BUILD_CONTEXT}/${path.dirname(
+      getBuildFilePath({ isMain: true, ...env }),
+    )}`;
+    if (!!env.isDevelopment !== isMeteorAppDevelopment()) {
+      return [`${context}/**`];
+    }
+    // Tests generate their own HTML, but normal tests still validate the main
+    // module paths. Keep those modules while excluding stale main-build HTML.
+    return isTest ? [`${context}/**/*.html`] : [];
+  });
   const foldersToIgnore = [
     // Cross-process isolation: a single app directory can host several Meteor
     // instances at once (a dev server, a `meteor test` daemon, an E2E run),
@@ -258,7 +258,7 @@ export function configureMeteorForRspack() {
     `!/${RSPACK_BUILD_CONTEXT}`,
     `!/${RSPACK_BUILD_CONTEXT}/**`,
     ...testIgnorePaths,
-    otherMainIgnorePath,
+    ...mainIgnorePaths,
     'node_modules/**',
     ...extraFoldersToIgnore,
   ].filter(Boolean);

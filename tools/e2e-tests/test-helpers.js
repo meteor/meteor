@@ -32,6 +32,7 @@ import {
   assertPathNotExist,
   assertRspackScriptTag
 } from "./assertions";
+import { withConsoleCapture } from "./console-capture";
 import fs from "fs-extra";
 import path from "path";
 import execa from "execa";
@@ -469,21 +470,25 @@ export function testMeteorRspackBundler(options) {
 
       // Update the client code
       if (!skipClient) {
-        await appendFileContent(tempDir, filePaths.client, {
-          content: customUpdates.devClient(customMessages.devClient),
-        });
-        const consoleLogs = await waitForPlaywrightConsole(customMessages.devClient, { returnAllLogs: true });
-
-        // Run custom assertions if provided
-        if (customAssertions && customAssertions.afterRunRebuildClient) {
-          await customAssertions.afterRunRebuildClient({
-            tempDir,
-            port,
-            meteorProcess,
-            result,
-            allConsoleLogs: consoleLogs.allLogs
+        await withConsoleCapture(page, async allConsoleLogs => {
+          await appendFileContent(tempDir, filePaths.client, {
+            content: customUpdates.devClient(customMessages.devClient),
           });
-        }
+          await waitForMeteorOutput(allConsoleLogs, customMessages.devClient, {
+            timeout: process.env.CI ? 90000 : 30000,
+          });
+
+          // Run custom assertions if provided
+          if (customAssertions && customAssertions.afterRunRebuildClient) {
+            await customAssertions.afterRunRebuildClient({
+              tempDir,
+              port,
+              meteorProcess,
+              result,
+              allConsoleLogs
+            });
+          }
+        });
       }
 
       // Update the server code
@@ -574,21 +579,25 @@ export function testMeteorRspackBundler(options) {
 
       // Update the client code
       if (!skipClient) {
-        await appendFileContent(tempDir, filePaths.client, {
-          content: customUpdates.prodClient(customMessages.prodClient),
-        });
-        const consoleLogs = await waitForPlaywrightConsole(customMessages.prodClient, { returnAllLogs: true });
-
-        // Run custom assertions if provided
-        if (customAssertions && customAssertions.afterRunProductionRebuildClient) {
-          await customAssertions.afterRunProductionRebuildClient({
-            tempDir,
-            port,
-            meteorProcess,
-            result,
-            allConsoleLogs: consoleLogs.allLogs
+        await withConsoleCapture(page, async allConsoleLogs => {
+          await appendFileContent(tempDir, filePaths.client, {
+            content: customUpdates.prodClient(customMessages.prodClient),
           });
-        }
+          await waitForMeteorOutput(allConsoleLogs, customMessages.prodClient, {
+            timeout: process.env.CI ? 90000 : 30000,
+          });
+
+          // Run custom assertions if provided
+          if (customAssertions && customAssertions.afterRunProductionRebuildClient) {
+            await customAssertions.afterRunProductionRebuildClient({
+              tempDir,
+              port,
+              meteorProcess,
+              result,
+              allConsoleLogs
+            });
+          }
+        });
       }
 
       // Update the server code
