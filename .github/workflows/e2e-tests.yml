@@ -96,36 +96,18 @@ jobs:
       - name: Install test deps
         run: npm run install:e2e
 
-      - name: Prepare Meteor under GDB
+      - name: Prepare Meteor with native signal tracing
         shell: bash
         env:
           NPM_LINK_RSPACK: "false"
         run: |
-          cat > /tmp/meteor-preparation.gdb <<'GDB'
-          set pagination off
-          set confirm off
-          set auto-load python-scripts off
-          set follow-fork-mode parent
-          handle SIGPIPE nostop noprint pass
-          run
-          python
-          import gdb
-          try:
-              code = int(gdb.parse_and_eval("$_exitcode"))
-          except Exception:
-              code = 134
-              for command in ["thread apply all bt 40", "info sharedlibrary"]:
-                  try:
-                      gdb.execute(command)
-                  except Exception as error:
-                      print(error)
-          print("PREFLIGHT_INFERIOR_EXIT=" + str(code))
-          gdb.execute("quit " + str(code))
-          end
-          GDB
+          cc -shared -fPIC -g -O1 -Wall -Wextra -Werror \
+            scripts/ci/native-preparation-trace.c -o /tmp/native-preparation-trace.so
+          cat /proc/sys/kernel/core_pattern
+          ulimit -c unlimited
           set -o pipefail
-          gdb --batch --nx --command /tmp/meteor-preparation.gdb \
-            --args /bin/bash ./meteor --get-ready --allow-superuser 2>&1 | tee /tmp/meteor-preparation.log
+          LD_PRELOAD=/tmp/native-preparation-trace.so \
+            ./meteor --get-ready --allow-superuser 2>&1 | tee /tmp/meteor-preparation.log
 
       - name: Save native preparation log
         if: always()
