@@ -92,8 +92,7 @@ Full-featured React Router app with custom packages, Less, and advanced rspack c
 | What is covered | Phase |
 |----------------|-------|
 | `METEOR_PACKAGE_DIRS` custom packages dir | All (env prefix) |
-| `babel-plugin-react-compiler` integration | Init, Prod, Build |
-| Compiler output cached in dev (babel.config.js) | Run |
+| `babel-plugin-react-compiler` configuration loads on first compilation | Init, Prod |
 | 404 page routing (renders "Page Not Found") | Run, Prod |
 | Less stylesheet support (`white-space: break-spaces`) | Run, Prod |
 | `meteor.modules` config styles (`align-content: center`) | Run, Prod |
@@ -106,6 +105,10 @@ Full-featured React Router app with custom packages, Less, and advanced rspack c
 | Full-app test mode (`--full-app`) | Test |
 | Static assets in bundle (png, md) | Build |
 | HMR works in dev, disabled in prod | Run, Prod |
+
+Full-app test-once execution also checks that earlier dev/prod builds do not introduce uncaught client errors through stale generated HTML.
+
+Later runs and builds may reuse compiled output, so they do not require `babel.config.js` to log another execution.
 
 ### assets
 
