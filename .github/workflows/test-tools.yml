@@ -120,6 +120,7 @@ jobs:
           chown -R circleci:circleci "$GITHUB_WORKSPACE" "$HOME"
 
       - name: Log environment
+        shell: runuser -u circleci --preserve-environment -- sh -e {0}
         run: |
           lsb_release -a
           uname -srm
@@ -200,6 +201,7 @@ jobs:
           chown -R circleci:circleci "$GITHUB_WORKSPACE" "$HOME"
 
       - name: Log environment
+        shell: runuser -u circleci --preserve-environment -- sh -e {0}
         run: |
           lsb_release -a
           uname -srm
@@ -273,6 +275,7 @@ jobs:
           chown -R circleci:circleci "$GITHUB_WORKSPACE" "$HOME"
 
       - name: Log environment
+        shell: runuser -u circleci --preserve-environment -- sh -e {0}
         run: |
           lsb_release -a
           uname -srm
@@ -352,6 +355,7 @@ jobs:
           chown -R circleci:circleci "$GITHUB_WORKSPACE" "$HOME"
 
       - name: Log environment
+        shell: runuser -u circleci --preserve-environment -- sh -e {0}
         run: |
           lsb_release -a
           uname -srm
@@ -427,6 +431,7 @@ jobs:
           chown -R circleci:circleci "$GITHUB_WORKSPACE" "$HOME"
 
       - name: Log environment
+        shell: runuser -u circleci --preserve-environment -- sh -e {0}
         run: |
           lsb_release -a
           uname -srm
@@ -500,6 +505,7 @@ jobs:
           chown -R circleci:circleci "$GITHUB_WORKSPACE" "$HOME"
 
       - name: Log environment
+        shell: runuser -u circleci --preserve-environment -- sh -e {0}
         run: |
           lsb_release -a
           uname -srm
@@ -574,6 +580,7 @@ jobs:
           chown -R circleci:circleci "$GITHUB_WORKSPACE" "$HOME"
 
       - name: Log environment
+        shell: runuser -u circleci --preserve-environment -- sh -e {0}
         run: |
           lsb_release -a
           uname -srm
@@ -648,6 +655,7 @@ jobs:
           chown -R circleci:circleci "$GITHUB_WORKSPACE" "$HOME"
 
       - name: Log environment
+        shell: runuser -u circleci --preserve-environment -- sh -e {0}
         run: |
           lsb_release -a
           uname -srm
@@ -721,6 +729,7 @@ jobs:
           chown -R circleci:circleci "$GITHUB_WORKSPACE" "$HOME"
 
       - name: Log environment
+        shell: runuser -u circleci --preserve-environment -- sh -e {0}
         run: |
           lsb_release -a
           uname -srm
@@ -794,6 +803,7 @@ jobs:
           chown -R circleci:circleci "$GITHUB_WORKSPACE" "$HOME"
 
       - name: Log environment
+        shell: runuser -u circleci --preserve-environment -- sh -e {0}
         run: |
           lsb_release -a
           uname -srm
@@ -867,6 +877,7 @@ jobs:
           chown -R circleci:circleci "$GITHUB_WORKSPACE" "$HOME"
 
       - name: Log environment
+        shell: runuser -u circleci --preserve-environment -- sh -e {0}
         run: |
           lsb_release -a
           uname -srm
@@ -940,6 +951,7 @@ jobs:
           chown -R circleci:circleci "$GITHUB_WORKSPACE" "$HOME"
 
       - name: Log environment
+        shell: runuser -u circleci --preserve-environment -- sh -e {0}
         run: |
           lsb_release -a
           uname -srm
@@ -1013,6 +1025,7 @@ jobs:
           chown -R circleci:circleci "$GITHUB_WORKSPACE" "$HOME"
 
       - name: Log environment
+        shell: runuser -u circleci --preserve-environment -- sh -e {0}
         run: |
           lsb_release -a
           uname -srm
