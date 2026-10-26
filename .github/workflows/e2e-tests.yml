@@ -114,7 +114,19 @@ jobs:
           test "$smoke_status" -eq 134
           grep -q trace_native_signal /tmp/meteor-preparation.log
           cp /tmp/meteor-preparation.log /tmp/native-trace-smoke.log
-          python3 scripts/ci/trace-native-preparation.py ./meteor --get-ready --allow-superuser
+          mkdir -p /tmp/native-preparation-traces
+          for attempt in 1 2 3 4 5 6; do
+            set +e
+            python3 scripts/ci/trace-native-preparation.py ./meteor --get-ready --allow-superuser
+            preparation_status=$?
+            set -e
+            cp /tmp/meteor-preparation.log "/tmp/native-preparation-traces/attempt-${attempt}.log"
+            test "$preparation_status" -eq 0
+            # A native background thread can abort while the main thread exits 0.
+            if grep -Eq 'double free|corrupted size|malloc\(\):|free\(\):|NATIVE_PREPARATION_SIGNAL' /tmp/meteor-preparation.log; then
+              exit 1
+            fi
+          done
 
       - name: Save native preparation log
         if: always()
@@ -122,7 +134,7 @@ jobs:
         with:
           name: native-preparation-${{ strategy.job-index }}
           path: |
-            /tmp/meteor-preparation.log
+            /tmp/native-preparation-traces/
             /tmp/native-trace-smoke.log
           if-no-files-found: warn
           retention-days: 7
