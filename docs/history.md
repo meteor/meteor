@@ -8,7 +8,7 @@
 
 [//]: # (go to meteor/docs/generators/changelog/docs)
 
-## v3.6.0, 2026-10-23
+## v3.6.0, 2026-10-26
 
 ### Highlights
 
@@ -16,7 +16,7 @@
 
 - **Build apps with Rspack 2**, [PR#14360](https://github.com/meteor/meteor/pull/14360).
   - ⚡ Apps using the `rspack` package now require Rspack 2.2.7 or newer. When automatic dependency installation is enabled, Meteor installs the required build dependencies for you.
-  - 📦 Update Meteor’s Rspack integration (`@meteorjs/rspack`) to `3.0.0-rc.1` for compatibility with Rspack 2, including a fix for build errors in TypeScript projects that re-export types.
+  - 📦 Update Meteor’s Rspack integration (`@meteorjs/rspack`) to `3.0.0-rc.2` for compatibility with Rspack 2, including a fix for build errors in TypeScript projects that re-export types.
   - ⚛️ New React apps start with React 19.2. The Rspack integration supports React Compiler and keeps React Refresh working with Rspack 2 so component edits can appear without a full page reload.
   - 🔁 Existing Rspack 1 apps can upgrade through Meteor’s automatic dependency installation, including apps whose older npm lockfiles would otherwise block the upgrade.
   - 🧪 Hot module replacement (HMR) updates code during development without a full page reload. Its runtime is now included only when needed for `meteor run`, keeping it out of production builds and native app bundles.
@@ -52,6 +52,8 @@
 
 #### Fixes
 
+- Keep generated Rspack development and production HTML out of test builds, preventing stale chunk references and browser errors after switching modes.
+- Honor release-required package wrap versions when resolving indirect dependencies.
 - Avoid restarting the Rspack development server when a rebuild leaves its emitted server code unchanged, [PR#14850](https://github.com/meteor/meteor/pull/14850).
 - Keep Change Streams observers current after oversized events by reassembling split events and recovering from non-resumable failures before releasing pending writes, [PR#14787](https://github.com/meteor/meteor/pull/14787).
 - Preserve `EJSON.equals` object comparisons in minified legacy production bundles, preventing repeated subscription restarts, [PR#14792](https://github.com/meteor/meteor/pull/14792), [#14847](https://github.com/meteor/meteor/issues/14847).
@@ -111,8 +113,8 @@ See [all merged PRs for Meteor 3.6](https://github.com/meteor/meteor/pulls?q=is%
 - **Linux requirements have changed for the local database.** The bundled MongoDB needs glibc 2.34+ on x86_64 or 2.35+ on ARM64, plus `libcurl.so.4`, `libssl.so.3`, and `libcrypto.so.3`, [PR#14663](https://github.com/meteor/meteor/pull/14663).
 - **The local database requires Windows 11 or Windows Server 2022 (x64).** Windows 10, Windows Server 2019, and earlier versions are no longer supported by the bundled MongoDB. See [MongoDB’s platform requirements](https://www.mongodb.com/docs/v8.0/tutorial/install-mongodb-on-windows/#platform-support), [PR#14663](https://github.com/meteor/meteor/pull/14663).
 - **Meteor now uses Node.js 26.12.1 and npm 11.20.0.** Check your app and native npm dependencies against the new runtime before deploying.
-- **Apps using `rspack` now need Rspack 2.** Required versions are `@rspack/core` and `@rspack/cli` 2.2.7+, `@rspack/dev-server` 2.2.1+, and `@meteorjs/rspack` 3.0.0-rc.1. Meteor installs them automatically when that setting is enabled. Review custom configurations against the [Rspack 1.x migration guide](https://rspack.rs/guide/migration/rspack_1.x).
-- **The npm Rspack integration has new dependencies.** `@meteorjs/rspack@3.0.0-rc.1` uses `rspack-merge` instead of `webpack-merge` and declares Rspack 2.2.0 peer dependencies. Meteor’s required versions are listed above.
+- **Apps using `rspack` now need Rspack 2.** Required versions are `@rspack/core` and `@rspack/cli` 2.2.7+, `@rspack/dev-server` 2.2.1+, and `@meteorjs/rspack` 3.0.0-rc.2. Meteor installs them automatically when that setting is enabled. Review custom configurations against the [Rspack 1.x migration guide](https://rspack.rs/guide/migration/rspack_1.x).
+- **The npm Rspack integration has new dependencies.** `@meteorjs/rspack@3.0.0-rc.2` uses `rspack-merge` instead of `webpack-merge` and declares Rspack 2.2.0 peer dependencies. Meteor’s required versions are listed above.
 - **HttpOnly login cookies have stricter requirements.** Enable `useHttpOnlyCookies` on the server. Cookie requests must come from the app’s origin, and `/set` requires JSON with a valid, unexpired login token. `SameSite=Strict` means the cookie is not sent on an initial navigation from another site.
 - **Custom passwordless login calls are validated more strictly.** Calls to `requestLoginTokenForUser` may contain only `selector`, `userData`, and `options` at the top level. The selector must contain exactly one non-empty `id`, `username`, or `email`. Handle validation errors and `too-many-requests` responses.
 - **Custom passwordless user-token flows now enforce 2FA and single use.** Tokens supplied through `Accounts.onCreateLoginToken` require a valid 2FA code when enabled and cannot be reused after consumption.
@@ -135,6 +137,8 @@ See [all merged PRs for Meteor 3.6](https://github.com/meteor/meteor/pulls?q=is%
 ```bash
 meteor update --release 3.6-rc.1
 ```
+
+Update the Meteor release to receive the complete security fixes. A package-only update on an older release does not include the new EJSON minor version and its companion Mongo and Minimongo fixes.
 
 **Check the parts your app uses:**
 
@@ -176,11 +180,11 @@ meteor update --release 3.6-rc.1
 - ddp-client@3.4.2-rc360.1
 - ddp-common@1.4.6-rc360.1
 - ddp-rate-limiter@1.3.1-rc360.1
-- ddp-server@3.4.2-rc360.1
-- diff-sequence@1.1.4-rc360.1
+- ddp-server@3.6.0-rc360.1
+- diff-sequence@1.2.1-rc360.1
 - dynamic-import@0.8.1-rc360.1
 - ecmascript@0.19.2-rc360.1
-- ejson@1.2.1-rc360.1
+- ejson@1.4.1-rc360.1
 - email@3.2.1-rc360.1
 - facebook-oauth@1.12.1-rc360.1
 - facts-base@1.0.3-rc360.1
@@ -204,6 +208,7 @@ meteor update --release 3.6-rc.1
 - modern-browsers@0.2.4-rc360.1
 - mongo@2.5.2-rc360.1
 - mongo-id@1.0.10-rc360.1
+- npm-mongo@6.18.1-rc360.1
 - oauth@3.0.5-rc360.1
 - oauth-encryption@1.3.4-rc360.1
 - oauth1@1.5.4-rc360.1
@@ -224,7 +229,7 @@ meteor update --release 3.6-rc.1
 - shell-server@0.7.2-rc360.1
 - socket-stream-client@0.7.2-rc360.1
 - standard-minifier-js@3.3.0-rc360.1
-- test-in-browser@1.6.1-rc360.1
+- test-in-browser@1.6.2-rc360.1
 - test-in-console@2.0.3-rc360.1
 - tools-core@1.4.0-rc360.1
 - tracker@1.3.5-rc360.1
@@ -238,7 +243,7 @@ meteor update --release 3.6-rc.1
 #### Bumped NPM Packages
 
 - @meteorjs/babel@7.20.2-rc.1
-- @meteorjs/rspack@3.0.0-rc.1
+- @meteorjs/rspack@3.0.0-rc.2
 - @meteorjs/swc-core@1.16.2
 
 #### Special thanks to
