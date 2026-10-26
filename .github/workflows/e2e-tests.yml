@@ -80,7 +80,10 @@ jobs:
         run: npx playwright install chromium chromium-headless-shell
 
       - name: Install Playwright system dependencies
-        run: npx playwright install-deps chromium
+        run: |
+          npx playwright install-deps chromium
+          # Port cleanup needs ss, lsof and fuser to find orphaned listeners.
+          apt-get install -y iproute2 lsof psmisc procps
 
       - name: Install deps
         run: npm install
