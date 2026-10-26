@@ -1,5 +1,6 @@
 #define _GNU_SOURCE
 #include <execinfo.h>
+#include <node_api.h>
 #include <signal.h>
 #include <unistd.h>
 
@@ -15,7 +16,7 @@ static void trace_native_signal(int signo) {
   raise(signo);
 }
 
-__attribute__((constructor)) static void install_native_trace(void) {
+static void install_native_trace(void) {
   // Load the unwinder before a failure can interrupt the allocator.
   void *frames[1];
   backtrace(frames, 1);
@@ -25,4 +26,10 @@ __attribute__((constructor)) static void install_native_trace(void) {
   sigemptyset(&action.sa_mask);
   sigaction(SIGABRT, &action, 0);
   sigaction(SIGSEGV, &action, 0);
+}
+
+NAPI_MODULE_INIT() {
+  (void)env;
+  install_native_trace();
+  return exports;
 }

@@ -101,12 +101,12 @@ jobs:
         env:
           NPM_LINK_RSPACK: "false"
         run: |
-          cc -shared -fPIC -g -O1 -Wall -Wextra -Werror \
-            scripts/ci/native-preparation-trace.c -o /tmp/native-preparation-trace.so
+          cc -shared -fPIC -g -O1 -Wall -Wextra -Werror -I /usr/local/include/node \
+            scripts/ci/native-preparation-trace.c -o /tmp/native-preparation-trace.node
           cat /proc/sys/kernel/core_pattern
           ulimit -c unlimited
           set -o pipefail
-          LD_PRELOAD=/tmp/native-preparation-trace.so \
+          NODE_OPTIONS="$NODE_OPTIONS --require=/tmp/native-preparation-trace.node" \
             ./meteor --get-ready --allow-superuser 2>&1 | tee /tmp/meteor-preparation.log
 
       - name: Save native preparation log
