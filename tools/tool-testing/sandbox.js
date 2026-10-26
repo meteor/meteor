@@ -504,7 +504,7 @@ export default class Sandbox {
     await this.warehouseOfficialCatalog.initialize({
       packageStorage: dataFile
     });
-    this.warehouseOfficialCatalog.insertData(stubCatalog);
+    await this.warehouseOfficialCatalog.insertData(stubCatalog);
 
     // And a cherry on top
     // XXX this is hacky
