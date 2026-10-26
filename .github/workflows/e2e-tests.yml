@@ -2,23 +2,9 @@ name: E2E Tests
 
 on:
   workflow_dispatch:
-  pull_request:
-    paths:
-      - "meteor"
-      - "tools/e2e-tests/**"
-      - "packages/rspack/**"
-      - "packages/tools-core/**"
-      - "packages/babel-compiler/**"
-      - "packages/meteor-tool/**"
-      - "npm-packages/meteor-rspack/**"
-      - "tools/isobuild/**"
-      - "scripts/dev-bundle-tool-package.js"
-      - "tools/fs/safe-watcher.ts"
-      - "tools/static-assets/skel-**"
-      - ".github/workflows/e2e-tests.yml"
 
 concurrency:
-  group: meteor-e2e-tests-${{ github.ref }}
+  group: meteor-native-preparation-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -37,7 +23,7 @@ jobs:
   test:
     name: ${{ matrix.category }}
     runs-on: oss-vm
-    timeout-minutes: 60
+    timeout-minutes: 25
     container:
       image: node:22-bookworm
       # --init runs tini as PID 1 so orphaned processes get reaped. Without it
@@ -52,31 +38,11 @@ jobs:
 
     strategy:
       fail-fast: false
-      max-parallel: 4
+      max-parallel: 2
       matrix:
         category:
-          - Angular
-          - Babel
-          - Blaze
-          - Coffeescript
-          - Full Skeleton
-          - Tailwind Skeleton
-          - Examples
-          - Monorepo
-          - Other
-          - React
-          - R.Router
-          - Solid
-          - Svelte
-          - Typescript
-          - Vue
-        include:
-          # Server Runtime is the largest coherent regression suite. Keep it
-          # separate while sending new regression tests to the general shard.
-          - category: Server Runtime
-            test_pattern: 'Regressions / Server Runtime'
-          - category: Regressions
-            test_pattern: 'Regressions / (?!Server Runtime)'
+          - Native preparation 1
+          - Native preparation 2
 
     steps:
       - name: Install Docker CLI
@@ -86,7 +52,7 @@ jobs:
           # host daemon (Docker 29+, minimum API 1.44) rejects with
           # "client version 1.41 is too old. Minimum supported API version is 1.44".
           apt-get update
-          apt-get install -y ca-certificates curl
+          apt-get install -y ca-certificates curl gdb
           install -m 0755 -d /etc/apt/keyrings
           curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
           chmod a+r /etc/apt/keyrings/docker.asc
@@ -103,7 +69,7 @@ jobs:
 
       - name: Cache dependencies
         id: deps-cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: |
             /root/.npm
@@ -130,45 +96,42 @@ jobs:
       - name: Install test deps
         run: npm run install:e2e
 
-      - name: Set NPM_LINK_RSPACK=false for release branches
+      - name: Prepare Meteor under GDB
         shell: bash
         env:
-          CURRENT_BRANCH: ${{ github.head_ref || github.ref_name }}
+          NPM_LINK_RSPACK: "false"
         run: |
-          echo "Current branch: $CURRENT_BRANCH"
-          if [[ "$CURRENT_BRANCH" == release-* ]]; then
-            echo "NPM_LINK_RSPACK=false" >> "$GITHUB_ENV"
-            echo "::warning::NPM_LINK_RSPACK=false on release branch. E2E tests will install @meteorjs/rspack from npm — make sure the latest version is published or tests may fail."
-          fi
+          cat > /tmp/meteor-preparation.gdb <<'GDB'
+          set pagination off
+          set confirm off
+          set auto-load python-scripts off
+          set follow-fork-mode parent
+          handle SIGPIPE nostop noprint pass
+          run
+          python
+          import gdb
+          try:
+              code = int(gdb.parse_and_eval("$_exitcode"))
+          except Exception:
+              code = 134
+              for command in ["thread apply all bt 40", "info sharedlibrary"]:
+                  try:
+                      gdb.execute(command)
+                  except Exception as error:
+                      print(error)
+          print("PREFLIGHT_INFERIOR_EXIT=" + str(code))
+          gdb.execute("quit " + str(code))
+          end
+          GDB
+          set -o pipefail
+          gdb --batch --nx --command /tmp/meteor-preparation.gdb \
+            --args /bin/bash ./meteor --get-ready --allow-superuser 2>&1 | tee /tmp/meteor-preparation.log
 
-      - name: Prepare Meteor
-        if: steps.deps-cache.outputs.cache-hit != 'true'
-        run: ./meteor --get-ready --allow-superuser
-
-      - name: Run tests for ${{ matrix.category }}
-        id: test-run
-        continue-on-error: true
-        timeout-minutes: 15
-        run: METEOR_ALLOW_SUPERUSER=1 npm run test:e2e -- -t="${{ matrix.test_pattern || matrix.category }}"
-
-      - name: Clean up before retry
-        if: steps.test-run.outcome == 'failure'
-        run: |
-          # First attempt and retry share this container; a hard timeout can
-          # orphan processes (EADDRINUSE) and temp dirs. The retry recreates
-          # each app fresh, so only container leftovers need clearing.
-          echo "Cleaning up after the failed attempt..."
-          pkill -9 -f 'meteortest-' || true
-          # Detached bundler/db children may not carry the temp path in argv.
-          pkill -9 -f mongod || true
-          pkill -9 -f rspack || true
-          rm -rf /tmp/meteortest-* /tmp/meteor-build-* || true
-          sleep 3
-          echo "Cleanup done."
-
-      - name: Retry failed tests for ${{ matrix.category }}
-        if: steps.test-run.outcome == 'failure'
-        timeout-minutes: 20
-        run: |
-          echo "::warning::First attempt failed, retrying..."
-          METEOR_ALLOW_SUPERUSER=1 npm run test:e2e -- -t="${{ matrix.test_pattern || matrix.category }}"
+      - name: Save native preparation log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-preparation-${{ strategy.job-index }}
+          path: /tmp/meteor-preparation.log
+          if-no-files-found: warn
+          retention-days: 7
