@@ -1,10 +1,11 @@
 Package.describe({
   summary: 'Extended and Extensible JSON library',
-  version: '1.1.6',
+  version: '1.3.0',
 });
 
 Package.onUse(function onUse(api) {
-  api.use(['ecmascript', 'base64']);
+  api.use('meteor@2.1.1');
+  api.use(['ecmascript@0.16.13', 'base64@1.0.13']);
   api.addAssets('ejson.d.ts', 'server');
   api.mainModule('ejson.js');
   api.export('EJSON');

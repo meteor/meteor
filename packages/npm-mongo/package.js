@@ -12,6 +12,7 @@ Npm.depends({
 });
 
 Package.onUse(function (api) {
+  api.use("meteor@2.1.1");
   api.addFiles("wrapper.js", "server");
   api.export(["NpmModuleMongodb", "NpmModuleMongodbVersion"], "server");
   api.addAssets("index.d.ts", "server");
