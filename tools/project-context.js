@@ -952,6 +952,11 @@ Object.assign(ProjectContext.prototype, {
       // Add a constraint but no dependency (we don't automatically use
       // all local packages!):
       depsAndConstraints.constraints.push(constraint);
+      // Tilde ranges discard wrap numbers; retain the release's minimum wrap.
+      if (version.includes('_')) {
+        depsAndConstraints.constraints.push(utils.parsePackageConstraint(
+          packageName + '@' + version));
+      }
     });
   },
 
