@@ -500,6 +500,9 @@ Object.assign(PackageSource.prototype, {
   // - name: override the name of this package with a different name.
   // - buildingIsopackets: true if this is being scanned in the process
   //   of building isopackets
+  // - buildingSelfTestCatalog: true if this is being scanned by
+  //   newSelfTestCatalog. Causes versionsFrom() to no-op so the scan
+  //   does not depend on catalog.official being warm.
   initFromPackageDir: Profile((dir, options) => {
     return `PackageSource#initFromPackageDir for ${
       options?.name || dir.split(files.pathSep).pop()
@@ -664,7 +667,9 @@ Object.assign(PackageSource.prototype, {
     // exist in the field, if not every single one. #OldStylePackageSupport
 
     var api = new PackageAPI({
-      buildingIsopackets: !! initFromPackageDirOptions.buildingIsopackets
+      buildingIsopackets: !! initFromPackageDirOptions.buildingIsopackets,
+      buildingSelfTestCatalog:
+        !! initFromPackageDirOptions.buildingSelfTestCatalog,
     });
 
     if (Package._fileAndDepLoader) {

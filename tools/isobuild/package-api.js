@@ -75,6 +75,7 @@ export class PackageAPI {
     options = options || {};
 
     this.buildingIsopackets = !!options.buildingIsopackets;
+    this.buildingSelfTestCatalog = !!options.buildingSelfTestCatalog;
 
     // source files used.
     // It's a multi-level map structured as:
@@ -529,6 +530,17 @@ export class PackageAPI {
       buildmessage.error(
         "packages in isopackets may not use versionsFrom");
       // recover by ignoring
+      return;
+    }
+
+    if (self.buildingSelfTestCatalog) {
+      // The self-test catalog is built from a checkout-only set of packages
+      // where the local catalog has exactly one version of each package.
+      // versionsFrom's release records would only fill in unspecified
+      // version constraints (see package-source.js:727), which has no effect
+      // when there is exactly one candidate version. Skipping the lookup
+      // avoids a hard dependency on catalog.official having every Meteor
+      // release cached on disk, which is fragile in CI.
       return;
     }
 

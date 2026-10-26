@@ -631,6 +631,7 @@ async function newSelfTestCatalog() {
           files.pathJoin(packagesDir, "non-core"),
           files.pathJoin(packagesDir, "non-core", "*", "packages"),
         ],
+        buildingSelfTestCatalog: true,
       });
     });
   if (messages.hasMessages()) {
