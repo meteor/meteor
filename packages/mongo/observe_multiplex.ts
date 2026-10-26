@@ -228,9 +228,10 @@ export class ObserveMultiplexer {
         throw Error("handle got removed before sending initial adds!");
       }
 
-      const { _id, ...fields } = handle.nonMutatingCallbacks
-        ? doc
-        : EJSON.clone(doc);
+      const fields = {
+        ...(handle.nonMutatingCallbacks ? doc : EJSON.clone(doc)),
+      };
+      delete fields._id;
 
       const promise = new Promise<void>((resolve, reject) => {
         try {
