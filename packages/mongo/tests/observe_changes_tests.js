@@ -597,3 +597,37 @@ if (Meteor.isServer) {
     }
   );
 }
+
+if (Meteor.isServer) {
+  Tinytest.addAsync('observeChanges - cached initial adds preserve prototype fields', async function(test) {
+    for (const nonMutatingCallbacks of [false, true]) {
+      const collection = makeCollection();
+      const document = JSON.parse('{"__proto__":{"tag":"own field"},"constructor":"stored value"}');
+      const id = await collection.insertAsync(document);
+      const cursor = collection.find(id);
+      let first;
+      let second;
+      try {
+        first = await cursor.observeChanges({ added() {} }, { nonMutatingCallbacks });
+        let received;
+        second = await cursor.observeChanges({
+          added(observedId, fields) {
+            test.equal(observedId, id);
+            received = fields;
+          },
+        }, { nonMutatingCallbacks });
+        test.isTrue(Boolean(received), 'cached document must be delivered');
+        if (received) {
+          test.isTrue(Object.prototype.hasOwnProperty.call(received, '__proto__'));
+          test.isTrue(Object.getPrototypeOf(received) === Object.prototype);
+          test.equal(received.__proto__, { tag: 'own field' });
+          test.equal(received.constructor, 'stored value');
+        }
+      } finally {
+        if (second) await second.stop();
+        if (first) await first.stop();
+        await collection.removeAsync(id);
+      }
+    }
+  });
+}
