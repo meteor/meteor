@@ -467,6 +467,29 @@ console.log(new Error('rspack debugger source-map marker').stack);
 `
       );
 
+      // Initial Rspack setup can restart the server and replace its Inspector
+      // target. Finish that setup before attaching to the debugging run.
+      const initialization = await runMeteorCommand(
+        'run',
+        ['--port', String(DEBUGGING_PORTS[0])],
+        tempDir,
+        {
+          captureOutput: true,
+          env: {
+            RSPACK_DEVSERVER_PORT: String(DEBUGGING_PORTS[1]),
+          },
+        }
+      );
+      meteorProcess = initialization.meteorProcess;
+      await waitForMeteorOutput(
+        initialization.outputLines,
+        '=> App running at',
+        { timeout: 90000, meteorProcess }
+      );
+      await killMeteorProcess(meteorProcess);
+      await killProcessByPort(DEBUGGING_PORTS);
+      meteorProcess = undefined;
+
       const result = await runMeteorCommand(
         'run',
         [
