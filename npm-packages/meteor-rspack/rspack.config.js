@@ -31,6 +31,7 @@ const { prepareMeteorRspackConfig } = require("./lib/meteorRspackConfigFactory")
 const { extractLocalDependencies } = require('./lib/localDependenciesHelpers.js');
 const { createTestClientNodePolyfillConfig } = require("./lib/testClientNodePolyfills.js");
 const { createOutputTracker } = require('./lib/compilationOutput.js');
+const { keepOutsideContexts } = require('./lib/clean.js');
 
 // Safe require that doesn't throw if the module isn't found
 function safeRequire(moduleName) {
@@ -205,16 +206,6 @@ function createRemoteDevServerConfig() {
 
   // If local doesn't provide any extra config
   return {};
-}
-
-// Keep files outside of build folders
-function keepOutsideBuild() {
-  return (p) => {
-    const normalized = '/' + path.normalize(p).replaceAll(path.sep, '/').replace(/^\/+/, '');
-    const isInBuildRoot = /\/build(\/|$)/.test(normalized);
-    const isInBuildStar = /\/build-[^/]+(\/|$)/.test(normalized);
-    return !(isInBuildRoot || isInBuildStar);
-  };
 }
 
 /**
@@ -644,7 +635,9 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       cssChunkFilename: `${clientChunkPrefix}[id]${
         isProd ? ".[contenthash]" : ""
       }.css`,
-      ...(isProd && { clean: clientOutputContext ? true : { keep: keepOutsideBuild() } }),
+      ...(isProd && { clean: clientOutputContext ? true : {
+        keep: keepOutsideContexts(clientOutputDir, [assetsContext, chunksContext]),
+      } }),
     },
     optimization: {
       usedExports: true,
@@ -767,7 +760,9 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       library: { type: "commonjs2" },
       chunkFilename: `${chunksContext}/[id]${isProd ? ".[chunkhash]" : ""}.js`,
       assetModuleFilename,
-      ...(isProd && { clean: { keep: keepOutsideBuild() } }),
+      ...(isProd && { clean: {
+        keep: keepOutsideContexts(serverOutputDir, [assetsContext, chunksContext]),
+      } }),
     },
     optimization: {
       usedExports: true,
