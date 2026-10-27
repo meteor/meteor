@@ -215,7 +215,6 @@ types, plus a barrel of references:
 ```text
 .meteor/types/
 ├── .gitignore
-├── assets.d.ts
 ├── package.json
 ├── packages.d.ts
 ├── packages/
@@ -227,11 +226,6 @@ types, plus a barrel of references:
 └── node_modules/
     └── meteor-package-types -> ../packages  # created only when needed
 ```
-
-`assets.d.ts` declares ambient modules for the stylesheet extensions (`.css`,
-`.scss`, `.sass`, `.less`, `.styl`), so side-effect imports such as
-`import './App.css'` type-check under TypeScript 6+, where
-`noUncheckedSideEffectImports` is enabled by default.
 
 Package authors can publish a single declaration, sub-path declarations, a
 whole declaration directory, or TypeScript source metadata. Meteor preserves
@@ -305,6 +299,14 @@ it cannot see peer dependencies installed only in the app. Symptoms include a
 If this occurs, add `"preserveSymlinks": true` to `compilerOptions` so
 resolution remains inside the application tree and can reach the app's
 `node_modules`.
+
+### `TS2882` for stylesheet imports on TypeScript 6+
+
+TypeScript 6 enables `noUncheckedSideEffectImports` by default, so
+`import './App.css'` reports `TS2882`. The TypeScript templates set it to
+`false`; add `"noUncheckedSideEffectImports": false` to `compilerOptions` in an
+existing app, or declare the stylesheet modules yourself
+(`declare module '*.css';`) in a `.d.ts` your `tsconfig.json` includes.
 
 ## Publishing Types from an Atmosphere Package
 
