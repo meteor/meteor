@@ -1471,6 +1471,12 @@ LocalCollection._modify = (doc, modifier, options = {}) => {
       Object.keys(operand).forEach(keypath => {
         const arg = operand[keypath];
 
+        // Mirrors the driver's ignoreUndefined: the key is dropped before
+        // findModTarget can create its parent path.
+        if (arg === undefined && modFunc === MODIFIERS.$set) {
+          return;
+        }
+
         if (keypath === '') {
           throw MinimongoError('An empty update path is not valid.');
         }
@@ -1990,11 +1996,6 @@ const MODIFIERS = {
     setOwnProperty(target2, keyparts.pop(), object);
   },
   $set(target, field, arg) {
-    // Mirrors the driver's ignoreUndefined: undefined is dropped, not stored.
-    if (arg === undefined) {
-      return;
-    }
-
     if (target !== Object(target)) { // not an array or an object
       const error = MinimongoError(
         'Cannot set property on non-object field',

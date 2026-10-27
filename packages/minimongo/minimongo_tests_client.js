@@ -2544,6 +2544,8 @@ Tinytest.addAsync('minimongo - modify', async test => {
   await modify({}, {$set: {a: undefined}}, {});
   await modify({a: {b: 1}}, {$set: {'a.b': undefined}}, {a: {b: 1}});
   await modify({a: 12}, {$set: {a: null}}, {a: null});
+  await modify({}, {$set: {'a.b': undefined}}, {});
+  await modify({a: 5}, {$set: {'a.b': undefined}}, {a: 5});
 
   // a.$.b
   await modifyWithQuery({a: [{x: 2}, {x: 4}]}, {'a.x': 4}, {$set: {'a.$.z': 9}},
@@ -2984,6 +2986,7 @@ Tinytest.addAsync('minimongo - modify', async test => {
   await modify({a: 0}, {$setOnInsert: {a: 12}}, {a: 0});
   await upsert({a: 12}, {$setOnInsert: {b: 12}}, {a: 12, b: 12});
   await upsert({a: 12}, {$setOnInsert: {b: undefined}}, {a: 12});
+  await upsert({a: 12}, {$setOnInsert: {'b.c': undefined}}, {a: 12});
   await upsert({a: 12}, {$setOnInsert: {_id: 'test'}}, {_id: 'test', a: 12});
   await upsert({'a.b': 10}, {$setOnInsert: {a: {b: 10, c: 12}}}, {a: {b: 10, c: 12}});
   await upsert({'a.b': 10}, {$setOnInsert: {c: 12}}, {a: {b: 10}, c: 12});
