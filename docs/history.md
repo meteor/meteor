@@ -230,7 +230,7 @@ Update the Meteor release to receive the complete security fixes. A package-only
 - socket-stream-client@0.7.2-rc360.1
 - standard-minifier-js@3.3.0-rc360.1
 - test-in-browser@1.6.2-rc360.1
-- test-in-console@2.0.3-rc360.1
+- test-in-console@2.2.0-rc360.1
 - tools-core@1.4.0-rc360.1
 - tracker@1.3.5-rc360.1
 - twitter-oauth@1.3.5-rc360.1
