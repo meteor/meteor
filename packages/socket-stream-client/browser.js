@@ -55,9 +55,9 @@ export class ClientStream extends StreamClientCommon {
   // messages on 'reset'
   send(data) {
     if (!this.currentStatus.connected) return;
-    // 1 is OPEN (SockJS only has the constant as a static). A socket that is
-    // not open can't take the frame, so retry rather than drop it silently.
-    if (this.socket && this.socket.readyState !== 1) {
+    // 0 is CONNECTING (SockJS only has the constant as a static): the one
+    // state where send() throws. A closing socket's own 'close' drives retry.
+    if (this.socket.readyState === 0) {
       this._lostConnection(new this.ConnectionError("Socket is not open"));
       return;
     }
