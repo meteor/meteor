@@ -54,9 +54,14 @@ export class ClientStream extends StreamClientCommon {
   // the floor, and it is up the user of this API to retransmit lost
   // messages on 'reset'
   send(data) {
-    if (this.currentStatus.connected) {
-      this.socket.send(data);
+    if (!this.currentStatus.connected) return;
+    // 1 is OPEN (SockJS only has the constant as a static). A socket that is
+    // not open can't take the frame, so retry rather than drop it silently.
+    if (this.socket && this.socket.readyState !== 1) {
+      this._lostConnection(new this.ConnectionError("Socket is not open"));
+      return;
     }
+    this.socket.send(data);
   }
 
   // Changes where this connection points
@@ -91,7 +96,8 @@ export class ClientStream extends StreamClientCommon {
   _cleanup(maybeError) {
     this._clearConnectionAndHeartbeatTimers();
     if (this.socket) {
-      this.socket.onmessage = this.socket.onclose = this.socket.onerror = this.socket.onheartbeat = () => {};
+      this.socket.onopen = this.socket.onmessage = this.socket.onclose =
+        this.socket.onerror = this.socket.onheartbeat = () => {};
       this.socket.close();
       this.socket = null;
 
@@ -184,7 +190,10 @@ export class ClientStream extends StreamClientCommon {
       this.socket = new WebSocket(toWebsocketUrl(this.rawUrl));
     }
 
-    this.socket.onopen = data => {
+    const socket = this.socket;
+    socket.onopen = () => {
+      // A replaced socket can still deliver its queued 'open'; ignore it.
+      if (this.socket !== socket) return;
       this.lastError = null;
       this._connected();
     };
