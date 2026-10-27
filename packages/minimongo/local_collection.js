@@ -1990,6 +1990,11 @@ const MODIFIERS = {
     setOwnProperty(target2, keyparts.pop(), object);
   },
   $set(target, field, arg) {
+    // Mirrors the driver's ignoreUndefined: undefined is dropped, not stored.
+    if (arg === undefined) {
+      return;
+    }
+
     if (target !== Object(target)) { // not an array or an object
       const error = MinimongoError(
         'Cannot set property on non-object field',
