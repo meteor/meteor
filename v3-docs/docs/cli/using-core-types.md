@@ -215,6 +215,7 @@ types, plus a barrel of references:
 ```text
 .meteor/types/
 ├── .gitignore
+├── assets.d.ts
 ├── package.json
 ├── packages.d.ts
 ├── packages/
@@ -226,6 +227,11 @@ types, plus a barrel of references:
 └── node_modules/
     └── meteor-package-types -> ../packages  # created only when needed
 ```
+
+`assets.d.ts` declares ambient modules for the stylesheet extensions (`.css`,
+`.scss`, `.sass`, `.less`, `.styl`), so side-effect imports such as
+`import './App.css'` type-check under TypeScript 6+, where
+`noUncheckedSideEffectImports` is enabled by default.
 
 Package authors can publish a single declaration, sub-path declarations, a
 whole declaration directory, or TypeScript source metadata. Meteor preserves
