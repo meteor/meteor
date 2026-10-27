@@ -1,17 +1,19 @@
 Package.describe({
   summary: "Common code for OAuth-based services",
-  version: '3.0.4',
+  version: '3.0.4_1',
 });
 
 Package.onUse(api => {
-  api.use(['check', 'ecmascript', 'localstorage', 'url']);
+  // Keep the published dependency floors for independent package updates.
+  api.use('meteor@2.3.1');
+  api.use(['check@1.5.0', 'ecmascript@0.18.1', 'localstorage@1.2.1', 'url@1.3.6']);
 
-  api.use(['routepolicy', 'webapp', 'mongo', 'service-configuration', 'logging'], 'server');
+  api.use(['routepolicy@1.1.2', 'webapp@2.2.0', 'mongo@2.4.0', 'service-configuration@1.3.5', 'logging@1.3.6'], 'server');
 
-  api.use(['reload', 'base64'], 'client');
+  api.use(['reload@1.3.2', 'base64@1.0.14'], 'client');
 
-  api.use('oauth-encryption', 'server', { weak: true });
-  api.use('fetch', 'server');
+  api.use('oauth-encryption@1.3.3', 'server', { weak: true });
+  api.use('fetch@0.2.0', 'server');
 
 
   api.export('OAuth');
