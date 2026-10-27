@@ -1022,7 +1022,7 @@ function addReconnectTests(name, testFunc) {
       stopper && stopper.stop();
       stopper = DDP.onReconnect(function (reconnectingConn) {
         if (reconnectingConn === conn) {
-          handler();
+          return handler();
         }
       });
     }
@@ -2115,6 +2115,64 @@ addReconnectTests(
     }).id;
   }
 );
+
+if (Meteor.isClient) {
+  // Client only: the server's observe drivers use Promise.allSettled too.
+  addReconnectTests(
+    'livedata connection - onReconnect re-sends outstanding methods once an async callback settles, without Promise.allSettled',
+    async function (test, setOnReconnect) {
+      const stream = new StubStream();
+      const conn = newConnection(stream);
+      await startAndConnect(test, stream);
+
+      conn.methods({ do_something: function (x) { } });
+
+      // Like accounts-base's resume login, the callback returns a promise.
+      // It rejects: outstanding methods are re-sent whatever its outcome.
+      let settleReconnect;
+      setOnReconnect(conn, function () {
+        return new Promise(function (resolve, reject) {
+          settleReconnect = reject;
+        });
+      });
+
+      let result;
+      conn.apply('do_something', ['one'], function (error, value) {
+        result = value;
+      });
+      const methodMessage = testGotMessage(test, stream, {
+        msg: 'method',
+        method: 'do_something',
+        params: ['one'],
+        id: '*'
+      });
+
+      // Browsers without Promise.allSettled (Chrome < 76, Safari < 13).
+      const allSettled = Object.getOwnPropertyDescriptor(Promise, 'allSettled');
+      delete Promise.allSettled;
+      try {
+        await stream.reset();
+        testGotMessage(test, stream, makeConnectMessage(SESSION_ID, conn._receivedCount));
+        // Nothing is re-sent until the callback settles.
+        test.length(stream.sent, 0);
+        settleReconnect(new Error('reconnect callback failed'));
+        await new Promise(resolve => setTimeout(resolve, 0));
+      } finally {
+        if (allSettled) Object.defineProperty(Promise, 'allSettled', allSettled);
+      }
+
+      // The method is re-sent with the same id...
+      testGotMessage(test, stream, methodMessage);
+      test.length(stream.sent, 0);
+
+      // ...and completes on the new (not resumed) session.
+      await stream.receive({ msg: 'connected', session: Random.id() });
+      await stream.receive({ msg: 'result', id: methodMessage.id, result: 'foo' });
+      await stream.receive({ msg: 'updated', methods: [methodMessage.id] });
+      test.equal(result, 'foo');
+    }
+  );
+}
 
 addReconnectTests('livedata stub - reconnect double wait method', async function (
   test,
