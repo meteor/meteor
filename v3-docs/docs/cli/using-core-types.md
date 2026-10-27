@@ -300,6 +300,14 @@ If this occurs, add `"preserveSymlinks": true` to `compilerOptions` so
 resolution remains inside the application tree and can reach the app's
 `node_modules`.
 
+### `TS2882` for stylesheet imports on TypeScript 6+
+
+TypeScript 6 enables `noUncheckedSideEffectImports` by default, so
+`import './App.css'` reports `TS2882`. The TypeScript templates set it to
+`false`; add `"noUncheckedSideEffectImports": false` to `compilerOptions` in an
+existing app, or declare the stylesheet modules yourself
+(`declare module '*.css';`) in a `.d.ts` your `tsconfig.json` includes.
+
 ## Publishing Types from an Atmosphere Package
 
 Meteor 3.6 adds the experimental `api.types()` package API while retaining the
