@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Serves a Meteor app over HTTP",
-  version: "2.0.7",
+  version: "2.0.8",
 });
 
 Npm.depends({
@@ -28,16 +28,18 @@ Cordova.depends({
 });
 
 Package.onUse(function (api) {
-  api.use("ecmascript");
+  // Keep the published dependency floors for independent package updates.
+  api.use('meteor@2.1.1');
+  api.use("ecmascript@0.16.11");
   api.use(
     [
-      'logging',
-      'routepolicy',
-      'modern-browsers',
-      'boilerplate-generator',
-      'webapp-hashing',
-      'inter-process-messaging',
-      'callback-hook',
+      'logging@1.3.6',
+      'routepolicy@1.1.2',
+      'modern-browsers@0.2.2',
+      'boilerplate-generator@2.0.1',
+      'webapp-hashing@1.1.2',
+      'inter-process-messaging@0.1.2',
+      'callback-hook@1.6.0',
     ],
     "server"
   );
