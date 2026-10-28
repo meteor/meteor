@@ -49,12 +49,28 @@ export default {
       "url": "https://release-3-3-2.docs-online.meteor.com/"
     },
     {
+      "version": "v3.3.3",
+      "url": "https://release-3-3-3.docs-online.meteor.com/"
+    },
+    {
+      "version": "v3.3.4",
+      "url": "https://release-3-3-4.docs-online.meteor.com/"
+    },
+    {
       "version": "v3.4.0",
       "url": "https://release-3-4-0.docs-online.meteor.com/"
     },
     {
       "version": "v3.4.1",
       "url": "https://release-3-4-1.docs-online.meteor.com/"
+    },
+    {
+      "version": "v3.4.2",
+      "url": "https://release-3-4-2.docs-online.meteor.com/"
+    },
+    {
+      "version": "v3.4.3",
+      "url": "https://release-3-4-3.docs-online.meteor.com/"
     },
     {
       "version": "v3.5.0",
@@ -66,9 +82,17 @@ export default {
     },
     {
       "version": "v3.5.2",
-      "url": "https://release-3-5-2.docs-online.meteor.com/",
+      "url": "https://release-3-5-2.docs-online.meteor.com/"
+    },
+    {
+      "version": "v3.5.3",
+      "url": "https://release-3-5-3.docs-online.meteor.com/"
+    },
+    {
+      "version": "v3.5.4",
+      "url": "https://release-3-5-4.docs-online.meteor.com/",
       "isCurrent": true
     }
   ],
-  "currentVersion": "v3.5.2"
+  "currentVersion": "v3.5.4"
 }
