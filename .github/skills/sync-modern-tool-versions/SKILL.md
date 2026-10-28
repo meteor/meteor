@@ -86,6 +86,8 @@ version that remains.
   that are not compatibility tests.
 - Keep `DEFAULT_RSPACK_VERSION` as the recommended floor for both
   `@rspack/core` and `@rspack/cli`.
+- Keep `DEFAULT_RSPACK_DEV_SERVER_VERSION` as the recommended floor for
+  `@rspack/dev-server`.
 - Keep npm `>=` peer floors at or below the recommended version. Do not raise a
   peer floor only to make numbers equal.
 - Keep `packages/rspack/package.js` independent. Include it in normal release
@@ -96,11 +98,13 @@ Treat the version-constant mapping as exhaustive:
 | Constant | Dependency or dependencies |
 |----------|----------------------------|
 | `DEFAULT_RSPACK_VERSION` | `@rspack/core`, `@rspack/cli` |
+| `DEFAULT_RSPACK_DEV_SERVER_VERSION` | `@rspack/dev-server` |
 | `DEFAULT_METEOR_RSPACK_VERSION` | `@meteorjs/rspack` |
 | `DEFAULT_METEOR_RSPACK_REACT_HMR_VERSION` | `@rspack/plugin-react-refresh` |
 | `DEFAULT_METEOR_RSPACK_REACT_REFRESH_VERSION` | `react-refresh` |
 | `DEFAULT_METEOR_RSPACK_SWC_LOADER_VERSION` | `swc-loader` |
 | `DEFAULT_METEOR_RSPACK_SWC_HELPERS_VERSION` | `@swc/helpers` |
+| `DEFAULT_METEOR_RSPACK_SWC_CORE_VERSION` | `@swc/core` |
 | `DEFAULT_RSDOCTOR_RSPACK_PLUGIN_VERSION` | `@rsdoctor/rspack-plugin` |
 
 Require every exported `DEFAULT_*_VERSION` in

@@ -51,7 +51,7 @@ DDP_TRANSPORT=sockjs meteor run
 }
 ```
 
-This populates `Meteor.settings.packages["ddp-server"].transport` on the server, which is what the DDP server reads. The environment variable takes precedence over `settings.json` when both are set.
+This populates `Meteor.settings.packages["ddp-server"].transport` on the server, which is what the DDP server reads. `settings.json` takes precedence over the environment variable when both are set.
 
 ### Legacy `DISABLE_SOCKJS`
 
@@ -67,7 +67,7 @@ See the full [`DDP_TRANSPORT`](/cli/environment-variables#ddp-transport) and [`D
 
 - Upgrade HTTP to WebSocket on the DDP path (typically `/sockjs` or your custom DDP URL).
 - Disable session affinity that depends on cookie-based stickiness, since there are no HTTP requests to attach cookies to once the WebSocket is established.
-- Ensure idle WebSocket timeouts are at least as long as your DDP heartbeat interval (default: 35 seconds).
+- Ensure idle WebSocket timeouts are at least as long as your DDP heartbeat interval (default: 15 seconds, see `heartbeatInterval` in ddp-server).
 
 ### Combining with WebSocket compression
 
@@ -246,9 +246,9 @@ The internal uws port is purely local — it is never exposed to clients. The re
 On the server, you can inspect the configured transport via the Meteor shell:
 
 ```javascript
-process.env.DDP_TRANSPORT
-  || Meteor.settings?.packages?.["ddp-server"]?.transport
-  || "sockjs";
+Meteor.settings?.packages?.["ddp-server"]?.transport
+  || process.env.DDP_TRANSPORT
+  || (process.env.DISABLE_SOCKJS ? "uws" : "sockjs");
 ```
 
 On the client, opening the browser Network tab and filtering by WS will show:

@@ -38,12 +38,83 @@ const {
   checkNpmDependencyVersion,
   installNpmDependency,
   isYarnProject,
+  getMonorepoPath,
 } = require('./npm');
 const {
   joinWithAnd,
 } = require('./string');
 
 const DEDUP_PREFIX = 'tools-core.deps.';
+
+function readPackageJson(directory) {
+  try {
+    return JSON.parse(
+      fs.readFileSync(path.join(directory, 'package.json'), 'utf8')
+    );
+  } catch (error) {
+    return {};
+  }
+}
+
+function getPackageManagerFromManifest(packageJson) {
+  if (typeof packageJson.packageManager !== 'string') {
+    return null;
+  }
+
+  const packageManager = packageJson.packageManager.split('@')[0];
+  return /^[a-z0-9_-]+$/i.test(packageManager) ? packageManager : null;
+}
+
+/**
+ * Detects the package manager and workspace containing a Meteor app.
+ * The workspace root takes precedence because it owns the shared lockfile.
+ *
+ * @param {string} appDir - Absolute path to the Meteor app
+ * @returns {{appDir: string, isMonorepo: boolean, packageManager: string, workspaceRoot: string}}
+ */
+export function getDependencyInstallContext(appDir) {
+  const resolvedAppDir = path.resolve(appDir);
+  const detectedWorkspaceRoot = getMonorepoPath({ cwd: resolvedAppDir });
+  const workspaceRoot = detectedWorkspaceRoot || resolvedAppDir;
+  const workspacePackageJson = readPackageJson(workspaceRoot);
+  const appPackageJson = workspaceRoot === resolvedAppDir
+    ? workspacePackageJson
+    : readPackageJson(resolvedAppDir);
+
+  let packageManager = getPackageManagerFromManifest(workspacePackageJson);
+
+  if (!packageManager) {
+    const packageManagerLockfiles = [
+      ['pnpm', 'pnpm-workspace.yaml'],
+      ['pnpm', 'pnpm-lock.yaml'],
+      ['yarn', 'yarn.lock'],
+      ['npm', 'package-lock.json'],
+      ['npm', 'npm-shrinkwrap.json'],
+    ];
+
+    packageManager = packageManagerLockfiles.find(([, lockfile]) =>
+      fs.existsSync(path.join(workspaceRoot, lockfile))
+    )?.[0];
+  }
+
+  if (!packageManager && workspaceRoot !== resolvedAppDir) {
+    packageManager = getPackageManagerFromManifest(appPackageJson);
+  }
+
+  if (!packageManager) {
+    packageManager = process.env.YARN_ENABLED === 'true' ||
+      isYarnProject({ cwd: resolvedAppDir })
+      ? 'yarn'
+      : 'npm';
+  }
+
+  return {
+    appDir: resolvedAppDir,
+    isMonorepo: detectedWorkspaceRoot !== null,
+    packageManager,
+    workspaceRoot,
+  };
+}
 
 function readCurrentVersion(name, cwd) {
   try {
@@ -110,6 +181,10 @@ export function detectMissingOrOutdatedDeps(dependencies, options = {}) {
       cwd,
       versionRequirement: dep.version,
       semverCondition: dep.semverCondition || 'gte',
+      // Local protocols describe a source location, not a semver range.
+      checkNodeModules: /^(file|link|portal|workspace):/.test(
+        readCurrentVersion(dep.name, cwd) || '',
+      ),
     });
 
     return {
@@ -132,26 +207,39 @@ export function detectMissingOrOutdatedDeps(dependencies, options = {}) {
  * @param {Object} params
  * @param {Array} params.changes - Output of detectMissingOrOutdatedDeps.
  * @param {boolean} [params.yarn=false]
+ * @param {'npm'|'yarn'|'pnpm'} [params.packageManager] - Overrides the legacy yarn option.
+ * @param {boolean} [params.legacyPeerDeps=false] - Include npm's peer-resolution compatibility flag.
  * @returns {{ devCommand?: string, regularCommand?: string }}
  */
-export function formatInstallCommands({ changes, yarn = false } = {}) {
+export function formatInstallCommands({
+  changes,
+  yarn = false,
+  packageManager = yarn ? 'yarn' : 'npm',
+  legacyPeerDeps = false,
+} = {}) {
   const needed = (changes || []).filter((c) => c.status !== 'ok');
   const dev = needed.filter((c) => c.dev);
   const regular = needed.filter((c) => !c.dev);
 
   const toSpec = (c) => `${c.name}@${c.requiredVersion}`;
   const out = {};
+  const commands = {
+    npm: { dev: 'meteor npm install --save-dev', regular: 'meteor npm install --save' },
+    yarn: { dev: 'yarn add --dev', regular: 'yarn add' },
+    pnpm: { dev: 'pnpm add --save-dev', regular: 'pnpm add' },
+  }[packageManager];
+
+  if (!commands) return out;
+
+  const peerResolutionFlag =
+    packageManager === 'npm' && legacyPeerDeps ? ' --legacy-peer-deps' : '';
 
   if (dev.length > 0) {
-    out.devCommand = yarn
-      ? `yarn add --dev ${dev.map(toSpec).join(' ')}`
-      : `meteor npm install --save-dev ${dev.map(toSpec).join(' ')}`;
+    out.devCommand = `${commands.dev}${peerResolutionFlag} ${dev.map(toSpec).join(' ')}`;
   }
 
   if (regular.length > 0) {
-    out.regularCommand = yarn
-      ? `yarn add ${regular.map(toSpec).join(' ')}`
-      : `meteor npm install --save ${regular.map(toSpec).join(' ')}`;
+    out.regularCommand = `${commands.regular}${peerResolutionFlag} ${regular.map(toSpec).join(' ')}`;
   }
 
   return out;
@@ -236,10 +324,12 @@ export function renderAutoInstallFooter({ docUrl } = {}) {
  * @param {string} params.packageLabel
  * @param {Array} params.changes
  * @param {boolean} [params.yarn=false]
+ * @param {string} [params.packageManager]
+ * @param {Object} [params.installContext] - Workspace and app paths for manual guidance.
  * @param {string} [params.docUrl]
  * @param {string} [params.note]
  */
-export function renderManualInstallInstructions({ packageLabel, changes, yarn = false, docUrl, note } = {}) {
+export function renderManualInstallInstructions({ packageLabel, changes, yarn = false, packageManager = yarn ? 'yarn' : 'npm', installContext, docUrl, note } = {}) {
   const needed = (changes || []).filter((c) => c.status !== 'ok');
   if (needed.length === 0) return;
 
@@ -247,13 +337,23 @@ export function renderManualInstallInstructions({ packageLabel, changes, yarn = 
   if (note) {
     logWarn(`   ${note}`);
   }
+  logWarn(`   Package manager: ${packageManager}`);
+  if (installContext?.isMonorepo) {
+    logWarn(`   Workspace root: ${installContext.workspaceRoot}`);
+    logWarn(`   Meteor app: ${path.relative(installContext.workspaceRoot, installContext.appDir) || '.'}`);
+  }
   groupedBullets(needed, bulletManual).forEach((line) => logWarn(line));
   logWarn(``);
-  logWarn(`   To bring your project in line, run:`);
+  logWarn(installContext
+    ? `   From the Meteor app directory (${installContext.appDir}), run:`
+    : `   To bring your project in line, run:`);
 
-  const { devCommand, regularCommand } = formatInstallCommands({ changes: needed, yarn });
+  const { devCommand, regularCommand } = formatInstallCommands({ changes: needed, packageManager });
   if (devCommand) logWarn(`       ${devCommand}`);
   if (regularCommand) logWarn(`       ${regularCommand}`);
+  if (!devCommand && !regularCommand) {
+    logWarn(`       Install the dependencies above with ${packageManager}.`);
+  }
   logWarn(`=> ℹ️  Set \`"meteor": { "autoInstallDeps": true }\` in package.json to manage them automatically.`);
   if (docUrl) {
     logWarn(`   See: ${docUrl}`);
@@ -283,6 +383,7 @@ export async function ensurePackageDependencies(params = {}) {
     dependencies,
     docUrl,
     note,
+    legacyPeerDeps = false,
     cwd: cwdParam,
   } = params;
 
@@ -306,10 +407,8 @@ export async function ensurePackageDependencies(params = {}) {
     return { mode: 'noop', changes, installed: false, installCommands: [] };
   }
 
-  const yarn = process.env.YARN_ENABLED === 'true' || isYarnProject({ cwd });
-  if (!process.env.YARN_ENABLED) {
-    process.env.YARN_ENABLED = yarn ? 'true' : 'false';
-  }
+  const installContext = getDependencyInstallContext(cwd);
+  const { packageManager } = installContext;
 
   // `meteor update --npm` is an explicit user request to align NPM deps with
   // the current Meteor release, so it overrides `meteor.autoInstallDeps=false`
@@ -321,16 +420,26 @@ export async function ensurePackageDependencies(params = {}) {
 
   const autoInstall = isUpdateNpm || hasMeteorAppConfigAutoInstallDeps({ cwd });
 
-  if (!autoInstall) {
+  const canAutoInstall = ['npm', 'yarn', 'pnpm'].includes(packageManager);
+  const cmds = formatInstallCommands({
+    changes: needed,
+    packageManager,
+    legacyPeerDeps,
+  });
+
+  if (!autoInstall || !canAutoInstall) {
+    const reason = !autoInstall
+      ? 'Automatic dependency installation is disabled by meteor.autoInstallDeps=false.'
+      : `Automatic dependency installation does not support ${packageManager} yet; no package files were changed.`;
     renderManualInstallInstructions({
       packageLabel,
       changes: needed,
-      yarn,
+      packageManager,
+      installContext,
       docUrl,
-      note,
+      note: [note, reason].filter(Boolean).join(' '),
     });
 
-    const cmds = formatInstallCommands({ changes: needed, yarn });
     setGlobalState(dedupKey, true);
 
     return {
@@ -357,12 +466,13 @@ export async function ensurePackageDependencies(params = {}) {
       }...`
     );
     const specs = devChanges.map((c) => `${c.name}@${c.requiredVersion}`);
-    installCommands.push(
-      yarn
-        ? `yarn add --dev ${specs.join(' ')}`
-        : `meteor npm install --save-dev ${specs.join(' ')}`
-    );
-    devOk = await installNpmDependency(specs, { cwd, dev: true, yarn });
+    installCommands.push(cmds.devCommand);
+    devOk = await installNpmDependency(specs, {
+      cwd,
+      dev: true,
+      packageManager,
+      legacyPeerDeps,
+    });
   }
 
   if (regularChanges.length > 0) {
@@ -372,25 +482,27 @@ export async function ensurePackageDependencies(params = {}) {
       }...`
     );
     const specs = regularChanges.map((c) => `${c.name}@${c.requiredVersion}`);
-    installCommands.push(
-      yarn
-        ? `yarn add ${specs.join(' ')}`
-        : `meteor npm install --save ${specs.join(' ')}`
-    );
-    regularOk = await installNpmDependency(specs, { cwd, dev: false, yarn });
+    installCommands.push(cmds.regularCommand);
+    regularOk = await installNpmDependency(specs, {
+      cwd,
+      dev: false,
+      packageManager,
+      legacyPeerDeps,
+    });
   }
 
   const success = devOk && regularOk;
 
   if (!success) {
     logError(`=> ❌ Failed to install ${packageLabel} dependencies`);
-    const cmds = formatInstallCommands({ changes: needed, yarn });
-    if (!devOk && cmds.devCommand) {
-      logError(`   For dev dependencies, run: ${cmds.devCommand}`);
-    }
-    if (!regularOk && cmds.regularCommand) {
-      logError(`   For regular dependencies, run: ${cmds.regularCommand}`);
-    }
+    renderManualInstallInstructions({
+      packageLabel,
+      changes: needed.filter((c) => c.dev ? !devOk : !regularOk),
+      packageManager,
+      installContext,
+      docUrl,
+      note: `Automatic installation with ${packageManager} failed.`,
+    });
 
     const failed = [];
     if (!devOk) failed.push('dev dependencies');
@@ -405,7 +517,7 @@ export async function ensurePackageDependencies(params = {}) {
   renderAutoInstallFooter({ docUrl });
 
   if (isMeteorAppUpdate()) {
-    const installCommand = yarn ? 'yarn install' : 'npm install';
+    const installCommand = `${packageManager} install`;
     logInfo(`=> 🔔 Remember: Run \`${installCommand}\` after the Meteor update finishes.`);
     logInfo(`   This helps keep your dependencies correct and your project stable.`);
   }

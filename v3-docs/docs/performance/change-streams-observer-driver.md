@@ -47,7 +47,7 @@ Optional tuning is available via `Meteor.settings`:
     "mongo": {
       "changeStream": {
         "delay": { "error": 100, "close": 100 },
-        "waitUntilCaughtUpTimeoutMs": 1000
+        "waitUntilCaughtUpWarnMs": 10000
       }
     }
   }
@@ -56,8 +56,8 @@ Optional tuning is available via `Meteor.settings`:
 
 - `delay.error`: Milliseconds to wait before restarting the stream after an error (default: `100`).
 - `delay.close`: Milliseconds to wait before restarting after an unexpected close (default: `100`).
-- `waitUntilCaughtUpTimeoutMs`: Upper bound for waiting until the stream catches up to the server's current operation time when coordinating with DDP fences (default: `1000`).
-  - If this timeout elapses, the driver stops waiting and lets the fence continue; the change stream will catch up later, so data is not lost, but clients can temporarily miss read-your-writes (a publication may become ready before the client's own writes appear).
+- `waitUntilCaughtUpWarnMs`: Milliseconds before the driver starts logging a diagnostic warning (`change stream catching up took too long`) when a fence's wait for the change stream to catch up stalls; the warning repeats at this interval while the wait continues (default: `10000`).
+  - The catch-up wait itself has no upper bound — a fence is released only once the change stream has processed the write it is waiting for (or when the observer is stopped), so publications do not become ready before the corresponding changes are applied. This setting only controls diagnostics; it does not release the fence early.
 
 ## Performance Comparison
 

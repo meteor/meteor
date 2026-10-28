@@ -21,5 +21,6 @@ Package.onTest(function (api) {
     'tests/deps_tests.js',
     'tests/process_tests.js',
     'tests/global_state_tests.js',
+    'tests/npm_tests.js',
   ], 'server');
 });

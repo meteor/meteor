@@ -379,6 +379,17 @@ Accounts.emailTemplates.sendLoginToken = {
 };
 ```
 
+### Configuration
+
+You can adjust the expiry and length of the emailed one-time login token through `Accounts.config`:
+
+```js
+Accounts.config({
+  loginTokenExpirationHours: 1, // validity of the emailed one-time login token, in hours (default: 1)
+  tokenSequenceLength: 6, // length of the emailed one-time login token (default: 6)
+});
+```
+
 ## Two-Factor Authentication
 
 The `accounts-2fa` package adds Time-based One-Time Password (TOTP) two-factor authentication, compatible with any standard authenticator app (Google Authenticator, Authy, etc.).
@@ -455,12 +466,7 @@ When 2FA is enabled, completing a password reset (`Accounts.resetPassword`) or e
 
 ### Configuration
 
-```js
-Accounts.config({
-  loginTokenExpirationHours: 1, // how long a TOTP window stays valid (default: 1 hour)
-  tokenSequenceLength: 6, // TOTP code length (default: 6)
-});
-```
+TOTP codes are always 6 digits generated on a 30-second period, per the authenticator-app standard; the package accepts codes within a tolerance window to allow for clock drift. There are no `Accounts.config` options for 2FA.
 
 ## OAuth login
 
@@ -593,7 +599,7 @@ import { Meteor } from "meteor/meteor";
 await Meteor.logoutAllClients();
 ```
 
-This was added in Meteor 3.5. Use [`Meteor.logoutOtherClients`](/api/accounts#Meteor-logoutOtherClients) instead if you want to keep the current device logged in.
+This was added in Meteor 3.4. Use [`Meteor.logoutOtherClients`](/api/accounts#Meteor-logoutOtherClients) instead if you want to keep the current device logged in.
 
 ## Loading and displaying user data
 

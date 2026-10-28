@@ -91,5 +91,5 @@ Using these API's could allow other code to run before the async stub finishes.
 If one of these API's are used, a warning will be shown in the console:
 
 ```
-Method stub (<method name>) took too long and could cause unexpected problems. Learn more at https://v3-migration-docs.meteor.com/breaking-changes/call-x-callAsync.html#what-are-the-limitations-of-call-meteor-callasync
+Method stub (<method name>) took too long and could cause unexpected problems. Learn more at https://v3-migration-docs.meteor.com/breaking-changes/call-x-callAsync.html#considerations-for-effective-use-of-meteor-callasync
 ```
