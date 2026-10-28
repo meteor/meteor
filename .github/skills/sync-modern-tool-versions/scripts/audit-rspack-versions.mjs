@@ -120,10 +120,12 @@ const constantNames = {
   '@meteorjs/rspack': 'DEFAULT_METEOR_RSPACK_VERSION',
   '@rspack/core': 'DEFAULT_RSPACK_VERSION',
   '@rspack/cli': 'DEFAULT_RSPACK_VERSION',
+  '@rspack/dev-server': 'DEFAULT_RSPACK_DEV_SERVER_VERSION',
   '@rspack/plugin-react-refresh': 'DEFAULT_METEOR_RSPACK_REACT_HMR_VERSION',
   'react-refresh': 'DEFAULT_METEOR_RSPACK_REACT_REFRESH_VERSION',
   'swc-loader': 'DEFAULT_METEOR_RSPACK_SWC_LOADER_VERSION',
   '@swc/helpers': 'DEFAULT_METEOR_RSPACK_SWC_HELPERS_VERSION',
+  '@swc/core': 'DEFAULT_METEOR_RSPACK_SWC_CORE_VERSION',
   '@rsdoctor/rspack-plugin': 'DEFAULT_RSDOCTOR_RSPACK_PLUGIN_VERSION',
 };
 
