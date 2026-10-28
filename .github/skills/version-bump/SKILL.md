@@ -1,6 +1,6 @@
 ---
 name: version-bump
-description: Use when bumping Meteor package versions for beta, RC, or official releases. Covers the two version schemes (meteor-tool vs all other packages), the update-semver automation tool, manual files the tool does not handle, modern-tool npm package semver analysis, the official installer gate, and the full lifecycle from beta through official release. Applies to packages/*/package.js, scripts/admin/, npm-packages/meteor-installer/, modern-tool npm packages, and .meteor/versions in test apps.
+description: Use when bumping Meteor package versions for beta, RC, or official releases. Covers the two version schemes (meteor-tool vs all other packages), the update-semver automation tool, the build plugin cascade rule (build plugins embed their dependencies at publish time), manual files the tool does not handle, modern-tool npm package semver analysis, the official installer gate, and the full lifecycle from beta through official release. Applies to packages/*/package.js, scripts/admin/, npm-packages/meteor-installer/, modern-tool npm packages, and .meteor/versions in test apps.
 ---
 
 # Meteor Version Bump Rules
@@ -30,10 +30,10 @@ The track number is the release branch digits concatenated (dots removed):
 ### Detecting Changed Packages
 
 ```bash
-git diff devel --dirstat=files -- ./packages/
+git diff devel --dirstat=files,0 -- ./packages/
 ```
 
-This is the same comparison used by the `update-semver` automation tool via `scripts/admin/update-semver/get-diff.sh`.
+The `,0` disables git's default 3% dirstat cutoff, which silently drops small packages from large diffs: without it the 3.4.2 → 3.5 diff listed 11 of the 47 changed packages, and `minifier-css` was not among them. This is the same comparison used by the `update-semver` automation tool via `scripts/admin/update-semver/get-diff.sh`.
 
 ---
 
@@ -139,7 +139,8 @@ A package should **not** be bumped if its only diff vs `devel` consists of:
 
 If, after mentally stripping out these classes of changes, no runtime code change is
 left, **do not bump the package**. The release ships with the package at its current
-stable version.
+stable version. The one exception is the [build plugin cascade](#build-plugin-cascading-rule):
+a build plugin package with no diff at all still needs a bump when a package it embeds is bumped.
 
 **Conversely, you MUST bump if any of these are present** alongside lint/test/format:
 
@@ -202,23 +203,47 @@ Always get user confirmation before applying the bumps.
 
 ### Build Plugin Cascading Rule
 
-When a package in the **build plugin chain** is bumped, its dependent build plugins must also be bumped — even if they have no code changes. This is because build plugins compile user code, and a change in an upstream compiler dependency can affect the compiled output.
+A package that calls `Package.registerBuildPlugin` is published with every package in its plugin's `use` closure compiled into the isopack (`plugin.<name>.os/packages/*.js`, built by `buildJsImage` from `tools/isobuild/compiler.js`). Apps run that embedded copy, never the version they resolve for themselves, and `publish-release --from-checkout` does not republish a version that already exists on the package server. A plugin package that is not bumped therefore keeps shipping the old embedded code.
 
-**The build plugin chain:**
+**Rule:** when a package in the bump list is embedded by a build plugin package, bump that plugin package as well — even if it has no diff of its own. Cascade bumps match or exceed the upstream magnitude (a minor upstream bump means at least a minor cascade, unless the plugin's own changes warrant major).
+
+The embedded set is the plugin's `use` list plus everything those packages `api.use` or `api.imply` on the server, transitively (every package implicitly uses `meteor`). Derive it mechanically instead of from memory:
+
+```bash
+# each build plugin package and everything it embeds
+node scripts/admin/update-semver/build-plugin-cascade.js
+
+# build plugin packages that need a cascade bump for these changed packages
+node scripts/admin/update-semver/build-plugin-cascade.js minifier-css babel-compiler
+```
+
+Direct `use` edges only, without the script:
+
+```bash
+awk '/registerBuildPlugin\(/{p=1} p{print FILENAME": "$0} /^\}\);/{p=0}' packages/*/package.js
+```
+
+**Current chain (core packages, direct edges):**
 
 ```
-babel-compiler
-├── ecmascript      (registerBuildPlugin, uses babel-compiler)
-├── typescript       (registerBuildPlugin, uses babel-compiler)
-└── minifier-js      (registerBuildPlugin, uses babel-compiler)
+babel-compiler ─┬─ ecmascript
+                ├─ typescript
+                └─ minifier-js ─── standard-minifier-js
+minifier-css ────── standard-minifier-css
+ecmascript ──────┬─ standard-minifier-css
+                 ├─ standard-minifier-js
+                 ├─ rspack
+                 └─ static-html
 ```
 
-**Rule:** If `babel-compiler` is in the bump list, also bump `ecmascript`, `typescript`, and `minifier-js`. Cascade bumps must match or exceed the upstream magnitude — if `babel-compiler` gets a minor bump, cascading packages also get minor (unless their own changes warrant major).
+Runtime packages such as `meteor`, `modules`, `promise`, `fetch`, `dynamic-import` and `logging` (and through it `ejson` and `typescript`) sit inside these closures too, so bumping any of them cascades to the plugins that embed them. The script output is the source of truth; this chart only covers the common cases.
 
-This rule applies only to build plugin dependencies (`registerBuildPlugin` + `api.use` of the upstream package). It does **not** apply to:
+**Example from 3.5:** `minifier-css` was bumped to 2.0.2 but `standard-minifier-css` stayed at 1.10.1, so its published `plugin.minifyStdCSS.os/packages/minifier-css.js` kept the old `url.parse` code and every 3.5.x production build logged the Node deprecation warning. `build-plugin-cascade.js minifier-css` prints `standard-minifier-css: embeds minifier-css`; run against the full 3.5 diff it also lists `standard-minifier-js`, `rspack` and `static-html`.
+
+This rule applies only to packages embedded by a build plugin. It does **not** apply to:
 - Umbrella/wrapper packages that `api.imply` a bumped package (e.g., `ddp` implying `ddp-server`)
 - The `accounts-*` family that implies `accounts-base`
-- Packages that only use a bumped package at runtime via `api.use`
+- Packages that only use a bumped package at runtime via `api.use` — their isopack references the dependency by name, nothing is embedded
 
 When presenting the bump table, mark cascading bumps clearly:
 
@@ -226,9 +251,11 @@ When presenting the bump table, mark cascading bumps clearly:
 | Package | Current | Bump | New Version | Reason |
 |---------|---------|------|-------------|--------|
 | babel-compiler | 7.13.0 | patch | 7.13.1-betaXXX.0 | Bug fix in compilation |
-| typescript | 5.9.3 | patch | 5.9.4-betaXXX.0 | **Cascade:** depends on babel-compiler (build plugin) |
-| ecmascript | 0.17.0 | patch | 0.17.1-betaXXX.0 | **Cascade:** depends on babel-compiler (build plugin) |
-| minifier-js | 3.1.0 | patch | 3.1.1-betaXXX.0 | **Cascade:** depends on babel-compiler (build plugin) |
+| minifier-css | 2.0.1 | patch | 2.0.2-betaXXX.0 | Replace `url.parse` with WHATWG URL |
+| ecmascript | 0.17.0 | patch | 0.17.1-betaXXX.0 | **Cascade:** build plugin embeds babel-compiler |
+| typescript | 5.9.3 | patch | 5.9.4-betaXXX.0 | **Cascade:** build plugin embeds babel-compiler |
+| standard-minifier-js | 3.1.0 | patch | 3.1.1-betaXXX.0 | **Cascade:** build plugin embeds babel-compiler (via minifier-js) |
+| standard-minifier-css | 1.10.1 | patch | 1.10.2-betaXXX.0 | **Cascade:** build plugin embeds minifier-css and babel-compiler |
 ```
 
 ---
@@ -258,13 +285,14 @@ Claude should perform the version bump process directly rather than relying on t
 
 ### AI Workflow
 
-1. Detect changed packages: `git diff devel --dirstat=files -- ./packages/`
+1. Detect changed packages: `git diff devel --dirstat=files,0 -- ./packages/`
 2. If modern-tool npm package code or dependency versions changed, complete its bump analysis and `sync-modern-tool-versions`
 3. For each package, read the diff and current version from `package.js`
 4. Classify the bump magnitude (patch/minor/major) based on change analysis
-5. Present the full table with reasons to the user for confirmation
-6. Apply all `package.js` version edits
-7. Handle the manual files (release JSON, `.meteor/versions`, etc.)
+5. Add cascade bumps: `node scripts/admin/update-semver/build-plugin-cascade.js <changed packages...>` lists the build plugin packages that embed any of them
+6. Present the full table with reasons to the user for confirmation
+7. Apply all `package.js` version edits
+8. Handle the manual files (release JSON, `.meteor/versions`, etc.)
 
 ### Deriving the Version
 
@@ -299,6 +327,10 @@ npm run bump-experimental-rc
 
 # Bump specific packages with specific magnitudes
 node index.js accounts-password.minor babel-compiler.minor
+
+# Build plugin packages that embed a bumped package are bumped too, at the
+# same magnitude (here: standard-minifier-css)
+node index.js minifier-css.patch
 ```
 
 ---
@@ -307,11 +339,12 @@ node index.js accounts-password.minor babel-compiler.minor
 
 ### Step 1: Analyze and bump package versions
 
-1. Detect changed packages: `git diff devel --dirstat=files -- ./packages/`
+1. Detect changed packages: `git diff devel --dirstat=files,0 -- ./packages/`
 2. For each changed package, analyze the diff to determine patch/minor/major
-3. Present the bump table with reasons to the user
-4. After confirmation, edit each `packages/*/package.js` `Package.describe` version
-5. Apply the correct beta suffix: `X.Y.Z-beta<TRACK>.0` for packages, `X.Y.Z-beta.0` for meteor-tool
+3. Add cascade bumps for build plugin packages that embed a changed package (`build-plugin-cascade.js`)
+4. Present the bump table with reasons to the user
+5. After confirmation, edit each `packages/*/package.js` `Package.describe` version
+6. Apply the correct beta suffix: `X.Y.Z-beta<TRACK>.0` for packages, `X.Y.Z-beta.0` for meteor-tool
 
 ### Step 2: Update experimental release file
 
@@ -363,6 +396,8 @@ The transitions are:
 - `rc<TRACK>.N` -> `rc<TRACK>.N+1` (subsequent RCs)
 - `beta.N` -> `rc.0` (meteor-tool, first RC)
 - `rc.N` -> `rc.N+1` (meteor-tool, subsequent RCs)
+
+Packages changed on the release branch since the last beta get a fresh bump analysis, including the build plugin cascade.
 
 ### Step 2: Update experimental release file
 
@@ -458,8 +493,9 @@ by republishing the same version.
 
 ### Beta Release
 
-- [ ] Detect changed packages (`git diff devel --dirstat=files -- ./packages/`)
+- [ ] Detect changed packages (`git diff devel --dirstat=files,0 -- ./packages/`)
 - [ ] Analyze each package diff and determine bump magnitude (patch/minor/major)
+- [ ] Add build plugin cascade bumps (`node scripts/admin/update-semver/build-plugin-cascade.js <changed packages...>`)
 - [ ] Present bump table with reasons to user and get confirmation
 - [ ] Apply version bumps to all `packages/*/package.js`
 - [ ] Update `scripts/admin/meteor-release-experimental.json` version to `X.Y.Z-beta.N`
@@ -471,6 +507,7 @@ by republishing the same version.
 ### RC Release
 
 - [ ] Update prerelease suffix from beta to RC (or increment RC) in all `packages/*/package.js`
+- [ ] Re-check the build plugin cascade for packages changed since the last beta
 - [ ] Update `scripts/admin/meteor-release-experimental.json` version to `X.Y.Z-rc.N`
 - [ ] Update `.meteor/versions` in `test-apps/` only (not `tools/tests/apps/` or `tools/e2e-tests/apps/`)
 - [ ] Update changelog
