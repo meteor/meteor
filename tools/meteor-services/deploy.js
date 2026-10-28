@@ -917,6 +917,28 @@ export async function listSites() {
   return 0;
 };
 
+// Like listSites, but returns the sites as a sorted array instead of
+// printing them: null if the RPC failed (deployRpc reports errors as
+// values rather than throwing), [] if the account has no sites.
+export async function getSitesList() {
+  var result = await deployRpc({
+    method: "GET",
+    operation: "authorized-apps",
+    expectPayload: ["sites"]
+  });
+
+  if (result.errorMessage) {
+    return null;
+  }
+
+  if (! result.payload ||
+      ! result.payload.sites ||
+      ! result.payload.sites.length) {
+    return [];
+  }
+  return result.payload.sites.sort();
+};
+
 // Given a hostname, add "http://" or "https://" as
 // appropriate. (localhost gets http; anything else is always https.)
 function addScheme(hostOrURL) {
