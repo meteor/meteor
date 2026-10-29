@@ -1,0 +1,40 @@
+import { expect, rs, test } from '@rstest/core';
+import { Meteor } from 'meteor/meteor';
+import { Mongo } from 'meteor/mongo';
+import { runtimeValue } from './runtime-value.js';
+
+rs.mock('./runtime-value.js', () => ({ runtimeValue: 99 }));
+
+const fixtureTest = test.extend({
+  label: async ({}, use) => {
+    await use('embedded');
+  },
+});
+
+test.for([1, 2])(
+  'upstream case %s',
+  async (value, { task }) => {
+    rs.useFakeTimers();
+    rs.setSystemTime(new Date('2026-08-15T00:00:00.000Z'));
+    const probe = rs.fn(input => input * 2);
+
+    expect(Meteor.isServer).toBe(true);
+    expect(Date.now()).toBe(Date.parse('2026-08-15T00:00:00.000Z'));
+    expect(probe(value)).toBe(value * 2);
+    expect(probe).toHaveBeenCalledExactlyOnceWith(value);
+    expect(runtimeValue).toBe(99);
+    task.meta.executor = 'meteor-server';
+    rs.useRealTimers();
+
+    const collection = new Mongo.Collection(null);
+    const id = await collection.insertAsync({ value });
+    expect(await collection.findOneAsync(id)).toEqual(
+      expect.objectContaining({ value }),
+    );
+  },
+);
+
+fixtureTest('upstream fixture', async ({ label, task }) => {
+  expect(label).toBe('embedded');
+  expect(task.name).toBe('upstream fixture');
+});

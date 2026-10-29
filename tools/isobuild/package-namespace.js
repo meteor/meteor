@@ -248,6 +248,34 @@ export class PackageNamespace {
    * @locus package.js
    */
   registerBuildPlugin(options) {
+    this._registerPlugin(options, {
+      collectionName: 'pluginInfo',
+      kind: 'build',
+    });
+  }
+
+  /**
+   * @summary Define a test-runner provider plugin for a test-only package.
+   * Provider plugins run in the Meteor tool process and register orchestration
+   * through `Plugin.registerTestRunner`; they are not linked into test runtime
+   * bundles.
+   * @param {Object} [options]
+   * @param {String} options.name A cosmetic name, unique across all plugins in
+   * the package.
+   * @param {String|String[]} options.use Meteor packages used by this plugin.
+   * @param {String[]} options.sources Source files that make up the plugin.
+   * @param {Object} options.npmDependencies NPM dependencies used by the
+   * plugin.
+   * @locus package.js
+   */
+  registerTestRunnerPlugin(options) {
+    this._registerPlugin(options, {
+      collectionName: 'testRunnerPluginInfo',
+      kind: 'test runner',
+    });
+  }
+
+  _registerPlugin(options, { collectionName, kind }) {
     const isTest = this._packageSource.isTest;
 
     // Tests don't have plugins; plugins initialized in the control file
@@ -257,16 +285,19 @@ export class PackageNamespace {
       return;
     }
 
-    if (! ('name' in options)) {
-      buildmessage.error("build plugins require a name",
+    if (!options || !('name' in options)) {
+      buildmessage.error(`${kind} plugins require a name`,
                          { useMyCaller: true });
       // recover by ignoring plugin
       return;
     }
 
-    const pluginInfo = this._packageSource.pluginInfo;
+    const pluginInfo = this._packageSource[collectionName];
+    const otherPluginInfo = collectionName === 'pluginInfo'
+      ? this._packageSource.testRunnerPluginInfo
+      : this._packageSource.pluginInfo;
 
-    if (options.name in pluginInfo) {
+    if (options.name in pluginInfo || options.name in otherPluginInfo) {
       buildmessage.error("this package already has a plugin named '" +
                          options.name + "'",
                          { useMyCaller: true });

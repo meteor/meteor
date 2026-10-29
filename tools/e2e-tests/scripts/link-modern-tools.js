@@ -1,0 +1,149 @@
+#!/usr/bin/env node
+
+const fs = require('node:fs');
+const path = require('node:path');
+const execa = require('execa');
+
+const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
+const CONSTANTS_PATH = path.join(REPO_ROOT, 'packages', 'rspack', 'lib', 'constants.js');
+
+function readRspackVersion(repoRoot = REPO_ROOT) {
+  const constantsPath = path.join(repoRoot, 'packages', 'rspack', 'lib', 'constants.js');
+  const source = fs.readFileSync(constantsPath, 'utf8');
+  const match = source.match(/DEFAULT_RSPACK_VERSION\s*=\s*['"]([^'"]+)['"]/);
+  if (!match) throw new Error(`Unable to read DEFAULT_RSPACK_VERSION from ${constantsPath}`);
+  return match[1];
+}
+
+function createLocalPackageLinkPlan({ destinationRoot, packageSpecs }) {
+  return Object.entries(packageSpecs || {}).map(([name, spec]) => {
+    if (!spec || typeof spec.source !== 'string') {
+      throw new Error(`Local npm package ${name} must specify a source path`);
+    }
+    if (spec.save !== 'dev' && spec.save !== 'prod') {
+      throw new Error(`Local npm package ${name} must specify save as dev or prod`);
+    }
+    return {
+      command: 'npm',
+      args: [
+        'install',
+        spec.save === 'dev' ? '--save-dev' : '--save',
+        '--no-package-lock',
+        '--install-links=false',
+        spec.source,
+      ],
+      cwd: destinationRoot,
+    };
+  });
+}
+
+function createLocalModernToolsLinkPlan({
+  repoRoot = REPO_ROOT,
+  appDir,
+  rspackVersion,
+  includeRstest = true,
+}) {
+  const meteor = path.join(repoRoot, 'meteor');
+  const rspackDir = path.join(repoRoot, 'npm-packages', 'meteor-rspack');
+  const rstestDir = path.join(repoRoot, 'npm-packages', 'meteor-rstest');
+  const prepareRstest = includeRstest ? [
+    {
+      command: 'npm',
+      args: [
+        'install',
+        '--no-save',
+        '--no-package-lock',
+        '--install-links=false',
+        rspackDir,
+      ],
+      cwd: rstestDir,
+    },
+  ] : [];
+  const persistAppRstest = includeRstest
+    ? createLocalPackageLinkPlan({
+      destinationRoot: appDir,
+      packageSpecs: {
+        '@meteorjs/rstest': { source: rstestDir, save: 'dev' },
+      },
+    }).map(step => ({
+      ...step,
+      // Rstest's adapter requires the branch's exact Rspack version. An app
+      // may already have a newer version from its initial registry install.
+      args: [
+        ...step.args,
+        '--save-exact',
+        `@rspack/core@${rspackVersion}`,
+        `@rspack/cli@${rspackVersion}`,
+      ],
+    }))
+    : [];
+  const persistAppRspack = createLocalPackageLinkPlan({
+    destinationRoot: appDir,
+    packageSpecs: {
+      '@meteorjs/rspack': { source: rspackDir, save: 'prod' },
+    },
+  });
+  return [
+    { command: meteor, args: ['update', '--npm'], cwd: appDir },
+    {
+      command: 'npm',
+      args: [
+        'install',
+        `@rspack/core@${rspackVersion}`,
+        `@rspack/cli@${rspackVersion}`,
+        '--no-save',
+        '--no-package-lock',
+      ],
+      cwd: rspackDir,
+    },
+    ...prepareRstest,
+    { command: 'npm', args: ['install', 'ignore-loader', '--save'], cwd: appDir },
+    ...persistAppRspack,
+    ...persistAppRstest,
+  ];
+}
+
+async function linkLocalModernTools(appDir, { env, includeRstest = true } = {}) {
+  if (!appDir || !fs.existsSync(appDir)) {
+    throw new Error(
+      `linkLocalModernTools: invalid app directory (${appDir}). ` +
+      'The test app was probably never created; check the earlier app-creation step.'
+    );
+  }
+  const rspackVersion = readRspackVersion();
+  const plan = createLocalModernToolsLinkPlan({
+    appDir,
+    rspackVersion,
+    includeRstest,
+  });
+  const execEnv = env ? { ...process.env, ...env } : undefined;
+
+  for (const step of plan) {
+    await execa(step.command, step.args, {
+      cwd: step.cwd,
+      env: execEnv,
+      stdio: 'inherit',
+    });
+  }
+}
+
+module.exports = {
+  CONSTANTS_PATH,
+  REPO_ROOT,
+  createLocalPackageLinkPlan,
+  createLocalModernToolsLinkPlan,
+  linkLocalModernTools,
+  readRspackVersion,
+};
+
+if (require.main === module) {
+  const appDir = process.argv[2];
+  if (!appDir) {
+    console.error('Usage: node link-modern-tools.js <appDir>');
+    process.exit(1);
+  }
+  linkLocalModernTools(path.resolve(appDir)).catch(error => {
+    console.error(error.message);
+    process.exit(1);
+  });
+}
