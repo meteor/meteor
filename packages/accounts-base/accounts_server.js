@@ -6,6 +6,7 @@ import {
   EXPIRE_TOKENS_INTERVAL_MS,
 } from './accounts_common.js';
 import { URL } from 'meteor/url';
+import { Hook } from 'meteor/callback-hook';
 export const _CurrentEndpointInvocation = new Meteor.EnvironmentVariable();
 
 
@@ -134,6 +135,7 @@ export class AccountsServer extends AccountsCommon {
       return url.toString();
     };
 
+    this.afterCreateUserHook = new Hook({ bindEnvironment: false });
     // Expose the _CurrentEndpointInvocation
     this._CurrentEndpointInvocation = _CurrentEndpointInvocation;
   }
@@ -1435,9 +1437,9 @@ export class AccountsServer extends AccountsCommon {
       await pinEncryptedFieldsToUser(serviceData, user._id);
 
       let setAttrs = {};
-      Object.keys(serviceData).forEach(key =>
-        setAttrs[`services.${serviceName}.${key}`] = serviceData[key]
-      );
+      for (const key of Object.keys(serviceData)) {
+        setAttrs[`services.${serviceName}.${key}`] = serviceData[key];
+      }
 
       // XXX Maybe we should re-use the selector above and notice if the update
       //     touches nothing?
@@ -1455,9 +1457,10 @@ export class AccountsServer extends AccountsCommon {
       user = {services: {}};
       user.services[serviceName] = serviceData;
       const userId = await this.insertUserDoc(opts, user);
+      await this._finishUserCreation(userId, opts);
       return {
         type: serviceName,
-        userId
+        userId,
       };
     }
   };
@@ -1587,7 +1590,38 @@ export class AccountsServer extends AccountsCommon {
       await Meteor.users.removeAsync(userId);
       throw ex;
     }
+
+    await this._finishUserCreation(userId, options);
+
     return userId;
+  }
+
+  // Only the built-in client registration methods call this guard. Server
+  // application code may authorize role assignment before creating a user.
+  _validateClientUserCreationOptions(options) {
+    if (options && (options.role !== undefined || options.scope !== undefined)) {
+      throw new Meteor.Error(403, 'Roles can only be assigned by the server');
+    }
+  }
+
+  async _finishUserCreation(userId, options = {}) {
+    if (Package['roles'] && options.role) {
+      try {
+        await Package['roles'].Roles.addUsersToRolesAsync(userId, options.role, options.scope);
+      } catch (error) {
+        await this.users.removeAsync(userId);
+        throw error;
+      }
+    }
+
+    // Hooks observe the stored document and complete before registration returns.
+    // A hook failure propagates but leaves the account in place: hooks may have
+    // already performed side effects that cannot be rolled back.
+    const user = await this.users.findOneAsync(userId);
+    await this.afterCreateUserHook.forEachAsync(async hook => {
+      await hook(user);
+      return true;
+    });
   }
 
   _handleError = (msg, throwError = true, errorCode = 403) => {
