@@ -1471,6 +1471,12 @@ LocalCollection._modify = (doc, modifier, options = {}) => {
       Object.keys(operand).forEach(keypath => {
         const arg = operand[keypath];
 
+        // Mirrors the driver's ignoreUndefined: the key is dropped before
+        // findModTarget can create its parent path.
+        if (arg === undefined && modFunc === MODIFIERS.$set) {
+          return;
+        }
+
         if (keypath === '') {
           throw MinimongoError('An empty update path is not valid.');
         }
