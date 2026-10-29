@@ -236,11 +236,22 @@ export function getCurrentNodeBinDir() {
 
 // Return the top-level directory for this meteor install or checkout
 export function getCurrentToolsDir() {
+  const runningToolsDir = pathDirname(pathDirname(convertToStandardPath(__dirname)));
+
   if (!process.env.SANDBOX && process.env.METEOR_WAREHOUSE_DIR) {
+    // A tool that lives in the warehouse (the default one, or a release it
+    // springboarded to) is the current tool. Following the warehouse's `meteor`
+    // symlink here would make a springboarded release think it is still the
+    // default one, and springboard again forever. A checkout run against a
+    // warehouse (#13199) still uses the warehouse's tool.
+    const warehouseDir = convertToStandardPath(realpathSync(process.env.METEOR_WAREHOUSE_DIR));
+    if (runningToolsDir.startsWith(`${warehouseDir}/`)) {
+      return runningToolsDir;
+    }
     return pathDirname(realpathSync(pathJoin(process.env.METEOR_WAREHOUSE_DIR, 'meteor')));
   }
 
-  return pathDirname(pathDirname(convertToStandardPath(__dirname)));
+  return runningToolsDir;
 }
 
 // Read a settings file and sanity-check it. Returns a string on
