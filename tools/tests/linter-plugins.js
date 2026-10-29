@@ -139,6 +139,121 @@ selftest.define('linter plugins - linting package with `meteor lint`', async () 
   await run.expectExit(1);
 });
 
+async function checkMainModulesLint(check) {
+  const s = new Sandbox({ fakeMongo: true });
+  await s.init();
+  await s.createApp('myapp', 'linting-app');
+  s.cd('myapp');
+  s.set('MAIN_MODULES_LINTER_CHECK', check);
+
+  s.write('.meteor/packages', [
+    'meteor-base',
+    'ecmascript',
+    'blaze-html-templates',
+    'main-modules-package',
+    'main-modules-linter',
+    '',
+  ].join('\n'));
+  s.mkdir('packages/main-modules-package');
+  s.mkdir('packages/main-modules-package/src');
+  s.mkdir('packages/main-modules-package/src/nested');
+  s.write('packages/main-modules-package/package.js', [
+    'Package.describe({',
+    '  name: "main-modules-package",',
+    '  version: "0.0.1",',
+    '});',
+    '',
+    'Package.onUse(function (api) {',
+    '  api.use(["ecmascript", "main-modules-linter"]);',
+    '  api.mainModules("src/**/*.js");',
+    '});',
+    '',
+  ].join('\n'));
+  s.write(
+    'packages/main-modules-package/src/alpha.js',
+    'export const alpha = "alpha";\n'
+  );
+  s.write(
+    'packages/main-modules-package/src/beta.js',
+    'export const beta = "beta";\n'
+  );
+  s.write(
+    'packages/main-modules-package/src/nested/gamma.js',
+    'export const gamma = "gamma";\n'
+  );
+
+  s.mkdir('packages/main-modules-linter');
+  s.write('packages/main-modules-linter/package.js', [
+    'Package.describe({',
+    '  name: "main-modules-linter",',
+    '  version: "0.0.1",',
+    '});',
+    '',
+    'Package.registerBuildPlugin({',
+    '  name: "lintMainModules",',
+    '  sources: ["plugin.js"],',
+    '});',
+    '',
+    'Package.onUse(function (api) {',
+    '  api.use("isobuild:linter-plugin");',
+    '});',
+    '',
+  ].join('\n'));
+  s.write('packages/main-modules-linter/plugin.js', [
+    'Plugin.registerLinter({ extensions: ["js"] }, function () {',
+    '  return {',
+    '    processFilesForPackage: function (files) {',
+    '      if (files[0].getPackageName() !== "main-modules-package") {',
+    '        return;',
+    '      }',
+    '',
+    '      var syntheticFiles = files.filter(function (file) {',
+    '        return file.getPathInPackage() === "__meteor_main_modules__.js";',
+    '      });',
+    '',
+    '      if (process.env.MAIN_MODULES_LINTER_CHECK === "count") {',
+    '        if (syntheticFiles.length !== 1) {',
+    '          files[0].error({',
+    '            message: "Expected one synthetic main module, got " +',
+    '              syntheticFiles.length,',
+    '          });',
+    '        }',
+    '        return;',
+    '      }',
+    '',
+    '      if (process.env.MAIN_MODULES_LINTER_CHECK === "contents") {',
+    '        var expected = [',
+    '          \'export * from "./src/alpha.js";\',',
+    '          \'export * from "./src/beta.js";\',',
+    '          \'export * from "./src/nested/gamma.js";\',',
+    '          "",',
+    '        ].join("\\n");',
+    '',
+    '        if (syntheticFiles[0].getContentsAsString() !== expected) {',
+    '          syntheticFiles[0].error({',
+    '            message: "Synthetic main module has unexpected contents",',
+    '          });',
+    '        }',
+    '      }',
+    '    },',
+    '  };',
+    '});',
+    '',
+  ].join('\n'));
+
+  const run = s.run('lint');
+  run.waitSecs(60);
+  await run.expectExit(0);
+}
+
+selftest.define('linter plugins - synthetic main module contents', async () => {
+  await checkMainModulesLint('contents');
+});
+
+selftest.define('linter plugins - one synthetic main module', async () => {
+  await checkMainModulesLint('count');
+});
+
 selftest.define('linter plugins - running with --no-lint', async () => {
   const s = new Sandbox({ fakeMongo: true });
   await s.init();

@@ -64,7 +64,7 @@ Npm.devDepends({
 });
 ```
 
-`api.mainModule` is documented in the [modules](../packages/modules.md#modular-application-structure) section.
+`api.mainModule` and `api.mainModules` are documented in the [modules](../packages/modules.md#modular-application-structure) section.
 
 Build plugins are created with
 [`Package.registerBuildPlugin`](#PackageNamespace-registerBuildPlugin). See the
