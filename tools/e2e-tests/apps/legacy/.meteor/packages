@@ -1,0 +1,7 @@
+meteor-base
+ecmascript
+typescript
+static-html
+standard-minifier-css
+standard-minifier-js
+rspack

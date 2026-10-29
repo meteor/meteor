@@ -442,6 +442,59 @@ selftest.define("run and SIGKILL parent process", ["yet-unsolved-windows-failure
   await run.stop();
 });
 
+// Regression test for #13490. An app can override Node's default SIGTERM
+// behavior, but the development runner must still stop it during a restart.
+selftest.define("run restart kills app ignoring SIGTERM", ["yet-unsolved-windows-failure"], async function () {
+  var s = new Sandbox({ fakeMongo: true });
+  await s.init();
+
+  await s.createApp("myapp", "app-prints-pid");
+  s.cd("myapp");
+
+  const appSource = `
+    Meteor.startup(function () {
+      console.log("My pid is " + process.pid);
+      process.on("SIGTERM", function () {
+        console.log("Ignoring SIGTERM in " + process.pid);
+      });
+    });
+  `;
+  s.write("print.js", appSource);
+
+  const run = s.run();
+  await run.tellMongo(MONGO_LISTENING);
+  run.waitSecs(30);
+
+  const firstMatch = await run.match(/My pid is (\d+)/);
+  const firstPid = Number(firstMatch[1]);
+  await run.match("App running at");
+
+  s.write("print.js", appSource + "\n// trigger restart\n");
+  await run.match("Server modified -- restarting");
+  await run.match("Ignoring SIGTERM in " + firstPid);
+
+  const secondMatch = await run.match(/My pid is (\d+)/);
+  const secondPid = Number(secondMatch[1]);
+  selftest.expectTrue(secondPid !== firstPid);
+  await run.match("Meteor server restarted");
+
+  const deadline = Date.now() + 5000;
+  while (Date.now() < deadline) {
+    try {
+      process.kill(firstPid, 0);
+    } catch (error) {
+      if (error.code === "ESRCH") {
+        await run.stop();
+        return;
+      }
+      throw error;
+    }
+    await utils.sleepMs(100);
+  }
+
+  selftest.fail("Old app process " + firstPid + " is still running");
+});
+
 selftest.define("'meteor run --port' accepts/rejects proper values", async function () {
   var s = new Sandbox();
   await s.init();

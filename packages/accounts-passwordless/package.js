@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'No-password login/sign-up support for accounts',
-  version: '3.1.1',
+  version: '3.1.2-rc360.1',
 });
 
 Package.onUse(api => {
@@ -19,11 +19,29 @@ Package.onUse(api => {
   api.addFiles('passwordless_server.js', 'server');
   api.addFiles('passwordless_client.js', 'client');
   api.addFiles('server_utils.js', 'server');
+
+  api.types('accounts-passwordless.d.ts');
 });
 
 Package.onTest(function (api) {
-  api.use(['accounts-base', 'ecmascript', 'tinytest', 'sha']);
+  api.use([
+    'accounts-passwordless',
+    'accounts-base',
+    'ddp',
+    'ddp-rate-limiter',
+    'check',
+    'random',
+    'mongo',
+    'ecmascript',
+    'tinytest',
+    'test-helpers',
+    'sha',
+  ]);
 
+  api.use('accounts-2fa', 'server');
+  api.addFiles('passwordless_user_token_tests.js', 'server');
+  api.addFiles('passwordless_login_race_tests.js', 'server');
+  api.addFiles('compatibility_runtime_tests.js', 'server');
   api.addFiles('server_utils.js', 'server');
   api.mainModule('server_tests.js', 'server');
 });

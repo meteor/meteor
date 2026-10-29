@@ -9,6 +9,324 @@ This is a complete history of changes for Meteor releases.
 [//]: # (If you want to change something in this file)
 
 [//]: # (go to meteor/v3-docs/docs/generators/changelog/versions)
+## v3.6.0, 2026-10-28
+
+### Highlights
+
+- **Native TypeScript types for Meteor packages.** Use `meteor types` to generate definitions for editor autocomplete and TypeScript checking. Package authors can ship their own definitions with `api.types()`. New TypeScript, TypeScript + Tailwind, Angular, and Svelte apps use native package declarations by default. Adoption remains optional for existing apps, which can keep `@types/meteor` or `zodern:types`. See the [setup guide](/cli/using-core-types), [PR#14699](https://github.com/meteor/meteor/pull/14699), [PR#14762](https://github.com/meteor/meteor/pull/14762), [PR#14853](https://github.com/meteor/meteor/pull/14853).
+
+- **Build apps with Rspack 2**, [PR#14360](https://github.com/meteor/meteor/pull/14360).
+  - ⚡ Apps using the `rspack` package now require Rspack 2.2.7 or newer. When automatic dependency installation is enabled, Meteor installs the required build dependencies for you.
+  - 📦 Update Meteor’s Rspack integration (`@meteorjs/rspack`) to `3.0.0-rc.2` for compatibility with Rspack 2, including a fix for build errors in TypeScript projects that re-export types.
+  - ⚛️ New React apps start with React 19.2. The Rspack integration supports React Compiler and keeps React Refresh working with Rspack 2 so component edits can appear without a full page reload.
+  - 🔁 Existing Rspack 1 apps can upgrade through Meteor’s automatic dependency installation, including apps whose older npm lockfiles would otherwise block the upgrade.
+  - 🧪 Hot module replacement (HMR) updates code during development without a full page reload. Its runtime is now included only when needed for `meteor run`, keeping it out of production builds and native app bundles.
+
+  These changes address the Rspack 2 compatibility and upgrade behavior reported in [#14368](https://github.com/meteor/meteor/issues/14368), [#14652](https://github.com/meteor/meteor/issues/14652), [#14310](https://github.com/meteor/meteor/issues/14310).
+
+- **Node.js 26:** Meteor apps and build tools now run on Node.js 26.12.1 with npm 11.20.0, [PR#14412](https://github.com/meteor/meteor/pull/14412), [PR#14786](https://github.com/meteor/meteor/pull/14786), [PR#14862](https://github.com/meteor/meteor/pull/14862).
+- **MongoDB 8:** local development now uses MongoDB 8.0.29 with official MongoDB binaries. Review the platform requirements and data migration steps below before updating, [PR#14663](https://github.com/meteor/meteor/pull/14663).
+
+#### Features
+
+- **Create pnpm workspaces and share local packages**, [PR#14421](https://github.com/meteor/meteor/pull/14421).
+  - 📁 Run `meteor create --pnpm my-workspace` to create a Meteor + Rspack app alongside reusable client, server, and shared packages in one repository.
+  - 🔍 Meteor detects whether your app uses npm, Yarn, or pnpm when installing Rspack dependencies. If you install dependencies manually, it shows commands for your package manager.
+  - 🔗 Apps can use locally linked and workspace packages without Rspack’s dependency checks incorrectly rejecting their version declarations.
+
+  This addresses the long-standing report [#10903](https://github.com/meteor/meteor/issues/10903).
+- **Create an installable web app** with `meteor create --pwa`. The Blaze template includes app icons, installation support, and a fallback page for when the user is offline, [PR#14473](https://github.com/meteor/meteor/pull/14473).
+- **Choose packages interactively in the terminal.** Run `meteor add` or `meteor remove` without arguments to select packages and confirm your choices. Use `meteor add --search <query>` to start with a search, [PR#14408](https://github.com/meteor/meteor/pull/14408).
+- **Start projects and add packages directly from Git repositories.** Use `meteor create <url>` for a project or `meteor add <url|user/repo>` for a package. You can also select a branch or a subdirectory of the repository, [PR#14409](https://github.com/meteor/meteor/pull/14409).
+- **Observe server activity with the new `instrumentation` package.** Subscribe to events from Meteor methods, publications, and client connections to build monitoring integrations. Capturing argument and result previews is optional, [PR#14483](https://github.com/meteor/meteor/pull/14483).
+- **Enable terminal autocompletion** for Meteor commands with `meteor shell-completion`. Bash and Zsh are supported, [PR#14551](https://github.com/meteor/meteor/pull/14551).
+- **Use separate app code and Rspack settings for modern browsers, older browsers, and Cordova.** Meteor builds each configured entry point independently, including `meteor.mainModule.legacy` for older browsers. You can also disable an entry point your app does not need, [PR#14800](https://github.com/meteor/meteor/pull/14800).
+
+#### Improvements
+
+- Update the SWC compiler to 1.16.2 across Meteor’s JavaScript build tools and Rspack, [PR#14792](https://github.com/meteor/meteor/pull/14792).
+- Make Rspack development-server connection errors easier to diagnose, with useful error details and a summary of repeated failures, [PR#14348](https://github.com/meteor/meteor/pull/14348).
+- Prepare package dependencies in parallel during `meteor --get-ready`, with individual retries if a batch fails, [PR#14683](https://github.com/meteor/meteor/pull/14683).
+- Avoid reinstalling unchanged Git dependencies declared by Meteor packages. The first build after upgrading still refreshes each package’s npm dependencies and rewrites its shrinkwrap file for the new format, [PR#14681](https://github.com/meteor/meteor/pull/14681).
+- Strengthen HttpOnly login-cookie protection with origin and token checks, stricter cookie settings, and request limits. Apps using this feature should review the migration steps below, [PR#14726](https://github.com/meteor/meteor/pull/14726).
+- Validate passwordless login requests before looking up or creating accounts, and apply the default Accounts request limit, [PR#14725](https://github.com/meteor/meteor/pull/14725).
+
+#### Fixes
+
+- Prevent crafted proxy headers from crashing or stalling production apps using `force-ssl`, while preserving HTTPS and local-connection detection. [Parser fix](https://github.com/meteor/meteor/commit/04dcaf87ba698e0b25777e09e7dd7a4c1c46f521)
+- Update `webapp` compression to 1.8.2 and OAuth body parsing to 1.20.9. HTTP responses can now use Brotli when clients advertise `br`; gzip-only clients retain gzip. [Dependency updates](https://github.com/meteor/meteor/commit/8f31606745d372e4e10098b56a6f4a5c00c42706)
+- Keep generated Rspack development and production HTML out of test builds, preventing stale chunk references and browser errors after switching modes.
+- Honor release-required package wrap versions when resolving indirect dependencies.
+- Avoid restarting the Rspack development server when a rebuild leaves its emitted server code unchanged, [PR#14850](https://github.com/meteor/meteor/pull/14850).
+- Keep Change Streams observers current after oversized events by reassembling split events and recovering from non-resumable failures before releasing pending writes, [PR#14787](https://github.com/meteor/meteor/pull/14787).
+- Preserve `EJSON.equals` object comparisons in minified legacy production bundles, preventing repeated subscription restarts, [PR#14792](https://github.com/meteor/meteor/pull/14792), [#14847](https://github.com/meteor/meteor/issues/14847).
+- Let applications augment `Meteor.UserServices`, and align native OAuth and provider declarations with their runtime behavior, [PR#14813](https://github.com/meteor/meteor/pull/14813), [PR#14830](https://github.com/meteor/meteor/pull/14830).
+- Install required build-time dependencies even when `NODE_ENV=production`, and restore client refreshes after delayed legacy builds extend their watched files, [commit e7dcf5dfd5](https://github.com/meteor/meteor/commit/e7dcf5dfd57fa372d7c4330783ebde508d525322).
+- Validate native Google and Facebook sign-in tokens against the configured application before accepting the external identity, [commit 6052d7f1ac](https://github.com/meteor/meteor/commit/6052d7f1ac7797ca948897de7dc3911152b46411).
+- Bound and validate dynamic-import requests while batching valid client requests, reject invalid DDP message handlers safely, and retain field names that overlap inherited object properties during allow/deny validation, [commit 6052d7f1ac](https://github.com/meteor/meteor/commit/6052d7f1ac7797ca948897de7dc3911152b46411).
+- Protect shell-history storage and reject untrusted deployment-discovery destinations before sending Meteor credentials, [commit 6052d7f1ac](https://github.com/meteor/meteor/commit/6052d7f1ac7797ca948897de7dc3911152b46411).
+- Preserve own `__proto__` fields when computing and applying document changes without changing object prototypes in `diff-sequence`.
+- Require two-factor authentication for passwordless user-level tokens when enabled, and prevent concurrent login attempts from consuming the same passwordless token more than once.
+- Consume email-verification tokens only while the token and its email address still match, and reject stale verification attempts.
+- Reject unregistered DDP method and publication names inherited from object prototypes while preserving explicitly registered handlers.
+- Preserve own `__proto__` fields during EJSON cloning and conversion without changing object prototypes.
+- Restrict Minimongo modifier traversal and optimized `_id` lookups to own properties, and preserve prototype-named fields as data.
+- Preserve prototype-named fields when applying Mongo collection replication changes without reading inherited document values.
+- Keep `Meteor.users` and account indexes in sync when `Accounts.config({ collection })` selects a custom users collection, including a different collection instance with the same name, [PR#14272](https://github.com/meteor/meteor/pull/14272).
+- Resume valid HttpOnly-cookie sessions after temporary network errors, rate limits or server errors, while cancelling stale retries after logout or another successful login, [PR#14777](https://github.com/meteor/meteor/pull/14777).
+- Wait for a Rspack server bundle's top-level `await` before running `Meteor.startup` hooks in development, [PR#14807](https://github.com/meteor/meteor/pull/14807).
+- Preserve native async functions and private fields in Rspack server builds, preventing runtime errors caused by unnecessary downlevel transforms, [PR#14466](https://github.com/meteor/meteor/pull/14466).
+- Keep Rspack hot-reload builds running when generated entry files are briefly missing during a rebuild, [PR#14493](https://github.com/meteor/meteor/pull/14493).
+- Prevent build crashes during native npm dependency rebuilds after an upgrade or when moving an app between environments, [PR#14679](https://github.com/meteor/meteor/pull/14679).
+- Preserve original source locations in Rspack legacy builds, serve hot-update source maps correctly, and refresh Meteor compiler caches when input maps change, [PR#14776](https://github.com/meteor/meteor/pull/14776).
+- Prevent Babel startup and build failures when source-map lookup occurs while compiler plugins are still loading, [PR#14822](https://github.com/meteor/meteor/pull/14822).
+- Avoid memory growth when serving Rspack static assets, and return `404` for missing asset files, [commit 1ed24e64f5](https://github.com/meteor/meteor/commit/1ed24e64f55e28010e19469326bf9967f0ac2b00).
+- Keep dynamically imported code loading when the browser closes its local cache connection, [PR#14780](https://github.com/meteor/meteor/pull/14780), [#14761](https://github.com/meteor/meteor/issues/14761).
+- Keep the exact npm dependency versions recorded in a Meteor package’s shrinkwrap file when rebuilding without cached dependencies, [PR#14418](https://github.com/meteor/meteor/pull/14418), [#14415](https://github.com/meteor/meteor/issues/14415).
+- Fix Windows updates that fail while rebuilding the `argon2` password-hashing dependency, [PR#14706](https://github.com/meteor/meteor/pull/14706), [#13663](https://github.com/meteor/meteor/issues/13663).
+- Restore browser-based package tests by including their required jQuery dependency, [PR#14736](https://github.com/meteor/meteor/pull/14736), [#14735](https://github.com/meteor/meteor/issues/14735).
+- Handle SWC cache writes gracefully when a temporary app directory has already been removed, [PR#14360](https://github.com/meteor/meteor/pull/14360).
+- Stop `meteor run --inspect` from repeatedly printing the full Rspack configuration unless verbose logging is enabled, [PR#14732](https://github.com/meteor/meteor/pull/14732), [#14731](https://github.com/meteor/meteor/issues/14731).
+- Fix repeated reconnects when clients negotiate a DDP protocol version over the uWebSockets transport, [PR#14747](https://github.com/meteor/meteor/pull/14747), [#14746](https://github.com/meteor/meteor/issues/14746).
+- Fix Rspack startup when `--port` includes a hostname or URL, such as `localhost:3060` or `http://localhost:3060/`, [PR#14743](https://github.com/meteor/meteor/pull/14743), [#14741](https://github.com/meteor/meteor/issues/14741).
+- Prevent `Server sent add for existing id` errors when resubscribing with `NO_MERGE_NO_HISTORY` while a client update is pending, and preserve the client’s temporary changes, [PR#14768](https://github.com/meteor/meteor/pull/14768).
+- Stop TypeScript apps using Rspack from entering a development-server restart loop, and keep the last working server entry when compilation fails, [PR#14769](https://github.com/meteor/meteor/pull/14769).
+- Respect `.meteorignore` exceptions and `METEOR_IGNORE` when selecting Rspack tests, and prevent automatic exclusions from hiding generated test entry points, [PR#14800](https://github.com/meteor/meteor/pull/14800), [PR#14799](https://github.com/meteor/meteor/pull/14799).
+- Fix Rspack test discovery on Windows so dependencies and generated folders are correctly excluded, [PR#14758](https://github.com/meteor/meteor/pull/14758).
+- Prevent crashes and hangs in `meteor run` during rapid rebuilds, [PR#14775](https://github.com/meteor/meteor/pull/14775).
+- Keep commands from linked workspace packages working when a deployment bundle is moved to another location, [PR#14765](https://github.com/meteor/meteor/pull/14765).
+- Keep subscriptions working when repeated document messages omit the `fields` property, [PR#14766](https://github.com/meteor/meteor/pull/14766).
+- Fix generated TypeScript definition paths and correct types for DDP, subscriptions, and Minimongo, [PR#14779](https://github.com/meteor/meteor/pull/14779), [PR#14782](https://github.com/meteor/meteor/pull/14782).
+- Allow stylesheet side-effect imports such as `import './App.css'` in apps created from the TypeScript template on TypeScript 6+ (`TS2882`); existing apps can set `noUncheckedSideEffectImports` to `false`, [PR#14877](https://github.com/meteor/meteor/pull/14877), [#14833](https://github.com/meteor/meteor/issues/14833).
+- Handle errors from instrumentation reporting callbacks and limit the data included in error previews, [PR#14778](https://github.com/meteor/meteor/pull/14778).
+- Use the platform’s built-in `fetch` in modern Cordova apps, [PR#14781](https://github.com/meteor/meteor/pull/14781).
+- Keep reactive queries using `$where` or `$near` working by falling back from Change Streams to another configured database observer, [PR#14733](https://github.com/meteor/meteor/pull/14733).
+- Fix OAuth login flows that open additional popups or return credentials across origins, [PR#14666](https://github.com/meteor/meteor/pull/14666).
+- Pass the resolved user to login-failure hooks, and correctly accept allowed email domains across external login services, [PR#14620](https://github.com/meteor/meteor/pull/14620), [PR#14185](https://github.com/meteor/meteor/pull/14185).
+- Fix Rspack development scripts in apps served under a URL prefix, and restore the full app template’s 404 page, [PR#14719](https://github.com/meteor/meteor/pull/14719), [PR#14720](https://github.com/meteor/meteor/pull/14720).
+- Fix Bash and Zsh completion installation and support package names containing colons, [PR#14772](https://github.com/meteor/meteor/pull/14772).
+- Re-send outstanding DDP methods after reconnecting on browsers without `Promise.allSettled`, and stop `Accounts.config` from throwing on browsers without `Object.hasOwn`, [PR#14879](https://github.com/meteor/meteor/pull/14879), [#14869](https://github.com/meteor/meteor/issues/14869).
+
+See [all merged PRs for Meteor 3.6](https://github.com/meteor/meteor/pulls?q=is%3Apr+is%3Amerged+base%3Arelease-3.6)
+
+#### Breaking Changes
+
+- **Native Google and Facebook sign-in tokens must belong to your application.** For Google Sign-In SDKs, send an ID token for an accepted client or list your own native OAuth client IDs in the Google service configuration's `additionalClientIds`. Facebook native tokens must be valid for the configured Facebook app. Web OAuth configuration is unchanged.
+- **Automatic deployment discovery accepts only trusted Galaxy HTTPS destinations.** Deployments to a deliberately configured custom server must use an explicit `DEPLOY_HOSTNAME`; review that destination before setting it.
+- **Custom users collections receive the default Accounts permissions and indexes.** After `Accounts.config({ collection })`, the selected collection receives account indexes and, where client mutation methods are enabled, the default rule allowing users to update their own `profile`. Review custom allow/deny policies and configure the collection before clients connect, [PR#14272](https://github.com/meteor/meteor/pull/14272).
+- **Existing local databases need preparation.** Before opening MongoDB 7 data with the bundled MongoDB 8, set its feature compatibility version (FCV) to `7.0` while still running MongoDB 7. External databases configured through `MONGO_URL` are upgraded separately.
+- **Linux requirements have changed for the local database.** The bundled MongoDB needs glibc 2.34+ on x86_64 or 2.35+ on ARM64, plus `libcurl.so.4`, `libssl.so.3`, and `libcrypto.so.3`, [PR#14663](https://github.com/meteor/meteor/pull/14663).
+- **The local database requires Windows 11 or Windows Server 2022 (x64).** Windows 10, Windows Server 2019, and earlier versions are no longer supported by the bundled MongoDB. See [MongoDB’s platform requirements](https://www.mongodb.com/docs/v8.0/tutorial/install-mongodb-on-windows/#platform-support), [PR#14663](https://github.com/meteor/meteor/pull/14663).
+- **Meteor now uses Node.js 26.12.1 and npm 11.20.0.** Check your app and native npm dependencies against the new runtime before deploying.
+- **Apps using `rspack` now need Rspack 2.** Required versions are `@rspack/core` and `@rspack/cli` 2.2.7+, `@rspack/dev-server` 2.2.1+, and `@meteorjs/rspack` 3.0.0-rc.2. Meteor installs them automatically when that setting is enabled. Review custom configurations against the [Rspack 1.x migration guide](https://rspack.rs/guide/migration/rspack_1.x).
+- **The npm Rspack integration has new dependencies.** `@meteorjs/rspack@3.0.0-rc.2` uses `rspack-merge` instead of `webpack-merge` and declares Rspack 2.2.0 peer dependencies. Meteor’s required versions are listed above.
+- **HttpOnly login cookies have stricter requirements.** Enable `useHttpOnlyCookies` on the server. Cookie requests must come from the app’s origin, and `/set` requires JSON with a valid, unexpired login token. `SameSite=Strict` means the cookie is not sent on an initial navigation from another site.
+- **Custom passwordless login calls are validated more strictly.** Calls to `requestLoginTokenForUser` may contain only `selector`, `userData`, and `options` at the top level. The selector must contain exactly one non-empty `id`, `username`, or `email`. Handle validation errors and `too-many-requests` responses.
+- **Custom passwordless user-token flows now enforce 2FA and single use.** Tokens supplied through `Accounts.onCreateLoginToken` require a valid 2FA code when enabled and cannot be reused after consumption.
+
+#### Internal API changes
+
+- `Accounts.onUsersCollectionChanged(callback)` lets account packages refresh their setup when the users collection is replaced. The callback receives the selected collection, [PR#14272](https://github.com/meteor/meteor/pull/14272).
+- Build-plugin output hashes now include an explicitly supplied `hash`, allowing compilers to invalidate cached output when auxiliary inputs such as source maps change, [PR#14776](https://github.com/meteor/meteor/pull/14776).
+- `tools-core` adds helpers for installing dependencies with the app’s package manager: `getDependencyInstallContext`, `formatInstallCommands`, `renderManualInstallInstructions`, and pnpm/Yarn command helpers, [PR#14421](https://github.com/meteor/meteor/pull/14421).
+- `rspack` adds version constants for its dev server and SWC dependencies: `DEFAULT_RSPACK_DEV_SERVER_VERSION` and `DEFAULT_METEOR_RSPACK_SWC_CORE_VERSION`, [PR#14360](https://github.com/meteor/meteor/pull/14360).
+- Package authors can register TypeScript definitions and submodules with `api.types()`. Meteor preserves these definitions when building and publishing packages, [PR#14699](https://github.com/meteor/meteor/pull/14699).
+- The Meteor tool exposes its top-level command list for shell completion, [PR#14551](https://github.com/meteor/meteor/pull/14551).
+- DDP transport adapters must send queued messages before `close()` finishes. The uWebSockets adapter now uses `end()` for this, [PR#14747](https://github.com/meteor/meteor/pull/14747).
+- `tools-core` adds `parseMeteorAppPort()`. Its existing `getMeteorAppPort()` helper now returns only the port digits, without the host or URL prefix, [PR#14743](https://github.com/meteor/meteor/pull/14743).
+
+#### Migration Steps
+
+**Before updating, prepare your local database:** back up existing data and set MongoDB 7's FCV to `7.0` while still running MongoDB 7. Follow the [MongoDB upgrade prerequisites](https://www.mongodb.com/docs/v8.0/release-notes/8.0-upgrade-replica-set/#prerequisites). External databases configured through `MONGO_URL` are not upgraded by Meteor. Check the [installation requirements](/about/install#prereqs-os) as well. Then update:
+
+```bash
+meteor update --release 3.6-rc.1
+```
+
+Update the Meteor release to receive the complete security fixes. A package-only update on an older release does not include the new EJSON minor version and its companion Mongo and Minimongo fixes.
+
+**Check the parts your app uses:**
+
+- **Native Google/Facebook sign-in:** verify that SDK tokens belong to the configured app. For Google, configure the SDK to send an ID token for your web client, or add your own Android/iOS client IDs to `additionalClientIds` in the Google service configuration. See the [package migration guidance](https://github.com/meteor/meteor/blob/e7dcf5dfd57fa372d7c4330783ebde508d525322/packages/google-oauth/README.md#signing-in-with-a-native-google-token).
+- **Custom deployment endpoints:** explicitly configure `DEPLOY_HOSTNAME` only for a deployment server you trust.
+- **Custom users collections:** set `Accounts.config({ collection })` early, before clients connect. Review the default `profile` update rule and confirm the account indexes were created; index-creation errors are logged.
+- **Native npm dependencies:** rebuild and test them with Node.js 26 before deploying.
+- **Rspack:** run `meteor run` to install the required versions listed above. If automatic installation is disabled, use the install command Meteor prints. Review custom `rspack.config.js` settings against the [migration guide](https://rspack.rs/guide/migration/rspack_1.x).
+- **HttpOnly login cookies:** enable `useHttpOnlyCookies` on the server. Custom cookie requests must use the app’s origin, send JSON and a valid token to `/set`, and handle rate limits. Test sign-in flows reached through links from other sites because the cookie now uses `SameSite=Strict`.
+- **Custom passwordless login calls:** use the payload described above and handle `400` validation errors and `too-many-requests` responses.
+- **Custom passwordless user-token flows:** use `Meteor.passwordlessLoginWithTokenAnd2faCode` for accounts with 2FA enabled, and request a new login token after the previous token has been consumed. User-level tokens do not verify an email address.
+- **Native TypeScript types (optional):** follow the [setup guide](/cli/using-core-types) to switch providers, run `meteor types`, and configure your project. You can keep your current type provider during this upgrade.
+- **Package shrinkwrap files:** the first build refreshes each Meteor package’s npm dependencies once. If your app tracks `packages/*/.npm/package/npm-shrinkwrap.json`, commit the rewritten files.
+
+#### Bumped Meteor Packages
+
+- accounts-2fa@3.1.1-rc360.1
+- accounts-base@3.4.0-rc360.1
+- accounts-facebook@1.3.5-rc360.1
+- accounts-github@1.5.2-rc360.1
+- accounts-google@1.4.2-rc360.1
+- accounts-meetup@1.5.2-rc360.1
+- accounts-meteor-developer@1.5.2-rc360.1
+- accounts-oauth@1.4.8-rc360.1
+- accounts-password@3.3.2-rc360.1
+- accounts-passwordless@3.1.2-rc360.1
+- accounts-twitter@1.5.3-rc360.1
+- accounts-weibo@1.4.2-rc360.1
+- allow-deny@2.1.2-rc360.1
+- autoupdate@2.0.2-rc360.1
+- babel-compiler@7.15.2-rc360.1
+- base64@1.0.15-rc360.1
+- binary-heap@1.0.14-rc360.1
+- boilerplate-generator@2.2.0-rc360.1
+- browser-policy-common@1.0.14-rc360.1
+- callback-hook@1.8.1-rc360.1
+- check@1.5.1-rc360.1
+- ddp@1.4.3-rc360.1
+- ddp-client@3.4.2-rc360.1
+- ddp-common@1.4.6-rc360.1
+- ddp-rate-limiter@1.3.1-rc360.1
+- ddp-server@3.6.0-rc360.1
+- diff-sequence@1.2.1-rc360.1
+- dynamic-import@0.8.1-rc360.1
+- ecmascript@0.19.2-rc360.1
+- ejson@1.4.1-rc360.1
+- email@3.2.1-rc360.1
+- facebook-oauth@1.12.1-rc360.1
+- facts-base@1.0.3-rc360.1
+- facts-ui@1.0.3-rc360.1
+- fetch@0.2.1-rc360.1
+- force-ssl-common@1.1.2-rc360.1
+- geojson-utils@1.0.13-rc360.1
+- github-oauth@1.4.3-rc360.1
+- google-oauth@1.5.1-rc360.1
+- hot-module-replacement@0.6.1-rc360.1
+- id-map@1.2.1-rc360.1
+- instrumentation@0.0.1-rc360.1
+- inter-process-messaging@0.1.4-rc360.1
+- logging@1.3.7-rc360.1
+- meetup-oauth@1.1.4-rc360.1
+- meteor@2.3.2-rc360.1
+- meteor-developer-oauth@1.3.4-rc360.1
+- meteor-tool@3.6.0-rc.1
+- minifier-js@3.3.2-rc360.1
+- minimongo@2.2.1-rc360.1
+- modern-browsers@0.2.4-rc360.1
+- mongo@2.6.0-rc360.1
+- mongo-id@1.0.10-rc360.1
+- npm-mongo@6.18.1-rc360.1
+- oauth@3.0.5-rc360.1
+- oauth-encryption@1.3.4-rc360.1
+- oauth1@1.5.4-rc360.1
+- ordered-dict@1.2.1-rc360.1
+- promise@1.0.1-rc360.1
+- random@1.2.3-rc360.1
+- rate-limit@1.2.1-rc360.1
+- reactive-dict@1.3.3-rc360.1
+- reload@1.3.3-rc360.1
+- retry@1.1.2-rc360.1
+- roles@1.1.1-rc360.1
+- routepolicy@1.1.3-rc360.1
+- rspack@1.4.0-rc360.1
+- server-render@0.4.5-rc360.1
+- service-configuration@1.3.6-rc360.1
+- session@1.2.4-rc360.1
+- sha@1.0.11-rc360.1
+- shell-server@0.7.2-rc360.1
+- socket-stream-client@0.7.2-rc360.1
+- standard-minifier-js@3.3.0-rc360.1
+- test-in-browser@1.6.2-rc360.1
+- test-in-console@2.2.0-rc360.1
+- tools-core@1.4.0-rc360.1
+- tracker@1.3.5-rc360.1
+- twitter-oauth@1.3.5-rc360.1
+- typescript@5.11.2-rc360.1
+- url@1.3.7-rc360.1
+- webapp@2.4.0-rc360.1
+- webapp-hashing@1.1.3-rc360.1
+- weibo-oauth@1.3.4-rc360.1
+
+#### Bumped NPM Packages
+
+- compression@1.8.2
+- body-parser@1.20.9
+- @meteorjs/babel@7.20.2-rc.1
+- @meteorjs/rspack@3.0.0-rc.2
+- @meteorjs/swc-core@1.16.2
+
+#### Special thanks to
+
+✨✨✨
+
+PR authors and source contributors:
+
+- [@hexsprite](https://github.com/hexsprite)
+- [@nachocodoner](https://github.com/nachocodoner)
+- [@dupontbertrand](https://github.com/dupontbertrand)
+- [@italojs](https://github.com/italojs)
+- [@mvogttech](https://github.com/mvogttech)
+- [@sanki92](https://github.com/sanki92)
+- [@Grubba27](https://github.com/Grubba27), and for implementing the proxy-header fix and dependency updates.
+- [@StorytellerCZ](https://github.com/StorytellerCZ)
+- [@perbergland](https://github.com/perbergland)
+- [@cyphercodes](https://github.com/cyphercodes)
+- [@YadavAkhileshh](https://github.com/YadavAkhileshh)
+- [@zodern](https://github.com/zodern)
+- [@julio-rocketchat](https://github.com/julio-rocketchat)
+- [@boomfly](https://github.com/boomfly)
+- [@Julusian](https://github.com/Julusian)
+- [@kobihikri](https://github.com/kobihikri)
+
+Reviewers and design contributors:
+
+- [@radekmie](https://github.com/radekmie)
+- [@ebroder](https://github.com/ebroder)
+
+Issue reporters and reproduction contributors:
+
+- [@alobaidizt](https://github.com/alobaidizt)
+- [@ddaydd](https://github.com/ddaydd)
+- [@Friction-less-development](https://github.com/Friction-less-development)
+- [@miamagana](https://github.com/miamagana)
+- [@yalshazly](https://github.com/yalshazly)
+- [@a4xrbj1](https://github.com/a4xrbj1)
+- [@jfurneaux](https://github.com/jfurneaux)
+- [@xet7](https://github.com/xet7)
+- [@evolross](https://github.com/evolross)
+- [@arggh](https://github.com/arggh)
+- [@juanpmd](https://github.com/juanpmd)
+- [@nitesh32](https://github.com/nitesh32)
+- [@Jsakdev](https://github.com/Jsakdev)
+- [@ignl](https://github.com/ignl)
+- [@vparpoil](https://github.com/vparpoil)
+- [@thaDude](https://github.com/thaDude)
+- [@uNetworkingAB](https://github.com/uNetworkingAB)
+- [@anahar1](https://github.com/anahar1)
+- [@WilliamKelley](https://github.com/WilliamKelley)
+- [@rj-david](https://github.com/rj-david)
+- [@ToyboxZach](https://github.com/ToyboxZach)
+- [@harryadel](https://github.com/harryadel)
+- [@timvansteenis](https://github.com/timvansteenis)
+- [@apendua](https://github.com/apendua)
+- [@henriquealbert](https://github.com/henriquealbert)
+- [@sherryysj](https://github.com/sherryysj)
+- [@vlasky](https://github.com/vlasky)
+- [@paulincai](https://github.com/paulincai)
+- [@cybairfly](https://github.com/cybairfly)
+- [@trusktr](https://github.com/trusktr)
+- [@tropicalseal](https://github.com/tropicalseal)
+- [@denihs](https://github.com/denihs)
+- [@illusionfield](https://github.com/illusionfield)
+- [@jankapunkt](https://github.com/jankapunkt)
+
+Meteor's continued development is supported by our sponsors. Thank you:
+
+- [Galaxy](https://galaxycloud.app/)
+- [Input Logic](https://inputlogic.com/)
+- [CodeRabbit](https://www.coderabbit.ai/)
+
+Support Meteor through the [Meteor Sponsorship Program](https://www.meteor.com/sponsorship).
+
+✨✨✨
 ## v3.5.4, 2026-10-27
 
 ### Highlights

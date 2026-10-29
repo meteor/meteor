@@ -601,7 +601,7 @@ export class AccountsServer extends AccountsCommon {
     };
 
     if (result.userId) {
-      attempt.user = this.users.findOneAsync(result.userId, {fields: this._options.defaultFieldSelector});
+      attempt.user = await this.users.findOneAsync(result.userId, {fields: this._options.defaultFieldSelector});
     }
 
     await this._validateLogin(methodInvocation.connection, attempt);
@@ -837,7 +837,8 @@ export class AccountsServer extends AccountsCommon {
 
   _initServerPublications() {
     // Bring into lexical scope for publish callbacks that need `this`
-    const { users, _autopublishFields, _defaultPublishFields } = this;
+    const accounts = this;
+    const { _autopublishFields, _defaultPublishFields } = this;
 
     // Publish all login service configuration fields other than secret.
     this._server.publish("meteor.loginServiceConfiguration", function() {
@@ -863,7 +864,7 @@ export class AccountsServer extends AccountsCommon {
       // Publish the current user's record to the client.
       this._server.publish(null, function () {
         if (this.userId) {
-          return users.find({
+          return accounts.users.find({
             _id: this.userId
           }, {
             fields,
@@ -884,7 +885,7 @@ export class AccountsServer extends AccountsCommon {
       );
       this._server.publish(null, function () {
         if (this.userId) {
-          return users.find({ _id: this.userId }, {
+          return accounts.users.find({ _id: this.userId }, {
             fields: toFieldSelector(_autopublishFields.loggedInUser),
           })
         } else {
@@ -899,7 +900,7 @@ export class AccountsServer extends AccountsCommon {
       // function which filters out fields based on 'this.userId'.
       this._server.publish(null, function () {
         const selector = this.userId ? { _id: { $ne: this.userId } } : {};
-        return users.find(selector, {
+        return accounts.users.find(selector, {
           fields: toFieldSelector(_autopublishFields.otherUsers),
         })
       }, /*suppress autopublish warning*/{is_auto: true});
@@ -1238,6 +1239,16 @@ export class AccountsServer extends AccountsCommon {
     return superResult;
   };
 
+  _onUsersCollectionChanged() {
+    if (this === Accounts) {
+      Meteor.users = this.users;
+    }
+    setupUsersCollection(this.users).catch(err => {
+      console.error('Failed to setup users collection:', err);
+    });
+    super._onUsersCollectionChanged();
+  }
+
   // Called by accounts-password
   async insertUserDoc(options, user) {
     // - clone user document, to protect from modification
@@ -1474,8 +1485,8 @@ export class AccountsServer extends AccountsCommon {
   };
 
   /**
-   * @summary Add a default rule of limiting logins, creating new users and password reset
-   * to 5 times every 10 seconds per connection.
+   * @summary Add a default rule of limiting logins, creating new users, requesting
+   * passwordless login tokens and password reset to 5 times every 10 seconds per connection.
    * @locus Server
    * @importFromPackage accounts-base
    */
@@ -1485,7 +1496,8 @@ export class AccountsServer extends AccountsCommon {
         userId: null,
         clientAddress: null,
         type: 'method',
-        name: name => ['login', 'createUser', 'resetPassword', 'forgotPassword']
+        name: name => ['login', 'createUser', 'resetPassword', 'forgotPassword',
+          'requestLoginTokenForUser']
           .includes(name),
         connectionId: (connectionId) => true,
       }, 5, 10000);
@@ -1832,20 +1844,23 @@ function defaultValidateNewUserHook(user) {
     return true;
   }
 
-  let emailIsGood = false;
-  if (user.emails && user.emails.length > 0) {
-    emailIsGood = user.emails.reduce(
-      (prev, email) => prev || this._testEmailDomain(email.address), false
-    );
-  } else if (user.services && Object.values(user.services).length > 0) {
-    // Find any email of any service and check it
-    emailIsGood = Object.values(user.services).reduce(
-      (prev, service) => service.email && this._testEmailDomain(service.email),
-      false,
-    );
+  const hasValidEmail = (user) => {
+    // Option A: user-provided emails
+    if (user.emails?.length) {
+      return user.emails.some(email => this._testEmailDomain(email.address));
+    }
+
+    // Option B: any connected service email
+    if (user.services) {
+      return Object.values(user.services).some(
+        service => service?.email && this._testEmailDomain(service.email)
+      );
+    }
+
+    return false;
   }
 
-  if (emailIsGood) {
+  if (hasValidEmail(user)) {
     return true;
   }
 
@@ -1860,7 +1875,10 @@ const setupUsersCollection = async users => {
   ///
   /// RESTRICTING WRITES TO USER OBJECTS
   ///
-  users.allow({
+  // Collections created with `defineMutationMethods: false` have no
+  // allow/deny validators (and no client mutation methods to protect);
+  // don't let allow() throw and skip every index below.
+  if (users._validators) users.allow({
     // clients can modify the profile field of their own document, and
     // nothing else.
     update: (userId, user, fields, modifier) => {

@@ -160,12 +160,24 @@ function fetchMissing(missingTree) {
     url += "key=" + secretKey;
   }
 
-  return fetch(url, {
-    method: "POST",
-    body: JSON.stringify(missingTree)
-  }).then(function (res) {
-    if (! res.ok) throw res;
-    return res.json();
+  var bodies = require("./request-batches.js").makeRequestBodies(missingTree);
+  var results = Object.create(null);
+  // Bound concurrency as well as each request. The installer sees one merged
+  // response only after all batches succeed, preserving normal cache behavior.
+  return bodies.reduce(function (previous, body) {
+    return previous.then(function () {
+      return fetch(url, { method: "POST", body: body });
+    }).then(function (res) {
+      if (!res.ok) throw res;
+      return res.json();
+    }).then(function (tree) {
+      var flat = flattenModuleTree(tree);
+      Object.keys(flat).forEach(function (id) {
+        addToTree(results, id, flat[id]);
+      });
+    });
+  }, Promise.resolve()).then(function () {
+    return results;
   });
 }
 

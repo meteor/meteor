@@ -154,7 +154,7 @@ For the rest, try looking nearby for a `README.md`.  For example, [`isobuild`](t
 
 When running tests that use `./meteor`, be sure to run them against the checked-out copy of Meteor instead of the globally-installed version. This ensures tests run against your local development version.
 
-The repository has four test layers, each covering a different scope:
+The main test workflows exercise different boundaries:
 
 | Command | Layer | Scope |
 |---------|-------|-------|
@@ -162,6 +162,8 @@ The repository has four test layers, each covering a different scope:
 | `npm run test:e2e` | **E2E** (Jest + Playwright) | Bundler integration and skeleton apps: creates real Meteor projects, launches a browser |
 | `./meteor self-test` | **Self-test** (custom) | Meteor CLI tool itself, spawns sandboxed Meteor processes to verify commands end-to-end |
 | `./meteor test-packages` | **Package** (TinyTest) | Atmosphere packages in `packages/`, runs inside a Meteor app with the full reactive runtime |
+| Package-local test script | **NPM package** | Tests under `npm-packages/` use the package's own scripts and runner |
+| `npm run test:native -- --platform=android` | **Native smoke** (Maestro) | Installed Cordova app and hot-code-push behavior; see the [native guide](tools/native-tests/README.md) for platform setup |
 
 ### Unit tests (Jest)
 
@@ -178,10 +180,17 @@ npm run test:unit
 npm run test:unit -- tools/path/to/file.test.js
 
 # Run tests matching a name pattern
-npm run test:unit -- -t "my test name"
+npm --prefix tools/unit-tests test -- tools/path/to/file.test.js -t "my test name"
 ```
 
-Place test files next to the module they test using the `*.test.js` naming convention. Jest will pick them up automatically.
+Use the direct `--prefix` invocation for Jest options so the nested npm command
+in `test:unit` does not consume flags such as `-t`. Confirm the intended cases
+ran; the runner allows an empty selection to exit successfully.
+
+For `tools/` and `scripts/`, place Jest tests next to their source using the
+`*.test.js` convention. See the [unit-test guide](tools/unit-tests/README.md) and
+[runner configuration](tools/unit-tests/jest.config.js) for package-specific
+placement and exclusions, including scripts that use Node's test runner.
 
 ### E2E tests (Jest + Playwright)
 
@@ -194,11 +203,20 @@ npm run install:e2e
 # Run all E2E tests
 npm run test:e2e
 
-# Run a specific suite
-npm run test:e2e -- -t="React"
+# List groups and run the same selection as CI
+npm run test:e2e:groups
+npm run test:e2e:group -- react_vue
+
+# Verify that every registered test has exactly one group
+npm run test:e2e:groups:audit
 ```
 
-Each test has a corresponding app fixture in `tools/e2e-tests/apps/`. See that directory for examples when adding new E2E tests.
+Group definitions live in `tools/e2e-tests/test-groups.js`; CI generates its
+matrix from the same module used by the local runner. Accounts has its own
+`accounts` group and workflow. New unassigned tests run in an `uncategorized`
+fallback job, and the audit reports them. See the [E2E README](tools/e2e-tests/README.md)
+for file filters, CI settings, and how to add groups. App fixtures live in
+`tools/e2e-tests/apps/`.
 
 ### Self-tests (Meteor tool)
 
@@ -232,11 +250,11 @@ When working with core Atmosphere packages, use `test-packages` to run their tes
 # Test a specific package
 ./meteor test-packages mongo
 
-# Filter by test name (supports regex), using --filter or -f
-./meteor test-packages --filter "collection - call new Mongo.Collection"
+# Filter by a case-sensitive test-name substring, using --filter or -f
+./meteor test-packages mongo --filter "collection - call new Mongo.Collection"
 
 # Equivalent using the environment variable
-TINYTEST_FILTER="collection - call new Mongo.Collection" ./meteor test-packages
+TINYTEST_FILTER="collection - call new Mongo.Collection" ./meteor test-packages mongo
 ```
 
 For headless console output:
@@ -247,13 +265,31 @@ PUPPETEER_DOWNLOAD_PATH=~/.npm/chromium ./packages/test-in-console/run.sh
 
 ### Continuous integration
 
-Any time a pull-request is submitted or a commit is pushed directly to the `devel` branch, continuous integration tests will be started automatically by the CI server.  The tests to run and the containers to run them under are defined in the [`/scripts/ci.sh`](scripts/ci.sh) script, which is a script which can run locally to replicate the exact tests.
+CI is defined in [GitHub Actions workflows](.github/workflows/). Each workflow's
+event and path filters determine when it runs. Reproduce a failure using the
+affected job's command, environment, test selection, and platform.
 
-Not every test which is defined in a test spec is actually ran by the CI server.  Some tests are simply too long-running and some tests are just no longer relevant.  As one particular example, there is a suite of very slow tests grouped into a `slow` designator within the test framework.  These can be executed by adding the `--slow` option to the `self-test` command.
+The [Test Tools workflow](.github/workflows/test-tools.yml) builds a self-test
+matrix from filtered discovery, groups tests by source file, and runs cases
+requiring isolation in separate jobs. Tags and exclusions limit the selection;
+for example, `slow` self-tests require `--slow`.
 
-> Please Note: Windows
->
-> There is not currently a continuous integration system setup for Windows.  Additionally, not all tests are known to work on Windows.  If you're able to take time to improve those tests, it would be greatly appreciated.  Currently, there isn't an official list of known tests which do not run on Windows, but a PR to note those here and get them fixed would be ideal!
+[Windows Selftest](.github/workflows/windows-selftest.yml) uses a separate
+[PowerShell runner](scripts/windows/ci/test.ps1) with explicit test-name
+patterns. A new self-test receives Windows CI coverage only when the workflow
+triggers and those patterns select it.
+
+The [package workflow](.github/workflows/test-packages.yml) runs a reactivity
+configuration matrix controlled by `METEOR_REACTIVITY_ORDER`. The separate
+[DDP workflow](.github/workflows/test-ddp-transport.yml) tests `ddp-server`
+with `DDP_TRANSPORT=sockjs` and `DDP_TRANSPORT=uws`. Check the affected job's
+configuration and exclusions when interpreting its results.
+
+For other runners, consult the [unit workflow](.github/workflows/unit-tests.yml),
+the [E2E group guide](tools/e2e-tests/README.md#group-definitions-and-ci), the
+package-local workflows for `npm-packages/`, or the
+[native CI guide](tools/native-tests/README.md#ci). Discovery, skipped cases,
+and a pass on an earlier commit do not establish that the current behavior ran.
 
 ## Code style
 

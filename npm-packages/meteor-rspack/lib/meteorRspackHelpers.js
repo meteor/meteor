@@ -56,17 +56,12 @@ function compileWithRspack(deps, { options = {} } = {}) {
  */
 function setCache(
   enabled,
-  cacheConfig = { cache: true, experiments: { cache: true } }
+  cacheConfig = { cache: true }
 ) {
   return prepareMeteorRspackConfig(
     enabled
       ? cacheConfig
-      : {
-          cache: false, // disable cache
-          experiments: {
-            cache: false, // disable persistent cache (experimental flag)
-          },
-        }
+      : { cache: false }
   );
 }
 
