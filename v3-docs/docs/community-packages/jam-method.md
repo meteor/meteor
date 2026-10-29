@@ -345,7 +345,7 @@ create.validate.only({...})
 If you're using a custom validate function instead of one of the supported schemas and you'd like to use `.validate.only`, you can simply append an `only` function onto the `validate` function that you supply.
 
 ### Options for Meteor.applyAsync
-When called, the method uses [Meteor.applyAsync](https://docs.meteor.com/api/methods#Meteor-applyAsync) under the hood to execute your `run` function or `.pipe` function(s). `Meteor.applyAsync` takes a few options which can be used to alter the way Meteor handles the method. If you want to change the defaults or include other supported options, pass in `options` when creating the method.
+When called, the method uses [Meteor.applyAsync](https://docs.meteor.com/api/meteor#Meteor-applyAsync) under the hood to execute your `run` function or `.pipe` function(s). `Meteor.applyAsync` takes a few options which can be used to alter the way Meteor handles the method. If you want to change the defaults or include other supported options, pass in `options` when creating the method.
 
 ```js
 export const create = createMethod({
