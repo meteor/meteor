@@ -3558,7 +3558,18 @@ const setupBenchmarkSuite = async (profilingPath) => {
 async function doBenchmarkCommand(options) {
   const isWindows = process.platform === "win32";
   if (isWindows) {
-    throw new Error('Profiling is not supported on Windows');
+    // The profiling suite runs bash scripts, so it can't run natively on Windows.
+    Console.error(
+      "meteor profile is not supported on Windows: the profiling suite relies on bash scripts.\n\n" +
+      "Alternatives:\n" +
+      "  - Run meteor profile inside WSL (Windows Subsystem for Linux).\n" +
+      "  - Set METEOR_PROFILE to 1, then run `meteor run` or `meteor build` to print build timings.\n" +
+      "  - Set METEOR_INSPECT (e.g. to bundler.bundle) to capture CPU profiles of build steps.\n\n" +
+      "Set the variable before running the command:\n" +
+      "  cmd:        set METEOR_PROFILE=1\n" +
+      "  PowerShell: $env:METEOR_PROFILE = \"1\""
+    );
+    throw new main.ExitWithCode(1);
   }
 
   const args = process.argv.slice(3);
