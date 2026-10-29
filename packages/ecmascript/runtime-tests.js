@@ -148,7 +148,6 @@ if (Meteor.isServer) {
   // the server.  (Technically they just need a working
   // Object.defineProperty, found in IE9+ and all modern environments.)
   Tinytest.add('ecmascript - runtime - classes - getters/setters', test => {
-    // uses `babelHelpers.createClass`
     class Foo {
       get two() {
         return 1 + 1;
