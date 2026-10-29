@@ -68,7 +68,6 @@ const getWritableGroupName = () => {
     }
   }
 
-  if (Boolean(process.env.TRAVIS)) return 'travis';
   if (isMacOS()) return 'staff';
   return uid === 0 ? 'root' : null;
 };
@@ -211,15 +210,12 @@ testAsyncMulti(
       return closeServer({ httpServer, server });
     },
     async (test) => {
-      const isLinux = platform() === 'linux';
-      const isTravis = Boolean(process.env.TRAVIS);
-
-      if (isLinux && !isTravis) {
+      if (platform() === 'linux') {
         /*
-         * Local Linux developers usually run Meteor as an unprivileged user.
-         * Changing the socket file's group to "root" would require elevated
-         * permissions, so we skip this assertion outside CI to avoid forcing
-         * sudo usage. The behavior is still verified on macOS and in CI.
+         * Linux runs usually happen as an unprivileged user. Changing the
+         * socket file's group to "root" would require elevated permissions,
+         * so we skip this assertion to avoid forcing sudo usage. The behavior
+         * is still verified on macOS.
          */
         test.ok();
         return;
