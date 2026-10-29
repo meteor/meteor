@@ -143,15 +143,54 @@ OAuth._handleCredentialSecret = (credentialToken, secret) => {
 // corresponding to credential secret to call the `login` method over DDP.
 OAuth._retrieveCredentialSecret = credentialToken => {
   // First check the secrets collected by OAuth._handleCredentialSecret,
-  // then check localStorage. This matches what we do in
+  // then check sessionStorage and localStorage. This matches what we do in
   // end_of_login_response.html.
   let secret = credentialSecrets[credentialToken];
   if (! secret) {
-    const localStorageKey = OAuth._storageTokenPrefix + credentialToken;
-    secret = Meteor._localStorage.getItem(localStorageKey);
-    Meteor._localStorage.removeItem(localStorageKey);
+    const storageKey = OAuth._storageTokenPrefix + credentialToken;
+    // Check sessionStorage first (used by popup and redirect flows)
+    try {
+      secret = sessionStorage.getItem(storageKey);
+      if (secret) {
+        sessionStorage.removeItem(storageKey);
+      }
+    } catch (e) {
+      // sessionStorage may not be available in some environments
+    }
+    
+    if (!secret) {
+      // Fallback to localStorage for backwards compatibility
+      secret = Meteor._localStorage.getItem(storageKey);
+      Meteor._localStorage.removeItem(storageKey);
+    }
   } else {
     delete credentialSecrets[credentialToken];
   }
   return secret;
+};
+
+// Client-side OAuth error retrieval function
+OAuth.getError = () => {
+  // Only available in browser environment
+  if (typeof Meteor === 'undefined' || !Meteor._localStorage) {
+    return null;
+  }
+  
+  const errorKey = OAuth._storageTokenPrefix + "error";
+  const errorDescriptionKey = OAuth._storageTokenPrefix + "error_description";
+  
+  const error = Meteor._localStorage.getItem(errorKey);
+  const error_description = Meteor._localStorage.getItem(errorDescriptionKey);
+  
+  if (error && error !== "undefined") {
+    Meteor._localStorage.removeItem(errorKey);
+    Meteor._localStorage.removeItem(errorDescriptionKey);
+    
+    return {
+      error: error,
+      error_description: error_description && error_description !== "undefined" ? error_description : undefined
+    };
+  }
+  
+  return null;
 };
