@@ -83,3 +83,33 @@ expectTypeOf(DDPCommon.makeRpcSeed(invocation, "method")).toBeString();
 expectTypeOf(DDPCommon.makeRpcSeed(null, "method")).toBeString();
 expectTypeOf(DDPCommon.makeRpcSeed(undefined, "method")).toBeString();
 expectTypeOf(invocation.setUserId("user-id")).toEqualTypeOf<Promise<void>>();
+
+expectTypeOf<DDPCommon.Serializer>().toBeObject();
+expectTypeOf(DDPCommon.setSerializer).toBeFunction();
+expectTypeOf(DDPCommon.getSerializer).toBeFunction();
+expectTypeOf(DDPCommon.createEJSONSerializer).toBeFunction();
+expectTypeOf(DDPCommon.toWireMessage).toBeFunction();
+expectTypeOf(DDPCommon.fromWireMessage).toBeFunction();
+
+const ejsonSerializer = DDPCommon.createEJSONSerializer();
+expectTypeOf(ejsonSerializer).toEqualTypeOf<DDPCommon.Serializer>();
+expectTypeOf(ejsonSerializer.wireFormat).toEqualTypeOf<"text">();
+expectTypeOf(ejsonSerializer.serialize({ msg: "ping", id: "1" })).toBeString();
+expectTypeOf(ejsonSerializer.deserialize('{"msg":"pong","id":"1"}'))
+  .toEqualTypeOf<Record<string, unknown>>();
+expectTypeOf(DDPCommon.getSerializer()).toEqualTypeOf<DDPCommon.Serializer>();
+expectTypeOf(DDPCommon.setSerializer(ejsonSerializer)).toBeVoid();
+DDPCommon.setSerializer({
+  name: "custom",
+  wireFormat: "text",
+  serialize: (msg) => JSON.stringify(DDPCommon.toWireMessage(msg)),
+  deserialize: (raw) => DDPCommon.fromWireMessage(JSON.parse(raw)),
+});
+// @ts-expect-error The DDP transports only deliver text frames.
+DDPCommon.setSerializer({ ...ejsonSerializer, wireFormat: "binary" });
+// @ts-expect-error A serializer must provide serialize() and deserialize().
+DDPCommon.setSerializer({ name: "broken", wireFormat: "text" });
+expectTypeOf(DDPCommon.toWireMessage({ msg: "changed", fields: { a: undefined } }))
+  .toEqualTypeOf<Record<string, unknown>>();
+expectTypeOf(DDPCommon.fromWireMessage({ msg: "changed", cleared: ["a"] }))
+  .toEqualTypeOf<Record<string, unknown>>();
