@@ -334,9 +334,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           // Since builder is not updating in place, and
           // this build is only used if every file is successfully written,
           // it is not important to write atomically.
-          files.writeFile(absPath, getData(), {
-            mode
-          });
+          await this._writeFileWithReadOnlyFallback(absPath, getData(), { mode });
       }
       }
 
@@ -345,6 +343,23 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     this.usedAsFile[relPath] = true;
 
     return relPath;
+  }
+
+  // Write a file, falling back to an atomic rewrite when the target already
+  // exists and is read-only. Writing over such a file (e.g. one reached through
+  // a symlink into a prior build) fails with EACCES/EPERM; the atomic temp-file
+  // + rename path can replace it, since rename only needs write access to the
+  // parent directory.
+  async _writeFileWithReadOnlyFallback(absPath, content, options) {
+    try {
+      files.writeFile(absPath, content, options);
+    } catch (e) {
+      if (e.code === 'EACCES' || e.code === 'EPERM') {
+        await atomicallyRewriteFile(absPath, content, options);
+      } else {
+        throw e;
+      }
+    }
   }
 
   async copyTranspiledModules(relativePaths, {
@@ -800,18 +815,16 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           if (this.previousWrittenHashes[thisRelTo] !== hash) {
             const content = optimisticReadFile(thisAbsFrom);
 
-            files.writeFile(
+            // We call writeFile (rather than files.copyFile) so we can read the
+            // source with optimisticReadFile instead of a stream. The mode logic
+            // is borrowed from files.copyFile: create the file readable and
+            // writable by everyone, and executable by everyone if the original
+            // is executable by owner (modified by umask); we don't copy the mode
+            // directly because this is also used by 'meteor create', copying
+            // from the read-only tools tree into a writable app.
+            await this._writeFileWithReadOnlyFallback(
                 files.pathResolve(this.buildPath, thisRelTo),
-                // The reason we call files.writeFile here instead of
-                // files.copyFile is so that we can read the file using
-                // optimisticReadFile instead of files.createReadStream.
                 content,
-                // Logic borrowed from files.copyFile: "Create the file as
-                // readable and writable by everyone, and executable by everyone
-                // if the original file is executably by owner. (This mode will be
-                // modified by umask.) We don't copy the mode *directly* because
-                // this function is used by 'meteor create' which is copying from
-                // the read-only tools tree into a writable app."
                 { mode: (fileStatus.mode & 0o100) ? 0o777 : 0o666 },
             );
           }
