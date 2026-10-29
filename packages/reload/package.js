@@ -7,6 +7,7 @@ Package.onUse(function (api) {
   api.use('ecmascript');
   api.mainModule('reload.js', 'client');
   api.export('Reload', 'client');
+  api.addAssets('reload.d.ts', 'server');
 });
 
 Package.onTest(function (api) {

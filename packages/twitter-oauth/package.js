@@ -14,5 +14,7 @@ Package.onUse(function(api) {
   api.addFiles('twitter_client.js', 'client');
   api.addFiles('twitter_server.js', 'server');
 
+  api.addAssets('twitter-oauth.d.ts', 'server');
+
   api.export('Twitter');
 });
