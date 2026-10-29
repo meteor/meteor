@@ -27,13 +27,18 @@ const internalPasswordlessLoginWithToken = ({
   code,
   callback,
 }) => {
+  const loginOptions = {
+    selector: transformSelector(selector),
+    token,
+    code,
+  };
+  const clientContext = Accounts._get2faClientContext?.();
+  if (clientContext && Object.keys(clientContext).length) {
+    loginOptions.twoFactorContext = clientContext;
+  }
   Accounts.callLoginMethod({
     methodArguments: [
-      {
-        selector: transformSelector(selector),
-        token,
-        code,
-      },
+      loginOptions,
     ],
     userCallback: error => {
       if (error) {
