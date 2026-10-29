@@ -8,6 +8,7 @@ on:
       - "packages/rspack/**"
       - "packages/tools-core/**"
       - "packages/babel-compiler/**"
+      - "packages/standard-minifier-js/**"
       - "packages/meteor-tool/**"
       - "npm-packages/meteor-rspack/**"
       - "tools/isobuild/**"

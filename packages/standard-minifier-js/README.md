@@ -23,7 +23,7 @@ in the table.
 |---------------|:-----:|:------:|
 | Minified      |   N   |    Y   | 
 | Concatenated  |   N   |    Y   | 
-| Source Maps   |   Y   |    Soon   | 
+| Source Maps   |   Y   |    Opt-in (`modern.minifier.sourceMap`)   | 
 
 
 

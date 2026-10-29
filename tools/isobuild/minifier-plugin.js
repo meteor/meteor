@@ -69,6 +69,7 @@ class InputFile extends buildPluginModule.InputFile {
 export class JsFile extends InputFile {
   // - data
   // - sourceMap
+  // - hiddenSourceMap? (write the source map, but do not serve it)
   // - path
   // - hash?
   // - stats?
