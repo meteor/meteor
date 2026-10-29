@@ -36,15 +36,11 @@ Package.onUse(api => {
   api.addFiles('oauth_common.js');
 });
 
-Npm.depends({
-  'body-parser': '1.20.3',
-});
-
 Package.onTest(api => {
   api.use('tinytest');
   api.use('random');
   api.use('service-configuration', 'server');
-  api.use('oauth', 'server');
+  api.use(['oauth', 'webapp', 'fetch'], 'server');
   api.addFiles("oauth_tests.js", 'server');
 });
 
