@@ -1112,6 +1112,18 @@ async function runWebAppServer() {
       },
     },
 
+    'web.tauri': {
+      runtimeConfigOverrides: {
+        // Like Cordova, a packaged Tauri app serves its client assets from an
+        // on-device local server, so the DDP/ROOT_URL must point at the actual
+        // Meteor server rather than the local file server.
+        DDP_DEFAULT_CONNECTION_URL:
+          process.env.MOBILE_DDP_URL || Meteor.absoluteUrl(),
+        ROOT_URL: process.env.MOBILE_ROOT_URL || Meteor.absoluteUrl(),
+        isModern: false,
+      },
+    },
+
     'web.browser': {
       runtimeConfigOverrides: {
         isModern: true,

@@ -1,0 +1,26 @@
+[package]
+name = "meteor-tauri-app"
+version = "0.0.1"
+description = "A Meteor app packaged with Tauri"
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+# The shared library that contains the app logic. Tauri's mobile targets
+# require a cdylib/staticlib; the desktop binary in src/main.rs calls into it.
+name = "meteor_tauri_app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-meteor-webapp = { path = "../tauri-plugin-meteor-webapp" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[features]
+# This feature is used for production builds or when a dev server is not
+# specified, DO NOT REMOVE!!
+custom-protocol = ["tauri/custom-protocol"]

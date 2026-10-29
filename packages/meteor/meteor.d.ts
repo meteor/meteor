@@ -10,6 +10,8 @@ export namespace Meteor {
   var isClient: boolean;
   /** True if running in a Cordova mobile environment. */
   var isCordova: boolean;
+  /** True if running in a Tauri native environment. */
+  var isTauri: boolean;
   /** True if running in server environment. */
   var isServer: boolean;
   /** True if running in production environment. */
