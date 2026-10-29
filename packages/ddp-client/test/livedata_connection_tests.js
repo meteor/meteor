@@ -1930,7 +1930,8 @@ if (Meteor.isServer) {
 testAsyncMulti('livedata connection - reconnect to a different server', [
   function (test, expect) {
     const self = this;
-    self.conn = DDP.connect('reverse.meteor.com');
+    // Use TLS directly: the HTTP endpoint redirects WebSocket upgrade requests.
+    self.conn = DDP.connect('https://reverse.meteor.com');
     pollUntil(
       expect,
       function () {
