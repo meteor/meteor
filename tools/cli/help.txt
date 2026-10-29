@@ -903,6 +903,8 @@ Options:
   --replaceFn		 	  Replace function to replace the names in the template. Check https://docs.meteor.com/commandline.html#meteorgenerate-templating for more info.
   --methods       	Generate methods.
   --publications  	Generate publications.
+  --importIntoServerMain Set to false to not add an import statement to the main server file.
+  --serverImportFile  The path to the server file where the generated index should be imported.
 
 
 >>> publish-release
