@@ -75,3 +75,32 @@ Tinytest.addAsync(
     
   }
 );
+
+if (Meteor.isServer) {
+  [
+    ["setTimeout", (f) => Meteor.setTimeout(f, 0)],
+    ["setInterval", (f) => Meteor.setInterval(f, 0)],
+    ["defer", (f) => Meteor.defer(f)],
+  ].forEach(([name, schedule]) => {
+    Tinytest.addAsync(
+      `timers - ${name} logs errors thrown by async callbacks`,
+      async function (test) {
+        const originalDebug = Meteor._debug;
+        let handle;
+        try {
+          const logged = await new Promise((resolve) => {
+            Meteor._debug = (...args) => resolve(args);
+            handle = schedule(async () => {
+              throw new Error("async boom");
+            });
+          });
+          test.equal(logged[0], `Exception in ${name} callback:`);
+          test.equal(logged[1].message, "async boom");
+        } finally {
+          Meteor._debug = originalDebug;
+          if (name === "setInterval") Meteor.clearInterval(handle);
+        }
+      }
+    );
+  });
+}
