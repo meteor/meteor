@@ -11,6 +11,8 @@ on:
       - "packages/rspack/**"
       - "packages/tools-core/**"
       - "packages/babel-compiler/**"
+      - "packages/standard-minifier-js/**"
+      - "packages/ejson/**"
       - "packages/meteor-tool/**"
       - "packages/test-in-browser/**"
       - "npm-packages/meteor-rspack/**"
@@ -65,8 +67,7 @@ jobs:
     needs: groups
     name: ${{ matrix.category }}
     runs-on: oss-vm
-    # Budget both longer Regressions attempts and environment preparation.
-    timeout-minutes: ${{ matrix.group == 'regressions' && 110 || 60 }}
+    timeout-minutes: 60
     env:
       # SWC's native addon cache rejects parents owned by another user.
       # Actions mounts the host-owned /github/home into this root container.
@@ -157,7 +158,7 @@ jobs:
       - name: Run tests for ${{ matrix.category }}
         id: test-run
         continue-on-error: true
-        timeout-minutes: ${{ matrix.group == 'regressions' && 40 || 20 }}
+        timeout-minutes: 20
         run: METEOR_ALLOW_SUPERUSER=1 npm run test:e2e:group -- "${{ matrix.group }}"
 
       - name: Clean up before retry
@@ -177,7 +178,7 @@ jobs:
 
       - name: Retry failed tests for ${{ matrix.category }}
         if: steps.test-run.outcome == 'failure'
-        timeout-minutes: ${{ matrix.group == 'regressions' && 45 || 25 }}
+        timeout-minutes: 25
         run: |
           echo "::warning::First attempt failed, retrying..."
           METEOR_ALLOW_SUPERUSER=1 npm run test:e2e:group -- "${{ matrix.group }}"
