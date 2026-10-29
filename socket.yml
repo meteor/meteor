@@ -1,0 +1,27 @@
+# Socket (socket.dev) configuration for the Socket GitHub App and CLI.
+# Reference: https://docs.socket.dev/docs/socket-yml
+#
+# The GitHub App scans every package.json / lockfile in the repo on pull
+# requests and comments on supply-chain risks (malware, typosquats, install
+# scripts, network/shell access, unmaintained packages, CVEs, licenses). Which
+# alert types block, warn or are ignored is the org's security policy in the
+# Socket dashboard. The CLI scan in .github/workflows/npm-dependency-audit.yml
+# additionally covers packages/* Npm.depends via generated manifests.
+version: 2
+
+# Test fixtures and internal tooling are not things Meteor publishes; keep them
+# out of PR alerts and the dependency overview. App skeletons
+# (tools/static-assets/skel-*) stay in: they define what `meteor create` ships.
+projectIgnorePaths:
+  - "tools/e2e-tests"
+  - "tools/native-tests"
+  - "tools/tests"
+  - "npm-packages/*/tests"
+  - "npm-packages/eslint-plugin-meteor/scripts"
+  - "scripts"
+
+githubApp:
+  enabled: true
+  pullRequestAlertsEnabled: true
+  dependencyOverviewEnabled: true
+  projectReportsEnabled: true
