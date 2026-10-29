@@ -45,10 +45,7 @@ export class AsynchronousCursor {
     try {
       this._pendingNext = this._dbCursor.next();
       const result = await this._pendingNext;
-      this._pendingNext = null;
       return result;
-    } catch (e) {
-      console.error(e);
     } finally {
       this._pendingNext = null;
     }
@@ -96,10 +93,10 @@ export class AsynchronousCursor {
         resolve(this.close());
       }, timeoutMS);
 
-      // If the `_nextObjectPromise` returned first, cancel the timeout.
-      nextObjectPromise.finally(() => {
-        clearTimeout(timeoutId);
-      });
+      // Cancel the timeout on success or failure without leaving a rejected
+      // cleanup promise unhandled.
+      const clearTimer = () => clearTimeout(timeoutId);
+      nextObjectPromise.then(clearTimer, clearTimer);
     });
 
     return Promise.race([nextObjectPromise, timeoutPromise]);
