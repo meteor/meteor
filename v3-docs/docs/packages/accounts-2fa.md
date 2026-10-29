@@ -96,6 +96,30 @@ To disable 2FA for a user use this method:
 
 To call this function the user must be already logged in.
 
+## Configuration {#configuration}
+
+Call `Accounts.configure2fa` at server startup. Every option is optional.
+
+`window` is the number of 30-second steps accepted on each side of the current step. The default stays at 10, which matches previous releases. A smaller window, such as 1, is a better fit for most apps.
+
+`preventReplay` defaults to `true`. Once a time step is accepted, that step and every earlier step are rejected, not only the same code typed again. This follows RFC 6238 section 5.2: a verifier must not accept a second attempt of an OTP after a successful validation. Set `preventReplay` to `false` to keep the previous behavior, where a code can be used again for as long as it stays inside the window.
+
+The check is a `validateLoginAttempt` hook registered by this package. Hooks your app registers afterwards still run. When a replay is rejected they see `attempt.allowed === false` and `attempt.error.error === 'invalid-2fa-code'`.
+
+`loginTypes` lists the login attempt types that receive this check. It defaults to `['password', 'passwordless']`. Passing a new array replaces that list, so include the defaults if they should stay protected. A custom login handler opts in by adding its `type` to the list.
+
+If the stored secret changes between verification and the write that enables 2FA, `enableUser2fa` throws `2fa-secret-changed` instead of `invalid-2fa-code`.
+
+```js
+import { Accounts } from 'meteor/accounts-base';
+
+Accounts.configure2fa({
+  window: 1, // steps accepted on each side of the current 30s step (default 10)
+  preventReplay: true,
+  loginTypes: ['password', 'passwordless'], // replaces the default list
+});
+```
+
 ## Log in with 2FA {#log-in-with-2fa}
 
 Now that you have a way to allow your users to enable 2FA on their accounts, you can create a login flow based on that.

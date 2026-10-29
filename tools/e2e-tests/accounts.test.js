@@ -707,7 +707,8 @@ function defineAccountsScenarios(storageMode, getCtx) {
         login(page, { email: '2fa@example.com' }, 'pw12345'),
       ).rejects.toThrow(/"error":\s*"no-2fa-code"/);
 
-      const totp2 = await callMethod(page, '_e2e.generateTotp', activation.secret);
+      // Activation consumed the current time step, so the login uses the next one.
+      const totp2 = await callMethod(page, '_e2e.generateTotp', activation.secret, 1);
       await page.evaluate(
         ({ password, code }) =>
           window.__accountsE2E.loginWithPasswordAnd2faCode(
