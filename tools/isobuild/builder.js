@@ -13,6 +13,11 @@ import {
   optimisticHashOrNull,
 } from "../fs/optimistic";
 
+// Node's synchronous fs.readFileSync refuses to read files larger than this
+// (it throws ERR_FS_FILE_TOO_LARGE), so files above it must be copied without
+// being read into a Buffer.
+const MAX_READABLE_FILE_SIZE = 2 ** 31 - 1;
+
 // Builder is in charge of writing "bundles" to disk, which are
 // directory trees such as site archives, programs, and packages.  In
 // addition to writing data to files, it can copy or link in existing
@@ -795,6 +800,32 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
         // could not be created above.
         fileStatus = optimisticStatOrNull(thisAbsFrom);
         if (fileStatus && fileStatus.isFile()) {
+          // Files larger than Node's single-read limit (~2 GiB) cannot be read
+          // into a Buffer, so hashing (optimisticHashOrNull) and reading
+          // (optimisticReadFile) below would throw ERR_FS_FILE_TOO_LARGE and
+          // abort the whole build. Copy those directly with files.copyFile
+          // (fs.copyFileSync streams, with no such limit). Since we can't hash
+          // the contents, key incremental rebuilds off size + mtime.
+          if (fileStatus.size > MAX_READABLE_FILE_SIZE) {
+            const largeFileKey = `size:${fileStatus.size}:mtime:${
+                fileStatus.mtimeMs ||
+                (fileStatus.mtime && fileStatus.mtime.getTime()) || 0
+            }`;
+
+            if (this.previousWrittenHashes[thisRelTo] !== largeFileKey) {
+              // files.copyFile handles mkdir, the streaming copy and the same
+              // executable-bit mode logic used below.
+              files.copyFile(
+                  thisAbsFrom,
+                  files.pathResolve(this.buildPath, thisRelTo),
+              );
+            }
+
+            this.writtenHashes[thisRelTo] = largeFileKey;
+            this.usedAsFile[thisRelTo] = true;
+            continue;
+          }
+
           const hash = optimisticHashOrNull(thisAbsFrom);
 
           if (this.previousWrittenHashes[thisRelTo] !== hash) {
