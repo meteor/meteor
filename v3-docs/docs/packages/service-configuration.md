@@ -41,6 +41,22 @@ In your `settings.json` add:
       "meteor-developer": {
         "clientId": "YOUR_CLIENT_ID",
         "secret": "YOUR_CLIENT_SECRET"
+      },
+      "discord": {
+        "clientId": "YOUR_CLIENT_ID",
+        "secret": "YOUR_CLIENT_SECRET"
+      },
+      "slack": {
+        "clientId": "YOUR_CLIENT_ID",
+        "secret": "YOUR_CLIENT_SECRET"
+      },
+      "spotify": {
+        "clientId": "YOUR_CLIENT_ID",
+        "secret": "YOUR_CLIENT_SECRET"
+      },
+      "twitch": {
+        "clientId": "YOUR_CLIENT_ID",
+        "secret": "YOUR_CLIENT_SECRET"
       }
     }
   }
@@ -441,6 +457,202 @@ import { ServiceConfiguration } from 'meteor/service-configuration';
 
 await ServiceConfiguration.configurations.upsertAsync(
   { service: 'meteor-developer' },
+  {
+    $set: {
+      clientId: 'YOUR_CLIENT_ID',
+      secret: 'YOUR_CLIENT_SECRET'
+    }
+  }
+);
+```
+
+## Discord
+
+### Setting up Discord OAuth
+
+1. Visit [https://discord.com/developers/applications](https://discord.com/developers/applications) and sign in
+
+2. Click **"New Application"** and set the application name
+
+3. Go to the **"OAuth2"** section in the left sidebar
+
+4. Add `YOUR_SITE_URL/_oauth/discord` to the **"Redirects"** field (e.g., `http://localhost:3000/_oauth/discord`)
+
+5. Note down your **"Client ID"** and **"Client Secret"**
+
+### Configuration
+
+Add to your `settings.json`:
+
+```json
+{
+  "packages": {
+    "service-configuration": {
+      "discord": {
+        "clientId": "YOUR_CLIENT_ID",
+        "secret": "YOUR_CLIENT_SECRET"
+      }
+    }
+  }
+}
+```
+
+Or configure programmatically:
+
+```javascript
+import { ServiceConfiguration } from 'meteor/service-configuration';
+
+await ServiceConfiguration.configurations.upsertAsync(
+  { service: 'discord' },
+  {
+    $set: {
+      clientId: 'YOUR_CLIENT_ID',
+      secret: 'YOUR_CLIENT_SECRET'
+    }
+  }
+);
+```
+
+## Slack
+
+### Setting up Slack OAuth
+
+Slack uses [OpenID Connect](https://api.slack.com/authentication/sign-in-with-slack) for authentication.
+
+1. Visit [https://api.slack.com/apps](https://api.slack.com/apps) and click **"Create New App"**, then **"From scratch"**
+
+2. Set the **App Name** and select a workspace
+
+3. Go to **"OAuth & Permissions"** in the left sidebar
+
+4. Add `YOUR_SITE_URL/_oauth/slack` to the **"Redirect URLs"** field (e.g., `http://localhost:3000/_oauth/slack`)
+
+5. Go to **"Basic Information"** to find your **"Client ID"** and **"Client Secret"**
+
+### Configuration
+
+Add to your `settings.json`:
+
+```json
+{
+  "packages": {
+    "service-configuration": {
+      "slack": {
+        "clientId": "YOUR_CLIENT_ID",
+        "secret": "YOUR_CLIENT_SECRET"
+      }
+    }
+  }
+}
+```
+
+Or configure programmatically:
+
+```javascript
+import { ServiceConfiguration } from 'meteor/service-configuration';
+
+await ServiceConfiguration.configurations.upsertAsync(
+  { service: 'slack' },
+  {
+    $set: {
+      clientId: 'YOUR_CLIENT_ID',
+      secret: 'YOUR_CLIENT_SECRET'
+    }
+  }
+);
+```
+
+## Spotify
+
+### Setting up Spotify OAuth
+
+1. Visit [https://developer.spotify.com/dashboard](https://developer.spotify.com/dashboard) and create a new app
+
+2. Set the **App name** and **description**
+
+3. Add `YOUR_SITE_URL/_oauth/spotify` to the **"Redirect URIs"** field
+
+4. Check the **"Web API"** option under **"Which API/SDKs are you planning to use?"**
+
+5. Save your app, then go to **Settings** to find your **"Client ID"** and **"Client Secret"**
+
+> **Note:** Spotify does not allow `localhost` in redirect URIs. For local development, set the redirect URI to `http://127.0.0.1:3000/_oauth/spotify` and start your app with `ROOT_URL=http://127.0.0.1:3000 meteor`.
+
+### Configuration
+
+Add to your `settings.json`:
+
+```json
+{
+  "packages": {
+    "service-configuration": {
+      "spotify": {
+        "clientId": "YOUR_CLIENT_ID",
+        "secret": "YOUR_CLIENT_SECRET"
+      }
+    }
+  }
+}
+```
+
+Or configure programmatically:
+
+```javascript
+import { ServiceConfiguration } from 'meteor/service-configuration';
+
+await ServiceConfiguration.configurations.upsertAsync(
+  { service: 'spotify' },
+  {
+    $set: {
+      clientId: 'YOUR_CLIENT_ID',
+      secret: 'YOUR_CLIENT_SECRET'
+    }
+  }
+);
+```
+
+## Twitch
+
+### Setting up Twitch OAuth
+
+1. Visit [https://dev.twitch.tv/console/apps/create](https://dev.twitch.tv/console/apps/create)
+
+2. Set the **Name** to your application name
+
+3. Add `YOUR_SITE_URL/_oauth/twitch` to the **"OAuth Redirect URLs"** field (e.g., `http://localhost:3000/_oauth/twitch`) and click **"Add"**
+
+4. Set the **Category** to the most appropriate option for your application
+
+5. Set **Client Type** to **"Confidential"**
+
+6. Click **"Create"**, then open your application and click **"New Secret"**
+
+7. Note down your **"Client ID"** and the generated **"Client Secret"**
+
+### Configuration
+
+Add to your `settings.json`:
+
+```json
+{
+  "packages": {
+    "service-configuration": {
+      "twitch": {
+        "clientId": "YOUR_CLIENT_ID",
+        "secret": "YOUR_CLIENT_SECRET"
+      }
+    }
+  }
+}
+```
+
+Or configure programmatically:
+
+```javascript
+import { ServiceConfiguration } from 'meteor/service-configuration';
+
+await ServiceConfiguration.configurations.upsertAsync(
+  { service: 'twitch' },
   {
     $set: {
       clientId: 'YOUR_CLIENT_ID',
