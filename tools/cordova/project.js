@@ -3,6 +3,7 @@ import util from 'util';
 import assert from 'assert';
 import chalk from 'chalk';
 import semver from 'semver';
+import validatePackageName from 'validate-npm-package-name';
 import { fileURLToPath } from 'url';
 
 import files from '../fs/files';
@@ -171,7 +172,7 @@ outdated platforms`);
       const packageJson = JSON.parse(files.readFile(packageJsonPath, 'utf8'));
       const dependencies = packageJson.dependencies || {};
       const pathNames = Object.keys(dependencies).filter(name =>
-        name.startsWith('.') || name.startsWith('/') || name.includes('/..'));
+        !validatePackageName(name).validForOldPackages);
       if (pathNames.length) {
         pathNames.forEach(name => delete dependencies[name]);
         files.writeFile(packageJsonPath, JSON.stringify(packageJson, null, 2) + "\n");
