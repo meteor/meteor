@@ -3,6 +3,7 @@ import util from 'util';
 import assert from 'assert';
 import chalk from 'chalk';
 import semver from 'semver';
+import validatePackageName from 'validate-npm-package-name';
 import { fileURLToPath } from 'url';
 
 import files from '../fs/files';
@@ -162,6 +163,19 @@ outdated platforms`);
         // Remove Cordova project directory to start afresh
         // and avoid a broken project
         await files.rm_recursive(this.projectRoot);
+      }
+    }
+
+    // Earlier builds wrote local plugin paths as dependency names, which npm rejects.
+    const packageJsonPath = files.pathJoin(this.projectRoot, 'package.json');
+    if (files.exists(packageJsonPath)) {
+      const packageJson = JSON.parse(files.readFile(packageJsonPath, 'utf8'));
+      const dependencies = packageJson.dependencies || {};
+      const pathNames = Object.keys(dependencies).filter(name =>
+        !validatePackageName(name).validForOldPackages);
+      if (pathNames.length) {
+        pathNames.forEach(name => delete dependencies[name]);
+        files.writeFile(packageJsonPath, JSON.stringify(packageJson, null, 2) + "\n");
       }
     }
 
@@ -484,6 +498,10 @@ to Cordova project`, async () => {
       };
 
       const packageJsonObj = Object.entries(packages).reduce((acc, [key, value]) => {
+        // Local plugins are linked from outside node_modules, not npm deps.
+        if (value.link || !key.startsWith('node_modules/')) {
+          return acc;
+        }
         const name = getPackageName(key);
         const originalPluginVersion = installedPlugins[name];
         return ({
@@ -648,13 +666,18 @@ from Cordova project`, async () => {
     const { retry = true } = options;
     const target = this.targetForPlugin(id, version, options);
     if (target) {
+      const isLocalPlugin = utils.isUrlWithFileScheme(version);
       const commandOptions = Object.assign(this.defaultOptions,
-        { cli_variables: config, link: utils.isUrlWithFileScheme(version) });
+        { cli_variables: config, link: isLocalPlugin });
 
       try {
         await this.runCommands(`adding plugin ${target} \
 to Cordova project`, cordova_lib.plugin.bind(undefined, 'add', [target],
           commandOptions));
+
+        if (isLocalPlugin) {
+          await this.linkLocalPluginToSource(target);
+        }
 
         // Accumulate dependencies from plugins to later installation
         const cordovaPackagesPath = files.pathJoin(this.projectRoot, cordovaPackagesFile);
@@ -688,6 +711,15 @@ to Cordova project`, cordova_lib.plugin.bind(undefined, 'add', [target],
         throw error;
       }
     }
+  }
+
+  // Cordova links local plugins via node_modules, which later npm installs prune.
+  async linkLocalPluginToSource(pluginPath) {
+    const { id } = new PluginInfoProvider().get(pluginPath);
+    await files.symlinkWithOverwrite(
+      files.convertToStandardPath(pluginPath),
+      files.pathJoin(this.pluginsDir, id)
+    );
   }
 
   // plugins is an array of plugin IDs.
