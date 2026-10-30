@@ -4168,7 +4168,10 @@ Tinytest.addAsync(
           added: (id, fields) => added.push(fields),
         });
         // Write once the observer listens for writes but before its stream is open.
-        await waitFor(() => Object.keys(remote.mongo._observeMultiplexers).length > 0, 5000, 5);
+        test.isTrue(
+          await waitFor(() => Object.keys(remote.mongo._observeMultiplexers).length > 0, 5000, 5),
+          'the observer must be registered before the write'
+        );
         await c.insertAsync({ n: 'during-start' });
         handle = await observing;
       });
