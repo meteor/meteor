@@ -564,7 +564,7 @@ Meteor.isServer && Tinytest.addAsync('collection - update rejected by validation
   let fired = false;
   fence.onAllCommitted(() => { fired = true; });
   await DDPServer._CurrentWriteFence.withValue(fence, () =>
-    test.throwsAsync(() => collection.updateAsync({}, { $set: { a: 1 }, b: 2 }))
+    test.throwsAsync(() => collection.updateAsync({}, { $set: { a: 1 }, b: 2 }), /both modifier and non-modifier/)
   );
   await fence.arm();
   test.isTrue(fired, 'the method would never send its updated message');
