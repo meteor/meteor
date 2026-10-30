@@ -483,6 +483,7 @@ MongoConnection.prototype.updateAsync = async function (collection_name, selecto
         }
       }).catch(async err => {
         try { await session.endSession(); } catch (_) { /* ignore */ }
+        await write.committed();
         throw err;
       });
   } else {

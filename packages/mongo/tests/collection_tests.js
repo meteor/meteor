@@ -540,3 +540,20 @@ Tinytest.addAsync('collection - compare default idGeneration with explicit idGen
   await stringCollection.removeAsync({});
   await mongoCollection.removeAsync({});
 });
+
+Meteor.isServer && Tinytest.addAsync('collection - failed replacement upsert still commits the write fence', async function (test) {
+  const collection = new Mongo.Collection('upsertFence' + test.id);
+  await collection.createIndexAsync({ b: 1 }, { unique: true });
+  await collection.insertAsync({ b: 1 });
+
+  const fence = new DDPServer._WriteFence();
+  let fired = false;
+  fence.onAllCommitted(() => { fired = true; });
+  await DDPServer._CurrentWriteFence.withValue(fence, () =>
+    test.throwsAsync(() => collection.upsertAsync({ a: 1 }, { b: 1 }), /duplicate key/)
+  );
+  await fence.arm();
+  test.isTrue(fired, 'the method would never send its updated message');
+
+  await collection.dropCollectionAsync();
+});
