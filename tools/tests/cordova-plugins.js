@@ -485,19 +485,23 @@ selftest.define("cordova builds with several local plugins", ["cordova"], async 
     await run.expectExit(0);
   }
 
-  // Build a fresh Cordova project, then rebuild it to reinstall the plugins.
-  await files.rm_recursive(
-    files.pathJoin(s.cwd, '.meteor', 'local', 'cordova-build'));
-
-  for (let i = 0; i < 2; i++) {
-    run = s.run("build", '../a', "--server", "localhost:3000");
+  const buildWithPlugins = async (outputDir) => {
+    run = s.run("build", outputDir, "--server", "localhost:3000");
     run.waitSecs(90);
     await run.expectExit(0);
 
     for (const id of pluginIds) {
       await checkCordovaPluginExists(s, id);
+      selftest.expectTrue(files.exists(files.pathJoin(s.cwd, outputDir,
+        `android/project/app/src/main/assets/www/plugins/${id}/www/index.js`)));
     }
-  }
+  };
+
+  // Build a fresh Cordova project, then rebuild it to reinstall the plugins.
+  await files.rm_recursive(
+    files.pathJoin(s.cwd, '.meteor', 'local', 'cordova-build'));
+  await buildWithPlugins('../a');
+  await buildWithPlugins('../b');
 });
 
 selftest.define("meteor exits when cordova plugins change", ["slow", "cordova"], async function () {
