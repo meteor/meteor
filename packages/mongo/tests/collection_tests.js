@@ -53,6 +53,19 @@ Tinytest.add('collection - call new Mongo.Collection with defineMutationMethods=
   }
 );
 
+Tinytest.add('collection - allow and deny with defineMutationMethods=false',
+  function (test) {
+    var handlerPropName = Meteor.isClient ? '_methodHandlers' : 'method_handlers';
+    var collectionName = 'nomethodsrules' + test.id;
+    var collection = new Mongo.Collection(collectionName, {defineMutationMethods: false});
+
+    collection.deny({insert: () => false, update: () => false, transform: null});
+    collection.allow({insert: () => true, update: () => true, fetch: ['_id']});
+
+    test.equal(collection._connection[handlerPropName]['/' + collectionName + '/insert'], undefined);
+  }
+);
+
 Tinytest.add('collection - call find with sort function',
   function (test) {
     var initialize = function (collection) {
