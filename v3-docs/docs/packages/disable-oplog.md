@@ -70,7 +70,7 @@ Like the package, per-query `disableOplog` only removes the **oplog** driver —
 
 ## Driver tradeoffs
 
-- **Change Streams** (default) push changes to reactive queries in realtime and work even where oplog access isn't available (most managed MongoDB tiers). Requires MongoDB 6.0.9+ on a replica set or sharded cluster whose `ping` replies include `operationTime`; where they don't (seen on Atlas Flex), Meteor logs the reason once and uses the next driver.
+- **Change Streams** (default) push changes to reactive queries in realtime and work even where oplog access isn't available (most managed MongoDB tiers). Requires MongoDB 6.0.9+ on a replica set or sharded cluster whose `ping` replies include `operationTime`; where they don't (reported on Atlas Flex), Meteor logs the reason once and uses the next driver.
 - **Oplog tailing** also pushes changes with low latency, but needs a configured oplog URL (e.g. `MONGO_OPLOG_URL`) and oplog read access.
 - **Polling** re-runs each reactive query periodically. Updates can lag by up to `pollingIntervalMs` (default **10 seconds**), and app-wide polling multiplies query load across every observer.
 
