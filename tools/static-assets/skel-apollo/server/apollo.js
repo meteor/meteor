@@ -3,7 +3,7 @@ import { WebApp, WebAppInternals } from 'meteor/webapp';
 import { getUser } from 'meteor/apollo';
 import { LinksCollection } from '/imports/api/links';
 import typeDefs from '/imports/apollo/schema.graphql';
-import { expressMiddleware } from '@apollo/server/express4';
+import { expressMiddleware } from '@as-integrations/express5';
 
 const express = WebAppInternals.NpmModules.express.module;
 
@@ -30,6 +30,6 @@ export async function startApolloServer() {
   WebApp.handlers.use(
     '/graphql',                                     // Configure the path as you want.
     express.json(),
-    expressMiddleware(server, { context }) // From `@apollo/server/express4`
+    expressMiddleware(server, { context })
   );
 }
