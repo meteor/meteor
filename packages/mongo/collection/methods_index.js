@@ -10,7 +10,7 @@ const defaultIndexName = index => {
   for (const spec of specs) {
     if (typeof spec === 'string') key.set(spec, 1);
     else if (Array.isArray(spec)) key.set(spec[0], spec[1] ?? 1);
-    else for (const [path, direction] of spec instanceof Map ? spec : Object.entries(spec)) key.set(path, direction);
+    else if (spec && typeof spec === 'object') for (const [path, direction] of spec instanceof Map ? spec : Object.entries(spec)) key.set(path, direction);
   }
   return [...key].flat().join('_');
 };
