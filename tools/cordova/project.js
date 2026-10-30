@@ -165,6 +165,19 @@ outdated platforms`);
       }
     }
 
+    // Earlier builds wrote local plugin paths as dependency names, which npm rejects.
+    const packageJsonPath = files.pathJoin(this.projectRoot, 'package.json');
+    if (files.exists(packageJsonPath)) {
+      const packageJson = JSON.parse(files.readFile(packageJsonPath, 'utf8'));
+      const dependencies = packageJson.dependencies || {};
+      const pathNames = Object.keys(dependencies).filter(name =>
+        name.startsWith('.') || name.startsWith('/') || name.includes('/..'));
+      if (pathNames.length) {
+        pathNames.forEach(name => delete dependencies[name]);
+        files.writeFile(packageJsonPath, JSON.stringify(packageJson, null, 2) + "\n");
+      }
+    }
+
     if (!files.exists(this.projectRoot)) {
       // We create a temporary directory with a generated config.xml
       // to use as a template for creating the Cordova project

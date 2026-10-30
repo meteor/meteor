@@ -501,6 +501,14 @@ selftest.define("cordova builds with several local plugins", ["cordova"], async 
   await files.rm_recursive(
     files.pathJoin(s.cwd, '.meteor', 'local', 'cordova-build'));
   await buildWithPlugins('../a');
+
+  // Earlier builds wrote local plugin paths as dependency names into this file.
+  const packageJsonPath = '.meteor/local/cordova-build/package.json';
+  const packageJson = JSON.parse(s.read(packageJsonPath));
+  for (const id of pluginIds) {
+    packageJson.dependencies[`../../../../local-plugins/${id}`] = '1.0.0';
+  }
+  s.write(packageJsonPath, JSON.stringify(packageJson, null, 2));
   await buildWithPlugins('../b');
 });
 
