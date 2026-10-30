@@ -484,6 +484,10 @@ to Cordova project`, async () => {
       };
 
       const packageJsonObj = Object.entries(packages).reduce((acc, [key, value]) => {
+        // Local plugins are linked from outside node_modules, not npm deps.
+        if (value.link || !key.startsWith('node_modules/')) {
+          return acc;
+        }
         const name = getPackageName(key);
         const originalPluginVersion = installedPlugins[name];
         return ({

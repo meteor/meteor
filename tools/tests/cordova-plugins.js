@@ -453,6 +453,53 @@ selftest.define("meteor reinstalls only local cordova plugins on consecutive bui
   );
 });
 
+selftest.define("cordova builds with several local plugins", ["slow", "cordova"], async function () {
+  var s = new Sandbox();
+  await s.init();
+
+  var run;
+
+  await s.createApp("myapp", "package-tests");
+  s.cd("myapp");
+
+  run = s.run("add-platform", "android");
+  run.waitSecs(90);
+  await run.match("added platform");
+  await run.expectExit(0);
+
+  const pluginIds = ['one', 'two', 'three'].map(name => `cordova-plugin-local-${name}`);
+  for (const id of pluginIds) {
+    const pluginPath = `../local-plugins/${id}`;
+    files.mkdir_p(files.pathJoin(s.cwd, pluginPath, 'www'));
+    s.write(`${pluginPath}/package.json`,
+      JSON.stringify({ name: id, version: '1.0.0', cordova: { id } }));
+    s.write(`${pluginPath}/plugin.xml`, `<?xml version="1.0" encoding="UTF-8"?>
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0" id="${id}" version="1.0.0">
+  <name>${id}</name>
+  <js-module src="www/index.js" name="index" />
+</plugin>
+`);
+    s.write(`${pluginPath}/www/index.js`, 'module.exports = {};\n');
+
+    run = s.run("add", `cordova:${id}@file://${pluginPath}`);
+    await run.expectExit(0);
+  }
+
+  // Build a fresh Cordova project, then rebuild it to reinstall the plugins.
+  await files.rm_recursive(
+    files.pathJoin(s.cwd, '.meteor', 'local', 'cordova-build'));
+
+  for (let i = 0; i < 2; i++) {
+    run = s.run("build", '../a', "--server", "localhost:3000");
+    run.waitSecs(90);
+    await run.expectExit(0);
+
+    for (const id of pluginIds) {
+      await checkCordovaPluginExists(s, id);
+    }
+  }
+});
+
 selftest.define("meteor exits when cordova plugins change", ["slow", "cordova"], async function () {
   var s = new Sandbox();
   await s.init();
