@@ -446,7 +446,7 @@ Object.assign(exports, {
     const masterProgress = options.progress;
     const outputStream = new ConcatStream();
 
-    function attempt(triesRemaining = maxAttempts, startAt = 0) {
+    async function attempt(triesRemaining = maxAttempts, startAt = 0) {
       if (startAt > 0) {
         options.headers = {
           ...options.headers,
@@ -462,10 +462,10 @@ Object.assign(exports, {
       }
 
       try {
-        return Promise.resolve(httpHelpers.request({
+        return await httpHelpers.request({
           outputStream,
           ...options,
-        }));
+        });
 
       } catch (e) {
         const size = outputStream.size;
