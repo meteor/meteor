@@ -6,6 +6,11 @@
   "type": "commonjs",
   "author": "",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/meteor/meteor.git",
+    "directory": "npm-packages/meteor-rspack"
+  },
   "scripts": {
     "bump": "node ./scripts/bump-version.js",
     "publish:beta": "bash ./scripts/publish-beta.sh"
