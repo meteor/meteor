@@ -1061,7 +1061,17 @@ OplogObserveDriver.cursorSupported = function (cursorDescription, matcher) {
   //            have a bug there)
   //           XXX: once we support it, we would need to think more on how we
   //           initialize the comparators when we create the driver.
-  return !matcher.hasWhere() && !matcher.hasGeoQuery();
+  if (matcher.hasWhere() || matcher.hasGeoQuery()) return false;
+
+  // Selectors whose local re-match can diverge from MongoDB ($type, negated
+  // $elemMatch, PCRE-only regex, collation) must fall back to polling, which
+  // re-queries MongoDB, so an excluded document cannot arrive via a live event.
+  if (LocalCollection._liveReMatchDivergence(
+        cursorDescription.selector, options)) {
+    return false;
+  }
+
+  return true;
 };
 
 var modifierCanBeDirectlyApplied = function (modifier) {
