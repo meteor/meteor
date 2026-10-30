@@ -33,12 +33,11 @@ const packages = {
     // TODO: Fibers
     // Ignored server files that has a features > 2016
     ignoredFiles: [
-      "async_helpers.js",
       "asynchronous_queue.js",
-      "test_environment.js",
     ]
   },
   "accounts-ui": {},
+  "core-runtime": {},
   "audit-argument-checks": {},
   autopublish: {},
   "babel-compiler": {
