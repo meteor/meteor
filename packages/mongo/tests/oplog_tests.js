@@ -163,6 +163,40 @@ Tinytest.addAsync('mongo-livedata - oplog - cursorSupported', async function(
   // implement $elemMatch inside $all which MongoDB supports.)
   await supported(false, { x: { $all: [{ $elemMatch: { y: 2 } }] } });
 
+  // Selectors whose local re-match can diverge from MongoDB fall back to
+  // polling (see LocalCollection._liveReMatchDivergence).
+  // Numeric $type: Minimongo collapses JS number subtypes.
+  await supported(false, { foo: { $type: 'double' } });
+  await supported(false, { foo: { $type: 1 } });
+  // Negated $type (array) and negated document $elemMatch.
+  await supported(false, { foo: { $not: { $type: 4 } } });
+  await supported(false, { foo: { $not: { $elemMatch: { y: 2 } } } });
+  await supported(false, { $nor: [{ foo: { $elemMatch: { y: 2 } } }] });
+  // PCRE-only regex syntax (\A anchor, atomic group) is not JS-equivalent.
+  await supported(false, { foo: { $regex: '\\Aabc' } });
+  await supported(false, { foo: /\Aabc/ });
+  // These stay on oplog: plain $elemMatch and ordinary regex are fine.
+  await supported(true, { foo: { $elemMatch: { y: 2 } } });
+  await supported(true, { foo: { $regex: '^abc.*z$' } });
+  await supported(true, { foo: /^abc\d+$/i });
+  // Collations with no faithful Intl.Collator equivalent fall back; plain ones
+  // stay on oplog.
+  await supported(
+    false,
+    { foo: 'abc' },
+    { collation: { locale: 'en', strength: 2, caseLevel: true } }
+  );
+  await supported(
+    false,
+    { foo: 'abc' },
+    { collation: { locale: 'en', strength: 5 } }
+  );
+  await supported(
+    true,
+    { foo: 'abc' },
+    { collation: { locale: 'en', strength: 2 } }
+  );
+
   await supported(true, {}, { sort: { x: 1 } });
   await supported(true, {}, { sort: { x: 1 }, limit: 5 });
   await supported(false, {}, { sort: { $natural: 1 }, limit: 5 });

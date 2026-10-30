@@ -117,6 +117,53 @@ Tinytest.addAsync(
   }
 );
 
+// Selectors whose local re-match can diverge from MongoDB must fall back too,
+// so a document MongoDB excluded cannot arrive via a live change event
+// (see LocalCollection._liveReMatchDivergence).
+Tinytest.addAsync(
+  'changestream - cursorSupported rejects divergent selectors',
+  async function (test) {
+    const c = makeCollection();
+
+    const supported = async function (expected, selector, options) {
+      const handle = await c
+        .find(selector, options)
+        .observeChanges({ added() {} });
+      test.equal(
+        isChangeStreamDriver(handle),
+        expected,
+        EJSON.stringify({ selector, options })
+      );
+      handle.stop();
+    };
+
+    // Divergent: numeric/negated $type, negated $elemMatch, PCRE-only regex.
+    await supported(false, { foo: { $type: 'double' } });
+    await supported(false, { foo: { $type: 1 } });
+    await supported(false, { foo: { $not: { $type: 4 } } });
+    await supported(false, { foo: { $not: { $elemMatch: { y: 2 } } } });
+    await supported(false, { $nor: [{ foo: { $elemMatch: { y: 2 } } }] });
+    await supported(false, { foo: { $regex: '\\Aabc' } });
+    await supported(false, { foo: /\Aabc/ });
+    // Collation with no faithful Intl.Collator equivalent falls back.
+    await supported(
+      false,
+      { foo: 'abc' },
+      { collation: { locale: 'en', strength: 2, caseLevel: true } }
+    );
+
+    // Safe: plain $elemMatch, ordinary regex and plain collation stay live.
+    await supported(true, { foo: { $elemMatch: { y: 2 } } });
+    await supported(true, { foo: { $regex: '^abc.*z$' } });
+    await supported(true, { foo: /^abc\d+$/i });
+    await supported(
+      true,
+      { foo: 'abc' },
+      { collation: { locale: 'en', strength: 2 } }
+    );
+  }
+);
+
 // ============================================================================
 // BASIC CRUD OPERATIONS TESTS
 // ============================================================================
