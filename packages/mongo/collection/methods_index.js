@@ -1,10 +1,19 @@
 import { Log } from 'meteor/logging';
 
-// Name the driver gives a string, object or Map spec created without one, e.g. { a: 1, b: -1 } -> 'a_1_b_-1'
-const defaultIndexName = index =>
-  typeof index === 'string'
-    ? `${index}_1`
-    : (index instanceof Map ? [...index] : Object.entries(index)).flat().join('_');
+const isIndexDirection = x =>
+  typeof x === 'number' || x === '2d' || x === '2dsphere' || x === 'text' || x === 'geoHaystack';
+
+// Name the driver gives an index created without one, e.g. { a: 1, b: -1 } -> 'a_1_b_-1'
+const defaultIndexName = index => {
+  const specs = !Array.isArray(index) || (index.length === 2 && isIndexDirection(index[1])) ? [index] : index;
+  const key = new Map();
+  for (const spec of specs) {
+    if (typeof spec === 'string') key.set(spec, 1);
+    else if (Array.isArray(spec)) key.set(spec[0], spec[1] ?? 1);
+    else for (const [path, direction] of spec instanceof Map ? spec : Object.entries(spec)) key.set(path, direction);
+  }
+  return [...key].flat().join('_');
+};
 
 export const IndexMethods = {
   // We'll actually design an index API later. For now, we just pass through to
