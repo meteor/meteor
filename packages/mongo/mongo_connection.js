@@ -1049,51 +1049,55 @@ MongoConnection.prototype._observeChanges = async function (
           const reasons = [];
 
           if (this._supportsChangeStreams === undefined) {
-            const serverReasons = [];
+            // Concurrent first observers share one check, so the reasons are logged once.
+            this._changeStreamSupportCheck ??= (async () => {
+              const serverReasons = [];
 
-            try {
-              // The large-event split stage requires MongoDB 6.0.9+ / 7+.
-              const admin = this.db.admin();
-              const serverInfo = await admin.serverInfo();
-              const isMasterPromise = admin.command({ isMaster: 1 });
-              const versionString = serverInfo.version || 'unknown';
-              const versionParts = versionString.split('.').map(Number);
-              const major = Number.isFinite(versionParts[0]) ? versionParts[0] : 0;
+              try {
+                // The large-event split stage requires MongoDB 6.0.9+ / 7+.
+                const admin = this.db.admin();
+                const serverInfo = await admin.serverInfo();
+                const isMasterPromise = admin.command({ isMaster: 1 });
+                const versionString = serverInfo.version || 'unknown';
+                const versionParts = versionString.split('.').map(Number);
+                const major = Number.isFinite(versionParts[0]) ? versionParts[0] : 0;
 
-              const [, minor = 0, patch = 0] = versionParts;
-              const hasMinVersion = major >= 7 ||
-                (major === 6 && (minor > 0 || (minor === 0 && patch >= 9)));
+                const [, minor = 0, patch = 0] = versionParts;
+                const hasMinVersion = major >= 7 ||
+                  (major === 6 && (minor > 0 || (minor === 0 && patch >= 9)));
 
-              if (!hasMinVersion) {
-                serverReasons.push(`Change Streams require MongoDB 6.0.9+ or 7+ (current ${versionString})`);
-              } else {
-                // Check if we're running on a replica set or sharded cluster.
-                // `isMaster.ismaster` is true on a standalone too (it only means
-                // the node accepts writes), so it is NOT a replica-set signal:
-                // including it made standalone deployments select Change Streams
-                // and then fail at watch() with "$changeStream is only supported
-                // on replica sets". `setName` is the replica-set signal.
-                const isMaster = await isMasterPromise;
-                const isReplicaSet = Boolean(isMaster.setName || isMaster.secondary);
-                const isSharded = isMaster.msg === 'isdbgrid';
+                if (!hasMinVersion) {
+                  serverReasons.push(`Change Streams require MongoDB 6.0.9+ or 7+ (current ${versionString})`);
+                } else {
+                  // Check if we're running on a replica set or sharded cluster.
+                  // `isMaster.ismaster` is true on a standalone too (it only means
+                  // the node accepts writes), so it is NOT a replica-set signal:
+                  // including it made standalone deployments select Change Streams
+                  // and then fail at watch() with "$changeStream is only supported
+                  // on replica sets". `setName` is the replica-set signal.
+                  const isMaster = await isMasterPromise;
+                  const isReplicaSet = Boolean(isMaster.setName || isMaster.secondary);
+                  const isSharded = isMaster.msg === 'isdbgrid';
 
-                if (!(isReplicaSet || isSharded)) {
-                  serverReasons.push('Change Streams require a replica set or sharded cluster');
-                } else if (!(await this.db.command({ ping: 1 }))?.operationTime) {
-                  // Stream starts and fence floors come from ping's operationTime; seen missing on Atlas Flex.
-                  serverReasons.push('Change Streams require ping replies to include operationTime');
+                  if (!(isReplicaSet || isSharded)) {
+                    serverReasons.push('Change Streams require a replica set or sharded cluster');
+                  } else if (!(await this.db.command({ ping: 1 }))?.operationTime) {
+                    // Stream starts and fence floors come from ping's operationTime; reported missing on Atlas Flex.
+                    serverReasons.push('Change Streams require ping replies to include operationTime');
+                  }
                 }
+              } catch (error) {
+                Meteor._debug("Error checking Change Stream support:", error);
+                serverReasons.push(`Error checking Change Stream support: ${error.message}`);
               }
-            } catch (error) {
-              Meteor._debug("Error checking Change Stream support:", error);
-              serverReasons.push(`Error checking Change Stream support: ${error.message}`);
-            }
 
-            this._changeStreamServerReasons = serverReasons;
-            this._supportsChangeStreams = serverReasons.length === 0;
-            if (serverReasons.length) {
-              Meteor._debug(`Change Streams unavailable, using the next reactivity driver: ${serverReasons.join('; ')}`);
-            }
+              this._changeStreamServerReasons = serverReasons;
+              this._supportsChangeStreams = serverReasons.length === 0;
+              if (serverReasons.length) {
+                Meteor._debug(`Change Streams unavailable, using the next reactivity driver: ${serverReasons.join('; ')}`);
+              }
+            })().finally(() => { this._changeStreamSupportCheck = null; });
+            await this._changeStreamSupportCheck;
           }
 
           if (!this._supportsChangeStreams) {
