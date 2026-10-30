@@ -1151,6 +1151,121 @@ LocalCollection._checkSupportedProjection = fields => {
   });
 };
 
+// Live observe drivers (oplog, Change Streams) take their initial set from
+// MongoDB but re-check later events locally with a Matcher. Where Minimongo's
+// semantics can diverge from MongoDB for the same selector, a document MongoDB
+// excluded could be admitted by the local re-match, so such cursors must fall
+// back to polling (which re-queries MongoDB). This mirrors the oplog driver's
+// existing $where/$near guard.
+//
+// Returns a short reason string if the selector, or the cursor's collation, can
+// diverge, otherwise null. It is conservative: it declines on the presence of a
+// risky construct rather than deciding the exact value that diverges.
+//
+// A collation diverges when LocalCollection._createCollator cannot build an
+// Intl.Collator that matches MongoDB's ICU for it.
+const collationDiverges = collation => {
+  if (!collation || typeof collation !== 'object') {
+    return false;
+  }
+  // strength 4-5 have no Intl.Collator equivalent (identical/quaternary).
+  if (collation.strength != null && collation.strength > 3) {
+    return true;
+  }
+  // caseLevel only maps faithfully at strength 1 (sensitivity 'case'); at
+  // strength 2 Intl.Collator has no accent-and-case sensitivity, so MongoDB's
+  // case-sensitive result is matched case-insensitively.
+  if (collation.caseLevel && collation.strength === 2) {
+    return true;
+  }
+  // Options _createCollator does not map are silently ignored, so a local match
+  // would diverge from MongoDB.
+  if (collation.alternate != null && collation.alternate !== 'non-ignorable') {
+    return true;
+  }
+  if (collation.maxVariable != null || collation.backwards ||
+      collation.normalization) {
+    return true;
+  }
+  return false;
+};
+
+LocalCollection._liveReMatchDivergence = (selector, options) => {
+  // Collations that LocalCollection._createCollator cannot represent with an
+  // Intl.Collator diverge from MongoDB's ICU (e.g. caseLevel at strength 2,
+  // which MongoDB makes case-sensitive but maps to case-insensitive 'accent'
+  // here; strength 4-5; and options that are silently ignored). Faithful
+  // collations (plain strength 1-3, numericOrdering, caseFirst, caseLevel at
+  // strength 1) stay on the live driver.
+  if (options && collationDiverges(options.collation)) {
+    return 'collation';
+  }
+
+  // PCRE constructs that JavaScript RegExp does not interpret the same way:
+  // \A \Z \z \G \h \H \R \K escapes, atomic groups and PCRE named groups
+  // ((?> (?P (?#), inline flag groups ((?i) (?-i:), \Q..\E literals and
+  // possessive quantifiers (a++ a*+ a?+ a}+). Any of these can diverge.
+  const PCRE_ONLY = /\\[AZzGhHRK]|\(\?[>P#]|\(\?-?[a-z]+[:)]|\\Q|[*+?}]\+/;
+
+  const regexDiverges = re => {
+    const source = re instanceof RegExp ? re.source : re;
+    return typeof source === 'string' && PCRE_ONLY.test(source);
+  };
+
+  // Walk the selector tree. `negated` is true inside a $not or $nor subtree.
+  const scan = (node, negated) => {
+    if (node instanceof RegExp) {
+      return regexDiverges(node) ? 'pcre-regex' : null;
+    }
+
+    if (!node || typeof node !== 'object') {
+      return null;
+    }
+
+    if (Array.isArray(node)) {
+      for (const item of node) {
+        const reason = scan(item, negated);
+        if (reason) {
+          return reason;
+        }
+      }
+      return null;
+    }
+
+    for (const key of Object.keys(node)) {
+      const value = node[key];
+
+      // Minimongo collapses all JS numbers to one type, so numeric BSON
+      // subtypes ($type 'double'/'int'/'long'/'decimal') match stored values
+      // MongoDB would exclude, and negated array $type also diverges. $type is
+      // rare on live cursors; decline any use.
+      if (key === '$type') {
+        return 'type';
+      }
+
+      if (key === '$elemMatch' && negated) {
+        return 'negated-elemMatch';
+      }
+
+      if (key === '$regex') {
+        if (regexDiverges(value)) {
+          return 'pcre-regex';
+        }
+        continue;
+      }
+
+      const reason = scan(value, negated || key === '$not' || key === '$nor');
+      if (reason) {
+        return reason;
+      }
+    }
+
+    return null;
+  };
+
+  return scan(selector, false);
+};
+
 // Knows how to compile a fields projection to a predicate function.
 // @returns - Function: a closure that filters out an object according to the
 //            fields projection rules:
