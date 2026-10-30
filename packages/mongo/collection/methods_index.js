@@ -1,6 +1,6 @@
 import { Log } from 'meteor/logging';
 
-// Name the mongodb driver gives an index created without one, e.g. { a: 1, b: -1 } -> 'a_1_b_-1'
+// Name the driver gives a string, object or Map spec created without one, e.g. { a: 1, b: -1 } -> 'a_1_b_-1'
 const defaultIndexName = index =>
   typeof index === 'string'
     ? `${index}_1`

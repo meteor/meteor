@@ -562,6 +562,12 @@ Meteor.isServer && Tinytest.addAsync('collection - reCreateIndexOnOptionMismatch
     await collection.createIndexAsync({ a: 1 }, { name: 'a_ttl', expireAfterSeconds: 60 });
     await collection.createIndexAsync({ a: 1 }, { name: 'a_ttl', expireAfterSeconds: 120 });
 
+    // Compound and Map specs join every key and direction
+    await collection.createIndexAsync({ c: 1, d: -1 }, { hidden: true });
+    await collection.createIndexAsync({ c: 1, d: -1 }, { hidden: false });
+    await collection.createIndexAsync(new Map([['e', 1]]), { hidden: true });
+    await collection.createIndexAsync(new Map([['e', 1]]), { hidden: false });
+
     const indexes = Object.fromEntries(
       (await collection.rawCollection().indexes()).map(index => [index.name, index])
     );
@@ -569,6 +575,8 @@ Meteor.isServer && Tinytest.addAsync('collection - reCreateIndexOnOptionMismatch
     test.equal(indexes.title_text.default_language, 'spanish');
     test.equal(indexes.a_ttl.expireAfterSeconds, 120);
     test.isTrue(indexes.a_partial);
+    test.isUndefined(indexes['c_1_d_-1'].hidden);
+    test.isUndefined(indexes.e_1.hidden);
   } finally {
     Meteor.settings.packages = packagesSettings;
     await collection.dropCollectionAsync();
