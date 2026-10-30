@@ -1466,8 +1466,8 @@ export class AccountsServer extends AccountsCommon {
   };
 
   /**
-   * @summary Add a default rule of limiting logins, creating new users and password reset
-   * to 5 times every 10 seconds per connection.
+   * @summary Add a default rule of limiting logins, creating new users, requesting
+   * passwordless login tokens and password reset to 5 times every 10 seconds per connection.
    * @locus Server
    * @importFromPackage accounts-base
    */
@@ -1477,7 +1477,8 @@ export class AccountsServer extends AccountsCommon {
         userId: null,
         clientAddress: null,
         type: 'method',
-        name: name => ['login', 'createUser', 'resetPassword', 'forgotPassword']
+        name: name => ['login', 'createUser', 'resetPassword', 'forgotPassword',
+          'requestLoginTokenForUser']
           .includes(name),
         connectionId: (connectionId) => true,
       }, 5, 10000);
