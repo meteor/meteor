@@ -186,6 +186,12 @@ You can refer to our meteor/galaxy-images repository to see how to use it, and t
 
 On Windows, the installer runs faster when [Windows Developer Mode](https://docs.microsoft.com/en-us/windows/apps/get-started/enable-your-device-for-development) is enabled. The installation extracts a large number of small files, which Windows Defender can cause to be very slow.
 
+The `meteor` command is affected the same way when it downloads a new release (`Extracting meteor-tool@<version>...`) or builds your app, because real-time scanning by Windows Defender or a company-managed security agent checks every file Meteor writes. If these steps take much longer than on macOS, Linux or WSL, exclude these folders from real-time scanning, or move them to a [Dev Drive](https://learn.microsoft.com/en-us/windows/dev-drive/):
+
+- `%LOCALAPPDATA%\.meteor`, where Meteor is installed.
+- Meteor's temporary folder. Meteor uses the first of the `TMPDIR`, `TMP` and `TEMP` environment variables that is set. Windows sets `TMP` by default, so changing only `TEMP` has no effect. To move only Meteor's temporary files, set `TMPDIR` to an existing folder, for example `D:\Temp`.
+- Your project folders.
+
 ## Node version manager {#nvm}
 
 If you use a node version manager that uses a separate global `node_modules` folder for each Node version, you will need to re-install the `meteor` npm package when changing to a Node version for the first time. Otherwise, the `meteor` command will no longer be found.
