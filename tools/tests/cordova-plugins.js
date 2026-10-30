@@ -453,7 +453,7 @@ selftest.define("meteor reinstalls only local cordova plugins on consecutive bui
   );
 });
 
-selftest.define("cordova builds with several local plugins", ["slow", "cordova"], async function () {
+selftest.define("cordova builds with several local plugins", ["cordova"], async function () {
   var s = new Sandbox();
   await s.init();
 
