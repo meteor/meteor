@@ -540,3 +540,37 @@ Tinytest.addAsync('collection - compare default idGeneration with explicit idGen
   await stringCollection.removeAsync({});
   await mongoCollection.removeAsync({});
 });
+
+Meteor.isServer && Tinytest.addAsync('collection - reCreateIndexOnOptionMismatch drops the conflicting index by name (#12178)', async function (test) {
+  const collection = new Mongo.Collection('reCreateIndex' + test.id);
+  const packagesSettings = Meteor.settings.packages;
+  Meteor.settings.packages = {
+    ...packagesSettings,
+    mongo: { ...packagesSettings?.mongo, reCreateIndexOnOptionMismatch: true },
+  };
+  try {
+    // Field name spec, as accounts-base uses
+    await collection.createIndexAsync('createdAt', { expireAfterSeconds: 60 });
+    await collection.createIndexAsync('createdAt', { expireAfterSeconds: 120 });
+
+    // Text indexes can't be dropped by key pattern
+    await collection.createIndexAsync({ title: 'text' }, { default_language: 'english' });
+    await collection.createIndexAsync({ title: 'text' }, { default_language: 'spanish' });
+
+    // Dropping by key pattern is ambiguous when another index shares it
+    await collection.createIndexAsync({ a: 1 }, { name: 'a_partial', partialFilterExpression: { b: { $exists: true } } });
+    await collection.createIndexAsync({ a: 1 }, { name: 'a_ttl', expireAfterSeconds: 60 });
+    await collection.createIndexAsync({ a: 1 }, { name: 'a_ttl', expireAfterSeconds: 120 });
+
+    const indexes = Object.fromEntries(
+      (await collection.rawCollection().indexes()).map(index => [index.name, index])
+    );
+    test.equal(indexes.createdAt_1.expireAfterSeconds, 120);
+    test.equal(indexes.title_text.default_language, 'spanish');
+    test.equal(indexes.a_ttl.expireAfterSeconds, 120);
+    test.isTrue(indexes.a_partial);
+  } finally {
+    Meteor.settings.packages = packagesSettings;
+    await collection.dropCollectionAsync();
+  }
+});

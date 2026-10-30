@@ -1,5 +1,11 @@
 import { Log } from 'meteor/logging';
 
+// Name the mongodb driver gives an index created without one, e.g. { a: 1, b: -1 } -> 'a_1_b_-1'
+const defaultIndexName = index =>
+  typeof index === 'string'
+    ? `${index}_1`
+    : (index instanceof Map ? [...index] : Object.entries(index)).flat().join('_');
+
 export const IndexMethods = {
   // We'll actually design an index API later. For now, we just pass through to
   // Mongo's, but make it synchronous.
@@ -54,8 +60,9 @@ export const IndexMethods = {
         ) &&
         Meteor.settings?.packages?.mongo?.reCreateIndexOnOptionMismatch
       ) {
-        Log.info(`Re-creating index ${ index } for ${ self._name } due to options mismatch.`);
-        await self._collection.dropIndexAsync(index);
+        const indexName = options?.name ?? defaultIndexName(index);
+        Log.info(`Re-creating index ${ indexName } for ${ self._name } due to options mismatch.`);
+        await self._collection.dropIndexAsync(indexName);
         await self._collection.createIndexAsync(index, options);
       } else {
         console.error(e);
