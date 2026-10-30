@@ -63,7 +63,7 @@ if (typeof testDriverPackageName === "string") {
         }
       }
     } catch (error) {
-      // Fail as a rejection like the former async callback, without aborting other startup callbacks.
+      // Reject instead of throwing so the other startup callbacks still run.
       return Promise.reject(error);
     }
   });

@@ -37,7 +37,6 @@ const packages = {
     ]
   },
   "accounts-ui": {},
-  "core-runtime": {},
   "audit-argument-checks": {},
   autopublish: {},
   "babel-compiler": {
@@ -54,6 +53,7 @@ const packages = {
   // },
   "browser-policy-framing": {},
   // 'constraint-solver': {},
+  "core-runtime": {},
   crosswalk: {},
   // context: { Removed/moved to depracated, we don't need it anymore because of fibers
   //   serverFiles: ["context.js"],
