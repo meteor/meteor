@@ -540,7 +540,7 @@ Where each feature is tested across apps and skeletons.
 | Skeleton creation | | all 16 tested skeletons |
 | Body style assertions | | react, tailwind (custom); most others (default) |
 | Custom .gitignore entries | react | |
-| ESM-only packages | react-router, monorepo, babel | |
+| ESM-only packages | react-router, monorepo | |
 | ESM subpath exports | react-router | |
 | Native bindings (C++ addon) | react-router | |
 | `node:` protocol imports | monorepo, typescript | |
