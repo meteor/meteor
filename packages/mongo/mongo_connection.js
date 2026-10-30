@@ -1080,7 +1080,7 @@ MongoConnection.prototype._observeChanges = async function (
                 if (!(isReplicaSet || isSharded)) {
                   serverReasons.push('Change Streams require a replica set or sharded cluster');
                 } else if (!(await this.db.command({ ping: 1 }))?.operationTime) {
-                  // Stream starts and fence floors come from ping's operationTime, which Atlas Flex omits.
+                  // Stream starts and fence floors come from ping's operationTime; seen missing on Atlas Flex.
                   serverReasons.push('Change Streams require ping replies to include operationTime');
                 }
               }
@@ -1091,6 +1091,9 @@ MongoConnection.prototype._observeChanges = async function (
 
             this._changeStreamServerReasons = serverReasons;
             this._supportsChangeStreams = serverReasons.length === 0;
+            if (serverReasons.length) {
+              Meteor._debug(`Change Streams unavailable, using the next reactivity driver: ${serverReasons.join('; ')}`);
+            }
           }
 
           if (!this._supportsChangeStreams) {

@@ -4183,7 +4183,7 @@ Tinytest.addAsync(
       test.isTrue(fired, 'the fence must not wait for an unrelated later write');
       test.isTrue(added.some(f => f.n === 'during-start'), 'the observer must see the write');
     } finally {
-      await handle?.stop();
+      await (handle ?? await observing.catch(() => null))?.stop();
       await remote.mongo.close();
     }
   }
