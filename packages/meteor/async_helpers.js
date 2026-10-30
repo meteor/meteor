@@ -28,7 +28,11 @@ Meteor._DoubleEndedQueue = Meteor.isServer ? Npm.require('denque') : FakeDoubleE
 // Sleep. Mostly used for debugging (eg, inserting latency into server
 // methods).
 //
-const _sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+var _sleep = function (ms) {
+  return new Promise(function (resolve) {
+    setTimeout(resolve, ms);
+  });
+};
 Meteor._sleepForMs = function (ms) {
   return _sleep(ms);
 };

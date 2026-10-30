@@ -92,15 +92,16 @@ describe('Regressions / Architecture-specific entrypoints /', () => {
       });
     }
 
+    // meteor and core-runtime ship untranspiled, so audit the whole legacy program.
+    const legacySource = await readProgramJavaScript(buildOutputDir, 'web.browser.legacy');
+    expect(() => parse(legacySource, { ecmaVersion: 5 })).not.toThrow();
+
     if (mode === 'debug') {
-      // Debug builds keep app code separate from Meteor packages, so this checks
-      // the fixture's downlevel compilation without auditing every dependency.
       const appSource = await readProgramJavaScript(buildOutputDir, 'web.browser.legacy', {
         appOnly: true,
       });
       expect(appSource.includes('architecture-legacy-entry')).toBe(true);
       expect(appSource.includes('missing')).toBe(true);
-      expect(() => parse(appSource, { ecmaVersion: 5 })).not.toThrow();
       // Check Rspack's output before Meteor's compiler sees it, including the
       // asynchronously loaded chunk and the Rspack runtime itself.
       const rspackSource = await fs.readFile(path.join(tempDir,
