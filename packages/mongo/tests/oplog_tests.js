@@ -600,6 +600,130 @@ process.env.MONGO_OPLOG_URL && Tinytest.addAsync(
   }
 );
   
+const sleep = ms => new Promise(resolve => Meteor.setTimeout(resolve, ms));
+
+// Resolves to the promise's outcome, or to 'timed-out' if it is still pending after `ms`.
+const within = (promise, ms) => Promise.race([
+  promise,
+  sleep(ms).then(() => 'timed-out'),
+]);
+
+const waitFor = async (condition, timeoutMs) => {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (condition()) return true;
+    await sleep(50);
+  }
+  return false;
+};
+
+Tinytest.addAsync(
+  'mongo-livedata - oplog - queued fence commits do not deadlock the multiplexer (#14795)',
+  async function (test) {
+    const collection = new Mongo.Collection(`oplog_besteady_${Random.id()}`);
+    const handle = await collection.find({}).observeChangesAsync({ added() {} });
+    const driver = handle._multiplexer._observeDriver;
+    test.isTrue(driver._usesOplog);
+
+    const originalMultiplexer = driver._multiplexer;
+    const queue = new Meteor._AsynchronousQueue();
+    const isolatedMultiplexer = {
+      onFlush: async callback => {
+        await queue.runTask(async () => {
+          await callback();
+        });
+      },
+    };
+    let reentrantFlushCompleted = false;
+
+    driver._multiplexer = isolatedMultiplexer;
+
+    try {
+      driver._writesToCommitWhenWeReachSteady.push({
+        committed: async () => {
+          await isolatedMultiplexer.onFlush(() => {
+            reentrantFlushCompleted = true;
+          });
+        },
+      });
+
+      test.equal(
+        await within(driver._beSteady().then(() => 'resolved'), 500),
+        'resolved',
+        'committing a fence write must not hold the multiplexer queue'
+      );
+      test.isTrue(
+        await waitFor(() => reentrantFlushCompleted, 1000),
+        'the fence callback must be able to re-enter the multiplexer queue'
+      );
+    } finally {
+      driver._multiplexer = originalMultiplexer;
+      await handle.stop();
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'mongo-livedata - oplog - a fence parked on a fetching observer fires after a late write (#14795)',
+  async function (test) {
+    const fetcher = MongoInternals.defaultRemoteCollectionDriver().mongo._docFetcher;
+    const originalFetch = fetcher.fetch;
+    const collection = new Mongo.Collection(`oplog_besteady_fence_${Random.id()}`);
+    await collection.insertAsync({ _id: 'a', x: 0 });
+    await collection.insertAsync({ _id: 'b', x: 0 });
+
+    const events = [];
+    const handle = await collection.find({ x: 1 }).observeChangesAsync({
+      added(id) {
+        events.push(`added ${id}`);
+      },
+    });
+    test.isTrue(handle._multiplexer._observeDriver._usesOplog);
+
+    // Keeps the observer FETCHING when the fence is armed, so the fence parks
+    // its write on the observer until the observer is steady.
+    fetcher.fetch = async (...args) => {
+      await sleep(300);
+      return originalFetch.apply(fetcher, args);
+    };
+
+    let lateWrite;
+    let fired;
+
+    try {
+      const fence = new DDPServer._WriteFence();
+      fired = new Promise(resolve => fence.onAllCommitted(() => {
+        events.push('fence fired');
+        resolve('fired');
+      }));
+
+      await DDPServer._CurrentWriteFence.withValue(fence, async () => {
+        await collection.updateAsync('a', { $set: { x: 1 } });
+        // Not awaited, like an app helper called without await: this write
+        // joins the fence after it is armed and registers a second
+        // before-fire callback on it.
+        lateWrite = sleep(50).then(() => collection.updateAsync('b', { $set: { x: 1 } }));
+      });
+      await fence.arm();
+
+      test.equal(
+        await within(fired, 5000),
+        'fired',
+        'the fence must fire once the observer is steady'
+      );
+      test.equal(await within(lateWrite, 1000), 1);
+      test.equal(
+        events,
+        ['added a', 'added b', 'fence fired'],
+        'the observer must see both writes before the fence fires'
+      );
+    } finally {
+      fetcher.fetch = originalFetch;
+      await within(handle.stop(), 1000);
+    }
+  }
+);
+
 // TODO this is commented for now, but we need to find out the cause
 // PR: https://github.com/meteor/meteor/pull/12057
 // Meteor.isServer && Tinytest.addAsync(

@@ -601,13 +601,22 @@ Object.assign(OplogObserveDriver.prototype, {
     self._registerPhaseChange(PHASE.STEADY);
     var writes = self._writesToCommitWhenWeReachSteady || [];
     self._writesToCommitWhenWeReachSteady = [];
-    await self._multiplexer.onFlush(async function () {
-      try {
-        for (const w of writes) {
-          await w.committed();
-        }
-      } catch (e) {
-        console.error("_beSteady error", {writes}, e);
+    await self._multiplexer.onFlush(function () {
+      // Commit in a microtask instead of awaiting inside this queue task.
+      // committed() on the fence's last outstanding write fires the fence, and
+      // the fence's onBeforeFire handler (registered by the listenAll callback
+      // in the constructor) re-enters this same multiplexer queue via onFlush.
+      // Awaiting that chain from inside the current queue task deadlocks the
+      // queue: the fire waits on a task queued behind this one, which can never
+      // run. Deferring keeps the ordering guarantee - commits still start only
+      // after the flush point - without holding the queue while the fence
+      // fires. Same fix as #14564 for ChangeStreamObserveDriver.
+      for (const w of writes) {
+        Promise.resolve()
+          .then(() => w.committed())
+          .catch((e) => {
+            console.error("_beSteady deferred write commit failed", {writes}, e);
+          });
       }
     });
   },
