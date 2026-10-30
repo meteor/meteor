@@ -557,3 +557,15 @@ Meteor.isServer && Tinytest.addAsync('collection - failed replacement upsert sti
 
   await collection.dropCollectionAsync();
 });
+
+Meteor.isServer && Tinytest.addAsync('collection - update rejected by validation still commits the write fence', async function (test) {
+  const collection = new Mongo.Collection('updateFence' + test.id);
+  const fence = new DDPServer._WriteFence();
+  let fired = false;
+  fence.onAllCommitted(() => { fired = true; });
+  await DDPServer._CurrentWriteFence.withValue(fence, () =>
+    test.throwsAsync(() => collection.updateAsync({}, { $set: { a: 1 }, b: 2 }))
+  );
+  await fence.arm();
+  test.isTrue(fired, 'the method would never send its updated message');
+});

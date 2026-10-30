@@ -406,24 +406,6 @@ MongoConnection.prototype.updateAsync = async function (collection_name, selecto
 
   if (!options) options = {};
 
-  var write = self._maybeBeginWrite();
-  var refresh = async function () {
-    await self._refresh(collection_name, selector);
-  };
-
-  var collection = self.rawCollection(collection_name);
-  const session = self.client.startSession();
-  var mongoOpts = {safe: true, session};
-  // Add support for filtered positional operator
-  if (options.arrayFilters !== undefined) mongoOpts.arrayFilters = options.arrayFilters;
-  // explictly enumerate options that minimongo supports
-  if (options.upsert) mongoOpts.upsert = true;
-  if (options.multi) mongoOpts.multi = true;
-  // Lets you get a more more full result from MongoDB. Use with caution:
-  // might not work with C.upsert (as opposed to C.update({upsert:true}) or
-  // with simulated upsert.
-  if (options.fullResult) mongoOpts.fullResult = true;
-
   var mongoSelector = replaceTypes(selector, replaceMeteorAtomWithMongo);
   var mongoMod = replaceTypes(mod, replaceMeteorAtomWithMongo);
 
@@ -450,6 +432,25 @@ MongoConnection.prototype.updateAsync = async function (collection_name, selecto
       throw err;
     }
   }
+  // Begin the write only after validation, so a rejected modifier cannot leave the fence open.
+  var write = self._maybeBeginWrite();
+  var refresh = async function () {
+    await self._refresh(collection_name, selector);
+  };
+
+  var collection = self.rawCollection(collection_name);
+  const session = self.client.startSession();
+  var mongoOpts = {safe: true, session};
+  // Add support for filtered positional operator
+  if (options.arrayFilters !== undefined) mongoOpts.arrayFilters = options.arrayFilters;
+  // explictly enumerate options that minimongo supports
+  if (options.upsert) mongoOpts.upsert = true;
+  if (options.multi) mongoOpts.multi = true;
+  // Lets you get a more more full result from MongoDB. Use with caution:
+  // might not work with C.upsert (as opposed to C.update({upsert:true}) or
+  // with simulated upsert.
+  if (options.fullResult) mongoOpts.fullResult = true;
+
   if (options.upsert &&
     ! isModify &&
     ! knownId &&
