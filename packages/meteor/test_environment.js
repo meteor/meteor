@@ -43,23 +43,28 @@ Meteor.isPackageTest = !!testDriverPackageName && !Meteor.isTest && !Meteor.isAp
 if (typeof testDriverPackageName === "string") {
   // Untranspiled in legacy bundles, so no async syntax; boot.js awaits the returned promise.
   Meteor.startup(function() {
-    var testDriverPackage = Package[testDriverPackageName];
-    if (! testDriverPackage) {
-      throw new Error("Can't find test driver package: " + testDriverPackageName);
-    }
+    try {
+      var testDriverPackage = Package[testDriverPackageName];
+      if (! testDriverPackage) {
+        throw new Error("Can't find test driver package: " + testDriverPackageName);
+      }
 
-    // On the client, the test driver *must* define `runTests`
-    if (Meteor.isClient) {
-      if (typeof testDriverPackage.runTests !== "function") {
-        throw new Error("Test driver package " + testDriverPackageName
-          + " missing `runTests` export");
+      // On the client, the test driver *must* define `runTests`
+      if (Meteor.isClient) {
+        if (typeof testDriverPackage.runTests !== "function") {
+          throw new Error("Test driver package " + testDriverPackageName
+            + " missing `runTests` export");
+        }
+        testDriverPackage.runTests();
+      } else {
+        // The server can optionally define `start`
+        if (typeof testDriverPackage.start === "function") {
+          return testDriverPackage.start();
+        }
       }
-      testDriverPackage.runTests();
-    } else {
-      // The server can optionally define `start`
-      if (typeof testDriverPackage.start === "function") {
-        return testDriverPackage.start();
-      }
+    } catch (error) {
+      // Fail as a rejection like the former async callback, without aborting other startup callbacks.
+      return Promise.reject(error);
     }
   });
 }
