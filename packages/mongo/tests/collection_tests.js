@@ -53,6 +53,26 @@ Tinytest.add('collection - call new Mongo.Collection with defineMutationMethods=
   }
 );
 
+Tinytest.addAsync('collection - allow and deny with defineMutationMethods=false',
+  async function (test) {
+    var handlerPropName = Meteor.isClient ? '_methodHandlers' : 'method_handlers';
+    var collectionName = 'nomethodsrules' + test.id;
+    var collection = new Mongo.Collection(collectionName, {defineMutationMethods: false});
+
+    collection.deny({insert: () => false, update: () => false, transform: null});
+    collection.allow({insert: () => true, update: () => true, fetch: ['_id']});
+
+    test.equal(collection._connection[handlerPropName]['/' + collectionName + '/insert'], undefined);
+    test.equal(collection._validators.insert.deny.length, 1);
+    test.equal(collection._validators.insert.allow.length, 1);
+    if (Meteor.isServer) {
+      // The rules guard nothing: the server writes directly, and there are no client methods to check.
+      const id = await collection.insertAsync({ a: 1 });
+      test.equal(await collection.find(id).countAsync(), 1);
+    }
+  }
+);
+
 Tinytest.add('collection - call find with sort function',
   function (test) {
     var initialize = function (collection) {
