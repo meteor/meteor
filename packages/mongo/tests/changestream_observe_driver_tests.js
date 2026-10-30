@@ -4162,9 +4162,10 @@ Tinytest.addAsync(
     const added = [];
     const fence = new DDPServer._WriteFence();
     let handle;
+    let observing;
     try {
       await DDPServer._CurrentWriteFence.withValue(fence, async () => {
-        const observing = c.find({}).observeChanges({
+        observing = c.find({}).observeChanges({
           added: (id, fields) => added.push(fields),
         });
         // Write once the observer listens for writes but before its stream is open.
@@ -4183,8 +4184,11 @@ Tinytest.addAsync(
       test.isTrue(fired, 'the fence must not wait for an unrelated later write');
       test.isTrue(added.some(f => f.n === 'during-start'), 'the observer must see the write');
     } finally {
-      await (handle ?? await observing.catch(() => null))?.stop();
-      await remote.mongo.close();
+      try {
+        await (handle ?? await observing?.catch(() => null))?.stop();
+      } finally {
+        await remote.mongo.close();
+      }
     }
   }
 );
