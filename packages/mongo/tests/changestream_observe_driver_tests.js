@@ -4122,6 +4122,70 @@ Tinytest.addAsync(
   }
 );
 
+// Atlas Flex replies to ping without operationTime and lacks getDefaultRWConcern.
+// The ping delay lets a test write land before the first observer's watch().
+const emulateFlexTier = (mongo, pingDelayMs) => {
+  const { db, client } = mongo;
+  const dbCommand = db.command;
+  db.command = async function (command, options) {
+    const result = await dbCommand.call(this, command, options);
+    if (!command?.ping) return result;
+    await new Promise(r => setTimeout(r, pingDelayMs));
+    const { operationTime, $clusterTime, ...reply } = result;
+    return reply;
+  };
+  const clientDb = client.db;
+  client.db = function (name, options) {
+    const target = clientDb.call(this, name, options);
+    if (name === 'admin') {
+      const adminCommand = target.command;
+      target.command = async function (command, opts) {
+        if (command?.getDefaultRWConcern) {
+          throw Object.assign(new Error('command not found'), {
+            code: 59,
+            codeName: 'CommandNotFound',
+          });
+        }
+        return adminCommand.call(this, command, opts);
+      };
+    }
+    return target;
+  };
+};
+
+Tinytest.addAsync(
+  'changestream - fence does not hang when ping omits operationTime (#14872)',
+  async function (test) {
+    const remote = new MongoInternals.RemoteCollectionDriver(process.env.MONGO_URL);
+    emulateFlexTier(remote.mongo, 300);
+    const c = new Mongo.Collection('changestream_test_' + Random.id(), { _driver: remote });
+    const added = [];
+    const fence = new DDPServer._WriteFence();
+    let handle;
+    try {
+      await DDPServer._CurrentWriteFence.withValue(fence, async () => {
+        const observing = c.find({}).observeChanges({
+          added: (id, fields) => added.push(fields),
+        });
+        // Write once the observer listens for writes but before its stream is open.
+        await waitFor(() => Object.keys(remote.mongo._observeMultiplexers).length > 0, 5000, 5);
+        await c.insertAsync({ n: 'during-start' });
+        handle = await observing;
+      });
+
+      const fired = await Promise.race([
+        fence.armAndWait().then(() => true),
+        new Promise(r => setTimeout(() => r(false), 3000)),
+      ]);
+      test.isTrue(fired, 'the fence must not wait for an unrelated later write');
+      test.isTrue(added.some(f => f.n === 'during-start'), 'the observer must see the write');
+    } finally {
+      await handle?.stop();
+      await remote.mongo.close();
+    }
+  }
+);
+
 // ============================================================================
 // TRANSLATION BOUNDARY TESTS
 //

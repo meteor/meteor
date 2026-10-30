@@ -1079,6 +1079,9 @@ MongoConnection.prototype._observeChanges = async function (
 
                 if (!(isReplicaSet || isSharded)) {
                   serverReasons.push('Change Streams require a replica set or sharded cluster');
+                } else if (!(await this.db.command({ ping: 1 }))?.operationTime) {
+                  // Stream starts and fence floors come from ping's operationTime, which Atlas Flex omits.
+                  serverReasons.push('Change Streams require ping replies to include operationTime');
                 }
               }
             } catch (error) {
