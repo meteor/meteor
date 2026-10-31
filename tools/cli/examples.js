@@ -257,7 +257,8 @@ function parseGitUrl(url) {
 
 function validateMeteorApp(dirPath) {
   const meteorDir = files.pathJoin(dirPath, '.meteor');
-  if (!files.exists(meteorDir)) {
+  const stat = files.statOrNull(meteorDir);
+  if (!stat || !stat.isDirectory()) {
     throw new Error(
       `The directory '${files.convertToOSPath(dirPath)}' is not a Meteor app (no .meteor directory found).`
     );
