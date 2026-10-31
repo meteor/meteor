@@ -52,6 +52,23 @@ Tinytest.add("ordered-dict - putBefore inserts before target", (test) => {
   test.equal(dict.size(), 3);
 });
 
+Tinytest.add("ordered-dict - falsy destination keys (0 and empty string)", (test) => {
+  [0, ""].forEach((destination) => {
+    const inserted = new OrderedDict();
+    inserted.append(destination, "target");
+    inserted.append("tail", "tail");
+    inserted.putBefore("new", "new", destination);
+    test.equal(keysInOrder(inserted), ["new", destination, "tail"]);
+
+    const moved = new OrderedDict();
+    moved.append(destination, "target");
+    moved.append("tail", "tail");
+    moved.append("new", "new");
+    moved.moveBefore("new", destination);
+    test.equal(keysInOrder(moved), ["new", destination, "tail"]);
+  });
+});
+
 Tinytest.add("ordered-dict - putBefore(null) appends to end", (test) => {
   const dict = new OrderedDict();
   dict.append("A", 1);
