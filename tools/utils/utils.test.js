@@ -111,6 +111,8 @@ describe('isIPv4Address', () => {
   test.each([
     ['192.168.1.1', true], ['0.0.0.0', true], ['255.255.255.255', true],
     ['localhost', false], ['192.168.1', false], ['::1', false], ['1.2.3.4.5', false],
+    ['256.1.2.3', false], ['1.256.2.3', false], ['1.2.256.3', false], ['1.2.3.256', false],
+    ['999.999.999.999', false],
   ])('(%s) = %s', (input, expected) => {
     expect(!!utils.isIPv4Address(input)).toBe(expected);
   });
