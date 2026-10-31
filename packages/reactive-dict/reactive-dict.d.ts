@@ -6,6 +6,12 @@ export declare class ReactiveDict<O = EJSONable> {
    * @param name When a name is passed, preserves contents across Hot Code Pushes
    * @param initialValue The default values for the dictionary
    */
+  constructor(initialValue?: Partial<O>);
+  /**
+   * Constructor for a ReactiveDict, which represents a reactive dictionary of key/value pairs.
+   * @param name When a name is passed, preserves contents across Hot Code Pushes
+   * @param initialValue The default values for the dictionary
+   */
   constructor(name?: string, initialValue?: Partial<O>);
   /**
    * Set a value for a key if it hasn't been set before.
