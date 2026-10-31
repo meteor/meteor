@@ -295,6 +295,42 @@ Tinytest.add("binary-heap - MaxHeap.clone empty heap", (test) => {
   test.equal(clone.maxElementId(), null);
 });
 
+// O que este teste executa:
+// Valida que MaxHeap.clone() preserva um construtor IdMap customizado sensível a identidade de objetos.
+Tinytest.add("binary-heap - MaxHeap.clone preserves custom IdMap", (test) => {
+  class IdentityMap {
+    constructor() {
+      this._map = new Map();
+    }
+    set(id, value) {
+      this._map.set(id, value);
+    }
+    get(id) {
+      return this._map.get(id);
+    }
+    has(id) {
+      return this._map.has(id);
+    }
+    remove(id) {
+      this._map.delete(id);
+    }
+    clear() {
+      this._map.clear();
+    }
+  }
+
+  const heap = new MaxHeap((a, b) => a - b, { IdMap: IdentityMap });
+  const id1 = { x: 1 };
+  const id2 = { x: 1 };
+  heap.set(id1, 100);
+  heap.set(id2, 200);
+
+  const clone = heap.clone();
+  test.equal(clone.size(), 2);
+  test.equal(clone.get(id1), 100);
+  test.equal(clone.get(id2), 200);
+});
+
 Tinytest.add("binary-heap - MinHeap sorts ascending", (test) => {
   const heap = new MinHeap((a, b) => a - b);
   heap.set("a", 5);

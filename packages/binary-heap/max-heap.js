@@ -25,6 +25,7 @@ export class MaxHeap {
 
     // _heapIdx maps an id to an index in the Heap array the corresponding value
     // is located on.
+    this._IdMap = options.IdMap;
     this._heapIdx = new options.IdMap();
 
     // The Heap data-structure implemented as a 0-based contiguous array where
@@ -191,7 +192,10 @@ export class MaxHeap {
   }
 
   clone() {
-    return new MaxHeap(this._comparator, { initData: this._heap });
+    return new MaxHeap(this._comparator, {
+      initData: this._heap,
+      IdMap: this._IdMap,
+    });
   }
 
   maxElementId() {

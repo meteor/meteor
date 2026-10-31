@@ -82,3 +82,23 @@ test("MinMaxHeap clone mantém elementos, minElementId e maxElementId", async ()
   assert.equal(heap.size(), 4);
   assert.equal(heap.minElementId(), "c");
 });
+
+// O que este teste executa:
+// Valida que MaxHeap.clone() e MinMaxHeap.clone() preservam o construtor IdMap customizado.
+test("MaxHeap e MinMaxHeap clone preservam IdMap customizado para objetos como id", async () => {
+  const { MaxHeap } = await import(new URL("../../../../max-heap.js", import.meta.url).href);
+  const { MinMaxHeap } = await import(new URL("../../../../min-max-heap.js", import.meta.url).href);
+
+  for (const HeapClass of [MaxHeap, MinMaxHeap]) {
+    const heap = new HeapClass((a, b) => a - b, { IdMap: SimpleIdMap });
+    const idA = { key: "alpha" };
+    const idB = { key: "alpha" }; // objeto distinto com mesmo conteúdo
+    heap.set(idA, 42);
+    heap.set(idB, 99);
+
+    const clone = heap.clone();
+    assert.equal(clone.size(), 2);
+    assert.equal(clone.get(idA), 42);
+    assert.equal(clone.get(idB), 99);
+  }
+});
