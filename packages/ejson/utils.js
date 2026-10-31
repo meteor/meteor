@@ -38,11 +38,14 @@ export const convertMapToObject = (map) =>
   }, {});
 
 export const isArguments = (obj) => {
-  if (!obj || typeof obj !== "object" || Object.prototype.toString.call(obj) !== "[object Arguments]") {
+  if (!obj || typeof obj !== "object") {
     return false;
   }
   const desc = Object.getOwnPropertyDescriptor(obj, "callee");
-  return desc !== undefined && !desc.enumerable;
+  if (!desc || desc.enumerable) {
+    return false;
+  }
+  return Object.prototype.toString.call(obj) === "[object Arguments]";
 };
 
 export const isInfOrNaN = (obj) => Number.isNaN(obj) || obj === Infinity || obj === -Infinity;
