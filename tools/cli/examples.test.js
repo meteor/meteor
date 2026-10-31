@@ -139,3 +139,36 @@ describe('parseGitUrl', () => {
     });
   });
 });
+
+describe('validateMeteorApp', () => {
+  const files = require('../fs/files');
+  const { validateMeteorApp } = require('./examples.js');
+
+  beforeEach(() => {
+    Object.assign(files, {
+      pathJoin: (...parts) => parts.join('/'),
+      convertToOSPath: (path) => path,
+    });
+  });
+
+  it('accepts when .meteor is a directory', () => {
+    Object.assign(files, {
+      statOrNull: () => ({ isDirectory: () => true }),
+    });
+    expect(() => validateMeteorApp('/fake-app')).not.toThrow();
+  });
+
+  it('rejects a regular file named .meteor', () => {
+    Object.assign(files, {
+      statOrNull: () => ({ isDirectory: () => false }),
+    });
+    expect(() => validateMeteorApp('/fake-app')).toThrow('is not a Meteor app');
+  });
+
+  it('rejects when .meteor does not exist', () => {
+    Object.assign(files, {
+      statOrNull: () => null,
+    });
+    expect(() => validateMeteorApp('/fake-app')).toThrow('is not a Meteor app');
+  });
+});
