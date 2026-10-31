@@ -405,6 +405,45 @@ Tinytest.add("ejson - clone", (test) => {
     test.equal(clonedArgs, [1, 2, "foo", [4]]);
   }
   testCloneArgs(1, 2, "foo", [4]);
+
+  // Objects with a 'callee' property should remain objects, not be treated as arguments
+  const objWithCallee = { callee: "incoming", name: "Ada", nested: { callee: 123 } };
+  const clonedObjWithCallee = EJSON.clone(objWithCallee);
+  test.equal(clonedObjWithCallee, objWithCallee);
+  test.equal(clonedObjWithCallee.callee, "incoming");
+  test.equal(clonedObjWithCallee.name, "Ada");
+  clonedObjWithCallee.nested.callee = 456;
+  test.equal(objWithCallee.nested.callee, 123);
+
+  function testStrictCloneArgs(/*arguments*/) {
+    "use strict";
+    const clonedStrict = EJSON.clone(arguments);
+    test.equal(clonedStrict, [1, 2, "foo", [4]]);
+  }
+  testStrictCloneArgs(1, 2, "foo", [4]);
+
+  // Objects tagged with Symbol.toStringTag = 'Arguments' should not be treated as arguments
+  const taggedObj = { name: "Ada", [Symbol.toStringTag]: "Arguments" };
+  const clonedTagged = EJSON.clone(taggedObj);
+  test.equal(clonedTagged, taggedObj);
+  test.equal(clonedTagged.name, "Ada");
+
+  // Objects without callee whose Symbol.toStringTag getter throws should not throw on clone
+  const throwingTagObj = {
+    name: "safe",
+    get [Symbol.toStringTag]() {
+      throw new Error("throwing getter");
+    },
+  };
+  const clonedThrowing = EJSON.clone(throwingTagObj);
+  test.equal(clonedThrowing.name, "safe");
+
+  // Objects with inherited Symbol.toStringTag and own non-enumerable callee should not be treated as arguments
+  const protoWithTag = { [Symbol.toStringTag]: "Arguments" };
+  const inheritedFake = Object.create(protoWithTag);
+  Object.defineProperty(inheritedFake, "callee", { value: () => {}, enumerable: false });
+  const clonedInherited = EJSON.clone(inheritedFake);
+  test.equal(clonedInherited, inheritedFake);
 });
 
 Tinytest.add("ejson - stringify", (test) => {
@@ -428,6 +467,14 @@ Tinytest.add("ejson - stringify", (test) => {
   test.equal(
     EJSON.stringify({ b: [2, { d: 4, c: 3 }], a: 1 }, { canonical: true }),
     '{"a":1,"b":[2,{"c":3,"d":4}]}',
+  );
+  test.equal(
+    EJSON.stringify({ callee: "incoming", name: "Ada" }, { canonical: true }),
+    '{"callee":"incoming","name":"Ada"}',
+  );
+  test.equal(
+    EJSON.stringify({ name: "Ada", [Symbol.toStringTag]: "Arguments" }, { canonical: true }),
+    '{"name":"Ada"}',
   );
   test.equal(
     EJSON.stringify(

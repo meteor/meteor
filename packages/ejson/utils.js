@@ -37,7 +37,23 @@ export const convertMapToObject = (map) =>
     return acc;
   }, {});
 
-export const isArguments = (obj) => obj != null && hasOwn(obj, "callee");
+export const isArguments = (obj) => {
+  if (!obj || typeof obj !== "object") {
+    return false;
+  }
+  const desc = Object.getOwnPropertyDescriptor(obj, "callee");
+  if (!desc || desc.enumerable) {
+    return false;
+  }
+  if (
+    typeof Symbol !== "undefined" &&
+    Symbol.toStringTag &&
+    Symbol.toStringTag in obj
+  ) {
+    return false;
+  }
+  return Object.prototype.toString.call(obj) === "[object Arguments]";
+};
 
 export const isInfOrNaN = (obj) => Number.isNaN(obj) || obj === Infinity || obj === -Infinity;
 
