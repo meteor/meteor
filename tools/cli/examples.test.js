@@ -138,4 +138,36 @@ describe('parseGitUrl', () => {
       expect(result).toEqual({ repoUrl: 42, branch: null, dir: null });
     });
   });
+
+  describe('validateMeteorApp', () => {
+    const files = require('../fs/files');
+    const { validateMeteorApp } = require('./examples.js');
+
+    it('accepts an existing .meteor directory', () => {
+      Object.assign(files, {
+        pathJoin: (...parts) => parts.join('/'),
+        convertToOSPath: path => path,
+        statOrNull: () => ({ isDirectory: () => true }),
+      });
+      expect(() => validateMeteorApp('/fake-app')).not.toThrow();
+    });
+
+    it('rejects a missing .meteor path', () => {
+      Object.assign(files, {
+        pathJoin: (...parts) => parts.join('/'),
+        convertToOSPath: path => path,
+        statOrNull: () => null,
+      });
+      expect(() => validateMeteorApp('/fake-app')).toThrow('is not a Meteor app');
+    });
+
+    it('rejects a regular file named .meteor', () => {
+      Object.assign(files, {
+        pathJoin: (...parts) => parts.join('/'),
+        convertToOSPath: path => path,
+        statOrNull: () => ({ isDirectory: () => false }),
+      });
+      expect(() => validateMeteorApp('/fake-app')).toThrow('is not a Meteor app');
+    });
+  });
 });
