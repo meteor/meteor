@@ -421,6 +421,12 @@ Tinytest.add("ejson - clone", (test) => {
     test.equal(clonedStrict, [1, 2, "foo", [4]]);
   }
   testStrictCloneArgs(1, 2, "foo", [4]);
+
+  // Objects tagged with Symbol.toStringTag = 'Arguments' should not be treated as arguments
+  const taggedObj = { name: "Ada", [Symbol.toStringTag]: "Arguments" };
+  const clonedTagged = EJSON.clone(taggedObj);
+  test.equal(clonedTagged, taggedObj);
+  test.equal(clonedTagged.name, "Ada");
 });
 
 Tinytest.add("ejson - stringify", (test) => {
@@ -448,6 +454,10 @@ Tinytest.add("ejson - stringify", (test) => {
   test.equal(
     EJSON.stringify({ callee: "incoming", name: "Ada" }, { canonical: true }),
     '{"callee":"incoming","name":"Ada"}',
+  );
+  test.equal(
+    EJSON.stringify({ name: "Ada", [Symbol.toStringTag]: "Arguments" }, { canonical: true }),
+    '{"name":"Ada"}',
   );
   test.equal(
     EJSON.stringify(
