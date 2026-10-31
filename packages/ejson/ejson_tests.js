@@ -405,6 +405,22 @@ Tinytest.add("ejson - clone", (test) => {
     test.equal(clonedArgs, [1, 2, "foo", [4]]);
   }
   testCloneArgs(1, 2, "foo", [4]);
+
+  // Objects with a 'callee' property should remain objects, not be treated as arguments
+  const objWithCallee = { callee: "incoming", name: "Ada", nested: { callee: 123 } };
+  const clonedObjWithCallee = EJSON.clone(objWithCallee);
+  test.equal(clonedObjWithCallee, objWithCallee);
+  test.equal(clonedObjWithCallee.callee, "incoming");
+  test.equal(clonedObjWithCallee.name, "Ada");
+  clonedObjWithCallee.nested.callee = 456;
+  test.equal(objWithCallee.nested.callee, 123);
+
+  function testStrictCloneArgs(/*arguments*/) {
+    "use strict";
+    const clonedStrict = EJSON.clone(arguments);
+    test.equal(clonedStrict, [1, 2, "foo", [4]]);
+  }
+  testStrictCloneArgs(1, 2, "foo", [4]);
 });
 
 Tinytest.add("ejson - stringify", (test) => {
@@ -428,6 +444,10 @@ Tinytest.add("ejson - stringify", (test) => {
   test.equal(
     EJSON.stringify({ b: [2, { d: 4, c: 3 }], a: 1 }, { canonical: true }),
     '{"a":1,"b":[2,{"c":3,"d":4}]}',
+  );
+  test.equal(
+    EJSON.stringify({ callee: "incoming", name: "Ada" }, { canonical: true }),
+    '{"callee":"incoming","name":"Ada"}',
   );
   test.equal(
     EJSON.stringify(
