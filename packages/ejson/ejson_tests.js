@@ -437,6 +437,13 @@ Tinytest.add("ejson - clone", (test) => {
   };
   const clonedThrowing = EJSON.clone(throwingTagObj);
   test.equal(clonedThrowing.name, "safe");
+
+  // Objects with inherited Symbol.toStringTag and own non-enumerable callee should not be treated as arguments
+  const protoWithTag = { [Symbol.toStringTag]: "Arguments" };
+  const inheritedFake = Object.create(protoWithTag);
+  Object.defineProperty(inheritedFake, "callee", { value: () => {}, enumerable: false });
+  const clonedInherited = EJSON.clone(inheritedFake);
+  test.equal(clonedInherited, inheritedFake);
 });
 
 Tinytest.add("ejson - stringify", (test) => {
