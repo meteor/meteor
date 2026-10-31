@@ -52,8 +52,6 @@ Tinytest.add("ordered-dict - putBefore inserts before target", (test) => {
   test.equal(dict.size(), 3);
 });
 
-// O que este teste executa:
-// Valida que putBefore e moveBefore aceitam chaves de destino com valor falsy (0 e string vazia '') sem tratá-los como null.
 Tinytest.add("ordered-dict - falsy destination keys (0 and empty string)", (test) => {
   [0, ""].forEach((destination) => {
     const inserted = new OrderedDict();
