@@ -45,6 +45,13 @@ export const isArguments = (obj) => {
   if (!desc || desc.enumerable) {
     return false;
   }
+  if (
+    typeof Symbol !== "undefined" &&
+    Symbol.toStringTag &&
+    Symbol.toStringTag in obj
+  ) {
+    return false;
+  }
   return Object.prototype.toString.call(obj) === "[object Arguments]";
 };
 
