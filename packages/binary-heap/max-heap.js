@@ -191,8 +191,7 @@ export class MaxHeap {
   }
 
   clone() {
-    const clone = new MaxHeap(this._comparator, this._heap);
-    return clone;
+    return new MaxHeap(this._comparator, { initData: this._heap });
   }
 
   maxElementId() {
