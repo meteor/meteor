@@ -40,8 +40,10 @@ export class MinMaxHeap extends MaxHeap {
   }
 
   clone() {
-    const clone = new MinMaxHeap(this._comparator, this._heap);
-    return clone;
+    return new MinMaxHeap(this._comparator, {
+      initData: this._heap,
+      IdMap: this._IdMap,
+    });
   }
 
   minElementId() {
