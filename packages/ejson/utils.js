@@ -37,7 +37,8 @@ export const convertMapToObject = (map) =>
     return acc;
   }, {});
 
-export const isArguments = (obj) => obj != null && hasOwn(obj, "callee");
+export const isArguments = (obj) =>
+  obj != null && Object.prototype.toString.call(obj) === "[object Arguments]";
 
 export const isInfOrNaN = (obj) => Number.isNaN(obj) || obj === Infinity || obj === -Infinity;
 
