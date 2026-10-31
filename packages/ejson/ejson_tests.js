@@ -427,6 +427,16 @@ Tinytest.add("ejson - clone", (test) => {
   const clonedTagged = EJSON.clone(taggedObj);
   test.equal(clonedTagged, taggedObj);
   test.equal(clonedTagged.name, "Ada");
+
+  // Objects without callee whose Symbol.toStringTag getter throws should not throw on clone
+  const throwingTagObj = {
+    name: "safe",
+    get [Symbol.toStringTag]() {
+      throw new Error("throwing getter");
+    },
+  };
+  const clonedThrowing = EJSON.clone(throwingTagObj);
+  test.equal(clonedThrowing.name, "safe");
 });
 
 Tinytest.add("ejson - stringify", (test) => {
