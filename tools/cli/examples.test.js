@@ -3,7 +3,38 @@ jest.mock('../fs/files', () => ({}));
 jest.mock('../utils/http-helpers.js', () => ({}));
 jest.mock('../console/console.js', () => ({ Console: { warn: jest.fn() } }));
 
-const { parseGitUrl } = require('./examples.js');
+const { parseGitUrl, validateExamplesData } = require('./examples.js');
+
+describe('validateExamplesData', () => {
+  it('keeps a valid example after a null or non-object entry', () => {
+    const warn = jest.fn();
+    const valid = {
+      slug: 'ok',
+      repositoryUrl: 'https://example.invalid/repo',
+    };
+    expect(validateExamplesData([null, 'bad-string', undefined, valid], { warn })).toEqual([valid]);
+    expect(warn).toHaveBeenCalledTimes(3);
+  });
+
+  it('skips entry with missing or non-string slug', () => {
+    const warn = jest.fn();
+    const entry = { slug: 123, repositoryUrl: 'https://example.com' };
+    expect(validateExamplesData([entry], { warn })).toEqual([]);
+    expect(warn).toHaveBeenCalledWith('Skipping example entry with missing slug');
+  });
+
+  it('skips entry with missing or non-string repositoryUrl', () => {
+    const warn = jest.fn();
+    const entry = { slug: 'test-slug', repositoryUrl: null };
+    expect(validateExamplesData([entry], { warn })).toEqual([]);
+    expect(warn).toHaveBeenCalledWith("Skipping example 'test-slug' with missing repositoryUrl");
+  });
+
+  it('throws when data is not an array', () => {
+    expect(() => validateExamplesData(null)).toThrow('Invalid examples.json format: expected a JSON array.');
+    expect(() => validateExamplesData({})).toThrow('Invalid examples.json format: expected a JSON array.');
+  });
+});
 
 describe('parseGitUrl', () => {
   describe('GitHub URLs', () => {
