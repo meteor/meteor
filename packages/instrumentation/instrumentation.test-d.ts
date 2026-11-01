@@ -9,24 +9,28 @@ expectTypeOf<Instrumentation.EventType>().toEqualTypeOf<
   | "method.start"
   | "method.end"
   | "method.error"
+  | "method.updated"
   | "publication.start"
   | "publication.ready"
   | "publication.stop"
   | "publication.error"
   | "ddp.connection.open"
   | "ddp.connection.close"
+  | "ddp.message.out"
 >();
 
 expectTypeOf<Instrumentation.EventMap>().toEqualTypeOf<{
   "method.start": Instrumentation.MethodStartEvent;
   "method.end": Instrumentation.MethodEndEvent;
   "method.error": Instrumentation.MethodErrorEvent;
+  "method.updated": Instrumentation.MethodUpdatedEvent;
   "publication.start": Instrumentation.PublicationStartEvent;
   "publication.ready": Instrumentation.PublicationReadyEvent;
   "publication.stop": Instrumentation.PublicationStopEvent;
   "publication.error": Instrumentation.PublicationErrorEvent;
   "ddp.connection.open": Instrumentation.ConnectionOpenEvent;
   "ddp.connection.close": Instrumentation.ConnectionCloseEvent;
+  "ddp.message.out": Instrumentation.MessageOutEvent;
 }>();
 expectTypeOf(Instrumentation.on).toBeFunction();
 expectTypeOf(Instrumentation.on).returns.toEqualTypeOf<Instrumentation.Registration>();
@@ -78,6 +82,17 @@ Instrumentation.on("method.error", (event) => {
   event.error.details;
 });
 
+Instrumentation.on("method.updated", (event) => {
+  expectTypeOf(event).toEqualTypeOf<Instrumentation.MethodUpdatedEvent>();
+  expectTypeOf(event.name).toEqualTypeOf<string>();
+  expectTypeOf(event.durationMs).toEqualTypeOf<number>();
+  expectTypeOf(event.handlerMs).toEqualTypeOf<number>();
+  // @ts-expect-error results are only captured on method.end
+  event.result;
+  // @ts-expect-error errors are only attached to method.error
+  event.error;
+});
+
 Instrumentation.on("publication.start", (event) => {
   expectTypeOf(event).toEqualTypeOf<Instrumentation.PublicationStartEvent>();
   expectTypeOf(event.subscriptionId).toEqualTypeOf<string | null>();
@@ -117,6 +132,19 @@ Instrumentation.on("ddp.connection.close", (event) => {
   expectTypeOf(event.durationMs).toEqualTypeOf<number>();
   // @ts-expect-error client IP is only supplied on connection.open
   event.clientAddress;
+});
+
+Instrumentation.on("ddp.message.out", (event) => {
+  expectTypeOf(event).toEqualTypeOf<Instrumentation.MessageOutEvent>();
+  expectTypeOf(event.connectionId).toEqualTypeOf<string>();
+  expectTypeOf(event.msg).toEqualTypeOf<string>();
+  expectTypeOf(event.bytes).toEqualTypeOf<number>();
+  // Only document messages name a collection.
+  expectTypeOf(event.collection).toEqualTypeOf<string | undefined>();
+  // @ts-expect-error message events have no invocation trace
+  event.traceId;
+  // @ts-expect-error documents never reach a listener
+  event.fields;
 });
 
 // Canonical event types narrow payloads even when eventName is prefixed.
