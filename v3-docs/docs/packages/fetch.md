@@ -57,10 +57,10 @@ async function postData (url, data) {
           referrerPolicy: 'no-referrer', // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
           body: JSON.stringify(data) // body data type must match "Content-Type" header
       });
-      const data = await response.json();
-      return response(null, data);
+      const responseData = await response.json();
+      return responseData;
     } catch (err) {
-      return response(err, null);
+      throw err;
     }
 }
 
