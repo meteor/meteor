@@ -2,6 +2,7 @@ import { Tinytest } from 'meteor/tinytest';
 import { Meteor } from 'meteor/meteor';
 import { Instrumentation } from 'meteor/instrumentation';
 import { makeTestConnection } from 'meteor/test-helpers';
+import { Mongo } from 'meteor/mongo';
 import { previewError, previewValue } from './preview.js';
 
 // What the instr_test.mutate handler actually SAW — proves projector mutations
@@ -331,6 +332,67 @@ Tinytest.addAsync('instrumentation - DDP client method error emits method.error 
     test.equal(ev.error && ev.error.error, 'nope');
     clientConn.disconnect();
   } finally { c.stop(); }
+});
+
+// method.updated marks the write fence of a DDP method call: it fires once the
+// 'updated' message is out, which Meteor sends before 'result', so it lands
+// between method.start and method.end. handlerMs isolates the handler's own time.
+Tinytest.addAsync('instrumentation - DDP client method call emits method.updated between start and end', async function (test) {
+  const events = [];
+  const a = collect('method.start', events);
+  const b = collect('method.updated', events);
+  const c = collect('method.end', events);
+  try {
+    const [clientConn, serverConn] = await connect(test);
+    test.equal(await clientConn.callAsync('instr_test.echo', 21), 42);
+    const mine = events.filter((e) => e.name === 'instr_test.echo' && e.connectionId === serverConn.id);
+    test.equal(mine.map((e) => e.type), ['method.start', 'method.updated', 'method.end']);
+    const [start, updated] = mine;
+    test.equal(updated.traceId, start.traceId);
+    test.equal(updated.argsCount, 1);
+    test.isUndefined(updated.args, 'args not captured by default');
+    test.equal(typeof updated.durationMs, 'number');
+    test.equal(typeof updated.handlerMs, 'number');
+    test.isTrue(updated.handlerMs <= updated.durationMs, 'the handler time is part of the total');
+    clientConn.disconnect();
+  } finally { a.stop(); b.stop(); c.stop(); }
+});
+
+Tinytest.addAsync('instrumentation - a server-side call emits no method.updated', async function (test) {
+  const updates = [];
+  const b = collect('method.updated', updates);
+  try {
+    test.equal(await Meteor.callAsync('instr_test.echo', 2), 4);
+    test.equal(updates.filter((e) => e.name === 'instr_test.echo').length, 0, 'no updated message, no event');
+  } finally { b.stop(); }
+});
+
+const Items = new Mongo.Collection('instr_test_items');
+Meteor.publish('instr_test.items', function () { return Items.find(); });
+
+// ddp.message.out reports each message written to the socket — kind, size and
+// collection only. The document itself must never reach a listener.
+Tinytest.addAsync('instrumentation - ddp.message.out reports every outbound message without its documents', async function (test) {
+  await Items.removeAsync({});
+  await Items.insertAsync({ _id: 'item1', secret: 'do not leak' });
+  const out = [];
+  const a = collect('ddp.message.out', out);
+  try {
+    const [clientConn, serverConn] = await connect(test);
+    test.equal(await clientConn.callAsync('instr_test.echo', 21), 42);
+    await new Promise((resolve) => clientConn.subscribe('instr_test.items', { onReady: resolve }));
+    const mine = out.filter((e) => e.connectionId === serverConn.id);
+    const kinds = mine.map((e) => e.msg);
+    test.isTrue(kinds.includes('updated') && kinds.includes('result'), 'method replies are reported');
+    test.isTrue(kinds.includes('ready'), 'subscription replies are reported');
+    const added = mine.find((e) => e.msg === 'added');
+    test.isTrue(!!added, 'document messages are reported');
+    test.equal(added.collection, 'instr_test_items');
+    test.equal(Object.keys(added).sort(), ['bytes', 'collection', 'connectionId', 'eventName', 'msg', 'ts', 'type']);
+    test.isTrue(added.bytes > 0, 'bytes is the serialized size');
+    test.isUndefined(mine.find((e) => e.msg === 'result').collection, 'collection only on document messages');
+    clientConn.disconnect();
+  } finally { a.stop(); }
 });
 
 // A publication whose handler calls this.error(). On the error path the
