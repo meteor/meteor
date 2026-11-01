@@ -13,6 +13,7 @@
 
   {{> installPrompt}}
   {{> hello}}
+  {{> links}}
   {{> info}}
 </body>
 
@@ -27,6 +28,25 @@
 <template name="hello">
   <button>Click Me</button>
   <p>You've pressed the button {{counter}} times.</p>
+</template>
+
+<!-- Links kept on the device by the `offline` package: the list survives a
+     reload without network, and a link added offline is sent on reconnection. -->
+<template name="links">
+  <h2>Links</h2>
+  <form class="link-form">
+    <input name="title" placeholder="Title" required>
+    <input name="url" type="url" placeholder="https://" required>
+    <button type="submit">Add link</button>
+  </form>
+  <p class="offline-status">
+    {{#if connected}}Online{{else}}Offline{{/if}}{{#if pendingCalls}}, {{pendingCalls}} waiting to be sent{{/if}}
+  </p>
+  <ul class="links">
+    {{#each links}}
+      <li><a href="{{url}}" target="_blank" rel="noopener">{{title}}</a></li>
+    {{/each}}
+  </ul>
 </template>
 
 <template name="info">

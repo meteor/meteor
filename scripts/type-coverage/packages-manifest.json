@@ -55,6 +55,7 @@
     "oauth",
     "oauth-encryption",
     "oauth1",
+    "offline",
     "ordered-dict",
     "promise",
     "random",

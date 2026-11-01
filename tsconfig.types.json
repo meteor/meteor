@@ -17,6 +17,7 @@
       "meteor/accounts-base": ["./packages/accounts-base/accounts-base.native.d.ts"],
       "meteor/service-configuration": ["./packages/service-configuration/service-configuration.native.d.ts"],
       "meteor/npm-mongo": ["./packages/npm-mongo/index.d.ts"],
+      "meteor/offline": ["./packages/offline/offline.d.ts"],
       "meteor/logging": ["./packages/logging/logging.native.d.ts"],
       "meteor/reactive-var": ["./packages/reactive-var/reactive-var.d.ts"],
       "meteor/reactive-dict": ["./packages/reactive-dict/reactive-dict.native.d.ts"],
