@@ -70,10 +70,11 @@ export class MessageProcessors {
     // Mark all named subscriptions which are ready as needing to be revived.
     self._subsBeingRevived = Object.create(null);
     Object.entries(self._subscriptions).forEach(([id, sub]) => {
-      if (sub.ready) {
+      if (sub.ready || self._reviveAllSubscriptions) {
         self._subsBeingRevived[id] = true;
       }
     });
+    self._reviveAllSubscriptions = false;
 
     // Arrange for "half-finished" methods to have their callbacks run, and
     // track methods that were sent on this connection so that we don't

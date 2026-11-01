@@ -1969,6 +1969,39 @@ testAsyncMulti('livedata connection - reconnect to a different server', [
   }
 ]);
 
+// Stores filled before the first connection (the offline package's device
+// copy) are replaced by the server's data in one batch, as on a reconnection:
+// with _reviveAllSubscriptions, the reset waits for the current subscriptions.
+Tinytest.addAsync('livedata connection - reset waits for the current subscriptions on first connect', async function (test) {
+  const stream = new StubStream();
+  const conn = newConnection(stream);
+  const collName = Random.id();
+  const coll = new Mongo.Collection(collName, { connection: conn });
+  coll._collection.insert({ _id: 'kept', a: 1 });
+  coll._collection.insert({ _id: 'gone', a: 2 });
+  const sub = conn.subscribe('my_data');
+  conn._resetStores = true;
+  conn._reviveAllSubscriptions = true;
+
+  stream.sent.length = 0;
+  await stream.reset();
+  testGotMessage(test, stream, makeConnectMessage());
+  const subMessage = JSON.parse(stream.sent.shift());
+  test.equal(subMessage.msg, 'sub');
+  await stream.receive({ msg: 'connected', session: SESSION_ID });
+  test.isFalse(conn._reviveAllSubscriptions, 'consumed by the first connection');
+  test.equal(await coll.find({}).count(), 2, 'not reset on connected');
+
+  await stream.receive({ msg: 'added', collection: collName, id: 'kept', fields: { a: 1 } });
+  await stream.receive({ msg: 'added', collection: collName, id: 'new', fields: { a: 3 } });
+  test.equal(await coll.find({}).count(), 2, 'buffered until the subscription is ready');
+
+  await stream.receive({ msg: 'ready', subs: [subMessage.id] });
+  const ids = (await coll.find({}, { sort: { _id: 1 } }).fetchAsync()).map((doc) => doc._id);
+  test.equal(ids, ['kept', 'new'], 'reset and server data applied together');
+  test.isTrue(sub.ready());
+});
+
 Tinytest.addAsync(
   'livedata connection - version negotiation requires renegotiating',
   function (test, onComplete) {
