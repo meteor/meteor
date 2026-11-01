@@ -1,4 +1,5 @@
 import { Meteor } from 'meteor/meteor';
+import { DDP } from 'meteor/ddp-client';
 import { EJSON } from 'meteor/ejson';
 import { Random } from 'meteor/random';
 import * as db from './db.js';
@@ -22,28 +23,52 @@ export function configure(methods, onEvent) {
   }
 }
 
+// A call made from inside a stub never reaches the server on its own: Meteor
+// runs it as part of the enclosing simulation.
+function inSimulation() {
+  const invocation = DDP._CurrentMethodInvocation.get();
+  return !!(invocation && invocation.isSimulation);
+}
+
 function wrap(connection) {
   const { apply, applyAsync } = connection;
 
   connection.apply = function (name, args, options, callback) {
-    if (!allowed.has(name)) return apply.call(this, name, args, options, callback);
     if (typeof options === 'function') {
       callback = options;
       options = {};
     }
-    return apply.call(this, name, args, recording(name, args, options), callback);
+    if (!allowed.has(name) || inSimulation()) return apply.call(this, name, args, options, callback);
+    const record = track(name, args);
+    try {
+      return apply.call(this, name, args, recording(record, options), callback);
+    } catch (error) {
+      // A stub exception with throwStubExceptions: the call is not sent.
+      settle(record, error);
+      throw error;
+    }
   };
 
   connection.applyAsync = function (name, args, options, callback) {
-    if (!allowed.has(name)) return applyAsync.call(this, name, args, options, callback);
-    return applyAsync.call(this, name, args, recording(name, args, options), callback);
+    if (typeof options === 'function') {
+      callback = options;
+      options = {};
+    }
+    if (!allowed.has(name) || inSimulation()) return applyAsync.call(this, name, args, options, callback);
+    const record = track(name, args);
+    const promise = applyAsync.call(this, name, args, recording(record, options), callback);
+    if (options && options.throwStubExceptions) {
+      // serverPromise is a separate promise object: handling it here leaves
+      // the caller's own rejection handling untouched.
+      promise.serverPromise.then(null, (error) => settle(record, error));
+    }
+    return promise;
   };
 }
 
-// Records the call and returns the options that settle the record on the
-// server's answer, keeping the caller's own onResultReceived if any.
-function recording(name, args, options = {}) {
-  const record = track(name, args);
+// The options that settle the record on the server's answer, keeping the
+// caller's own onResultReceived if any.
+function recording(record, options = {}) {
   const { onResultReceived } = options;
   return {
     ...options,
@@ -63,9 +88,22 @@ function track(name, args) {
   return { id, name, stored };
 }
 
-const errorToJSON = (error) => ({ error: error.error, reason: error.reason, message: error.message });
+function errorToJSON(error) {
+  const json = { error: error.error, reason: error.reason, message: error.message };
+  if (error.details !== undefined) {
+    try {
+      json.details = EJSON.clone(error.details);
+    } catch {
+      // Left out: the copy must stay storable.
+    }
+  }
+  return json;
+}
 
-function settle({ id, name, stored }, error) {
+function settle(record, error) {
+  if (record.settled) return;
+  record.settled = true;
+  const { id, name, stored } = record;
   stored
     .then(async () => {
       if (!error) {
@@ -73,9 +111,9 @@ function settle({ id, name, stored }, error) {
         emit('method.done', { id, name });
         return;
       }
-      const record = await db.get('calls', id);
-      if (!record) return; // dropped by the app in the meantime
-      await db.put('calls', { ...record, status: 'failed', error: errorToJSON(error) });
+      const stored = await db.get('calls', id);
+      if (!stored) return; // dropped by the app in the meantime
+      await db.put('calls', { ...stored, status: 'failed', error: errorToJSON(error) });
       emit('method.failed', { id, name, error });
     })
     .catch(db.warn);

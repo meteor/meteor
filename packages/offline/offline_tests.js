@@ -25,7 +25,7 @@ const started = () => {
   if (!startedOnce) {
     startedOnce = Offline.start({
       collections: [Items],
-      methods: ['offline_test.insert', 'offline_test.fail'],
+      methods: ['offline_test.insert', 'offline_test.setValue', 'offline_test.fail'],
     }).then(() => new Promise((resolve) => Meteor.subscribe('offline_test.items', { onReady: resolve })));
   }
   return startedOnce;
@@ -149,6 +149,77 @@ Tinytest.addAsync('offline - recorded calls are replayed in order, one stub at a
   test.equal(await Meteor.callAsync('offline_test.order', [first, second]), [first, second]);
   test.equal(await Meteor.callAsync('offline_test.executions', first), 1);
   test.equal(await Meteor.callAsync('offline_test.executions', second), 1);
+});
+
+Tinytest.addAsync('offline - a listed Method called from a stub is not recorded', async function (test) {
+  await started();
+  const events = [];
+  const queued = collect('method.queued', events);
+  const _id = Random.id();
+  try {
+    await Meteor.callAsync('offline_test.nested', { _id, value: 'nested' });
+    test.equal(events.filter((event) => event.name === 'offline_test.insert').length, 0);
+    test.equal((await Offline.pending()).length, 0);
+    test.equal((await Offline.failed()).length, 0);
+    test.equal(await Meteor.callAsync('offline_test.executions', _id), 1, 'the server ran it once, through the outer Method');
+  } finally {
+    queued.stop();
+  }
+});
+
+Tinytest.addAsync('offline - applyAsync with a callback keeps the callback and settles the record', async function (test) {
+  await started();
+  const _id = Random.id();
+  const result = await new Promise((resolve, reject) => {
+    Meteor.connection.applyAsync('offline_test.insert', [{ _id, value: 'callback' }], (error, value) =>
+      error ? reject(error) : resolve(value),
+    );
+  });
+  test.isUndefined(result);
+  await until(async () => (await Offline.pending()).length === 0, 'the record to be cleared');
+  test.equal(await Meteor.callAsync('offline_test.executions', _id), 1);
+});
+
+Tinytest.addAsync('offline - a stub exception with throwStubExceptions leaves no pending record', async function (test) {
+  await started();
+  await test.throwsAsync(
+    () => Meteor.connection.applyAsync('offline_test.insert', [{ _id: 42 }], { throwStubExceptions: true }),
+    /must be a string/,
+  );
+  await until(async () => (await Offline.failed()).length === 1, 'the record to be marked failed');
+  const [record] = await Offline.failed();
+  test.equal(record.error.error, 'offline-test-bad-id');
+  test.equal((await Offline.pending()).length, 0, 'nothing left to replay');
+  await Offline.drop(record.id);
+});
+
+Tinytest.addAsync('offline - a replayed update runs its stub against the loaded copy', async function (test) {
+  await started();
+  const _id = Random.id();
+  // The copy holds the document; the queue holds an update to it.
+  await db.put('documents', {
+    key: `${Items._name}:${JSON.stringify(_id)}`,
+    collection: Items._name,
+    doc: JSON.stringify({ _id, value: 'old' }),
+  });
+  await db.put('calls', {
+    id: Random.id(),
+    name: 'offline_test.setValue',
+    args: JSON.stringify([{ _id, value: 'new' }]),
+    queuedAt: Date.now(),
+    status: 'pending',
+  });
+  Meteor.disconnect();
+  try {
+    test.equal(await hydrate(Items), 1);
+    test.equal(Items.findOne(_id).value, 'old');
+    test.equal(await replay(), 1);
+    test.equal(Items.findOne(_id).value, 'new', 'the stub updated the loaded document');
+  } finally {
+    Meteor.reconnect();
+  }
+  await until(async () => (await Offline.pending()).length === 0, 'the replayed call to be answered');
+  await db.remove('documents', `${Items._name}:${JSON.stringify(_id)}`);
 });
 
 Tinytest.addAsync('offline - the copy follows Minimongo and is loaded back by hydrate', async function (test) {

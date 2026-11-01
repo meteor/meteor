@@ -9,11 +9,12 @@ export namespace Offline {
     methods?: string[];
   }
 
-  /** Safe summary of the server's error, as stored on the device. */
+  /** The server's error as stored on the device, and the shape of the error a listener receives (a `Meteor.Error` fits). */
   interface CallError {
     error?: unknown;
     reason?: string;
     message?: string;
+    details?: unknown;
   }
 
   interface Call {
@@ -39,7 +40,7 @@ export namespace Offline {
     /** The server answered without error; the record is gone. */
     "method.done": CallEvent;
     /** The server rejected the call; the record is kept with its error. */
-    "method.failed": CallEvent & { error: unknown };
+    "method.failed": CallEvent & { error: CallError };
     /** The app dropped a recorded call. */
     "method.dropped": { id: string };
     /** The copy is loaded and the recorded calls are queued, on start and on user change. */
