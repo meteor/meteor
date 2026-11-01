@@ -209,6 +209,20 @@ async function assertPwaLoadsOffline({ port, meteorProcess }) {
   console.log('✅ App shell served from the service worker cache with the server down');
 }
 
+// Server-side view of the links collection for the offline-data scenario: what
+// the page shows may come from the device copy, this tells what reached the
+// database. Playwright's request context bypasses the page's service worker.
+const LINKS_PATH = '/e2e-links';
+const LINKS_ROUTE = `
+import { WebApp } from 'meteor/webapp';
+import { Links } from '/imports/api/links/links.js';
+
+WebApp.handlers.get('${LINKS_PATH}', async (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.end(JSON.stringify(await Links.find({}, { sort: { createdAt: 1 } }).fetchAsync()));
+});
+`;
+
 async function assertReact19Dependencies({ tempDir }, includeTypes = false) {
   const packageJsonPath = path.join(tempDir, 'package.json');
   const packageJson = JSON.parse(
@@ -628,6 +642,85 @@ describe('Meteor Skeletons /', () => {
       await assertPwaInstallable({ port, prefix, swPath: `${prefix}/sw.js` });
       await assertPwaLoadsOffline({ port, meteorProcess });
     });
+  });
+
+  // Offline data: the `offline` package keeps the published links and the calls
+  // to `links.insert` on the device. Production only, so that the app shell
+  // comes from the service worker while the server is down.
+  describe('PWA Skeleton / offline data /', () => {
+    const port = 3216;
+    const origin = `http://localhost:${port}`;
+    let tempDir;
+    let meteorProcess;
+
+    const startProduction = async () => {
+      ({ meteorProcess } = await runMeteorApp(tempDir, port, {
+        waitForOutput: '=> App running at',
+        commandOptions: ['--production'],
+      }));
+    };
+    const stopServer = async () => {
+      await killMeteorProcess(meteorProcess);
+      meteorProcess = null;
+      await killProcessByPort(port);
+    };
+    const waitForStatus = (text) =>
+      page.waitForFunction(
+        (expected) => document.querySelector('.offline-status')?.textContent.trim() === expected,
+        text,
+        { timeout: 30_000 },
+      );
+
+    beforeAll(async () => {
+      await killProcessByPort(port);
+      const result = await createMeteorApp('pwa', 'pwa');
+      tempDir = result.tempDir;
+      await result.meteorProcess;
+      await linkLocalRspack(tempDir);
+      await appendFileContent(tempDir, 'server/main.js', { content: LINKS_ROUTE });
+    }, 360_000);
+
+    afterAll(async () => {
+      await cleanupTempDir(tempDir);
+    });
+
+    afterEach(async () => {
+      await resetPlaywrightPage();
+      await stopServer();
+    });
+
+    test('"meteor run --production" / keeps a link added offline and sends it once on reconnection', async () => {
+      await startProduction();
+      await page.goto(`${origin}/`);
+      await page.waitForSelector('h1');
+      // The worker has to control the page before the server goes away.
+      await assertPwaInstallable({ port, swPath: '/sw.js' });
+      await waitForStatus('Online');
+
+      await stopServer();
+      await waitForStatus('Offline');
+      await page.fill('.link-form input[name="title"]', 'Meteor');
+      await page.fill('.link-form input[name="url"]', 'https://www.meteor.com/');
+      await page.click('.link-form button');
+      // The Method stub shows the link at once; the call waits for the server.
+      await page.waitForSelector('.links li:has-text("Meteor")');
+      await waitForStatus('Offline, 1 waiting to be sent');
+
+      // A reload with the server still down: the shell comes from the worker,
+      // the link and the pending call from the device.
+      await page.reload({ waitUntil: 'load' });
+      await page.waitForSelector('.links li:has-text("Meteor")');
+      await waitForStatus('Offline, 1 waiting to be sent');
+      console.log('✅ Link and pending call survived a reload with the server down');
+
+      await startProduction();
+      await waitForStatus('Online');
+      const links = await (await page.request.get(`${origin}${LINKS_PATH}`)).json();
+      expect(links.map((link) => link.title)).toEqual(['Meteor']);
+      await page.waitForSelector('.links li:has-text("Meteor")');
+      expect(await page.locator('.links li').count()).toBe(1);
+      console.log('✅ Pending call sent once on reconnection, link in the database');
+    }, 240_000);
   });
 
   describe(

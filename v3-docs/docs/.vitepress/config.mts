@@ -259,6 +259,10 @@ export default defineConfig({
             link: "/api/instrumentation",
           },
           {
+            text: "Offline",
+            link: "/api/offline",
+          },
+          {
             text: "Check",
             link: "/api/check",
           },
@@ -415,6 +419,10 @@ export default defineConfig({
               {
                 text: "instrumentation",
                 link: "/packages/instrumentation",
+              },
+              {
+                text: "offline",
+                link: "/packages/offline",
               },
               {
                 text: "autoupdate",

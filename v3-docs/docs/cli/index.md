@@ -377,7 +377,7 @@ If you run `meteor create` without arguments, Meteor will launch an interactive 
 | `--vue`          | Vue 3 + Tailwind CSS | [Meteor 3 with Vue](https://docs.meteor.com/tutorials/vue/meteorjs3-vue3.html), [Meteor 2 with Vue](https://vue3-tutorial.meteor.com/) |
 | `--svelte`       | Svelte                  | [Meteor 2 with Svelte](https://svelte-tutorial.meteor.com/) |
 | `--blaze`        | Basic Blaze app         | [Meteor 2 with Blaze](https://blaze-tutorial.meteor.com/) |
-| `--pwa`          | Blaze app installable as a PWA (manifest, service worker, offline page) | - |
+| `--pwa`          | Blaze app installable as a PWA (manifest, service worker, offline page, data kept on the device by the [`offline`](/api/offline) package) | - |
 | `--solid`        | Solid               | [Meteor 2 with Solid Example](https://github.com/fredmaiaarantes/meteor-solid-app/releases/tag/milestone-2.0) |
 | `--apollo`       | React + Apollo (GraphQL) | [Meteor 2 with GraphQL](https://react-tutorial.meteor.com/simple-todos-graphql/) |
 | `--typescript`   | React + TypeScript      | [TypeScript Guide](/about/build-tool#typescript) |
