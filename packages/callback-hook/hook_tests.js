@@ -200,6 +200,130 @@ Tinytest.addAsync(
   },
 );
 
+// forEachAsync used to iterate the live Set, so a callback that registered
+// another saw it run in the same pass -- while forEach, which snapshots first,
+// deferred it to the next one. Both APIs now share that boundary.
+Tinytest.addAsync(
+  "callback-hook - forEachAsync defers callbacks registered during a pass",
+  async function (test) {
+    const runPasses = async (hook, order, useAsync) => {
+      const passes = [];
+      for (let pass = 0; pass < 2; pass++) {
+        order.length = 0;
+        if (useAsync) {
+          await hook.forEachAsync(async function (callback) {
+            await callback();
+            return true;
+          });
+        } else {
+          hook.forEach(function (callback) {
+            callback();
+            return true;
+          });
+        }
+        passes.push(order.slice());
+      }
+      return passes;
+    };
+
+    const build = () => {
+      const hook = new Hook({ bindEnvironment: false, wrapAsync: false });
+      const order = [];
+      let added = false;
+      hook.register(function () {
+        order.push("first");
+        if (!added) {
+          added = true;
+          hook.register(function () {
+            order.push("late");
+          });
+        }
+      });
+      return { hook, order };
+    };
+
+    const sync = build();
+    const asyncHook = build();
+    const syncPasses = await runPasses(sync.hook, sync.order, false);
+    const asyncPasses = await runPasses(asyncHook.hook, asyncHook.order, true);
+
+    // The new callback belongs to the second pass, not the one that added it.
+    test.equal(syncPasses, [["first"], ["first", "late"]]);
+    test.equal(asyncPasses, [["first"], ["first", "late"]]);
+    test.equal(asyncPasses, syncPasses, "both APIs agree across two passes");
+  },
+);
+
+// The other half of the boundary: a callback removed before its turn is
+// skipped, and a callback can still remove itself.
+Tinytest.addAsync(
+  "callback-hook - forEachAsync skips callbacks removed during a pass",
+  async function (test) {
+    const hook = new Hook({ bindEnvironment: false, wrapAsync: false });
+    const order = [];
+    let handleB;
+    hook.register(function () {
+      order.push("a");
+      handleB.stop();
+    });
+    handleB = hook.register(function () {
+      order.push("b");
+    });
+    hook.register(function () {
+      order.push("c");
+    });
+
+    await hook.forEachAsync(async function (callback) {
+      await callback();
+      return true;
+    });
+    test.equal(order, ["a", "c"], "b was removed before its turn");
+
+    const selfHook = new Hook({ bindEnvironment: false, wrapAsync: false });
+    const selfOrder = [];
+    let self;
+    self = selfHook.register(function () {
+      selfOrder.push("self");
+      self.stop();
+    });
+    selfHook.register(function () {
+      selfOrder.push("next");
+    });
+
+    await selfHook.forEachAsync(async function (callback) {
+      await callback();
+      return true;
+    });
+    test.equal(selfOrder, ["self", "next"], "self-removal does not disturb iteration");
+  },
+);
+
+// Snapshotting must not turn sequential awaits into parallel execution.
+Tinytest.addAsync(
+  "callback-hook - forEachAsync still awaits each callback in order",
+  async function (test) {
+    const hook = new Hook({ bindEnvironment: false, wrapAsync: false });
+    const order = [];
+    const delayed = (name, ms) =>
+      function () {
+        return new Promise(function (resolve) {
+          setTimeout(function () {
+            order.push(name);
+            resolve();
+          }, ms);
+        });
+      };
+    hook.register(delayed("slow", 20));
+    hook.register(delayed("fast", 1));
+
+    await hook.forEachAsync(async function (callback) {
+      await callback();
+      return true;
+    });
+    test.equal(order, ["slow", "fast"]);
+  },
+);
+
 Tinytest.add("callback-hook - debugPrintExceptions must be a string", function (test) {
   test.throws(function () {
     new Hook({ debugPrintExceptions: true });
