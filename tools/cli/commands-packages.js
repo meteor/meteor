@@ -1204,6 +1204,11 @@ main.registerCommand({
   const showWhy = options['why'];
 
   if (showWhy) {
+    if (!projectContext.packageMap.getInfo(showWhy)) {
+      Console.error('Package ' + showWhy + ' is not installed in this app.');
+      return 1;
+    }
+
     const packageDetails = new Map;
     await projectContext.packageMap.eachPackage(async function (name, info) {
       packageDetails.set(
@@ -1211,11 +1216,6 @@ main.registerCommand({
         await projectContext.projectCatalog.getVersion(name, info.version)
       );
     });
-
-    if (!projectContext.packageMap.getInfo(showWhy)) {
-      Console.error('Package ' + showWhy + ' is not installed in this app.');
-      return 1;
-    }
 
     const directDependencies = [];
     projectContext.projectConstraintsFile.eachConstraint(function (constraint) {

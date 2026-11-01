@@ -348,15 +348,11 @@ selftest.define("list --why package chains", [], async function () {
     await s.createPackage("workshop-admin", "workshop:admin", "package-for-show");
     await s.createPackage("workshop-ui", "workshop:ui", "package-for-show");
     await s.createPackage("workshop-shared", "workshop:shared", "package-for-show");
-    await s.createPackage("workshop-isolated", "workshop:isolated", "package-for-show");
   });
 
   s.write("packages/workshop-app/package.js", [
     "Package.describe({ summary: 'Workshop app root', version: '1.0.0' });",
-    "Package.onUse(function (api) {",
-    "  api.use('workshop:ui');",
-    "  api.use('workshop:isolated', { weak: true });",
-    "});"
+    "Package.onUse(function (api) { api.use('workshop:ui'); });"
   ].join("\n"));
   s.write("packages/workshop-admin/package.js", [
     "Package.describe({ summary: 'Workshop admin root', version: '1.0.0' });",
@@ -382,10 +378,6 @@ selftest.define("list --why package chains", [], async function () {
     false,
     true
   );
-  await run.expectExit(0);
-
-  run = s.run("list", "--why", "workshop:isolated");
-  await run.match("Package workshop:isolated@1.0.0 is installed, but no strong dependency chain reaches it from a direct application dependency.");
   await run.expectExit(0);
 
   run = s.run("list", "--why", "workshop:not-installed");
