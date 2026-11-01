@@ -454,7 +454,7 @@ Meteor.methods({
       throw new Meteor.Error("unauthorized", "Not authorized to delete posts");
     }
 
-    Posts.remove(postId);
+    await Posts.removeAsync(postId);
   },
 });
 ```
