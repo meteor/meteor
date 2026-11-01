@@ -19,7 +19,7 @@ expectTypeOf<Offline.EventType>().toEqualTypeOf<
 expectTypeOf<Offline.EventMap>().toEqualTypeOf<{
   "method.queued": Offline.CallEvent;
   "method.done": Offline.CallEvent;
-  "method.failed": Offline.CallEvent & { error: unknown };
+  "method.failed": Offline.CallEvent & { error: Offline.CallError };
   "method.dropped": { id: string };
   ready: { userId: string | null; calls: number; documents: number };
 }>();
@@ -36,7 +36,8 @@ const registration = Offline.on("method.failed", (event) => {
   expectTypeOf(event.type).toEqualTypeOf<"method.failed">();
   expectTypeOf(event.id).toEqualTypeOf<string>();
   expectTypeOf(event.name).toEqualTypeOf<string>();
-  expectTypeOf(event.error).toBeUnknown();
+  expectTypeOf(event.error).toEqualTypeOf<Offline.CallError>();
+  expectTypeOf(event.error.reason).toEqualTypeOf<string | undefined>();
 });
 expectTypeOf(registration).toEqualTypeOf<Offline.Registration>();
 expectTypeOf(registration.stop()).toBeVoid();
@@ -65,6 +66,7 @@ expectTypeOf<Offline.CallError>().toEqualTypeOf<{
   error?: unknown;
   reason?: string;
   message?: string;
+  details?: unknown;
 }>();
 expectTypeOf(Offline.drop).parameters.toEqualTypeOf<[id: string]>();
 expectTypeOf(Offline.drop).returns.toEqualTypeOf<Promise<void>>();

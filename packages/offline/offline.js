@@ -25,19 +25,21 @@ let collections = [];
 let handles = [];
 let started = false;
 
-// Opens the user's copy, re-issues the calls recorded before the last unload
-// (their stubs restore the optimistic documents), loads the copy into Minimongo
-// on boot, and mirrors the collections from now on.
+// Opens the user's copy, loads it into Minimongo on boot, re-issues the calls
+// recorded before the last unload (their stubs run against the loaded
+// documents), and mirrors the collections from now on. On a user change the
+// documents already in Minimongo are the new user's and start the new copy.
 async function activate(userId, { boot }) {
   await db.use(userId);
   handles.forEach((handle) => handle.stop());
-  const calls = await queue.replay();
   let documents = 0;
   if (boot) {
     for (const collection of collections) documents += await hydrate(collection);
   }
-  handles = collections.map(mirror);
+  const calls = await queue.replay();
+  handles = collections.map((collection) => mirror(collection, { initial: !boot }));
   emit('ready', { userId, calls, documents });
+  return documents;
 }
 
 export const Offline = {
@@ -51,29 +53,39 @@ export const Offline = {
     queue.configure(methods, emit);
     const connection = Meteor.connection;
     connection.disconnect();
+    let documents = 0;
     try {
-      await activate(currentUserId(), { boot: true });
+      documents = await activate(currentUserId(), { boot: true });
     } finally {
-      // Once the stream is up, the first batch of server data replaces the
-      // copy in one paused update, exactly as a reconnection does. The flag is
-      // raised at that moment and not before: Meteor also applies it when a
-      // stub flushes its writes, which must not empty the copy in the meantime.
-      const firstConnection = DDP.onReconnect((reconnecting) => {
-        if (reconnecting !== connection) return;
-        firstConnection.stop();
-        connection._resetStores = true;
-      });
+      // The copy is replaced by the server's documents the way a reconnection
+      // replaces the previous session's: once the stream is up, the current
+      // subscriptions are treated as revived and the stores are reset together
+      // with their data, in one paused batch. Nothing to replace when the copy
+      // was empty or when nothing is subscribed yet.
+      if (documents > 0) {
+        const firstConnection = DDP.onReconnect((reconnecting) => {
+          if (reconnecting !== connection) return;
+          firstConnection.stop();
+          if (Object.keys(connection._subscriptions).length === 0) return;
+          connection._resetStores = true;
+          connection._reviveAllSubscriptions = true;
+        });
+      }
       connection.reconnect();
     }
-    // Another user means another copy; the previous one is deleted.
+    // Another user means another copy; the previous one is deleted. Changes
+    // are applied one after the other, so a quick A, logout, A again cannot
+    // delete the copy being reopened.
     let known = currentUserId();
+    let switching = Promise.resolve();
     Tracker.autorun(() => {
       const userId = currentUserId();
       if (userId === known) return;
       const previous = db.nameFor(known);
       known = userId;
-      activate(userId, { boot: false })
-        .then(() => db.destroy(previous))
+      switching = switching
+        .then(() => activate(userId, { boot: false }))
+        .then(() => (db.currentName() === previous ? undefined : db.destroy(previous)))
         .catch(db.warn);
     });
   },

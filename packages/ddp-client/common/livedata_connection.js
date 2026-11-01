@@ -197,6 +197,11 @@ export class Connection {
     // map from sub ID -> true for subs that were ready (ie, called the sub
     // ready callback) before reconnect but haven't become ready again yet
     self._subsBeingRevived = {}; // map from sub._id -> true
+    // If true, the next 'connected' message treats every current subscription
+    // as being revived, so a store reset (_resetStores) waits for their data
+    // as it does on a reconnection. Raised by code that filled the stores
+    // before the first connection (the offline package); cleared once applied.
+    self._reviveAllSubscriptions = false;
     // if true, the next data update should reset all stores. (set during
     // reconnect.)
     self._resetStores = false;
