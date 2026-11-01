@@ -351,19 +351,19 @@ selftest.define("list --why package chains", [], async function () {
   });
 
   s.write("packages/workshop-app/package.js", [
-    "Package.describe({ summary: 'Workshop app root', version: '1.0.0' });",
+    "Package.describe({ name: 'workshop:app', summary: 'Workshop app root', version: '1.0.0' });",
     "Package.onUse(function (api) { api.use('workshop:ui'); });"
   ].join("\n"));
   s.write("packages/workshop-admin/package.js", [
-    "Package.describe({ summary: 'Workshop admin root', version: '1.0.0' });",
+    "Package.describe({ name: 'workshop:admin', summary: 'Workshop admin root', version: '1.0.0' });",
     "Package.onUse(function (api) { api.use('workshop:shared'); });"
   ].join("\n"));
   s.write("packages/workshop-ui/package.js", [
-    "Package.describe({ summary: 'Workshop UI', version: '1.0.0' });",
+    "Package.describe({ name: 'workshop:ui', summary: 'Workshop UI', version: '1.0.0' });",
     "Package.onUse(function (api) { api.use('workshop:shared'); });"
   ].join("\n"));
   s.write("packages/workshop-shared/package.js", [
-    "Package.describe({ summary: 'Workshop shared package', version: '1.0.0' });"
+    "Package.describe({ name: 'workshop:shared', summary: 'Workshop shared package', version: '1.0.0' });"
   ].join("\n"));
 
   s.write(".meteor/packages", [
