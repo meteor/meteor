@@ -1455,7 +1455,22 @@ export class Connection {
     const sendMessages = () => self._sendOutstandingMethodBlocksMessages(oldOutstandingMethodBlocks);
     if (promises.length > 0) {
       // Always re-send outstanding methods, even if a callback rejects.
-      Promise.allSettled(promises).then(sendMessages);
+      //
+      // Written with Promise.all over already-caught promises rather than
+      // Promise.allSettled, which neither client runtime polyfills: it is
+      // missing in Chrome < 76, Firefox < 71 and Safari < 13, and the modern
+      // bundle's floor is lower than that. Since accounts-base's reconnect
+      // handler became async, every logged-in client reaches this branch, so a
+      // browser without allSettled threw here and sendMessages never ran --
+      // leaving the resume-login method and every outstanding method unsent,
+      // with the client still showing as connected.
+      //
+      // Catching each promise first is what makes Promise.all behave like
+      // allSettled for this purpose: it cannot reject, so sendMessages always
+      // runs. The settled values are not used.
+      Promise.all(
+        promises.map((promise) => Promise.resolve(promise).catch(() => {}))
+      ).then(sendMessages);
     } else {
       sendMessages();
     }
