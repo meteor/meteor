@@ -67,6 +67,7 @@ export class ReactiveDict {
     this.allDeps = new Tracker.Dependency;
     this.keyDeps = {}; // key -> Dependency
     this.keyValueDeps = {}; // key -> Dependency
+    this.keyPresenceDeps = {}; // key -> Dependency
   }
 
   // set() began as a key/value method, but we are now overloading it
@@ -103,6 +104,12 @@ export class ReactiveDict {
       // Using the changed utility function here because this.allDeps might not exist yet,
       // when setting initial data from constructor
       changed(this.allDeps);
+    }
+
+    // Don't trigger changes when setting initial data from constructor,
+    // this.keyPresenceDeps is undefined in this case
+    if (!keyExisted && this.keyPresenceDeps) {
+      changed(this.keyPresenceDeps[key]);
     }
 
     // Don't trigger changes when setting initial data from constructor,
@@ -153,6 +160,38 @@ export class ReactiveDict {
     this._ensureKey(key);
     this.keyDeps[key].depend();
     return parse(this.keys[key]);
+  }
+
+  /**
+   * @summary Test if the ReactiveDict has an entry for a key. Unlike
+   * [`ReactiveDict.get`](#ReactiveDict_get), this tells a missing entry apart
+   * from an entry that was explicitly set to `undefined`. If inside a
+   * [reactive computation](#reactivity), invalidate the computation the next
+   * time an entry for this key is added or removed. Changing the value of an
+   * existing entry does not invalidate it.
+   * @locus Client
+   * @param {String} key The key to check, eg, `selectedItem`
+   * @returns {Boolean}
+   */
+  has(key) {
+    if (Tracker.active) {
+      if (! hasOwn.call(this.keyPresenceDeps, key)) {
+        this.keyPresenceDeps[key] = new Tracker.Dependency;
+      }
+
+      const isNew = this.keyPresenceDeps[key].depend();
+      if (isNew) {
+        Tracker.onInvalidate(() => {
+          // clean up keyPresenceDeps[key] if it's now empty, so we don't
+          // use O(n) memory for n = keys seen ever
+          if (! this.keyPresenceDeps[key].hasDependents()) {
+            delete this.keyPresenceDeps[key];
+          }
+        });
+      }
+    }
+
+    return hasOwn.call(this.keys, key);
   }
 
   /**
@@ -249,6 +288,7 @@ export class ReactiveDict {
     this.allDeps.changed();
 
     Object.keys(oldKeys).forEach(key => {
+      changed(this.keyPresenceDeps[key]);
       changed(this.keyDeps[key]);
       if (this.keyValueDeps[key]) {
         changed(this.keyValueDeps[key][oldKeys[key]]);
@@ -271,6 +311,7 @@ export class ReactiveDict {
     if (hasOwn.call(this.keys, key)) {
       const oldValue = this.keys[key];
       delete this.keys[key];
+      changed(this.keyPresenceDeps[key]);
       changed(this.keyDeps[key]);
       if (this.keyValueDeps[key]) {
         changed(this.keyValueDeps[key][oldValue]);

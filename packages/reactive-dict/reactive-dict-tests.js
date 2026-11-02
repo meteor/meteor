@@ -194,3 +194,107 @@ Tinytest.add('ReactiveDict - destroy works', function (test) {
   // Shouldn't throw now that we've destroyed the previous dict
   dict = new ReactiveDict('test');
 });
+
+Tinytest.add('ReactiveDict - has() reports presence, including undefined', function (test) {
+  var dict = new ReactiveDict();
+  test.isFalse(dict.has('foo'));
+
+  [undefined, null, false, 0, ''].forEach(function (value) {
+    dict.set('foo', value);
+    test.isTrue(dict.has('foo'), 'has() should be true for ' + String(value));
+    dict.delete('foo');
+    test.isFalse(dict.has('foo'));
+  });
+
+  // initial data
+  var withInitial = new ReactiveDict({a: 1, b: undefined});
+  test.isTrue(withInitial.has('a'));
+  test.isTrue(withInitial.has('b'));
+  test.isFalse(withInitial.has('c'));
+
+  // has() works outside of a computation
+  test.isFalse(Tracker.active);
+  test.isFalse(dict.has('missing'));
+});
+
+Tinytest.add('ReactiveDict - has() only reruns when presence changes', function (test) {
+  var dict = new ReactiveDict();
+  var seen = [];
+  var computation = Tracker.autorun(function () {
+    seen.push(dict.has('nickname'));
+  });
+  test.equal(seen, [false]);
+
+  dict.set('nickname', undefined);
+  Tracker.flush();
+  test.equal(seen, [false, true]);
+
+  // value-only changes and other keys don't rerun the observer
+  dict.set('nickname', 'Ada');
+  Tracker.flush();
+  dict.set('nickname', 'Grace');
+  Tracker.flush();
+  dict.set('unrelated', 1);
+  Tracker.flush();
+  dict.setDefault('nickname', 'ignored');
+  Tracker.flush();
+  test.equal(seen, [false, true]);
+
+  dict.delete('nickname');
+  Tracker.flush();
+  test.equal(seen, [false, true, false]);
+
+  // deleting an absent key is not a presence change
+  dict.delete('nickname');
+  Tracker.flush();
+  test.equal(seen, [false, true, false]);
+
+  computation.stop();
+});
+
+Tinytest.add('ReactiveDict - has() with object forms, clear and destroy', function (test) {
+  var dict = new ReactiveDict('test-has-destroy');
+  var seenA = [];
+  var seenB = [];
+  var seenA2 = [];
+  var a = Tracker.autorun(function () { seenA.push(dict.has('a')); });
+  var a2 = Tracker.autorun(function () { seenA2.push(dict.has('a')); });
+  var b = Tracker.autorun(function () { seenB.push(dict.has('b')); });
+
+  dict.set({a: 1, b: 2});
+  Tracker.flush();
+  test.equal(seenA, [false, true]);
+  test.equal(seenA2, [false, true]);
+  test.equal(seenB, [false, true]);
+
+  // setDefault on existing keys is a no-op
+  dict.setDefault({a: 5, b: 6});
+  Tracker.flush();
+  test.equal(seenA, [false, true]);
+
+  dict.clear();
+  Tracker.flush();
+  test.equal(seenA, [false, true, false]);
+  test.equal(seenA2, [false, true, false]);
+  test.equal(seenB, [false, true, false]);
+
+  // clearing an already empty dict changes nothing
+  dict.clear();
+  Tracker.flush();
+  test.equal(seenA, [false, true, false]);
+
+  dict.setDefault({a: 1});
+  Tracker.flush();
+  test.equal(seenA, [false, true, false, true]);
+
+  // a stopped computation is not rerun
+  a2.stop();
+  dict.destroy();
+  Tracker.flush();
+  test.equal(seenA, [false, true, false, true, false]);
+  test.equal(seenA2, [false, true, false, true]);
+
+  a.stop();
+  b.stop();
+  test.equal(Object.keys(dict.keyPresenceDeps).length, 0);
+});
