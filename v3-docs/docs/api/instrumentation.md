@@ -74,8 +74,8 @@ A method or publication event looks like this:
   type: 'method.start',           // canonical type — never prefixed
   eventName: 'method.start',      // = type, optionally prefixed (see configure)
   ts: 1750000000000,              // emit time, ms since epoch
-  traceId: 'jhqfY9ETQsPLCHxJg',   // identifies the invocation; shared start↔end
-  spanId: 'JhyAKkZmJDJzHkXH2',    // identifies this single event
+  traceId: '4bf92f3577b34da6a3ce929d0e0e4736', // identifies the invocation; shared start↔end
+  spanId: '00f067aa0ba902b7',                 // identifies this single event
   name: 'orders.create',          // the method / publication name
   connectionId: 'ML8NkBJoadu…',   // the client's DDP connection, or null
   userId: 'abc123',               // the logged-in user, or null
@@ -84,7 +84,10 @@ A method or publication event looks like this:
 ```
 
 The `traceId` is shared between an invocation's `start` and its `end`/`error`, so
-you can correlate them. Beyond the fields above:
+you can correlate them. Both ids use the W3C Trace Context format (a 16-byte
+`traceId` and an 8-byte `spanId`, lowercase hex), so an OpenTelemetry or APM
+consumer can adopt them as-is instead of minting a second, uncorrelated pair.
+Beyond the fields above:
 
 - `durationMs` is added on `method.end`, `method.error`, `publication.ready`,
   `publication.stop` and `publication.error`.
