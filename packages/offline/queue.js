@@ -12,15 +12,10 @@ import * as db from './db.js';
 let allowed = new Set();
 let emit = () => {};
 let replaying = null; // id of the record being re-issued by replay()
-let wrapped = false;
 
 export function configure(methods, onEvent) {
   allowed = new Set(methods);
   emit = onEvent;
-  if (!wrapped) {
-    wrap(Meteor.connection);
-    wrapped = true;
-  }
 }
 
 // A call made from inside a stub never reaches the server on its own: Meteor
@@ -30,10 +25,8 @@ function inSimulation() {
   return !!(invocation && invocation.isSimulation);
 }
 
-function wrap(connection) {
-  const { apply, applyAsync } = connection;
-
-  connection.apply = function (name, args, options, callback) {
+const recordedApply = (apply) =>
+  function (name, args, options, callback) {
     if (typeof options === 'function') {
       callback = options;
       options = {};
@@ -49,7 +42,8 @@ function wrap(connection) {
     }
   };
 
-  connection.applyAsync = function (name, args, options, callback) {
+const recordedApplyAsync = (applyAsync) =>
+  function (name, args, options, callback) {
     if (typeof options === 'function') {
       callback = options;
       options = {};
@@ -64,7 +58,17 @@ function wrap(connection) {
     }
     return promise;
   };
-}
+
+// Installed when the package loads, before the app's code and the packages
+// that keep a reference to these functions. Meteor.call and Meteor.callAsync
+// go through the connection's apply and applyAsync; Meteor.apply and
+// Meteor.applyAsync were bound to the original ones when ddp-client loaded,
+// so they are wrapped on their own.
+const connection = Meteor.connection;
+connection.apply = recordedApply(connection.apply);
+connection.applyAsync = recordedApplyAsync(connection.applyAsync);
+Meteor.apply = recordedApply(Meteor.apply);
+Meteor.applyAsync = recordedApplyAsync(Meteor.applyAsync);
 
 // The options that settle the record on the server's answer, keeping the
 // caller's own onResultReceived if any.
