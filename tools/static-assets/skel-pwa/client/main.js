@@ -48,7 +48,9 @@ Meteor.startup(() => {
       .forEach((link) => link.setAttribute('href', prefix + link.getAttribute('href')));
   }
 
-  if (!('serviceWorker' in navigator)) return;
+  // A Cordova build has its assets on the device and updates them through hot
+  // code push: a worker there has nothing to add.
+  if (Meteor.isCordova || !('serviceWorker' in navigator)) return;
   const swUrl = `${prefix}/sw.js${Meteor.isProduction ? '' : '?dev=1'}`;
   navigator.serviceWorker
     .register(swUrl, { scope: `${prefix}/` })
