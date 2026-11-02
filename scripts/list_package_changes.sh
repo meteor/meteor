@@ -21,13 +21,29 @@ set -euo pipefail
 OUTPUT_FILE=""
 EXCLUDE_AUTHORS=""
 
+# Stops with a clear message when an option is missing its value, so the parser
+# never reads an absent "$2" under `set -u` and never takes the next option as
+# the value.
+require_value() {
+  local option="$1"
+  local value="${2:-}"
+  local example="$3"
+
+  if [[ -z "$value" || "$value" == -* ]]; then
+    echo "❌  Missing value for $option. Usage: $option $example"
+    exit 1
+  fi
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --output)
+      require_value "$1" "${2:-}" "file.json"
       OUTPUT_FILE="$2"
       shift 2
       ;;
     --exclude-author)
+      require_value "$1" "${2:-}" "author1,author2,..."
       EXCLUDE_AUTHORS="$2"
       shift 2
       ;;
