@@ -16,7 +16,7 @@ Package.onUse(function (api) {
 });
 
 Package.onTest(function (api) {
-  api.use(['ecmascript', 'tinytest', 'ejson', 'random', 'mongo', 'ddp-client', 'tracker']);
+  api.use(['ecmascript', 'tinytest', 'ejson', 'random', 'mongo', 'ddp-client', 'tracker', 'accounts-password']);
   api.use('offline', 'client');
   api.addFiles('offline_tests_common.js');
   api.mainModule('offline_tests.js', 'client');

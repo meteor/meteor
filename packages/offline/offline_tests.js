@@ -1,5 +1,6 @@
 import { Tinytest } from 'meteor/tinytest';
 import { Meteor } from 'meteor/meteor';
+import { Accounts } from 'meteor/accounts-base';
 import { Mongo } from 'meteor/mongo';
 import { Random } from 'meteor/random';
 import { Offline } from 'meteor/offline';
@@ -258,4 +259,37 @@ Tinytest.addAsync('offline - clear empties the documents and the recorded calls'
   await Offline.clear();
   test.equal(await db.all('calls'), []);
   test.equal(await db.all('documents'), []);
+});
+
+Tinytest.addAsync('offline - a login starts the user copy from Minimongo, a logout starts the anonymous copy empty', async function (test) {
+  await started();
+  const events = [];
+  const ready = collect('ready', events);
+  // Read at `ready`: a snapshot of Minimongo, if any, is written just before it.
+  let anonymousRows;
+  const probe = Offline.on('ready', ({ userId }) => {
+    if (userId === null) anonymousRows = db.all('documents');
+  });
+  const anonymous = db.currentName();
+  const exists = async (name) => (await indexedDB.databases()).some((database) => database.name === name);
+  try {
+    const _id = Random.id();
+    await Meteor.callAsync('offline_test.insert', { _id, value: 'before login' });
+    await new Promise((resolve, reject) =>
+      Accounts.createUser({ username: Random.id(), password: 'offline-test' }, (error) => (error ? reject(error) : resolve())),
+    );
+    const userId = Meteor.userId();
+    await until(() => events.some((event) => event.userId === userId), 'the user copy to start');
+    test.equal(db.currentName(), db.nameFor(userId));
+    test.isTrue((await db.all('documents')).some((row) => row.doc.includes(_id)), 'the user copy starts from Minimongo');
+    await until(() => exists(anonymous).then((found) => !found), 'the anonymous copy to be deleted');
+    await new Promise((resolve, reject) => Meteor.logout((error) => (error ? reject(error) : resolve())));
+    await until(() => anonymousRows !== undefined, 'the anonymous copy to start');
+    test.equal(db.currentName(), anonymous);
+    test.equal(await anonymousRows, [], 'the documents of the previous user are not copied');
+    await until(() => exists(db.nameFor(userId)).then((found) => !found), 'the user copy to be deleted');
+  } finally {
+    ready.stop();
+    probe.stop();
+  }
 });

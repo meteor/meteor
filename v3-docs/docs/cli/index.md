@@ -455,13 +455,13 @@ The `--prototype` option adds packages that make development faster but shouldn'
 <details>
 <summary><strong>PWA App</strong> (--pwa)</summary>
 
-Blaze app plus a web app manifest, icons, a dependency-free service worker and an offline page.
+Blaze app plus a web app manifest, icons, a dependency-free service worker, an offline page, and a links list kept on the device by the [`offline`](/api/offline) package.
 
 **NPM packages:**
 - `@babel/runtime`, `@swc/helpers`, `jquery`, `meteor-node-stubs`
 
 **Meteor packages:**
-- `meteor-base`, `mobile-experience`, `mongo`, `blaze-html-templates`, `jquery`, `reactive-var`, `tracker`, `standard-minifier-css`, `standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`, `hot-module-replacement`, `blaze-hot`, `rspack`
+- `meteor-base`, `mobile-experience`, `mongo`, `offline`, `blaze-html-templates`, `jquery`, `reactive-var`, `tracker`, `standard-minifier-css`, `standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`, `hot-module-replacement`, `blaze-hot`, `rspack`
 
 **Service worker behavior:**
 
@@ -477,10 +477,11 @@ Blaze app plus a web app manifest, icons, a dependency-free service worker and a
 local development. A browser on a phone or another device requires the app to
 be served over HTTPS before offering installation.
 
-The skeleton provides an installable app shell and offline fallback page. It
-does not synchronize Meteor data, queue methods, or replay writes while the
-application is offline; add those capabilities separately if your application
-needs them.
+The skeleton provides an installable app shell, an offline fallback page and,
+through the `offline` package, a links list that keeps working without network:
+the published links stay on the device and a link added offline reaches the
+server once the connection is back. See the [Offline API](/api/offline) for
+what the package does and does not do.
 
 </details>
 
