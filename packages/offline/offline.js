@@ -25,6 +25,45 @@ let collections = [];
 let handles = [];
 let started = false;
 
+// The subscriptions made while the connection is down: on boot, the ones the
+// app makes before the connection is up; later, the ones made offline. They
+// become ready as soon as the copy is in Minimongo, if it holds documents:
+// their data is the copy's until the server's replaces it in one batch, and
+// they stay ready then, as any subscription does across a reconnection. On a
+// first start, with nothing on the device, they wait for the server as usual.
+const made = new Set(); // subscription ids
+let loaded = false; // the boot copy is in Minimongo
+
+function readyFromCopy() {
+  if (!loaded) return;
+  const held = collections.some((collection) => collection.find({}, { reactive: false }).count() > 0);
+  made.forEach((id) => {
+    const record = Meteor.connection._subscriptions[id];
+    if (!held || !record || record.ready) return;
+    // What the server's ready message does.
+    record.ready = true;
+    if (record.readyCallback) record.readyCallback();
+    record.readyDeps.changed();
+  });
+  made.clear();
+}
+
+const subscribing = (subscribe) =>
+  function (...args) {
+    const handle = subscribe.apply(this, args);
+    if (!Tracker.nonreactive(() => Meteor.connection.status().connected)) {
+      made.add(handle.subscriptionId);
+      // Never ready synchronously: the server's answer is not either.
+      Promise.resolve().then(readyFromCopy);
+    }
+    return handle;
+  };
+
+// Installed when the package loads: Meteor.subscribe was bound to the
+// connection's original function when ddp-client loaded.
+Meteor.connection.subscribe = subscribing(Meteor.connection.subscribe);
+Meteor.subscribe = subscribing(Meteor.subscribe);
+
 // Opens the user's copy, loads it into Minimongo on boot, re-issues the calls
 // recorded before the last unload (their stubs run against the loaded
 // documents), and mirrors the collections from now on. On a login the
@@ -42,6 +81,10 @@ async function activate(userId, { boot }) {
   }
   const calls = await queue.replay();
   handles = collections.map((collection) => mirror(collection, { initial: !boot && userId !== null }));
+  if (boot) {
+    loaded = true;
+    readyFromCopy();
+  }
   emit('ready', { userId, calls, documents });
   return documents;
 }

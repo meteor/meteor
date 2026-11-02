@@ -54,10 +54,12 @@ reconnection. To keep a set of documents on the device, keep its subscription
 active for the whole session rather than tied to a route: a board kept offline
 is a board whose subscription stays up.
 
-Without network the subscriptions do not become ready. Render from the
-collections rather than from a subscription's `ready()`,
-`Template.subscriptionsReady` or `useSubscribe`: the documents are in Minimongo
-as soon as `start` has resolved, and the `ready` event says so.
+A subscription made while the connection is down is ready as soon as the copy
+is in Minimongo, as long as the copy holds documents: `ready()`, `onReady`,
+`Template.subscriptionsReady` and `useSubscribe` see it, its documents are the
+copy's until the server's data replaces them, in one batch, and it stays ready
+then, as any subscription does across a reconnection. On a first start, with
+nothing on the device, the subscriptions wait for the server as usual.
 
 ## Recorded calls
 
