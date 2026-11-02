@@ -65,8 +65,8 @@ export class ReactiveDict {
     }
 
     this.allDeps = new Tracker.Dependency;
-    this.keyDeps = {}; // key -> Dependency
-    this.keyValueDeps = {}; // key -> Dependency
+    this.keyDeps = Object.create(null); // key -> Dependency
+    this.keyValueDeps = Object.create(null); // key -> Dependency
     this.keyPresenceDeps = Object.create(null); // key -> Dependency
   }
 

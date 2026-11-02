@@ -299,12 +299,23 @@ Tinytest.add('ReactiveDict - has() with object forms, clear and destroy', functi
   test.equal(Object.keys(dict.keyPresenceDeps).length, 0);
 });
 
-Tinytest.add('ReactiveDict - has() works with keys that shadow Object.prototype', function (test) {
+Tinytest.add('ReactiveDict - keys that shadow Object.prototype work', function (test) {
   var dict = new ReactiveDict();
   ['constructor', 'toString', 'hasOwnProperty'].forEach(function (key) {
     test.isFalse(dict.has(key));
-    // no presence observer: must not throw
+
+    // no observers: must not throw
     dict.set(key, undefined);
     test.isTrue(dict.has(key));
+    dict.set(key, 'value');
+    test.equal(dict.get(key), 'value');
+    test.isTrue(dict.equals(key, 'value'));
+
+    test.isTrue(dict.delete(key));
+    test.isFalse(dict.has(key));
+
+    dict.set(key, 'again');
+    dict.clear();
+    test.isFalse(dict.has(key));
   });
 });
