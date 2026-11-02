@@ -277,6 +277,38 @@ Tinytest.addAsync('offline - the copy follows Minimongo and is loaded back by hy
   test.equal(await hydrate(Local), 0, 'documents already present are skipped');
 });
 
+Tinytest.addAsync('offline - ObjectID ids survive the copy and the recorded calls', async function (test) {
+  await started();
+  const Local = new Mongo.Collection(`offline_test_oid_${Random.id()}`, { connection: null });
+  const _id = new Mongo.ObjectID();
+  const handle = mirror(Local);
+  const rows = async () => (await db.all('documents')).filter((row) => row.collection === Local._name);
+  try {
+    Local.insert({ _id, value: 'oid' });
+    await until(async () => (await rows()).length === 1, 'the document to be mirrored');
+  } finally {
+    handle.stop();
+  }
+  Local.remove({});
+  test.equal(await hydrate(Local), 1);
+  test.instanceOf(Local.findOne()._id, Mongo.ObjectID);
+  test.isTrue(Local.findOne()._id.equals(_id));
+  test.isTrue(!!Local.findOne(_id), 'found by its ObjectID');
+  Meteor.disconnect();
+  try {
+    const call = Meteor.callAsync('offline_test.setValue', { _id, value: 'oid' });
+    await until(async () => (await Offline.pending()).length === 1, 'the record to be written');
+    const [record] = await Offline.pending();
+    test.instanceOf(record.args[0]._id, Mongo.ObjectID);
+    test.isTrue(record.args[0]._id.equals(_id));
+    Meteor.reconnect();
+    await call;
+    await until(async () => (await Offline.pending()).length === 0, 'the record to be cleared');
+  } finally {
+    Meteor.reconnect();
+  }
+});
+
 Tinytest.addAsync('offline - clear empties the documents and the recorded calls', async function (test) {
   await started();
   await db.put('calls', { id: Random.id(), name: 'x', args: '[]', queuedAt: Date.now(), status: 'failed' });
