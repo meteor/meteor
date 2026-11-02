@@ -46,6 +46,19 @@ server replaces the copy in one batch, the way a reconnection does. `start`
 returns a promise that resolves once the copy is in Minimongo; waiting for it
 is optional.
 
+### The copy follows the subscriptions
+
+On the first data from the server, the documents that the current
+subscriptions do not publish leave Minimongo and the copy, as on any
+reconnection. To keep a set of documents on the device, keep its subscription
+active for the whole session rather than tied to a route: a board kept offline
+is a board whose subscription stays up.
+
+Without network the subscriptions do not become ready. Render from the
+collections rather than from a subscription's `ready()`,
+`Template.subscriptionsReady` or `useSubscribe`: the documents are in Minimongo
+as soon as `start` has resolved, and the `ready` event says so.
+
 ## Recorded calls
 
 A recorded call goes through Meteor as usual: the stub runs at once, Meteor
@@ -63,7 +76,8 @@ const waiting = await Offline.pending();
 const rejected = await Offline.failed();
 // same, with status: 'failed' and error: { error, reason, message }
 await Offline.drop(id);
-// forgets the record; a call still in flight is not cancelled
+// forgets the record; a call this page already handed to Meteor is not
+// cancelled and is still sent on reconnect
 ```
 
 ### Listed Methods must be idempotent
@@ -114,5 +128,7 @@ that was not published to the user is ever kept.
 - Documents only. Files belong on the server or in a service worker cache.
 - One tab replays the recorded calls; two tabs of the same app replay them twice.
 - `wait` and the other `Meteor.apply` options are not kept for the replay.
+- `drop` forgets a record; it does not cancel a call this page already handed
+  to Meteor.
 - The copy lives in IndexedDB, under the browser's storage quota and without
   encryption: data that must not sit on a shared device stays out of the list.
