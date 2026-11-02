@@ -103,11 +103,15 @@ lifetime) on close. The client IP is **opt-in** — `clientAddress` appears on
 `method.updated` exists only for methods called over DDP: a server-side
 `Meteor.callAsync` sends no `updated` message. It fires once the method's writes
 have been committed and every observer has reacted to them, right after the
-`updated` message has been written, and before `method.end` or `method.error`,
-because Meteor sends `updated` before `result`. It carries the invocation's
-`traceId`, `durationMs` since `method.start`, and `handlerMs`, how long the method
-function itself ran; the difference is the time the write fence took, a classic
-Meteor latency signal.
+`updated` message has been written. Do not rely on its position relative to
+`method.end` or `method.error`: when nothing holds the write fence once the
+handler returns, `updated` goes out before `result` and `method.updated` lands
+before `method.end`; when an observer still holds it, as the polling driver does
+until its next poll, or an oplog or change stream observer still catching up,
+`result` goes out first and `method.updated` arrives after `method.end`. It
+carries the invocation's `traceId`, `durationMs` since `method.start`, and
+`handlerMs`, how long the method function itself ran; the difference is the time
+the write fence took, a classic Meteor latency signal.
 
 `ddp.message.out` fires once per DDP message written to a client's socket, after
 serialization, so a message queued while its session waits for a reconnection is
