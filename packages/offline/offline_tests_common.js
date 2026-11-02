@@ -33,6 +33,10 @@ Meteor.methods({
   'offline_test.executions'(_id) {
     return executions.get(_id) || 0;
   },
+  // A sync stub, for Meteor.apply.
+  'offline_test.ping'(_id) {
+    if (Meteor.isServer) executions.set(_id, (executions.get(_id) || 0) + 1);
+  },
 });
 
 if (Meteor.isServer) {
