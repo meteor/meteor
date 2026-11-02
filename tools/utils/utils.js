@@ -143,7 +143,7 @@ exports.printPackageList = function (items, options) {
 exports.getHost = async function (...args) {
   var ret;
   var attempt = async function (...args) {
-    var output = await exports.execFile(args[0], args.slice(1)).stdout;
+    var output = (await exports.execFile(args[0], args.slice(1))).stdout;
     if (output) {
       ret = output.trim();
     }
