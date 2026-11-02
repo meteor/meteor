@@ -26,6 +26,17 @@ var REGEX_RELEASE_VERSION = /^(\d{1,4}(?:\.\d{1,4})*)(?:-([-A-Za-z.]{1,15})(\d{0
 // 'url.parse' would give us {protocol:' 3000', host: undefined, port:
 // undefined} or something like that.
 //
+// Returns the port written in the authority of a URL that has a scheme, or
+// undefined if none was written. The WHATWG URL parser drops a port equal to
+// the protocol's default (e.g. "http://localhost:80"), so we read it from the
+// input to tell an explicit default port apart from an omitted one.
+function explicitPort(urlWithScheme) {
+  var authority = urlWithScheme.replace(/^[^:]*:\/\//, '').split(/[\/?#]/)[0];
+  var host = authority.slice(authority.lastIndexOf('@') + 1);
+  var match = host.match(/^(?:\[[^\]]*\]|[^:]*):(\d+)$/);
+  return match ? String(parseInt(match[1], 10)) : undefined;
+}
+
 // 'defaults' is an optional object with 'hostname', 'port', and 'protocol' keys.
 exports.parseUrl = function (str, defaults) {
   // XXX factor this out into a {type: host/port}?
@@ -68,7 +79,7 @@ exports.parseUrl = function (str, defaults) {
   var ret = {
     protocol: hasScheme ? parsedProtocol : defaultProtocol,
     hostname: hostname,
-    port: parsed.port || defaultPort
+    port: parsed.port || explicitPort(str) || defaultPort
   };
   if (parsed.pathname !== '/' && parsed.pathname) {
     ret.pathname = parsed.pathname;
