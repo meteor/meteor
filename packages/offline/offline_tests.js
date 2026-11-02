@@ -26,7 +26,7 @@ const started = () => {
   if (!startedOnce) {
     startedOnce = Offline.start({
       collections: [Items],
-      methods: ['offline_test.insert', 'offline_test.setValue', 'offline_test.fail'],
+      methods: ['offline_test.insert', 'offline_test.setValue', 'offline_test.fail', 'offline_test.ping'],
     }).then(() => new Promise((resolve) => Meteor.subscribe('offline_test.items', { onReady: resolve })));
   }
   return startedOnce;
@@ -179,6 +179,31 @@ Tinytest.addAsync('offline - applyAsync with a callback keeps the callback and s
   test.isUndefined(result);
   await until(async () => (await Offline.pending()).length === 0, 'the record to be cleared');
   test.equal(await Meteor.callAsync('offline_test.executions', _id), 1);
+});
+
+Tinytest.addAsync('offline - Meteor.apply and Meteor.applyAsync record the call like Meteor.call does', async function (test) {
+  await started();
+  const pinged = Random.id();
+  const inserted = Random.id();
+  Meteor.disconnect();
+  try {
+    const ping = new Promise((resolve, reject) =>
+      Meteor.apply('offline_test.ping', [pinged], (error) => (error ? reject(error) : resolve())),
+    );
+    const insert = Meteor.applyAsync('offline_test.insert', [{ _id: inserted, value: 'applyAsync' }], {
+      returnServerResultPromise: true,
+    });
+    await until(async () => (await Offline.pending()).length === 2, 'both records to be written');
+    const names = (await Offline.pending()).map((record) => record.name);
+    test.equal(names.sort(), ['offline_test.insert', 'offline_test.ping']);
+    Meteor.reconnect();
+    await Promise.all([ping, insert]);
+    await until(async () => (await Offline.pending()).length === 0, 'both records to be cleared');
+  } finally {
+    Meteor.reconnect();
+  }
+  test.equal(await Meteor.callAsync('offline_test.executions', pinged), 1);
+  test.equal(await Meteor.callAsync('offline_test.executions', inserted), 1);
 });
 
 Tinytest.addAsync('offline - a stub exception with throwStubExceptions leaves no pending record', async function (test) {
