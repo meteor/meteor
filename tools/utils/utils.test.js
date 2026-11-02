@@ -116,6 +116,47 @@ describe('isIPv4Address', () => {
   });
 });
 
+describe('getHost', () => {
+  // The archinfo mock reports macOS, so getHost tries
+  // `scutil --get ComputerName`, then `hostname -s`, then `hostname`.
+  let exec;
+  let hostname;
+
+  beforeEach(() => {
+    // Never run a real command: every call returns empty output unless a
+    // test says otherwise.
+    exec = jest.spyOn(utils, 'execFile').mockResolvedValue({ stdout: '' });
+    hostname = jest.spyOn(require('os'), 'hostname').mockReturnValue('fallback-host');
+  });
+
+  afterEach(() => {
+    exec.mockRestore();
+    hostname.mockRestore();
+  });
+
+  test('uses the awaited command output', async () => {
+    exec.mockResolvedValue({ stdout: 'My computer\n' });
+    expect(await utils.getHost()).toBe('My computer');
+    expect(exec).toHaveBeenCalledTimes(1);
+    expect(hostname).not.toHaveBeenCalled();
+  });
+
+  test('tries the next command when the output is empty', async () => {
+    exec
+      .mockResolvedValueOnce({ stdout: '' })
+      .mockResolvedValueOnce({ stdout: 'my-host\n' });
+    expect(await utils.getHost()).toBe('my-host');
+    expect(exec).toHaveBeenCalledTimes(2);
+    expect(exec).toHaveBeenLastCalledWith('hostname', ['-s']);
+    expect(hostname).not.toHaveBeenCalled();
+  });
+
+  test('falls back to os.hostname() when every command is empty', async () => {
+    expect(await utils.getHost()).toBe('fallback-host');
+    expect(exec).toHaveBeenCalledTimes(3);
+  });
+});
+
 describe('validEmail', () => {
   test.each([
     ['user@example.com', true], ['a.b@mail.co.uk', true],
