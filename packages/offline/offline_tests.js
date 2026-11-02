@@ -350,3 +350,36 @@ Tinytest.addAsync('offline - a login starts the user copy from Minimongo, a logo
     probe.stop();
   }
 });
+
+Tinytest.addAsync('offline - a subscription made without connection is ready from the copy, and stays ready', async function (test) {
+  await started();
+  // The device holds documents: the ones the subscription made at start published.
+  await Meteor.callAsync('offline_test.insert', { _id: Random.id(), value: 'held' });
+  await until(() => Items.find().count() > 0, 'a published document');
+  const handles = [];
+  Meteor.disconnect();
+  try {
+    const handle = Meteor.subscribe('offline_test.items', 'without connection');
+    handles.push(handle);
+    test.isFalse(handle.ready(), 'not ready synchronously');
+    await until(() => handle.ready(), 'the subscription to be ready from the copy');
+    test.isFalse(Meteor.status().connected);
+    await new Promise((resolve) => handles.push(Meteor.subscribe('offline_test.items', 'with onReady', { onReady: resolve })));
+    Meteor.reconnect();
+    await until(() => Meteor.status().connected, 'the connection');
+    test.isTrue(handle.ready(), 'still ready once connected');
+    // With nothing on the device, a subscription waits for the server.
+    await Meteor.callAsync('offline_test.clear');
+    await until(() => Items.find().count() === 0, 'the documents to be withdrawn');
+    Meteor.disconnect();
+    const empty = Meteor.subscribe('offline_test.items', 'nothing held');
+    handles.push(empty);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    test.isFalse(empty.ready(), 'waits for the server');
+    Meteor.reconnect();
+    await until(() => empty.ready(), 'the subscription to be ready from the server');
+  } finally {
+    Meteor.reconnect();
+    handles.forEach((handle) => handle.stop());
+  }
+});
