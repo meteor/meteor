@@ -67,7 +67,7 @@ export class ReactiveDict {
     this.allDeps = new Tracker.Dependency;
     this.keyDeps = {}; // key -> Dependency
     this.keyValueDeps = {}; // key -> Dependency
-    this.keyPresenceDeps = {}; // key -> Dependency
+    this.keyPresenceDeps = Object.create(null); // key -> Dependency
   }
 
   // set() began as a key/value method, but we are now overloading it
