@@ -27,8 +27,12 @@ let started = false;
 
 // Opens the user's copy, loads it into Minimongo on boot, re-issues the calls
 // recorded before the last unload (their stubs run against the loaded
-// documents), and mirrors the collections from now on. On a user change the
-// documents already in Minimongo are the new user's and start the new copy.
+// documents), and mirrors the collections from now on. On a login the
+// documents already in Minimongo were published again for the new user before
+// the login completed, and start the new copy. On a logout they may still be
+// the previous user's: Meteor.userId() is cleared as soon as the logout is
+// sent, before the server has withdrawn them, so the anonymous copy starts
+// empty and fills from the next changes and the next start.
 async function activate(userId, { boot }) {
   await db.use(userId);
   handles.forEach((handle) => handle.stop());
@@ -37,7 +41,7 @@ async function activate(userId, { boot }) {
     for (const collection of collections) documents += await hydrate(collection);
   }
   const calls = await queue.replay();
-  handles = collections.map((collection) => mirror(collection, { initial: !boot }));
+  handles = collections.map((collection) => mirror(collection, { initial: !boot && userId !== null }));
   emit('ready', { userId, calls, documents });
   return documents;
 }
@@ -60,13 +64,15 @@ export const Offline = {
       // The copy is replaced by the server's documents the way a reconnection
       // replaces the previous session's: once the stream is up, the current
       // subscriptions are treated as revived and the stores are reset together
-      // with their data, in one paused batch. Nothing to replace when the copy
-      // was empty or when nothing is subscribed yet.
+      // with their data, in one paused batch. Without a subscription yet the
+      // reset is immediate, as on a reconnection, and the subscriptions made
+      // later fill the stores again: a copy nothing replaces would keep the
+      // documents deleted while the app was away. Nothing to replace when the
+      // copy was empty.
       if (documents > 0) {
         const firstConnection = DDP.onReconnect((reconnecting) => {
           if (reconnecting !== connection) return;
           firstConnection.stop();
-          if (Object.keys(connection._subscriptions).length === 0) return;
           connection._resetStores = true;
           connection._reviveAllSubscriptions = true;
         });

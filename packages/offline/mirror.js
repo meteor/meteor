@@ -27,7 +27,7 @@ export async function hydrate(collection) {
 
 // Keeps the copy in sync with Minimongo from now on. On boot the documents
 // already there came from the copy itself, so the initial `added` calls are
-// skipped; on a user change they are the new user's copy and are written.
+// skipped; on a login they are the new user's copy and are written.
 export function mirror(collection, { initial = false } = {}) {
   const save = (doc) =>
     db

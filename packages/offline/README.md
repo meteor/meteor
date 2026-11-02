@@ -19,6 +19,14 @@ copy in one batch, exactly as a reconnection does. The server stays the source
 of truth: nothing is fetched beyond what your publications already send, and
 there is no sync query.
 
+The copy follows the subscriptions of the session. On the first data from the
+server, the documents the current subscriptions do not publish leave Minimongo
+and the copy, as on any reconnection: to keep a set of documents on the device,
+keep its subscription active for the whole session rather than tied to a route.
+Without network the subscriptions do not become ready, so render from the
+collections rather than from `ready()` or `Template.subscriptionsReady`: the
+documents are in Minimongo as soon as `start` has resolved.
+
 A recorded call goes through Meteor as usual: its stub writes the optimistic
 document, Meteor keeps the call in its own queue while the connection is down
 and sends it on reconnect. The record only has to survive a page reload: it is
@@ -47,4 +55,6 @@ the client and insert only if absent, prefer `$set` to `$inc`.
 
 Limits of this version: documents only, not files; one tab replays the
 recorded calls, two tabs of the same app replay them twice; `wait` and the
-other `Meteor.apply` options are not kept for the replay.
+other `Meteor.apply` options are not kept for the replay; `drop` forgets a
+record but does not cancel a call this page already handed to Meteor, which is
+still sent on reconnect.

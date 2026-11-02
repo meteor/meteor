@@ -1,8 +1,8 @@
 // Service worker for the Meteor PWA scaffold — no external dependencies.
 // Scope: caches the app shell and static assets for installability + offline
 // page loads. It intentionally does NOT handle offline *data* (collection
-// mirroring, queued Methods, sync on reconnect) — that belongs to a separate
-// offline-data layer, out of scope for this baseline scaffold.
+// mirroring, queued Methods, sync on reconnect): that is the `offline`
+// package's job, started from client/main.js.
 //
 // Prefer a generated, declaratively configured worker? See the `notes-offline`
 // example (`meteor create my-app --example notes-offline`): Workbox builds its
