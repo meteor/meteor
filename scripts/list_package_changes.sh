@@ -24,10 +24,18 @@ EXCLUDE_AUTHORS=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --output)
+      if [[ $# -lt 2 || "$2" == --* ]]; then
+        echo "❌  --output requires a filename (e.g. --output packages_by_pr.json)"
+        exit 1
+      fi
       OUTPUT_FILE="$2"
       shift 2
       ;;
     --exclude-author)
+      if [[ $# -lt 2 || "$2" == --* ]]; then
+        echo "❌  --exclude-author requires a comma-separated list of authors (e.g. --exclude-author dependabot,renovate)"
+        exit 1
+      fi
       EXCLUDE_AUTHORS="$2"
       shift 2
       ;;
