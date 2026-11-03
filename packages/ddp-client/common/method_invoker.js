@@ -8,6 +8,8 @@ export class MethodInvoker {
     // Public (within this file) fields.
     this.methodId = options.methodId;
     this.sentMessage = false;
+    this._retryOnReconnect = false;
+    this._serverOwnsInvocation = false;
 
     this._callback = options.callback;
     this._connection = options.connection;
@@ -24,6 +26,10 @@ export class MethodInvoker {
   // Sends the method message to the server. May be called additional times if
   // we lose the connection and reconnect before receiving a result.
   sendMessage() {
+    // A resumed DDP session still owns any method sent before the disconnect;
+    // the server will deliver its original result without a second invocation.
+    if (this._serverOwnsInvocation) return;
+
     // This function is called before sending a method (including resending on
     // reconnect). We should only (re)send methods where we don't already have a
     // result!
@@ -34,6 +40,7 @@ export class MethodInvoker {
     // time.
     this._dataVisible = false;
     this.sentMessage = true;
+    this._retryOnReconnect = false;
 
     // If this is a wait method, make all data messages be buffered until it is
     // done.
