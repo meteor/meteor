@@ -72,6 +72,12 @@ selftest.define(
     await run.expectEnd();
     await run.expectExit(1);
 
+    // An unknown option must not consume the following --release flag.
+    run = s.run("create", "--pwa", "--release", "weird");
+    await run.readErr("Meteor weird: unknown release.\n");
+    await run.expectEnd();
+    await run.expectExit(1);
+
     // Suppose you're offline and you ask for a release you don't have
     // cached.
     // XXX On the refreshpolicy branch, we removed some of the support
