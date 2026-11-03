@@ -397,3 +397,175 @@ if (Meteor.isClient) {
     );
   });
 }
+
+// A sorted observe with skip or limit maintains its window from every match
+// instead of recomputing it; its callbacks must still describe exactly what
+// fetch() returns after every write, including multi-document writes and
+// writes made while paused. The sort key takes six values, so ties are the
+// norm and the window keeps them in insertion order like fetch() does.
+Tinytest.addAsync('minimongo - observe sorted with skip and limit tracks fetch', async test => {
+  const collection = new LocalCollection();
+  const sort = { a: 1 };
+  const windows = [{ limit: 3 }, { skip: 2, limit: 3 }, { skip: 2 }];
+
+  // Mirrors an ordered observeChanges into an array of documents.
+  const mirror = options => {
+    const docs = [];
+    const indexOf = id => docs.findIndex(doc => doc._id === id);
+    const insertBefore = (doc, before) => {
+      if (before === null) {
+        docs.push(doc);
+      } else {
+        docs.splice(indexOf(before), 0, doc);
+      }
+    };
+    const handle = collection.find({}, { sort, ...options }).observeChanges({
+      addedBefore(id, fields, before) {
+        insertBefore({ _id: id, ...fields }, before);
+      },
+      movedBefore(id, before) {
+        insertBefore(docs.splice(indexOf(id), 1)[0], before);
+      },
+      changed(id, fields) {
+        const doc = docs[indexOf(id)];
+        Object.keys(fields).forEach(key => {
+          if (fields[key] === undefined) {
+            delete doc[key];
+          } else {
+            doc[key] = fields[key];
+          }
+        });
+      },
+      removed(id) {
+        docs.splice(indexOf(id), 1);
+      },
+    });
+    return { options, docs, handle };
+  };
+
+  let seed = 42;
+  const random = max => {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    return seed % max;
+  };
+  let nextId = 0;
+
+  const randomWrite = async () => {
+    const ids = collection.find({}, { fields: { _id: 1 } }).map(doc => doc._id);
+    const choice = ids.length < 6 ? 0 : random(8);
+    if (choice < 2) {
+      await collection.insertAsync({ _id: `d${nextId++}`, a: random(6), b: 0 });
+    } else if (choice === 2) {
+      await collection.updateAsync(ids[random(ids.length)], { $set: { a: random(6) } });
+    } else if (choice === 3) {
+      await collection.updateAsync(ids[random(ids.length)], { $set: { b: random(3) }, $unset: { c: 1 } });
+    } else if (choice === 4) {
+      await collection.removeAsync(ids[random(ids.length)]);
+    } else if (choice === 5) {
+      await collection.updateAsync({ a: random(6) }, { $set: { c: random(2) } }, { multi: true });
+    } else if (choice === 6) {
+      await collection.updateAsync({ c: 1 }, { $set: { a: random(6) } }, { multi: true });
+    } else {
+      await collection.removeAsync({ a: random(6), c: 1 });
+    }
+  };
+
+  const mirrors = windows.map(mirror);
+  const check = step => {
+    mirrors.forEach(({ options, docs }) => {
+      test.equal(
+        docs,
+        collection.find({}, { sort, ...options }).fetch(),
+        `step ${step}, window ${JSON.stringify(options)}`
+      );
+    });
+  };
+
+  for (let step = 0; step < 300; step++) {
+    await randomWrite();
+    check(step);
+  }
+
+  collection.pauseObservers();
+  for (let step = 0; step < 30; step++) {
+    await randomWrite();
+  }
+  if (Meteor.isServer) {
+    await collection.resumeObserversServer();
+  } else {
+    collection.resumeObserversClient();
+  }
+  check('after resume');
+
+  mirrors.forEach(({ handle }) => handle.stop());
+});
+
+// Records the observeChanges callbacks of a sorted observe with limit 2,
+// starting with the initial addedBefore calls.
+const observeSortedLimit2 = async docs => {
+  const collection = new LocalCollection();
+  for (const doc of docs) {
+    await collection.insertAsync(doc);
+  }
+  const events = [];
+  // observeChangesAsync waits for the initial callbacks, which the server
+  // delivers asynchronously.
+  const handle = await collection.find({}, { sort: { a: 1 }, limit: 2 }).observeChangesAsync({
+    addedBefore(id, fields, before) {
+      events.push(['addedBefore', id, fields, before]);
+    },
+    movedBefore(id, before) {
+      events.push(['movedBefore', id, before]);
+    },
+    changed(id, fields) {
+      events.push(['changed', id, fields]);
+    },
+    removed(id) {
+      events.push(['removed', id]);
+    },
+  });
+  return { collection, events, handle };
+};
+
+Tinytest.addAsync('minimongo - observe sorted with limit keeps a tie in place on update', async test => {
+  const { collection, events, handle } = await observeSortedLimit2([
+    { _id: '1', a: 10, b: 0 },
+    { _id: '2', a: 10, b: 0 },
+  ]);
+  await collection.updateAsync('1', { $set: { b: 1 } });
+  test.equal(events, [
+    ['addedBefore', '1', { a: 10, b: 0 }, null],
+    ['addedBefore', '2', { a: 10, b: 0 }, null],
+    ['changed', '1', { b: 1 }],
+  ]);
+  handle.stop();
+});
+
+Tinytest.addAsync('minimongo - observe sorted with limit reports a multi-document remove once', async test => {
+  const { collection, events, handle } = await observeSortedLimit2(
+    [1, 2, 3, 4, 5].map(a => ({ _id: String(a), a }))
+  );
+  await collection.removeAsync({ a: { $lte: 4 } });
+  test.equal(events, [
+    ['addedBefore', '1', { a: 1 }, null],
+    ['addedBefore', '2', { a: 2 }, null],
+    ['removed', '1'],
+    ['removed', '2'],
+    ['addedBefore', '5', { a: 5 }, null],
+  ]);
+  handle.stop();
+});
+
+Tinytest.addAsync('minimongo - observe sorted with limit reports a multi-document update once', async test => {
+  const { collection, events, handle } = await observeSortedLimit2(
+    [1, 2, 3].map(a => ({ _id: String(a), a }))
+  );
+  await collection.updateAsync({}, { $inc: { a: 10 } }, { multi: true });
+  test.equal(events, [
+    ['addedBefore', '1', { a: 1 }, null],
+    ['addedBefore', '2', { a: 2 }, null],
+    ['changed', '1', { a: 11 }],
+    ['changed', '2', { a: 12 }],
+  ]);
+  handle.stop();
+});

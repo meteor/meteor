@@ -296,6 +296,8 @@ export default class Cursor {
       this.matcher.hasGeoQuery() && ordered && new LocalCollection._IdMap();
 
     const query = {
+      allResults: null,
+      windowBeforeWrite: null,
       cursor: this,
       dirty: false,
       distances,
@@ -315,10 +317,21 @@ export default class Cursor {
       this.collection.queries[qid] = query;
     }
 
-    query.results = this._getRawObjects({
-      ordered,
-      distances: query.distances,
-    });
+    if (ordered && this.sorter && (this.skip || this.limit)) {
+      // Keep every match so that writes maintain the window instead of
+      // recomputing it from the whole collection.
+      query.allResults = this._getRawObjects({
+        ordered,
+        distances: query.distances,
+        applySkipLimit: false,
+      });
+      query.results = LocalCollection._sliceWindow(query);
+    } else {
+      query.results = this._getRawObjects({
+        ordered,
+        distances: query.distances,
+      });
+    }
 
     if (this.collection.paused) {
       query.resultsSnapshot = ordered ? [] : new LocalCollection._IdMap();
