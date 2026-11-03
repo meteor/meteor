@@ -62,6 +62,12 @@ export class Retry {
     return timeout;
   }
 
+  // Call `fn` after a delay, based on the `count` of which retry this is.
+  // Returns the calculated delay in milliseconds.
+  //
+  // options.signal (optional AbortSignal): if it is aborted before `fn`
+  // starts, the pending call is cancelled. Aborting after `fn` has started
+  // has no effect. A new retryLater() call always replaces the pending one.
   retryLater(count, fn, { signal } = {}) {
     const timeout = this._timeout(count);
 
