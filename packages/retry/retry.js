@@ -62,16 +62,36 @@ export class Retry {
     return timeout;
   }
 
-  retryLater(count, fn) {
+  retryLater(count, fn, { signal } = {}) {
     const timeout = this._timeout(count);
+
+    // A new call always replaces the pending attempt, even when the new
+    // signal is already aborted.
     this.clear();
+
+    // Already aborted: schedule nothing, but keep the numeric return value.
+    if (signal && signal.aborted) {
+      return timeout;
+    }
+
+    if (signal) {
+      const onAbort = () => {
+        // Only cancel if this attempt is still the pending one.
+        if (this._releaseSignal === release) {
+          this.clear();
+        }
+      };
+      const release = () => signal.removeEventListener('abort', onAbort);
+      signal.addEventListener('abort', onAbort, { once: true });
+      this._releaseSignal = release;
+    }
+
     this.retryTimer = Meteor.setTimeout(() => {
-      // The attempt has started: forget it BEFORE running fn, so that a
-      // retryLater() called from fn is never cleaned up by this attempt.
       this.retryTimer = null;
       this._releaseAbortListener();
       fn();
     }, timeout);
+
     return timeout;
   }
 }
