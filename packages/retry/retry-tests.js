@@ -191,3 +191,122 @@ Tinytest.addAsync("retry - signal: callback runs normally when not aborted", asy
   test.equal(signal.listenerCount(), 0); // listener released after completion
   retry.clear();
 });
+
+Tinytest.addAsync("retry - signal: replacing a pending attempt releases the old listener", async (test) => {
+  const retry = newRetry();
+  const oldSignal = makeFakeSignal();
+  const newSignal = makeFakeSignal();
+  const calls = [];
+
+  retry.retryLater(0, () => calls.push("old"), { signal: oldSignal });
+  retry.retryLater(0, () => calls.push("new"), { signal: newSignal });
+  test.equal(oldSignal.listenerCount(), 0);
+
+  // Aborting the older signal must NOT cancel the newer attempt.
+  oldSignal.abort();
+  await sleep(80);
+
+  test.equal(calls, ["new"]);
+  retry.clear();
+});
+
+Tinytest.addAsync("retry - signal: replacing with an aborted signal cancels the previous attempt", async (test) => {
+  const retry = newRetry();
+  const first = makeFakeSignal();
+  const second = makeFakeSignal();
+  second.abort();
+  const calls = [];
+
+  retry.retryLater(0, () => calls.push("first"), { signal: first });
+  const delay = retry.retryLater(0, () => calls.push("second"), {
+    signal: second,
+  });
+  await sleep(80);
+
+  test.equal(calls, []);
+  test.equal(delay, 20);
+  test.equal(first.listenerCount(), 0);
+  retry.clear();
+});
+
+Tinytest.addAsync("retry - signal: repeated abort and clear are safe", async (test) => {
+  const retry = newRetry();
+  const signal = makeFakeSignal();
+  let fired = false;
+
+  retry.retryLater(
+    0,
+    () => {
+      fired = true;
+    },
+    { signal },
+  );
+  signal.abort();
+  signal.abort();
+  retry.clear();
+  retry.clear();
+  await sleep(80);
+
+  test.isFalse(fired, "callback should not fire");
+});
+
+Tinytest.addAsync("retry - signal: manual clear releases the listener", async (test) => {
+  const retry = newRetry();
+  const signal = makeFakeSignal();
+  let fired = false;
+
+  retry.retryLater(
+    0,
+    () => {
+      fired = true;
+    },
+    { signal },
+  );
+  test.equal(signal.listenerCount(), 1);
+  retry.clear();
+  test.equal(signal.listenerCount(), 0);
+  await sleep(80);
+
+  test.isFalse(fired, "cleared callback should not fire");
+});
+
+Tinytest.addAsync("retry - signal: a retry scheduled from the callback is not cleaned up", async (test) => {
+  const retry = newRetry();
+  const first = makeFakeSignal();
+  const second = makeFakeSignal();
+  const calls = [];
+
+  retry.retryLater(
+    0,
+    () => {
+      calls.push("first");
+      retry.retryLater(0, () => calls.push("second"), { signal: second });
+    },
+    { signal: first },
+  );
+  await sleep(120);
+
+  test.equal(calls, ["first", "second"]);
+  test.equal(first.listenerCount(), 0);
+  test.equal(second.listenerCount(), 0);
+  retry.clear();
+});
+
+Tinytest.addAsync("retry - signal: abort after the callback started does not undo it", async (test) => {
+  const retry = newRetry();
+  const signal = makeFakeSignal();
+  let fired = 0;
+
+  retry.retryLater(
+    0,
+    () => {
+      fired++;
+    },
+    { signal },
+  );
+  await sleep(80);
+  signal.abort();
+
+  test.equal(fired, 1);
+  retry.clear();
+});
