@@ -106,3 +106,88 @@ Tinytest.add("retry - clear is idempotent", (test) => {
   retry.clear();
   test.ok();
 });
+
+// Minimal AbortSignal stand-in so the tests are deterministic and do not
+// depend on a global AbortController.
+const makeFakeSignal = () => {
+  const listeners = new Set();
+  return {
+    aborted: false,
+    addEventListener(type, fn) {
+      if (type === "abort") listeners.add(fn);
+    },
+    removeEventListener(type, fn) {
+      if (type === "abort") listeners.delete(fn);
+    },
+    abort() {
+      if (this.aborted) return;
+      this.aborted = true;
+      [...listeners].forEach((fn) => fn());
+    },
+    listenerCount: () => listeners.size,
+  };
+};
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const newRetry = () => new Retry({ minCount: 1, minTimeout: 20, fuzz: 0 });
+
+Tinytest.addAsync("retry - signal: abort before firing cancels the callback", async (test) => {
+  const retry = newRetry();
+  const signal = makeFakeSignal();
+  let fired = false;
+
+  const delay = retry.retryLater(
+    0,
+    () => {
+      fired = true;
+    },
+    { signal },
+  );
+  signal.abort();
+  await sleep(80);
+
+  test.isFalse(fired, "aborted callback should not fire");
+  test.equal(delay, 20);
+  test.equal(signal.listenerCount(), 0);
+  retry.clear();
+});
+
+Tinytest.addAsync("retry - signal: already aborted schedules nothing", async (test) => {
+  const retry = newRetry();
+  const signal = makeFakeSignal();
+  signal.abort();
+  let fired = false;
+
+  const delay = retry.retryLater(
+    0,
+    () => {
+      fired = true;
+    },
+    { signal },
+  );
+  await sleep(80);
+
+  test.isFalse(fired, "callback should never be scheduled");
+  test.equal(delay, 20);
+  test.equal(signal.listenerCount(), 0);
+  retry.clear();
+});
+
+Tinytest.addAsync("retry - signal: callback runs normally when not aborted", async (test) => {
+  const retry = newRetry();
+  const signal = makeFakeSignal();
+  let fired = 0;
+
+  retry.retryLater(
+    0,
+    () => {
+      fired++;
+    },
+    { signal },
+  );
+  await sleep(80);
+
+  test.equal(fired, 1);
+  test.equal(signal.listenerCount(), 0); // listener released after completion
+  retry.clear();
+});
