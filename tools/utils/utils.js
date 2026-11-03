@@ -12,7 +12,7 @@ var utils = exports;
 // This improves performance in hot paths like URL parsing.
 var REGEX_PORT_ONLY = /^[0-9]+$/;
 var REGEX_HAS_SCHEME = /^[A-Za-z][A-Za-z0-9+-\.]*\:\/\//;
-var REGEX_IPV4_ADDRESS = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+var REGEX_IPV4_ADDRESS = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9]{1,2})\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9]{1,2})$/;
 var REGEX_VALID_EMAIL = /^[^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*@([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}$/;
 var REGEX_FILE_SCHEME = /^file:\/\/.+/;
 var REGEX_URL_WITH_SHA = /^https?:\/\/.*[0-9a-f]{40}/;
