@@ -767,7 +767,10 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
         rawOptions[term].push(value);
       } else if (_.has(implicitValues, term)) {
         rawOptions[term].push(implicitValues[term]);
-      } else if (i === argv.length - 1) {
+      } else if (i === argv.length - 1 || argv[i + 1].startsWith('-')) {
+        // An unknown option may be a boolean option added by the release
+        // we're springboarding to. Don't let it consume another option,
+        // especially --release, as its value.
         rawOptions[term].push(null);
       } else {
         rawOptions[term].push(argv[i + 1]);
