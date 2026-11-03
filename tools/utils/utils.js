@@ -30,8 +30,27 @@ var REGEX_RELEASE_VERSION = /^(\d{1,4}(?:\.\d{1,4})*)(?:-([-A-Za-z.]{1,15})(\d{0
 // undefined if none was written. The WHATWG URL parser drops a port equal to
 // the protocol's default (e.g. "http://localhost:80"), so we read it from the
 // input to tell an explicit default port apart from an omitted one.
+//
+// The authority is located the way the WHATWG parser locates it: surrounding
+// spaces and control characters are trimmed and tabs/newlines removed, and for
+// special schemes (http, https, ws, ...) any run of "/" or "\" after the scheme
+// is skipped and "\" also ends the authority.
+var SPECIAL_URL_SCHEMES = ['ftp', 'file', 'http', 'https', 'ws', 'wss'];
 function explicitPort(urlWithScheme) {
-  var authority = urlWithScheme.replace(/^[^:]*:\/\//, '').split(/[\/?#]/)[0];
+  var input = urlWithScheme
+    .replace(/^[\u0000- ]+|[\u0000- ]+$/g, '')
+    .replace(/[\t\n\r]/g, '');
+  var schemeEnd = input.indexOf(':');
+  var scheme = input.slice(0, schemeEnd).toLowerCase();
+  var rest = input.slice(schemeEnd + 1);
+  var authority;
+  if (SPECIAL_URL_SCHEMES.indexOf(scheme) !== -1) {
+    authority = rest.replace(/^[\/\\]*/, '').split(/[\/\\?#]/)[0];
+  } else if (rest.startsWith('//')) {
+    authority = rest.slice(2).split(/[\/?#]/)[0];
+  } else {
+    return undefined;
+  }
   var host = authority.slice(authority.lastIndexOf('@') + 1);
   var match = host.match(/^(?:\[[^\]]*\]|[^:]*):(\d+)$/);
   return match ? String(parseInt(match[1], 10)) : undefined;
