@@ -26,14 +26,24 @@ export class Retry {
     this.minCount = minCount;
     this.fuzz = fuzz;
     this.retryTimer = null;
+    this._releaseSignal = null;
   }
 
-  // Reset a pending retry, if any.
+   // Reset a pending retry, if any.
   clear() {
     if (this.retryTimer) {
       clearTimeout(this.retryTimer);
     }
     this.retryTimer = null;
+    this._releaseAbortListener();
+  }
+
+  // Remove the abort listener of the pending attempt, if any. Safe to call
+  // several times.
+  _releaseAbortListener() {
+    const release = this._releaseSignal;
+    this._releaseSignal = null;
+    if (release) release();
   }
 
   // Calculate how long to wait in milliseconds to retry, based on the
@@ -52,11 +62,16 @@ export class Retry {
     return timeout;
   }
 
-  // Call `fn` after a delay, based on the `count` of which retry this is.
   retryLater(count, fn) {
     const timeout = this._timeout(count);
-    if (this.retryTimer) clearTimeout(this.retryTimer);
-    this.retryTimer = Meteor.setTimeout(fn, timeout);
+    this.clear();
+    this.retryTimer = Meteor.setTimeout(() => {
+      // The attempt has started: forget it BEFORE running fn, so that a
+      // retryLater() called from fn is never cleaned up by this attempt.
+      this.retryTimer = null;
+      this._releaseAbortListener();
+      fn();
+    }, timeout);
     return timeout;
   }
 }
