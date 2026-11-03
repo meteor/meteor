@@ -45,7 +45,7 @@ export class MessageProcessors {
       // Successful reconnection -- pick up where we left off.
       // Don't reset stores since we're continuing the same session.
       self._resetStores = false;
-      return;
+      return true;
     }
 
     // Server doesn't have our data anymore. Re-sync a new session.
@@ -95,7 +95,7 @@ export class MessageProcessors {
           self._afterUpdateCallbacks.push(
             (...args) => invoker.dataVisible(...args)
           );
-        } else if (invoker.sentMessage) {
+        } else if (invoker.sentMessage || invoker._retryOnReconnect) {
           // This method has been sent on this connection (maybe as a resend
           // from the last connection, maybe from onReconnect, maybe just very
           // quickly before processing the connected message).
@@ -124,6 +124,7 @@ export class MessageProcessors {
       }
       self._runAfterUpdateCallbacks();
     }
+    return false;
   }
 
   /**

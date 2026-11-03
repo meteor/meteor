@@ -773,6 +773,8 @@ Tinytest.addAsync('livedata stub - method call before connect', async function (
   await stream.reset();
 
   testGotMessage(test, stream, makeConnectMessage());
+  test.length(stream.sent, 0);
+  await stream.receive({ msg: 'connected', session: SESSION_ID });
   testGotMessage(test, stream, {
     msg: 'method',
     method: 'someMethod',
@@ -867,16 +869,17 @@ Tinytest.addAsync('livedata stub - reconnect', async function (test, onComplete)
   test.equal(await coll.findOneAsync('1234'), { _id: '1234', a: 1, b: 2, c: 3 });
   o.expectCallbacks({ changed: 1 });
 
-  // stream reset. reconnect!  we send a connect, our pending method, and our
-  // sub. The wait method still is blocked.
+  // Stream reset. Subscriptions are resent with the connect message, while
+  // pending methods wait until the server confirms the session.
   await stream.reset();
 
   testGotMessage(test, stream, makeConnectMessage(SESSION_ID, conn._receivedCount));
-  testGotMessage(test, stream, methodMessage);
   testGotMessage(test, stream, subMessage);
+  test.length(stream.sent, 0);
 
-  // reconnect with different session id
+  // Reconnect with a different session id; pending methods are now resent.
   await stream.receive({ msg: 'connected', session: SESSION_ID + 1 });
+  testGotMessage(test, stream, methodMessage);
 
   // resend data. doesn't show up: we're in reconnect quiescence.
   await stream.receive({
@@ -1212,6 +1215,8 @@ if (Meteor.isClient) {
       // blocking on slowMethod.
       await stream.reset();
       testGotMessage(test, stream, makeConnectMessage(SESSION_ID + 1, conn._receivedCount));
+      test.length(stream.sent, 0);
+      await stream.receive({ msg: 'connected', session: SESSION_ID + 2 });
       const slowMethodId = testGotMessage(test, stream, {
         msg: 'method',
         method: 'slowMethod',
@@ -1227,8 +1232,7 @@ if (Meteor.isClient) {
       o.expectCallbacks();
       test.equal(callbackOutput, ['bla']);
 
-      // Receive 'connected'... but no reconnect quiescence yet due to slowMethod.
-      await stream.receive({ msg: 'connected', session: SESSION_ID + 2 });
+      // Reconnect quiescence is still blocked by slowMethod.
       test.equal(coll.find().count(), 2);
       test.equal(await coll.findOneAsync(stubWrittenId2), {
         _id: stubWrittenId2,
@@ -1333,6 +1337,8 @@ Tinytest.addAsync('livedata stub - reconnect method which only got data', async 
   // quiescence.
   await stream.reset();
   testGotMessage(test, stream, makeConnectMessage(SESSION_ID, conn._receivedCount));
+  test.length(stream.sent, 0);
+  await stream.receive({ msg: 'connected', session: SESSION_ID + 1 });
   testGotMessage(test, stream, {
     msg: 'method',
     method: 'doLittle',
@@ -1346,8 +1352,7 @@ Tinytest.addAsync('livedata stub - reconnect method which only got data', async 
   test.equal(callbackOutput, []);
   test.equal(onResultReceivedOutput, []);
 
-  // Receive 'connected'. Still blocking on reconnect quiescence.
-  await stream.receive({ msg: 'connected', session: SESSION_ID + 1 });
+  // Reconnect quiescence is still blocked on the method.
   test.equal(coll.find().count(), 1);
   test.equal(await coll.findOneAsync('photo'), { _id: 'photo', baz: 42 });
   o.expectCallbacks();
@@ -1810,6 +1815,8 @@ addReconnectTests(
     stream.sent = [];
     await stream.reset();
     testGotMessage(test, stream, makeConnectMessage(conn._lastSessionId, conn._receivedCount));
+    test.length(stream.sent, 0);
+    await stream.receive({ msg: 'connected', session: Random.id() });
 
     // Test that we sent what we expect to send, and we're blocked on
     // what we expect to be blocked. The subsequent logic to correctly
@@ -2036,6 +2043,8 @@ addReconnectTests(
     stream.sent = [];
     await stream.reset();
     testGotMessage(test, stream, makeConnectMessage(conn._lastSessionId, conn._receivedCount));
+    test.length(stream.sent, 0);
+    await stream.receive({ msg: 'connected', session: Random.id() });
 
     // Test that we sent what we expect to send, and we're blocked on
     // what we expect to be blocked. The subsequent logic to correctly
@@ -2087,6 +2096,8 @@ addReconnectTests(
     stream.sent = [];
     await stream.reset();
     testGotMessage(test, stream, makeConnectMessage(conn._lastSessionId, conn._receivedCount));
+    test.length(stream.sent, 0);
+    await stream.receive({ msg: 'connected', session: Random.id() });
 
     // Test that we sent just the login message.
     const loginId = testGotMessage(test, stream, {
@@ -2095,10 +2106,6 @@ addReconnectTests(
       params: ['login'],
       id: '*'
     }).id;
-
-    // we connect.
-    await stream.receive({ msg: 'connected', session: Random.id() });
-    test.length(stream.sent, 0);
 
     // login got result (but not yet data)
     await stream.receive({ msg: 'result', id: loginId, result: 'foo' });
@@ -2155,6 +2162,7 @@ addReconnectTests('livedata stub - reconnect double wait method', async function
   // Reconnect quiescence happens when reconnectMethod is done.
   await stream.reset();
   testGotMessage(test, stream, makeConnectMessage(SESSION_ID, conn._receivedCount));
+  await stream.receive({ msg: 'connected', session: SESSION_ID + 1 });
   const reconnectId = testGotMessage(test, stream, {
     msg: 'method',
     method: 'reconnectMethod',
@@ -2165,9 +2173,7 @@ addReconnectTests('livedata stub - reconnect double wait method', async function
   // Still holding out hope for session resumption, so no callbacks yet.
   test.equal(output, []);
 
-  // Receive 'connected', but reconnect quiescence is blocking on
-  // reconnectMethod.
-  await stream.receive({ msg: 'connected', session: SESSION_ID + 1 });
+  // Reconnect quiescence is blocking on reconnectMethod.
   test.equal(output, []);
 
   // Data-done for reconnectMethod. This gets us to reconnect quiescence, so
@@ -2589,11 +2595,12 @@ if (Meteor.isClient) {
       await stream.reset();
       testGotMessage(test, stream, makeConnectMessage(conn._lastSessionId, conn._receivedCount));
 
+      await stream.receive({ msg: 'connected', session: Random.id() });
       await new Promise(r => setTimeout(r, 50)); // let async callback finish
 
       test.isNotNull(outstandingMethodsSentDuringCallback);
       // BUG: methods re-sent synchronously before async callback completed
-      // FIX: methods deferred until all callbacks complete → empty during callback
+      // Methods are deferred until connected and all callbacks complete.
       test.equal(outstandingMethodsSentDuringCallback.length, 0,
         'Outstanding methods should not be re-sent before async reconnect callbacks complete');
       test.isTrue(stream.sent.some(msg => {
@@ -2631,6 +2638,7 @@ if (Meteor.isClient) {
       await stream.reset();
       testGotMessage(test, stream, makeConnectMessage(conn._lastSessionId, conn._receivedCount));
 
+      await stream.receive({ msg: 'connected', session: Random.id() });
       await new Promise(r => setTimeout(r, 50));
 
       test.isTrue(stream.sent.some(msg => {
@@ -2707,6 +2715,62 @@ Tinytest.addAsync('livedata connection - receivedCount sent on reconnect', async
   test.equal(connectMsg.receivedCount, expectedReceivedCount,
     "Connect message should include receivedCount for session resumption");
 });
+
+Tinytest.addAsync(
+  'livedata connection - does not resend methods when the session resumes',
+  async function (test) {
+    const stream = new StubStream();
+    const conn = newConnection(stream);
+    await startAndConnect(test, stream);
+
+    let callbackResult;
+    conn.apply('retryable', [], (error, result) => {
+      callbackResult = result;
+    });
+    const firstMethod = testGotMessage(test, stream, {
+      msg: 'method', method: 'retryable', params: [], id: '*'
+    });
+
+    stream.sent = [];
+    await stream.reset();
+    testGotMessage(test, stream, makeConnectMessage(SESSION_ID, conn._receivedCount));
+    test.length(stream.sent, 0, 'no method retry before the server responds');
+
+    await stream.receive({ msg: 'connected', session: SESSION_ID });
+    test.length(stream.sent, 0, 'the resumed session still owns the method');
+
+    await stream.receive({ msg: 'result', id: firstMethod.id, result: 'done' });
+    await stream.receive({ msg: 'updated', methods: [firstMethod.id] });
+    test.equal(callbackResult, 'done');
+    test.length(stream.sent, 0, 'do not retry a method completed by buffered responses');
+  }
+);
+
+Tinytest.addAsync(
+  'livedata connection - runs reconnect methods but does not retry resumed methods',
+  async function (test) {
+    const stream = new StubStream();
+    const conn = newConnection(stream);
+    await startAndConnect(test, stream);
+
+    conn.apply('original', [], identity);
+    testGotMessage(test, stream, {
+      msg: 'method', method: 'original', params: [], id: '*'
+    });
+    conn.onReconnect = () => conn.apply('reconnect', [], identity);
+
+    stream.sent = [];
+    await stream.reset();
+    testGotMessage(test, stream, makeConnectMessage(SESSION_ID, conn._receivedCount));
+    test.length(stream.sent, 0);
+    await stream.receive({ msg: 'connected', session: SESSION_ID });
+
+    testGotMessage(test, stream, {
+      msg: 'method', method: 'reconnect', params: [], id: '*'
+    });
+    test.length(stream.sent, 0, 'the original method remains owned by the resumed session');
+  }
+);
 
 Tinytest.addAsync('livedata connection - receivedCount reset on new session', async function (test) {
   const stream = new StubStream();
