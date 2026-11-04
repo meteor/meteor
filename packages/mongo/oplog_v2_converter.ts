@@ -143,17 +143,17 @@ function convertOplogDiff(
   Object.entries(diff).forEach(([diffKey, value]) => {
     if (diffKey === 'd') {
       // Handle `$unset`s
-      oplogEntry.$unset ??= {};
+      oplogEntry.$unset ??= Object.create(null);
       Object.keys(value).forEach(key => {
         oplogEntry.$unset![join(prefix, key)] = true;
       });
     } else if (diffKey === 'i') {
       // Handle (potentially) nested `$set`s
-      oplogEntry.$set ??= {};
+      oplogEntry.$set ??= Object.create(null);
       flattenObjectInto(oplogEntry.$set, value, prefix);
     } else if (diffKey === 'u') {
       // Handle flat `$set`s
-      oplogEntry.$set ??= {};
+      oplogEntry.$set ??= Object.create(null);
       Object.entries(value).forEach(([key, fieldValue]) => {
         oplogEntry.$set![join(prefix, key)] = fieldValue;
       });
@@ -169,10 +169,10 @@ function convertOplogDiff(
           if (position[0] === 's') {
             convertOplogDiff(oplogEntry, fieldValue, positionKey);
           } else if (fieldValue === null) {
-            oplogEntry.$unset ??= {};
+            oplogEntry.$unset ??= Object.create(null);
             oplogEntry.$unset[positionKey] = true;
           } else {
-            oplogEntry.$set ??= {};
+            oplogEntry.$set ??= Object.create(null);
             oplogEntry.$set[positionKey] = fieldValue;
           }
         });
