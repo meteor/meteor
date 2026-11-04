@@ -408,8 +408,9 @@ Tinytest.addAsync('minimongo - observe sorted with skip and limit tracks fetch',
   const sort = { a: 1 };
   const windows = [{ limit: 3 }, { skip: 2, limit: 3 }, { skip: 2 }];
 
-  // Mirrors an ordered observeChanges into an array of documents.
-  const mirror = options => {
+  // Mirrors an ordered observeChanges into an array of documents, starting
+  // with the initial addedBefore calls.
+  const mirror = async options => {
     const docs = [];
     const indexOf = id => docs.findIndex(doc => doc._id === id);
     const insertBefore = (doc, before) => {
@@ -419,7 +420,7 @@ Tinytest.addAsync('minimongo - observe sorted with skip and limit tracks fetch',
         docs.splice(indexOf(before), 0, doc);
       }
     };
-    const handle = collection.find({}, { sort, ...options }).observeChanges({
+    const handle = await collection.find({}, { sort, ...options }).observeChangesAsync({
       addedBefore(id, fields, before) {
         insertBefore({ _id: id, ...fields }, before);
       },
@@ -450,27 +451,41 @@ Tinytest.addAsync('minimongo - observe sorted with skip and limit tracks fetch',
   };
   let nextId = 0;
 
+  // On the client, half of the writes go through the synchronous methods,
+  // which maintain the window through their own code path.
+  const write = (method, ...args) =>
+    Meteor.isClient && random(2)
+      ? collection[method](...args)
+      : collection[`${method}Async`](...args);
+
   const randomWrite = async () => {
     const ids = collection.find({}, { fields: { _id: 1 } }).map(doc => doc._id);
     const choice = ids.length < 6 ? 0 : random(8);
     if (choice < 2) {
-      await collection.insertAsync({ _id: `d${nextId++}`, a: random(6), b: 0 });
+      await write('insert', { _id: `d${nextId++}`, a: random(6), b: 0 });
     } else if (choice === 2) {
-      await collection.updateAsync(ids[random(ids.length)], { $set: { a: random(6) } });
+      await write('update', ids[random(ids.length)], { $set: { a: random(6) } });
     } else if (choice === 3) {
-      await collection.updateAsync(ids[random(ids.length)], { $set: { b: random(3) }, $unset: { c: 1 } });
+      await write('update', ids[random(ids.length)], { $set: { b: random(3) }, $unset: { c: 1 } });
     } else if (choice === 4) {
-      await collection.removeAsync(ids[random(ids.length)]);
+      await write('remove', ids[random(ids.length)]);
     } else if (choice === 5) {
-      await collection.updateAsync({ a: random(6) }, { $set: { c: random(2) } }, { multi: true });
+      await write('update', { a: random(6) }, { $set: { c: random(2) } }, { multi: true });
     } else if (choice === 6) {
-      await collection.updateAsync({ c: 1 }, { $set: { a: random(6) } }, { multi: true });
+      await write('update', { c: 1 }, { $set: { a: random(6) } }, { multi: true });
     } else {
-      await collection.removeAsync({ a: random(6), c: 1 });
+      await write('remove', { a: random(6), c: 1 });
     }
   };
 
-  const mirrors = windows.map(mirror);
+  // Seed the collection first, so that the initial callbacks are checked too.
+  for (let step = 0; step < 6; step++) {
+    await randomWrite();
+  }
+  const mirrors = [];
+  for (const options of windows) {
+    mirrors.push(await mirror(options));
+  }
   const check = step => {
     mirrors.forEach(({ options, docs }) => {
       test.equal(
@@ -481,6 +496,7 @@ Tinytest.addAsync('minimongo - observe sorted with skip and limit tracks fetch',
     });
   };
 
+  check('initial');
   for (let step = 0; step < 300; step++) {
     await randomWrite();
     check(step);
