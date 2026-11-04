@@ -881,17 +881,6 @@ export default class LocalCollection {
     return recomputeQids;
   }
 
-  // Recomputes the results of a query and runs observe callbacks for the
-  // difference between the previous results and the current results (unless
-  // paused). Used for skip/limit queries.
-  //
-  // When this is used by insert or remove, it can just use query.results for
-  // the old results (and there's no need to pass in oldResults), because these
-  // operations don't mutate the documents in the collection. Update needs to
-  // pass in an oldResults which was deep-copied before the modifier was
-  // applied.
-  //
-  // oldResults is guaranteed to be ignored if the query is not paused.
   // Reports to the observers of sorted skip/limit queries what the write that
   // just completed changed in their window.
   _notifyWindowedQueries() {
@@ -904,6 +893,17 @@ export default class LocalCollection {
     }
   }
 
+  // Recomputes the results of a query and runs observe callbacks for the
+  // difference between the previous results and the current results (unless
+  // paused). Used for skip/limit queries.
+  //
+  // When this is used by insert or remove, it can just use query.results for
+  // the old results (and there's no need to pass in oldResults), because these
+  // operations don't mutate the documents in the collection. Update needs to
+  // pass in an oldResults which was deep-copied before the modifier was
+  // applied.
+  //
+  // oldResults is guaranteed to be ignored if the query is not paused.
   _recomputeResults(query, oldResults) {
     if (this.paused) {
       // There's no reason to recompute the results now as we're still paused.
@@ -1475,11 +1475,12 @@ LocalCollection._windowComparator = query => {
     compare(left, right) || insertionOrder.get(left) - insertionOrder.get(right);
 };
 
-// Keeps the window as it was before the write in progress, so that a write
-// touching several documents is reported to the observer once, at its end.
+// Keeps a copy of the window as it was before the write in progress, so that
+// a write touching several documents is reported to the observer once, at its
+// end.
 LocalCollection._windowBeforeWrite = query => {
   if (!query.windowBeforeWrite) {
-    query.windowBeforeWrite = query.results;
+    query.windowBeforeWrite = query.results.slice();
   }
 
   return query.windowBeforeWrite;
@@ -1527,8 +1528,11 @@ LocalCollection._removeFromWindowedResults = (query, doc) => {
 
 LocalCollection._updateInWindowedResults = (query, doc, old_doc) => {
   // The diff needs the document as it was before the modifier was applied.
-  query.windowBeforeWrite = LocalCollection._windowBeforeWrite(query)
-    .map(result => result === doc ? old_doc : result);
+  const oldWindow = LocalCollection._windowBeforeWrite(query);
+  const index = oldWindow.indexOf(doc);
+  if (index !== -1) {
+    oldWindow[index] = old_doc;
+  }
   query.allResults.splice(LocalCollection._findInOrderedResults(query, doc), 1);
   LocalCollection._insertInSortedList(
     LocalCollection._windowComparator(query),
