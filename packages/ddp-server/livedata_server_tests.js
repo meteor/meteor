@@ -235,6 +235,134 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
+  "livedata server - rejects unsub without a string id without stalling message queue",
+  async function (test) {
+    const malformedUnsubs = [{ msg: "unsub" }, { msg: "unsub", id: 42 }];
+
+    for (const unsub of malformedUnsubs) {
+      const { clientConn, serverConn } = await getTestConnections(test);
+
+      try {
+        const session = Meteor.server.sessions.get(serverConn.id);
+        const replies = [];
+        clientConn._stream.on("message", (raw) => replies.push(JSON.parse(raw)));
+        clientConn._stream.send(JSON.stringify(unsub));
+
+        const connectionId = await Promise.race([
+          clientConn.callAsync("livedata_server_test_inner"),
+          sleep(2000).then(() => {
+            throw new Error(`message queue stalled after ${JSON.stringify(unsub)}`);
+          }),
+        ]);
+
+        test.equal(connectionId, serverConn.id);
+        test.equal(
+          replies
+            .filter(({ msg }) => msg === "error" || msg === "nosub")
+            .map(({ msg, offendingMessage }) => ({ msg, offendingMessage })),
+          [{ msg: "error", offendingMessage: unsub }]
+        );
+        await pollUntil(() => session.inQueue.isEmpty() && !session.workerRunning);
+      } finally {
+        clientConn.disconnect();
+      }
+    }
+  }
+);
+
+Tinytest.addAsync(
+  "livedata server - rejects ping with a non-string id",
+  async function (test) {
+    const { clientConn, serverConn } = await getTestConnections(test);
+
+    try {
+      const replies = [];
+      clientConn._stream.on("message", (raw) => replies.push(JSON.parse(raw)));
+      const ping = { msg: "ping", id: 42 };
+      clientConn._stream.send(JSON.stringify(ping));
+
+      const connectionId = await clientConn.callAsync("livedata_server_test_inner");
+
+      test.equal(connectionId, serverConn.id);
+      test.equal(
+        replies
+          .filter(({ msg }) => msg === "error" || msg === "pong")
+          .map(({ msg, offendingMessage }) => ({ msg, offendingMessage })),
+        [{ msg: "error", offendingMessage: ping }]
+      );
+    } finally {
+      clientConn.disconnect();
+    }
+  }
+);
+
+Tinytest.addAsync(
+  "livedata server - throwing protocol handler does not stall message queue",
+  async function (test) {
+    const { clientConn, serverConn } = await getTestConnections(test);
+
+    try {
+      const session = Meteor.server.sessions.get(serverConn.id);
+      let thrown = 0;
+      session.protocol_handlers = {
+        ...session.protocol_handlers,
+        livedata_server_test_throw() {
+          thrown++;
+          throw new Error("livedata_server_test_throw");
+        },
+      };
+      clientConn._stream.send(JSON.stringify({ msg: "livedata_server_test_throw" }));
+
+      const connectionId = await Promise.race([
+        clientConn.callAsync("livedata_server_test_inner"),
+        sleep(2000).then(() => {
+          throw new Error("message queue stalled after a throwing handler");
+        }),
+      ]);
+
+      test.equal(thrown, 1);
+      test.equal(connectionId, serverConn.id);
+      await pollUntil(() => session.inQueue.isEmpty() && !session.workerRunning);
+    } finally {
+      clientConn.disconnect();
+    }
+  }
+);
+
+Tinytest.addAsync(
+  "livedata server - throwing protocol handler cannot throw outside the message queue",
+  async function (test) {
+    const { clientConn, serverConn } = await getTestConnections(test);
+
+    try {
+      const session = Meteor.server.sessions.get(serverConn.id);
+      let thrown = 0;
+      session.protocol_handlers = {
+        ...session.protocol_handlers,
+        livedata_server_test_throw() {
+          thrown++;
+          throw new Error("livedata_server_test_throw");
+        },
+      };
+      processInScheduledQueueTurn(session, { msg: "livedata_server_test_throw" });
+
+      const connectionId = await Promise.race([
+        clientConn.callAsync("livedata_server_test_inner"),
+        sleep(2000).then(() => {
+          throw new Error("message queue stalled after a throwing handler");
+        }),
+      ]);
+
+      test.equal(thrown, 1);
+      test.equal(connectionId, serverConn.id);
+      await pollUntil(() => session.inQueue.isEmpty() && !session.workerRunning);
+    } finally {
+      clientConn.disconnect();
+    }
+  }
+);
+
+Tinytest.addAsync(
   "livedata server - connection in method invocation",
   function (test, onComplete) {
     makeTestConnection(
@@ -705,6 +833,27 @@ function getTestConnections(test) {
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Helper to poll for a condition with timeout to prevent hanging tests
+function pollUntil(conditionFn, timeoutMs = 10000) {
+  return new Promise((resolve, reject) => {
+    const startTime = Date.now();
+    const interval = setInterval(() => {
+      if (conditionFn()) {
+        clearInterval(interval);
+        resolve();
+      } else if (Date.now() - startTime > timeoutMs) {
+        clearInterval(interval);
+        reject(new Error(`Timed out after ${timeoutMs}ms waiting for condition`));
+      }
+    }, 10);
+  });
+}
+
+function processInScheduledQueueTurn(session, msg) {
+  session.processMessage({ msg: "unsub", id: Random.id() });
+  session.processMessage(msg);
 }
 
 // ============================================================================
