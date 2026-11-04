@@ -585,3 +585,27 @@ Tinytest.addAsync('minimongo - observe sorted with limit reports a multi-documen
   ]);
   handle.stop();
 });
+
+// Unordered observes ignore skip and limit, through the id fast path too. Only
+// a reactive count() registers one on a cursor with skip, via _allow_unordered.
+Tinytest.addAsync('minimongo - unordered observe of an id with skip reports the document', async test => {
+  const collection = new LocalCollection();
+  await collection.insertAsync({ _id: 'foo', a: 1 });
+  const events = [];
+  const handle = await collection.find('foo', { skip: 1 }).observeChangesAsync({
+    _allow_unordered: true,
+    added(id, fields) {
+      events.push(['added', id, fields]);
+    },
+    changed(id, fields) {
+      events.push(['changed', id, fields]);
+    },
+    removed(id) {
+      events.push(['removed', id]);
+    },
+  });
+  await collection.updateAsync('foo', { $set: { a: 2 } });
+  await collection.removeAsync('foo');
+  test.equal(events, [['added', 'foo', { a: 1 }], ['changed', 'foo', { a: 2 }], ['removed', 'foo']]);
+  handle.stop();
+});

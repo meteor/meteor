@@ -511,7 +511,8 @@ export default class Cursor {
     if (this._selectorId !== undefined) {
       // If you have non-zero skip and ask for a single id, you get nothing.
       // This is so it matches the behavior of the '{_id: foo}' path.
-      if (applySkipLimit && this.skip) {
+      // Unordered results ignore skip, as they do on the slow path.
+      if (options.ordered && applySkipLimit && this.skip) {
         return results;
       }
 
