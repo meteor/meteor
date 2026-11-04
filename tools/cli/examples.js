@@ -8,6 +8,14 @@ const EXAMPLES_BRANCH = 'main';
 const EXAMPLES_JSON_URL =
   `https://raw.githubusercontent.com/meteor/examples/${EXAMPLES_BRANCH}/examples.json`;
 
+/**
+ * Filters malformed examples, warning for each skipped entry.
+ *
+ * @param {unknown} data - The parsed examples list.
+ * @param {{ warn?: (message: string) => void }} [options] - Warning handler.
+ * @returns {object[]} Examples with a non-empty slug and repository URL.
+ * @throws {Error} If the parsed data is not an array.
+ */
 function validateExamplesData(data, { warn = (msg) => Console.warn(msg) } = {}) {
   if (!Array.isArray(data)) {
     throw new Error('Invalid examples.json format: expected a JSON array.');
