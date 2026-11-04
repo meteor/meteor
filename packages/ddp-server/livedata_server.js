@@ -382,8 +382,12 @@ Object.assign(Session.prototype, {
     };
 
     if (self.version !== 'pre1' && msg_in.msg === 'ping') {
-      if (self._respondToPings)
-        self.send({msg: "pong", id: msg_in.id});
+      if (self._respondToPings) {
+        if ('id' in msg_in && typeof msg_in.id !== "string")
+          self.sendError("Malformed ping", msg_in);
+        else
+          self.send({msg: "pong", id: msg_in.id});
+      }
       return;
     }
     if (self.version !== 'pre1' && msg_in.msg === 'pong') {
@@ -423,11 +427,12 @@ Object.assign(Session.prototype, {
           typeof msg.msg === "string" &&
           Object.hasOwn(self.protocol_handlers, msg.msg)
         ) {
-          const result = self.protocol_handlers[msg.msg].call(
-            self,
-            msg,
-            unblock
-          );
+          let result;
+          try {
+            result = self.protocol_handlers[msg.msg].call(self, msg, unblock);
+          } catch (e) {
+            result = Promise.reject(e);
+          }
 
           if (Meteor._isPromise(result)) {
             // setImmediate runs outside the socket callback; catch rejected handlers here.
@@ -519,6 +524,11 @@ Object.assign(Session.prototype, {
 
     unsub: function (msg) {
       var self = this;
+
+      if (typeof (msg.id) !== "string") {
+        self.sendError("Malformed unsubscription", msg);
+        return;
+      }
 
       self._stopSubscription(msg.id);
     },
