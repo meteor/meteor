@@ -19,6 +19,11 @@ export default class LocalCollection {
     this.name = name;
     // _id -> document (also containing id)
     this._docs = new LocalCollection._IdMap;
+    // document -> rank of its insertion, the order in which _getRawObjects
+    // keeps ties. Sorted skip/limit queries break ties with it so that their
+    // window always matches fetch().
+    this._insertionOrder = new WeakMap();
+    this._insertedCount = 0;
 
     this._observeQueue = Meteor.isClient
       ? new Meteor._SynchronousQueue()
@@ -30,6 +35,11 @@ export default class LocalCollection {
     //  ordered: bool. ordered queries have addedBefore/movedBefore callbacks.
     //  results: array (ordered) or object (unordered) of current results
     //    (aliased with this._docs!)
+    //  allResults: for sorted queries with skip or limit, array of every
+    //    matching document in sort order, of which results is the window.
+    //    null otherwise.
+    //  windowBeforeWrite: for those queries, the window as it was before the
+    //    write in progress touched allResults. null outside writes.
     //  resultsSnapshot: snapshot of results. null if not paused.
     //  cursor: Cursor object for the query.
     //  selector, sorter, (callbacks): functions
@@ -121,6 +131,7 @@ export default class LocalCollection {
 
     this._saveOriginal(id, undefined);
     this._docs.set(id, doc);
+    this._insertionOrder.set(doc, this._insertedCount++);
 
     return id;
   }
@@ -147,7 +158,7 @@ export default class LocalCollection {
           query.distances.set(id, matchResult.distance);
         }
 
-        if (query.cursor.skip || query.cursor.limit) {
+        if (LocalCollection._recomputesOnWrite(query)) {
           queriesToRecompute.push(qid);
         } else {
           LocalCollection._insertInResultsSync(query, doc);
@@ -160,6 +171,8 @@ export default class LocalCollection {
         this._recomputeResults(this.queries[qid]);
       }
     });
+
+    this._notifyWindowedQueries();
 
     this._observeQueue.drain();
     if (callback) {
@@ -190,7 +203,7 @@ export default class LocalCollection {
           query.distances.set(id, matchResult.distance);
         }
 
-        if (query.cursor.skip || query.cursor.limit) {
+        if (LocalCollection._recomputesOnWrite(query)) {
           queriesToRecompute.push(qid);
         } else {
           await LocalCollection._insertInResultsAsync(query, doc);
@@ -203,6 +216,8 @@ export default class LocalCollection {
         this._recomputeResults(this.queries[qid]);
       }
     });
+
+    this._notifyWindowedQueries();
 
     await this._observeQueue.drain();
     if (callback) {
@@ -242,6 +257,9 @@ export default class LocalCollection {
 
       if (query.ordered) {
         query.results = [];
+        if (query.allResults) {
+          query.allResults = [];
+        }
       } else {
         query.results.clear();
       }
@@ -282,7 +300,7 @@ export default class LocalCollection {
         }
 
         if (query.matcher.documentMatches(removeDoc).result) {
-          if (query.cursor.skip || query.cursor.limit) {
+          if (LocalCollection._recomputesOnWrite(query)) {
             queriesToRecompute.push(qid);
           } else {
             queryRemove.push({qid, doc: removeDoc});
@@ -325,6 +343,8 @@ export default class LocalCollection {
       }
     });
 
+    this._notifyWindowedQueries();
+
     this._observeQueue.drain();
 
     const result = remove.length;
@@ -364,6 +384,8 @@ export default class LocalCollection {
         this._recomputeResults(query);
       }
     });
+
+    this._notifyWindowedQueries();
 
     await this._observeQueue.drain();
 
@@ -469,17 +491,7 @@ export default class LocalCollection {
     Object.keys(this.queries).forEach(qid => {
       const query = this.queries[qid];
 
-      if ((query.cursor.skip || query.cursor.limit) && ! this.paused) {
-        // Catch the case of a reactive `count()` on a cursor with skip
-        // or limit, which registers an unordered observe. This is a
-        // pretty rare case, so we just clone the entire result set with
-        // no optimizations for documents that appear in these result
-        // sets and other queries.
-        if (query.results instanceof LocalCollection._IdMap) {
-          qidToOriginalResults[qid] = query.results.clone();
-          return;
-        }
-
+      if (LocalCollection._recomputesOnWrite(query) && ! this.paused) {
         if (!(query.results instanceof Array)) {
           throw new Error('Assertion failed: query.results not an array');
         }
@@ -586,6 +598,8 @@ export default class LocalCollection {
       }
     });
 
+    this._notifyWindowedQueries();
+
     await this._observeQueue.drain();
 
     // If we are doing an upsert, and we didn't modify any documents yet, then
@@ -657,6 +671,8 @@ export default class LocalCollection {
         this._recomputeResults(query, qidToOriginalResults[qid]);
       }
     });
+
+    this._notifyWindowedQueries();
 
     this._observeQueue.drain();
 
@@ -798,7 +814,7 @@ export default class LocalCollection {
         query.distances.set(doc._id, afterMatch.distance);
       }
 
-      if (query.cursor.skip || query.cursor.limit) {
+      if (LocalCollection._recomputesOnWrite(query)) {
         // We need to recompute any query where the doc may have been in the
         // cursor's window either before or after the update. (Note that if skip
         // or limit is set, "before" and "after" being true do not necessarily
@@ -843,7 +859,7 @@ export default class LocalCollection {
         query.distances.set(doc._id, afterMatch.distance);
       }
 
-      if (query.cursor.skip || query.cursor.limit) {
+      if (LocalCollection._recomputesOnWrite(query)) {
         // We need to recompute any query where the doc may have been in the
         // cursor's window either before or after the update. (Note that if skip
         // or limit is set, "before" and "after" being true do not necessarily
@@ -863,6 +879,18 @@ export default class LocalCollection {
       }
     }
     return recomputeQids;
+  }
+
+  // Reports to the observers of sorted skip/limit queries what the write that
+  // just completed changed in their window.
+  _notifyWindowedQueries() {
+    for (const qid in this.queries) {
+      const query = this.queries[qid];
+
+      if (query.windowBeforeWrite) {
+        LocalCollection._notifyWindowChanges(query);
+      }
+    }
   }
 
   // Recomputes the results of a query and runs observe callbacks for the
@@ -893,10 +921,19 @@ export default class LocalCollection {
       query.distances.clear();
     }
 
-    query.results = query.cursor._getRawObjects({
-      distances: query.distances,
-      ordered: query.ordered
-    });
+    if (query.allResults) {
+      query.allResults = query.cursor._getRawObjects({
+        distances: query.distances,
+        ordered: query.ordered,
+        applySkipLimit: false,
+      });
+      query.results = LocalCollection._sliceWindow(query);
+    } else {
+      query.results = query.cursor._getRawObjects({
+        distances: query.distances,
+        ordered: query.ordered
+      });
+    }
 
     if (!this.paused) {
       LocalCollection._diffQueryChanges(
@@ -1096,7 +1133,7 @@ LocalCollection.wrapTransform = transform => {
 // XXX the sorted-query logic below is laughably inefficient. we'll
 // need to come up with a better datastructure for this.
 //
-// XXX the logic for observing with a skip or a limit is even more
+// XXX observing an unsorted query with a skip or a limit is even more
 // laughably inefficient. we recompute the whole results every time!
 
 // This binary search puts a value between any equal values, and the first
@@ -1267,8 +1304,10 @@ LocalCollection._findInOrderedResults = (query, doc) => {
     throw new Error('Can\'t call _findInOrderedResults on unordered query');
   }
 
-  for (let i = 0; i < query.results.length; i++) {
-    if (query.results[i] === doc) {
+  const results = query.allResults || query.results;
+
+  for (let i = 0; i < results.length; i++) {
+    if (results[i] === doc) {
       return i;
     }
   }
@@ -1326,6 +1365,11 @@ LocalCollection._idsMatchedBySelector = selector => {
 };
 
 LocalCollection._insertInResultsSync = (query, doc) => {
+  if (query.allResults) {
+    LocalCollection._insertInWindowedResults(query, doc);
+    return;
+  }
+
   const fields = EJSON.clone(doc);
 
   delete fields._id;
@@ -1359,6 +1403,11 @@ LocalCollection._insertInResultsSync = (query, doc) => {
 };
 
 LocalCollection._insertInResultsAsync = async (query, doc) => {
+  if (query.allResults) {
+    LocalCollection._insertInWindowedResults(query, doc);
+    return;
+  }
+
   const fields = EJSON.clone(doc);
 
   delete fields._id;
@@ -1402,6 +1451,94 @@ LocalCollection._insertInSortedList = (cmp, array, value) => {
   array.splice(i, 0, value);
 
   return i;
+};
+
+// Unsorted ordered queries with skip or limit recompute their results on
+// every write that may touch their window. Sorted ones maintain the window
+// from allResults instead, and unordered ones ignore skip and limit.
+LocalCollection._recomputesOnWrite = query =>
+  query.ordered && !query.sorter && !!(query.cursor.skip || query.cursor.limit);
+
+LocalCollection._sliceWindow = query => {
+  const { skip, limit } = query.cursor;
+
+  return query.allResults.slice(skip, limit ? skip + limit : query.allResults.length);
+};
+
+// Orders ties by insertion into the collection, as the stable sort of
+// _getRawObjects does, so that allResults stays in fetch() order.
+LocalCollection._windowComparator = query => {
+  const compare = query.sorter.getComparator({distances: query.distances});
+  const insertionOrder = query.cursor.collection._insertionOrder;
+
+  return (left, right) =>
+    compare(left, right) || insertionOrder.get(left) - insertionOrder.get(right);
+};
+
+// Keeps a copy of the window as it was before the write in progress, so that
+// a write touching several documents is reported to the observer once, at its
+// end.
+LocalCollection._windowBeforeWrite = query => {
+  if (!query.windowBeforeWrite) {
+    query.windowBeforeWrite = query.results.slice();
+  }
+
+  return query.windowBeforeWrite;
+};
+
+// Rebuilds the window of a sorted skip/limit query from allResults and
+// reports the difference from windowBeforeWrite to the observer.
+LocalCollection._notifyWindowChanges = query => {
+  const oldWindow = query.windowBeforeWrite;
+
+  query.windowBeforeWrite = null;
+  query.results = LocalCollection._sliceWindow(query);
+
+  const unchanged =
+    oldWindow.length === query.results.length &&
+    oldWindow.every((doc, index) => doc === query.results[index]);
+
+  // While paused, resumeObservers diffs the window against its snapshot.
+  if (unchanged || query.cursor.collection.paused) {
+    return;
+  }
+
+  LocalCollection._diffQueryChanges(
+    true,
+    oldWindow,
+    query.results,
+    query,
+    {projectionFn: query.projectionFn}
+  );
+};
+
+LocalCollection._insertInWindowedResults = (query, doc) => {
+  LocalCollection._windowBeforeWrite(query);
+  LocalCollection._insertInSortedList(
+    LocalCollection._windowComparator(query),
+    query.allResults,
+    doc
+  );
+};
+
+LocalCollection._removeFromWindowedResults = (query, doc) => {
+  LocalCollection._windowBeforeWrite(query);
+  query.allResults.splice(LocalCollection._findInOrderedResults(query, doc), 1);
+};
+
+LocalCollection._updateInWindowedResults = (query, doc, old_doc) => {
+  // The diff needs the document as it was before the modifier was applied.
+  const oldWindow = LocalCollection._windowBeforeWrite(query);
+  const index = oldWindow.indexOf(doc);
+  if (index !== -1) {
+    oldWindow[index] = old_doc;
+  }
+  query.allResults.splice(LocalCollection._findInOrderedResults(query, doc), 1);
+  LocalCollection._insertInSortedList(
+    LocalCollection._windowComparator(query),
+    query.allResults,
+    doc
+  );
 };
 
 LocalCollection._isModificationMod = mod => {
@@ -1712,6 +1849,11 @@ LocalCollection._observeChangesCallbacksAreOrdered = callbacks => {
 };
 
 LocalCollection._removeFromResultsSync = (query, doc) => {
+  if (query.allResults) {
+    LocalCollection._removeFromWindowedResults(query, doc);
+    return;
+  }
+
   if (query.ordered) {
     const i = LocalCollection._findInOrderedResults(query, doc);
 
@@ -1726,6 +1868,11 @@ LocalCollection._removeFromResultsSync = (query, doc) => {
 };
 
 LocalCollection._removeFromResultsAsync = async (query, doc) => {
+  if (query.allResults) {
+    LocalCollection._removeFromWindowedResults(query, doc);
+    return;
+  }
+
   if (query.ordered) {
     const i = LocalCollection._findInOrderedResults(query, doc);
 
@@ -1756,6 +1903,11 @@ LocalCollection._selectorIsIdPerhapsAsObject = selector =>
 LocalCollection._updateInResultsSync = (query, doc, old_doc) => {
   if (!EJSON.equals(doc._id, old_doc._id)) {
     throw new Error('Can\'t change a doc\'s _id while updating');
+  }
+
+  if (query.allResults) {
+    LocalCollection._updateInWindowedResults(query, doc, old_doc);
+    return;
   }
 
   const projectionFn = query.projectionFn;
@@ -1807,6 +1959,11 @@ LocalCollection._updateInResultsSync = (query, doc, old_doc) => {
 LocalCollection._updateInResultsAsync = async (query, doc, old_doc) => {
   if (!EJSON.equals(doc._id, old_doc._id)) {
     throw new Error('Can\'t change a doc\'s _id while updating');
+  }
+
+  if (query.allResults) {
+    LocalCollection._updateInWindowedResults(query, doc, old_doc);
+    return;
   }
 
   const projectionFn = query.projectionFn;
