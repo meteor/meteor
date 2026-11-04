@@ -67,6 +67,41 @@ Tinytest.addAsync('mongo-livedata - review oplog replacements preserve ownership
   }
 });
 
+Tinytest.addAsync('mongo-livedata - oplog $set on a top-level __proto__ field transfers ownership', async function(test) {
+  const collection = new Mongo.Collection('proto_owner_oplog_' + Random.id());
+  const raw = collection.rawCollection();
+  const events = {A: [], B: []};
+  const observers = [];
+  const writeAndWait = async modifier => {
+    const fence = new DDPServer._WriteFence;
+    await DDPServer._CurrentWriteFence.withValue(fence, () => collection.updateAsync('doc', modifier));
+    await fence.armAndWait();
+  };
+  try {
+    await raw.insertOne(JSON.parse('{"_id":"doc","__proto__":"A","secret":"s0"}'));
+    for (const owner of ['A', 'B']) {
+      const observer = await collection.find(JSON.parse(`{"__proto__":"${owner}"}`)).observeChangesAsync({
+        added(id, fields) { events[owner].push(['added', id, fields.secret]); },
+        changed(id, fields) { events[owner].push(['changed', id, fields.secret]); },
+        removed(id) { events[owner].push(['removed', id]); }
+      });
+      observers.push(observer);
+      test.isTrue(observer._multiplexer._observeDriver._usesOplog);
+    }
+
+    await writeAndWait({$set: JSON.parse('{"__proto__":"B"}')});
+    await writeAndWait({$set: {secret: 's1'}});
+
+    test.equal(events, {
+      A: [['added', 'doc', 's0'], ['removed', 'doc']],
+      B: [['added', 'doc', 's0'], ['changed', 'doc', 's1']]
+    });
+  } finally {
+    for (const observer of observers) await observer.stop();
+    await raw.deleteMany({});
+  }
+});
+
 var randomId = Random.id();
 var OplogCollection = new Mongo.Collection("oplog-" + randomId);
 
