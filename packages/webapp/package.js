@@ -12,7 +12,7 @@ Npm.depends({
   parseurl: "1.3.3",
   send: "1.1.0",
   "stream-to-string": "1.2.1",
-  qs: "6.13.0",
+  qs: "6.16.1",
   "useragent-ng": "2.4.4",
   "tmp": "0.2.3",
 });
