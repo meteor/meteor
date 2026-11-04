@@ -13,6 +13,10 @@ function validateExamplesData(data, { warn = (msg) => Console.warn(msg) } = {}) 
     throw new Error('Invalid examples.json format: expected a JSON array.');
   }
   return data.filter(entry => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+      warn('Skipping invalid example entry');
+      return false;
+    }
     if (!entry.slug || typeof entry.slug !== 'string') {
       warn('Skipping example entry with missing slug');
       return false;
