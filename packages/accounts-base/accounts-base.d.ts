@@ -82,7 +82,6 @@ export namespace Accounts {
   function config(options: {
     sendVerificationEmail?: boolean | undefined;
     forbidClientAccountCreation?: boolean | undefined;
-    allowClientServiceConfiguration?: boolean | undefined;
     restrictCreationByEmailDomain?: string | Function | undefined;
     loginExpiration?: number | undefined;
     loginExpirationInDays?: number | undefined;
@@ -91,8 +90,6 @@ export namespace Accounts {
     passwordResetTokenExpirationInDays?: number | undefined;
     passwordEnrollTokenExpiration?: number | undefined;
     passwordEnrollTokenExpirationInDays?: number | undefined;
-    emailVerificationTokenExpiration?: number | undefined;
-    emailVerificationTokenExpirationInDays?: number | undefined;
     ambiguousErrorMessages?: boolean | undefined;
     bcryptRounds?: number | undefined;
     argon2Enabled?: string | false;
