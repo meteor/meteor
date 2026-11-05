@@ -9,6 +9,134 @@ This is a complete history of changes for Meteor releases.
 [//]: # (If you want to change something in this file)
 
 [//]: # (go to meteor/v3-docs/docs/generators/changelog/versions)
+## v3.5.4, 2026-10-27
+
+### Highlights
+
+- Prevent crafted proxy headers from crashing or stalling production apps using `force-ssl`, while preserving HTTPS and local-connection detection. [Parser fix](https://github.com/meteor/meteor/commit/e7d6fa3d80b910f1a73af0fe57b4feff63615e84)
+- Update `webapp` compression to 1.8.2 and OAuth body parsing to 1.20.9. HTTP responses can now use Brotli when clients advertise `br`; gzip-only clients retain gzip. [Dependency updates](https://github.com/meteor/meteor/commit/2ed57b40f84fff01f8850bc6a0eccc21139a887c)
+- Keep generated Rspack development and production HTML out of test builds, preventing stale chunk references and browser errors after switching modes.
+- Honor release-required package wrap versions when resolving indirect dependencies.
+- Consume email-verification and passwordless tokens atomically to prevent concurrent reuse, and enforce two-factor authentication for user-level passwordless tokens. [Changes](https://github.com/meteor/meteor/commit/9e6e2e4712e2205ac3b226802b8e888be28c6f8c)
+- Preserve document fields such as `__proto__` as own data throughout EJSON conversion, document diffs, Minimongo updates, and MongoDB replication, and prevent update paths from traversing inherited properties. [Changes](https://github.com/meteor/meteor/commit/ff00a31642435a3d60475e7899cd83b73a2c8beb)
+- Preserve document ownership fields when processing oplog replacement events. [Changes](https://github.com/meteor/meteor/commit/2c04b6a948491ba803fe5b1a027612202d3d8763)
+- Prevent inherited object properties from being treated as registered DDP methods or publications. [Changes](https://github.com/meteor/meteor/commit/9e6e2e4712e2205ac3b226802b8e888be28c6f8c)
+- Report the remote client address correctly with the `uws` DDP transport, including connections forwarded through Meteor's local WebSocket proxy. [Changes](https://github.com/meteor/meteor/commit/9e6e2e4712e2205ac3b226802b8e888be28c6f8c)
+- Avoid an extra credential-bearing MongoDB connection during startup, and omit the connection URL from malformed `MONGO_URL` warnings. [Changes](https://github.com/meteor/meteor/commit/9e6e2e4712e2205ac3b226802b8e888be28c6f8c)
+- Update the bundled Node.js runtime to 24.22.1 and npm to 11.19.1. [Changes](https://github.com/meteor/meteor/commit/9fa589f12983647c7697cbebaec19b9569f331ab)
+
+#### Breaking Changes
+
+- `accounts-passwordless`: Custom login integrations using user-level tokens delivered to `Accounts.onCreateLoginToken` must now supply a two-factor authentication code when two-factor authentication is enabled. These flows can no longer bypass that check.
+
+#### Internal API changes
+
+- `ddp-server`: Method and publication handler registries now have null prototypes. Extensions that inspect these internal registries must not depend on inherited `Object.prototype` members.
+- `npm-mongo`: Startup validation parses `MONGO_URL` without opening an additional connection. Actual database connectivity is established through the normal MongoDB connection path.
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+meteor update --release 3.5.4
+```
+
+Update the Meteor release to receive the complete security fixes. A package-only update on an older release does not include the new EJSON minor version and its companion Mongo and Minimongo fixes.
+
+- **Passwordless integrations:** Supply the required two-factor authentication code when signing in with a user-level token for an account with two-factor authentication enabled. Treat login tokens as single-use credentials and request a fresh token after one has been consumed.
+- **uWS deployments:** Review custom IP-based rate limits or access checks that use `clientAddress`. For deployments behind external proxies, keep `HTTP_FORWARDED_COUNT` consistent with the trusted proxy chain; do not add a hop for Meteor's internal uWS connection. See [HTTP_FORWARDED_COUNT](https://docs.meteor.com/cli/environment-variables#http-forwarded-count).
+
+#### Bumped Meteor Packages
+
+- force-ssl-common@1.1.1_1
+- oauth@3.0.4_1
+- webapp@2.3.0_1
+- accounts-password@3.3.1_1
+- accounts-passwordless@3.1.1_1
+- ddp-server@3.5.0
+- diff-sequence@1.2.0
+- ejson@1.4.0
+- meteor-tool@3.5.4
+- minimongo@2.2.0_1
+- mongo@2.5.1_1
+- npm-mongo@6.18.0
+- rspack@1.3.1
+
+#### Bumped NPM Packages
+
+- compression@1.8.2
+- body-parser@1.20.9
+- npm@11.19.1
+
+#### Special thanks to
+
+✨✨✨
+
+- [@italojs](https://github.com/italojs), for implementing and integrating the security fixes.
+- [@nachocodoner](https://github.com/nachocodoner), for updating the runtime bundle and validating passwordless token races.
+- [@Grubba27](https://github.com/Grubba27), for implementing the proxy-header fix and dependency updates, and reviewing and testing account-token fixes.
+
+✨✨✨
+## v3.5.3, 2026-10-13
+
+### Highlights
+
+- Validate Google and Facebook direct-login tokens against the application's OAuth configuration, use provider-verified Google identity fields, and keep Facebook verification errors from exposing the app secret.
+- Prevent server crashes caused by invalid DDP protocol-handler names and unhandled asynchronous handler rejections.
+- Include all modified top-level fields in allow/deny checks, closing a field-authorization bypass.
+- Bound dynamic-import request size and complexity, batch large legitimate module graphs, and limit failed module reads and logging.
+- Keep `meteor shell` history and compilation caches private on POSIX systems, and keep the app running when private history persistence is unavailable.
+- Restrict deploy destinations returned by discovery to trusted HTTPS Galaxy servers before sending account credentials, while preserving HTTP discovery for first deploys.
+
+#### Breaking Changes
+
+- `google-oauth`: Native sign-in that directly supplies an iOS or Android access token without `serverAuthCode` must list that client in `additionalClientIds`, or supply a Google-validated `idToken` for an accepted client and the same user. Google email and picture data no longer fall back to client-supplied fields; apps must request the corresponding scopes.
+- `dynamic-import`: Oversized or malformed requests now receive HTTP 413 or 400. The updated client batches large valid graphs, but already-open clients running older code may need a refresh during a rolling deployment. Individual module paths must fit the new enforced limits.
+- `allow-deny`: Update validators now receive `__proto__` in the modified-field list instead of omitting it. Review validators that rely on that list.
+- Deploy discovery now rejects destinations outside Galaxy's HTTPS deploy domain. Custom deploy servers must be selected explicitly through `DEPLOY_HOSTNAME`; that override remains trusted with the account credentials.
+
+#### Internal API changes
+
+- DDP protocol dispatch accepts only string names for handlers defined directly on the handler table. Extensions that inherit protocol handlers must define them directly.
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+meteor update --release 3.5.3
+```
+
+- **Google sign-in:** For native access-token sign-in without `serverAuthCode`, set `additionalClientIds` in the server's Google service configuration to your application's iOS and Android OAuth client IDs, or send a matching `idToken` that Google can validate for an accepted client. Request `email` and `profile` scopes if your app needs those fields. Allow outbound access to `oauth2.googleapis.com` when using ID-token validation, alongside the existing Google API endpoints. The standard server authorization-code flow exchanges the code for tokens before validation.
+- **Dynamic imports:** Deploy the updated client and server together. If older open clients fail to load a large uncached module graph after the server update, refresh them to load the client that batches requests.
+- **Allow/deny:** Check validators that restrict updates by field name, including applications that intentionally use a top-level `__proto__` field.
+- **Meteor shell:** If a permissions warning appears, check ownership and permission support for `.meteor/local/shell`. The shell continues without persistent history when it cannot ensure privacy, and compilation runs without disk caching when the cache cannot be made private.
+- **Deploy:** Review any `DEPLOY_HOSTNAME` override and trust its destination before supplying account credentials. Automatic discovery still tries HTTP when HTTPS discovery fails, including first deploys before a site has a certificate; the discovery-selected deploy server must use trusted Galaxy HTTPS.
+
+#### Bumped Meteor Packages
+
+- allow-deny@2.1.1
+- ddp-server@3.4.1
+- dynamic-import@0.8.0
+- facebook-oauth@1.12.0
+- google-oauth@1.5.0
+- shell-server@0.7.1
+- meteor-tool@3.5.3
+
+#### Bumped NPM Packages
+
+N/A
+
+#### Special thanks to
+
+✨✨✨
+
+- [@italojs](https://github.com/italojs), for implementing and adapting the fixes.
+- [@Grubba27](https://github.com/Grubba27) and [@nachocodoner](https://github.com/nachocodoner), for reviewing dynamic-import.
+- Vext Labs, for the OAuth vulnerability disclosure.
+
+✨✨✨
 ## v3.5.2, 2026-09-04
 
 ### Highlights
@@ -430,6 +558,129 @@ N/A
 - [@vlasky](https://github.com/vlasky)
 
 ✨✨✨
+## v3.4.3, 2026-10-27
+
+### Highlights
+
+- Prevent crafted proxy headers from crashing or stalling production apps using `force-ssl`, while preserving HTTPS and local-connection detection. [Parser fix](https://github.com/meteor/meteor/commit/7e704f28845337076c2bad3ae56c5ec5283f8e06)
+- Update `webapp` compression to 1.8.2 and OAuth body parsing to 1.20.9. HTTP responses can now use Brotli when clients advertise `br`; gzip-only clients retain gzip. [Dependency updates](https://github.com/meteor/meteor/commit/02ce188a351dc4c22087a797701b37756a3edab4)
+- Honor release-required package wrap versions when resolving indirect dependencies.
+- Prevent concurrent reuse of email-verification and Meteor-generated passwordless login tokens, and enforce configured two-factor authentication for user-level passwordless tokens. [Security backports](https://github.com/meteor/meteor/commit/38eb8accd85b429f8c5207039d8950a67c9f2a3e).
+- Preserve prototype-named fields as ordinary data through EJSON, Minimongo, change notifications and Meteor's MongoDB integration, including projections, authorization checks and oplog replacements. [Field-boundary fixes](https://github.com/meteor/meteor/commit/b3c82cec8ca27146db0f2cc0448d803f7f457cfc), [oplog replacement fix](https://github.com/meteor/meteor/commit/30a830c7fa7955889c2a8ed149a0835f08fbad96).
+- Reject inherited, unregistered DDP method and publication names while preserving explicitly registered names. [Security backports](https://github.com/meteor/meteor/commit/38eb8accd85b429f8c5207039d8950a67c9f2a3e).
+- Remove the extra MongoDB startup connection that bypassed certificate validation, and keep connection strings out of invalid-URL warnings. [Security backports](https://github.com/meteor/meteor/commit/38eb8accd85b429f8c5207039d8950a67c9f2a3e).
+- Upgrade the dev bundle to Node.js 22.23.4 and npm 10.9.9. [Bundle update](https://github.com/meteor/meteor/commit/ab47fc787dd1a461a2dc8abe5d55dd5611aa3821).
+
+#### Breaking Changes
+
+- `accounts-passwordless`: Custom login flows using user-level tokens from `Accounts.onCreateLoginToken` must now provide a valid second-factor code when 2FA is enabled for the user.
+
+#### Internal API changes
+
+- DDP method and publication registries now have null prototypes. Extensions accessing these internal tables must not rely on inherited object methods; use `Object.prototype.hasOwnProperty.call(registry, name)` instead of `registry.hasOwnProperty(name)`.
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+meteor update --release 3.4.3
+```
+
+Update the Meteor release to receive the complete security fixes. A package-only update on an older release does not include the new EJSON minor version and its companion Mongo and Minimongo fixes.
+
+- If you use user-level tokens delivered through `Accounts.onCreateLoginToken`, ensure custom login flows supply a valid two-factor code when 2FA is enabled. These tokens are single-use and do not verify an email address. Successful use also invalidates the email codes from the same issuance; request a new token after it has been consumed.
+- Check extensions accessing internal DDP method or publication registries for inherited-object assumptions.
+
+#### Bumped Meteor Packages
+
+- force-ssl-common@1.1.1_1
+- oauth@3.0.2_1
+- webapp@2.1.3
+- accounts-password@3.2.4
+- accounts-passwordless@3.1.0_1
+- ddp-server@3.2.2
+- diff-sequence@1.1.4
+- ejson@1.3.0
+- minimongo@2.1.1
+- mongo@2.3.1
+- npm-mongo@6.17.0
+- meteor-tool@3.4.3
+
+#### Bumped NPM Packages
+
+- compression@1.8.2
+- body-parser@1.20.9
+- npm@10.9.9
+
+#### Special thanks to
+
+✨✨✨
+
+- [@italojs](https://github.com/italojs), for implementing and adapting the security fixes.
+- [@nachocodoner](https://github.com/nachocodoner), for the Node.js and npm bundle update, reproductions and substantive review.
+- [@Grubba27](https://github.com/Grubba27), for implementing the proxy-header fix and dependency updates, and testing and reviewing the account-token fixes and release consolidation.
+
+✨✨✨
+## v3.4.2, 2026-10-13
+
+### Highlights
+
+- Validate Google and Facebook direct-login tokens against the application's OAuth configuration, use provider-verified Google identity fields, and keep Facebook verification errors from exposing the app secret.
+- Prevent server crashes caused by invalid DDP protocol-handler names and unhandled asynchronous handler rejections.
+- Include all modified top-level fields in allow/deny checks, closing a field-authorization bypass.
+- Bound dynamic-import request size and complexity, batch large legitimate module graphs, and limit failed module reads and logging.
+- Keep `meteor shell` history and compilation caches private on POSIX systems, and keep the app running when private history persistence is unavailable.
+- Restrict deploy destinations returned by discovery to trusted HTTPS Galaxy servers before sending account credentials, while preserving HTTP discovery for first deploys.
+
+#### Breaking Changes
+
+- `google-oauth`: Native sign-in that directly supplies an iOS or Android access token without `serverAuthCode` must list that client in `additionalClientIds`, or supply a Google-validated `idToken` for an accepted client and the same user. Google email and picture data no longer fall back to client-supplied fields; apps must request the corresponding scopes.
+- `dynamic-import`: Oversized or malformed requests now receive HTTP 413 or 400. The updated client batches large valid graphs, but already-open clients running older code may need a refresh during a rolling deployment. Individual module paths must fit the new enforced limits.
+- `allow-deny`: Update validators now receive `__proto__` in the modified-field list instead of omitting it. Review validators that rely on that list.
+- Deploy discovery now rejects destinations outside Galaxy's HTTPS deploy domain. Custom deploy servers must be selected explicitly through `DEPLOY_HOSTNAME`; that override remains trusted with the account credentials.
+
+#### Internal API changes
+
+- DDP protocol dispatch accepts only string names for handlers defined directly on the handler table. Extensions that inherit protocol handlers must define them directly.
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+meteor update --release 3.4.2
+```
+
+- **Google sign-in:** For native access-token sign-in without `serverAuthCode`, set `additionalClientIds` in the server's Google service configuration to your application's iOS and Android OAuth client IDs, or send a matching `idToken` that Google can validate for an accepted client. Request `email` and `profile` scopes if your app needs those fields. Allow outbound access to `oauth2.googleapis.com` when using ID-token validation, alongside the existing Google API endpoints. The standard server authorization-code flow exchanges the code for tokens before validation.
+- **Dynamic imports:** Deploy the updated client and server together. If older open clients fail to load a large uncached module graph after the server update, refresh them to load the client that batches requests.
+- **Allow/deny:** Check validators that restrict updates by field name, including applications that intentionally use a top-level `__proto__` field.
+- **Meteor shell:** If a permissions warning appears, check ownership and permission support for `.meteor/local/shell`. The shell continues without persistent history when it cannot ensure privacy, and compilation runs without disk caching when the cache cannot be made private.
+- **Deploy:** Review any `DEPLOY_HOSTNAME` override and trust its destination before supplying account credentials. Automatic discovery still tries HTTP when HTTPS discovery fails, including first deploys before a site has a certificate; the discovery-selected deploy server must use trusted Galaxy HTTPS.
+
+#### Bumped Meteor Packages
+
+- allow-deny@2.1.1
+- ddp-server@3.2.1
+- dynamic-import@0.8.0
+- facebook-oauth@1.12.0
+- google-oauth@1.5.0
+- shell-server@0.7.1
+- meteor-tool@3.4.2
+
+#### Bumped NPM Packages
+
+N/A
+
+#### Special thanks to
+
+✨✨✨
+
+- [@italojs](https://github.com/italojs), for implementing and adapting the fixes.
+- [@Grubba27](https://github.com/Grubba27) and [@nachocodoner](https://github.com/nachocodoner), for reviewing dynamic-import.
+- Vext Labs, for the OAuth vulnerability disclosure.
+
+✨✨✨
 ## v3.4.1, 2026-04-28
 
 ### Highlights
@@ -750,6 +1001,132 @@ If you find any issues, please report them to the [Meteor issues tracker](https:
 - [@copleykj](https://github.com/copleykj)
 
   ✨✨✨
+## v3.3.4, 2026-10-27
+
+### Highlights
+
+- Prevent crafted proxy headers from crashing or stalling production apps using `force-ssl`, while preserving HTTPS and local-connection detection. [Parser fix](https://github.com/meteor/meteor/commit/d78343af94ca96232febb70a04723a64bb911496)
+- Update `webapp` compression to 1.8.2 and OAuth body parsing to 1.20.9. HTTP responses can now use Brotli when clients advertise `br`; gzip-only clients retain gzip. [Dependency updates](https://github.com/meteor/meteor/commit/e3b9edc4945a2df96bd5da06b0d783ec192d3fb6)
+- Honor release-required package wrap versions when resolving indirect dependencies.
+- Enforce single-use email-verification and Meteor-generated passwordless login tokens, including concurrent attempts, and require configured two-factor authentication for user-level passwordless tokens. [Security fixes](https://github.com/meteor/meteor/commit/fcab7e3c6a00adf0b027ac11e84549aa187abfd3)
+- Handle fields such as `__proto__` safely in EJSON, change detection, Minimongo, Meteor's MongoDB integration, and DDP method/publication registries. [Security fixes](https://github.com/meteor/meteor/commit/fcab7e3c6a00adf0b027ac11e84549aa187abfd3)
+- Remove the extra MongoDB startup connection that disabled certificate verification, and omit connection strings from invalid-URL warnings. [Security fixes](https://github.com/meteor/meteor/commit/fcab7e3c6a00adf0b027ac11e84549aa187abfd3)
+- Upgrade to Node.js 22.23.4 and npm 10.9.9. [Bundle update](https://github.com/meteor/meteor/commit/6ff430591e812c217ad296228f7674c887d1d4e1)
+- Pin the Solid and Vue application templates to jorgenvatle:vite 1.5.4 and meteor-vite 3.8.0. [Solid template](https://github.com/meteor/meteor/commit/a265772c3b21f8ab7c4dcbade0a9f18ddb55ab92), [Vue template](https://github.com/meteor/meteor/commit/9f6ebfe08d56d9924f543144de2def55ef298530)
+- Make `test-in-console` wait for browser readiness and exit unsuccessfully on runner errors, with support for locally installed Puppeteer. [Console runner](https://github.com/meteor/meteor/commit/c81cd51b08fb32e62fd4dba50d4c36af38b2bcb2)
+
+#### Breaking Changes
+
+- `accounts-passwordless`: Custom login flows using the user-level token exposed through `Accounts.onCreateLoginToken` now require a valid two-factor code when the account has two-factor authentication enabled.
+
+#### Internal API changes
+
+- DDP method and publication registries now have null prototypes. Extensions inspecting these internal tables must not rely on inherited object methods.
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+meteor update --release 3.3.4
+```
+
+Update the Meteor release to receive the complete security fixes. A package-only update on an older release does not include the new EJSON minor version and its companion Mongo and Minimongo fixes.
+
+- For custom user-level passwordless token flows, handle `no-2fa-code` by prompting for the authenticator code and retrying with `Meteor.passwordlessLoginWithTokenAnd2faCode(selector, token, code, callback)`. A missing or invalid two-factor code does not consume the token; a successful login does.
+- Review extensions accessing internal DDP method or publication registries for reliance on inherited object properties.
+
+#### Bumped Meteor Packages
+
+- force-ssl-common@1.1.1_1
+- oauth@3.0.2_1
+- webapp@2.0.8
+- accounts-password@3.2.1_1
+- accounts-passwordless@3.0.3
+- ddp-server@3.1.4
+- diff-sequence@1.1.4
+- ejson@1.3.0
+- minimongo@2.0.4_1
+- mongo@2.1.5
+- npm-mongo@6.17.0
+- test-in-console@2.1.0
+- meteor-tool@3.3.4
+
+#### Bumped NPM Packages
+
+- compression@1.8.2
+- body-parser@1.20.9
+- npm@10.9.9
+- meteor-vite@3.8.0
+
+#### Special thanks to
+
+✨✨✨
+
+- [@italojs](https://github.com/italojs), for consolidating the security fixes and updating the templates and console runner.
+- [@nachocodoner](https://github.com/nachocodoner), for preparing the Node.js/npm update and reviewing and validating the security fixes.
+- [@Grubba27](https://github.com/Grubba27), for implementing the proxy-header fix and dependency updates, and reviewing and validating the authentication fixes.
+
+✨✨✨
+## v3.3.3, 2026-10-13
+
+### Highlights
+
+- Validate Google and Facebook direct-login tokens against the application's OAuth configuration, use provider-verified Google identity fields, and keep Facebook verification errors from exposing the app secret.
+- Prevent server crashes caused by invalid DDP protocol-handler names and unhandled asynchronous handler rejections.
+- Include all modified top-level fields in allow/deny checks, closing a field-authorization bypass.
+- Bound dynamic-import request size and complexity, batch large legitimate module graphs, and limit failed module reads and logging.
+- Keep `meteor shell` history and compilation caches private on POSIX systems, and keep the app running when private history persistence is unavailable.
+- Restrict deploy destinations returned by discovery to trusted HTTPS Galaxy servers before sending account credentials, while preserving HTTP discovery for first deploys.
+
+#### Breaking Changes
+
+- `google-oauth`: Native sign-in that directly supplies an iOS or Android access token without `serverAuthCode` must list that client in `additionalClientIds`, or supply a Google-validated `idToken` for an accepted client and the same user. Google email and picture data no longer fall back to client-supplied fields; apps must request the corresponding scopes.
+- `dynamic-import`: Oversized or malformed requests now receive HTTP 413 or 400. The updated client batches large valid graphs, but already-open clients running older code may need a refresh during a rolling deployment. Individual module paths must fit the new enforced limits.
+- `allow-deny`: Update validators now receive `__proto__` in the modified-field list instead of omitting it. Review validators that rely on that list.
+- Deploy discovery now rejects destinations outside Galaxy's HTTPS deploy domain. Custom deploy servers must be selected explicitly through `DEPLOY_HOSTNAME`; that override remains trusted with the account credentials.
+
+#### Internal API changes
+
+- DDP protocol dispatch accepts only string names for handlers defined directly on the handler table. Extensions that inherit protocol handlers must define them directly.
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+meteor update --release 3.3.3
+```
+
+- **Google sign-in:** For native access-token sign-in without `serverAuthCode`, set `additionalClientIds` in the server's Google service configuration to your application's iOS and Android OAuth client IDs, or send a matching `idToken` that Google can validate for an accepted client. Request `email` and `profile` scopes if your app needs those fields. Allow outbound access to `oauth2.googleapis.com` when using ID-token validation, alongside the existing Google API endpoints. The standard server authorization-code flow exchanges the code for tokens before validation.
+- **Dynamic imports:** Deploy the updated client and server together. If older open clients fail to load a large uncached module graph after the server update, refresh them to load the client that batches requests.
+- **Allow/deny:** Check validators that restrict updates by field name, including applications that intentionally use a top-level `__proto__` field.
+- **Meteor shell:** If a permissions warning appears, check ownership and permission support for `.meteor/local/shell`. The shell continues without persistent history when it cannot ensure privacy, and compilation runs without disk caching when the cache cannot be made private.
+- **Deploy:** Review any `DEPLOY_HOSTNAME` override and trust its destination before supplying account credentials. Automatic discovery still tries HTTP when HTTPS discovery fails, including first deploys before a site has a certificate; the discovery-selected deploy server must use trusted Galaxy HTTPS.
+
+#### Bumped Meteor Packages
+
+- allow-deny@2.1.1
+- ddp-server@3.1.3
+- dynamic-import@0.8.0
+- facebook-oauth@1.12.0
+- google-oauth@1.5.0
+- shell-server@0.6.3
+- meteor-tool@3.3.3
+
+#### Bumped NPM Packages
+
+N/A
+
+#### Special thanks to
+
+✨✨✨
+
+- [@italojs](https://github.com/italojs), for implementing and adapting the fixes.
+- [@Grubba27](https://github.com/Grubba27) and [@nachocodoner](https://github.com/nachocodoner), for reviewing dynamic-import.
+- Vext Labs, for the OAuth vulnerability disclosure.
+
+✨✨✨
 ## v3.3.2, 2025-09-01
 
 ### Highlights
