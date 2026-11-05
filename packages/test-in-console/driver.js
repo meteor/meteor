@@ -209,8 +209,7 @@ runTests = function () {
 
       // Also log xUnit output
       xunit('<testsuite errors="" failures="" name="meteor" skips="" tests="" time="">');
-      Object.keys(resultSet).forEach(function (name) {
-        const result = resultSet[name];
+      resultSet.forEach(function (result, _name) {
         const classname =
           result.testPath.join(".").replace(/ /g, "-") + (result.server ? "-server" : "-client");
         const testName = result.test.replace(/ /g, "-") + (result.server ? "-server" : "-client");
