@@ -427,14 +427,20 @@ export const tasks = createModule("tasks")
   .buildSubmodule();
 ```
 
-Calls go through `Meteor.callAsync`, so they are validated and run the middlewares and hooks, with
-the current method's `userId`.
-
-- Pass another module (a `buildSubmodule()` result) or, outside the modules, the root router.
-  TypeScript can't infer a module whose type refers to itself.
-- When modules import each other, create the caller inside the resolver, as above.
-- Rate limits only apply to calls from clients, and outside a method or publication `userId` is
-  `null`.
+- **Same pipeline.** Calls go through `Meteor.callAsync`, so they are validated and run the
+  middlewares and hooks. Inside a method or publication they run with its `userId`. Elsewhere
+  (startup code, jobs) `userId` is `null`, so a middleware that requires a login rejects them.
+  `rateLimit` only applies to calls from clients.
+- **What to pass.** A `buildSubmodule()` result, the root router from `build()`, or a part of it
+  (`createCaller(server.users)`). A caller only has methods: subscribing needs a client.
+- **Full names.** A submodule learns its full name (`chat.messages.send`) when the root module is
+  built. A submodule added in several places can't be resolved: pass a module that contains it
+  once.
+- **Inside a module.** TypeScript can't infer a module whose type refers to itself, so don't pass
+  the module being defined, or the root router it is part of. For the same reason,
+  `createClient<Server>()` doesn't work there.
+- **Modules that import each other.** Create the caller inside the resolver, as above, not at the
+  top of the file.
 
 ## Using in the client
 
