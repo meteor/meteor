@@ -15,7 +15,7 @@ export async function hydrate(collection) {
   try {
     for (const row of rows) {
       const doc = EJSON.parse(row.doc);
-      if (local._docs.has(doc._id)) continue;
+      if (local.findOne(doc._id, { fields: { _id: 1 } })) continue;
       local.insert(doc);
       count += 1;
     }
