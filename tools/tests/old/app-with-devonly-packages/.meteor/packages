@@ -1,0 +1,7 @@
+# Local packages flagged devOnly, with and without an author prefix, and a
+# regular package whose name ends like one of them.
+
+meteor-base
+devonly-local-package
+test:devonly-author-package
+test:not-devonly-local-package
