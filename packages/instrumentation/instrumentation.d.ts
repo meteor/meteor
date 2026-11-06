@@ -46,6 +46,15 @@ export namespace Instrumentation {
     error: ErrorPreview;
   }
 
+  /** DDP path only: the method's writes are committed and `updated` has been sent. */
+  interface MethodUpdatedEvent extends InvocationEvent<"method.updated"> {
+    name: string;
+    /** Since `method.start`; the remainder after `handlerMs` is the write fence. */
+    durationMs: number;
+    /** How long the method function itself ran. */
+    handlerMs: number;
+  }
+
   interface PublicationEvent<T extends EventType = EventType> extends InvocationEvent<T> {
     /** Universal publications have a null name. */
     name: string | null;
@@ -79,16 +88,29 @@ export namespace Instrumentation {
     durationMs: number;
   }
 
+  /** One per DDP message written to a client socket; never carries documents. */
+  interface MessageOutEvent extends EventEnvelope<"ddp.message.out"> {
+    connectionId: string;
+    /** The DDP message kind: `added`, `changed`, `removed`, `ready`, `result`, `updated`, ... */
+    msg: string;
+    /** Only on document messages (`added`, `changed`, `removed`, ...). */
+    collection?: string;
+    /** UTF-8 size of the serialized message. */
+    bytes: number;
+  }
+
   interface EventMap {
     "method.start": MethodStartEvent;
     "method.end": MethodEndEvent;
     "method.error": MethodErrorEvent;
+    "method.updated": MethodUpdatedEvent;
     "publication.start": PublicationStartEvent;
     "publication.ready": PublicationReadyEvent;
     "publication.stop": PublicationStopEvent;
     "publication.error": PublicationErrorEvent;
     "ddp.connection.open": ConnectionOpenEvent;
     "ddp.connection.close": ConnectionCloseEvent;
+    "ddp.message.out": MessageOutEvent;
   }
 
   /** Discriminated by the canonical `type`, independently of `eventName`. */

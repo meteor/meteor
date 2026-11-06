@@ -378,6 +378,10 @@ Object.assign(Session.prototype, {
         self.sentCount++;
       }
       self.socket.send(stringMsg);
+      const Instrumentation = Package['instrumentation'] && Package['instrumentation'].Instrumentation;
+      if (Instrumentation) {
+        Instrumentation._emit('ddp.message.out', { msg, connectionId: self.id, stringMsg });
+      }
     }
   },
 
@@ -632,8 +636,17 @@ Object.assign(Session.prototype, {
 
       const Instrumentation = Package['instrumentation'] && Package['instrumentation'].Instrumentation;
       const instrStartedAt = Instrumentation ? Date.now() : 0;
+      let instrHandlerMs = 0;
       if (Instrumentation) {
         Instrumentation._emit('method.start', { invocation, name: msg.method, args: msg.params });
+        // Registered after the core callback above, so it runs once the
+        // 'updated' message has been sent.
+        fence.onAllCommitted(() => {
+          Instrumentation._emit('method.updated', {
+            invocation, name: msg.method, args: msg.params,
+            durationMs: Date.now() - instrStartedAt, handlerMs: instrHandlerMs,
+          });
+        });
       }
 
       async function finish() {
@@ -683,6 +696,7 @@ Object.assign(Session.prototype, {
           )
         );
 
+        if (Instrumentation) instrHandlerMs = Date.now() - instrStartedAt;
         await finish();
         if (result !== undefined) {
           payload.result = result;
@@ -695,6 +709,7 @@ Object.assign(Session.prototype, {
         }
         self.send(payload);
       } catch (exception) {
+        if (Instrumentation) instrHandlerMs = Date.now() - instrStartedAt;
         await finish();
         payload.error = wrapInternalException(
           exception,

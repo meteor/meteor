@@ -15,9 +15,9 @@ Instrumentation.on('method.end', (event) => {
 });
 ```
 
-Events: `method.start` / `method.end` / `method.error`,
+Events: `method.start` / `method.end` / `method.error` / `method.updated`,
 `publication.start` / `publication.ready` / `publication.stop` / `publication.error`,
-`ddp.connection.open` / `ddp.connection.close`.
+`ddp.connection.open` / `ddp.connection.close` / `ddp.message.out`.
 
 Payloads are bounded and redacted by default: arguments and results are only
 included as bounded previews when explicitly opted in, and the Accounts methods
