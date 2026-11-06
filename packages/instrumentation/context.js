@@ -8,7 +8,11 @@ import { Random } from 'meteor/random';
 // handler later reads through currentContext(). Needs no core change.
 
 const INSTRUMENTATION_CONTEXT = Symbol('meteor.instrumentation.context');
-const newId = () => Random.id();
+// W3C Trace Context ids (a 16-byte traceId and an 8-byte spanId, lowercase hex):
+// the format OpenTelemetry, traceparent headers and APMs accept, so a consumer
+// can adopt the seam's ids as-is instead of minting a second, uncorrelated pair.
+const newTraceId = () => Random.hexString(32);
+const newSpanId = () => Random.hexString(16);
 // Frozen: returned by reference from currentContext() outside any invocation,
 // so a misbehaving consumer must not be able to mutate it for everyone else.
 const EMPTY = Object.freeze({ traceId: null, spanId: null, userId: null, connectionId: null, kind: null, name: null });
@@ -24,7 +28,7 @@ function currentInvocation() {
 // Mint once per invocation, then reuse.
 function traceIds(inv) {
   let ids = inv[INSTRUMENTATION_CONTEXT];
-  if (!ids) ids = inv[INSTRUMENTATION_CONTEXT] = { traceId: newId(), spanId: newId() };
+  if (!ids) ids = inv[INSTRUMENTATION_CONTEXT] = { traceId: newTraceId(), spanId: newSpanId() };
   return ids;
 }
 
