@@ -164,6 +164,75 @@ Tinytest.addAsync(
   }
 );
 
+// Real-document coverage for the divergence fallback checked by cursorSupported
+// above: once Change Streams decline the cursor, a subscriber must only ever see
+// what MongoDB's query returns. `\A` anchors the match to the start of the
+// string in MongoDB's PCRE, but is a literal "A" in a JS RegExp, so Minimongo's
+// re-match diverges from MongoDB. A live driver re-checks later events with
+// Minimongo and would leak a MongoDB-excluded document; the polling fallback
+// cannot, because it re-queries MongoDB.
+Tinytest.addAsync(
+  'changestream - divergent selector polls MongoDB and never leaks excluded docs',
+  async function (test) {
+    const c = makeCollection();
+
+    const events = [];
+    const handle = await c.find({ foo: /\Aabc/ }).observeChanges({
+      added(id, fields) { events.push({ type: 'added', id, fields }); },
+      changed(id, fields) { events.push({ type: 'changed', id, fields }); },
+      removed(id) { events.push({ type: 'removed', id }); },
+    });
+
+    // The divergent selector must decline Change Streams (and oplog) and poll.
+    const driver = handle._multiplexer._observeDriver;
+    test.isFalse(
+      driver._usesChangeStreams === true,
+      'divergent selector must not use change streams'
+    );
+    test.isFalse(
+      driver._usesOplog === true,
+      'divergent selector must not use oplog'
+    );
+
+    try {
+      // MongoDB excludes this ("Aabcxyz" does not start with "abc"), but
+      // Minimongo's /\Aabc/ matches the literal "Aabc" substring, so a live
+      // driver would re-match it locally and leak it.
+      await c.insertAsync({ _id: 'excluded', foo: 'Aabcxyz' });
+      // MongoDB includes this ("abcdef" starts with "abc"); Minimongo would not
+      // match it. It proves the fallback still delivers valid results.
+      await c.insertAsync({ _id: 'allowed', foo: 'abcdef' });
+
+      test.isTrue(
+        await waitFor(() =>
+          events.some(e => e.type === 'added' && e.id === 'allowed'), 5000
+        ),
+        'a MongoDB-matching document must be delivered by the polling fallback'
+      );
+      test.isFalse(
+        events.some(e => e.id === 'excluded'),
+        'a document MongoDB excludes must never reach the observer'
+      );
+
+      // An update that keeps the excluded doc out of MongoDB's result set must
+      // not surface it either, though Minimongo would still "match" it.
+      events.length = 0;
+      await c.updateAsync('excluded', { $set: { foo: 'Aabc-updated' } });
+      await c.updateAsync('allowed', { $set: { marker: 1 } });
+      test.isTrue(
+        await waitFor(() => events.some(e => e.id === 'allowed'), 5000),
+        'updates to a MongoDB-matching document must be delivered'
+      );
+      test.isFalse(
+        events.some(e => e.id === 'excluded'),
+        'updates to an excluded document must stay hidden'
+      );
+    } finally {
+      handle.stop();
+    }
+  }
+);
+
 // ============================================================================
 // BASIC CRUD OPERATIONS TESTS
 // ============================================================================
