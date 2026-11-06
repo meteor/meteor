@@ -38,6 +38,10 @@ state.failures = state.failures || [];
 // suite vs test is in data.details.type on test:complete — reliable at every nesting depth.
 function isSuite(d) { return (d && d.details && d.details.type) === 'suite'; }
 
+// A suite fails on its own when its body or a hook throws; 'subtestsFailed' only repeats
+// failures already counted on its tests.
+function failedOnItsOwn(d) { return !d.details.passed && d.details.error.failureType !== 'subtestsFailed'; }
+
 // Keep the details here: we exit on the last test:complete, before the test:fail that follows it.
 function recordFailure(d) { state.failed++; state.failures.push(d); }
 
@@ -49,7 +53,11 @@ state.onEvent = function (event) {
       break;
     case 'test:complete':              // terminal for EVERY outcome → completed never stalls
       state.completed++;
-      if (isSuite(d)) { state.suites++; break; }  // suites carry details.passed too — exclude
+      if (isSuite(d)) {                           // suites carry details.passed too — exclude
+        state.suites++;
+        if (failedOnItsOwn(d)) recordFailure(d);
+        break;
+      }
       if (d.name === SENTINEL_NAME) break;        // barrier bookkeeping only — not a real test
       state.tests++;                              //   them from the pass/fail tally (no double-count)
       if (d.skip) state.skipped++;                // NB: skipped/todo also have details.passed:true,
