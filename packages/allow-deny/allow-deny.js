@@ -86,17 +86,7 @@ CollectionPrototype._defineMutationMethods = function(options) {
   // their collections.
   self._insecure = undefined;
 
-  self._validators = {
-    insert: {allow: [], deny: []},
-    update: {allow: [], deny: []},
-    remove: {allow: [], deny: []},
-    insertAsync: {allow: [], deny: []},
-    updateAsync: {allow: [], deny: []},
-    removeAsync: {allow: [], deny: []},
-    upsertAsync: {allow: [], deny: []}, // dummy arrays; can't set these!
-    fetch: [],
-    fetchAllFields: false
-  };
+  self._validators = emptyValidators();
 
   if (!self._name)
     return; // anonymous collection
@@ -543,6 +533,20 @@ function docToValidate(validator, doc, generatedId) {
   return ret;
 }
 
+function emptyValidators() {
+  return {
+    insert: {allow: [], deny: []},
+    update: {allow: [], deny: []},
+    remove: {allow: [], deny: []},
+    insertAsync: {allow: [], deny: []},
+    updateAsync: {allow: [], deny: []},
+    removeAsync: {allow: [], deny: []},
+    upsertAsync: {allow: [], deny: []}, // dummy arrays; can't set these!
+    fetch: [],
+    fetchAllFields: false
+  };
+}
+
 function addValidator(collection, allowOrDeny, options) {
   // validate keys
   const validKeysRegEx = /^(?:insertAsync|updateAsync|removeAsync|insert|update|remove|fetch|transform)$/;
@@ -557,6 +561,9 @@ function addValidator(collection, allowOrDeny, options) {
       Meteor.deprecate(allowOrDeny + `: The "${key}" key is deprecated. Use "${syncKey}" instead.`);
     }
   });
+
+  // Collections created with `defineMutationMethods: false` never ran _defineMutationMethods.
+  if (!collection._validators) collection._validators = emptyValidators();
 
   collection._restricted = true;
 
