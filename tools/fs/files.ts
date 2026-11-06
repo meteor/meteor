@@ -844,15 +844,28 @@ function isWithinRoot(root: string, candidate: string) {
 }
 
 // Follow symlinks in the hard link source before checking its location.
-// Treat a source that cannot be resolved as unsafe.
+// Use the OS realpath: Node's JS realpath collapses `..` in a symlink target
+// before following the links before it, so it can place a source inside the
+// root that the kernel resolves outside. Treat a source that cannot be
+// resolved as unsafe.
 function hardLinkEscapesRoot(root: string, source: string) {
   let real;
   try {
-    real = fs.realpathSync(source);
+    real = fs.realpathSync.native(source);
   } catch (e) {
     return true;
   }
   return ! isWithinRoot(root, real);
+}
+
+// The native realpath fails on some Windows virtual drives. Fall back for the
+// root so extraction still works there; hard link sources keep failing closed.
+function realpathNativeOrJs(path: string) {
+  try {
+    return fs.realpathSync.native(path);
+  } catch (e) {
+    return fs.realpathSync(path);
+  }
 }
 
 // A symlink target may not exist yet. Check its lexical path and reject any
@@ -938,7 +951,7 @@ function tryExtractWithNpmTar(
     // Use the same lexical root as tar-fs; compare hard link sources against
     // the real root after following symlinks.
     const lexicalRoot = pathResolve(osTempDir);
-    const realRoot = fs.realpathSync(osTempDir);
+    const realRoot = realpathNativeOrJs(osTempDir);
     let securityError: Error | null = null;
 
     const rejectEntry = (header: any) => {
