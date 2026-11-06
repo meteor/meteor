@@ -33,9 +33,13 @@ state.todo = state.todo || 0;
 state.rootAfterReached = state.rootAfterReached || false;
 state.finalized = state.finalized || false;
 state.pendingEvents = state.pendingEvents || [];
+state.failures = state.failures || [];
 
 // suite vs test is in data.details.type on test:complete — reliable at every nesting depth.
 function isSuite(d) { return (d && d.details && d.details.type) === 'suite'; }
+
+// Keep the details here: we exit on the last test:complete, before the test:fail that follows it.
+function recordFailure(d) { state.failed++; state.failures.push(d); }
 
 state.onEvent = function (event) {
   const d = event.data || {};
@@ -51,7 +55,7 @@ state.onEvent = function (event) {
       if (d.skip) state.skipped++;                // NB: skipped/todo also have details.passed:true,
       else if (d.todo) state.todo++;              //     so skip/todo MUST be checked before passed.
       else if (d.details && d.details.passed) state.passed++;
-      else state.failed++;                        // real failure OR cancelled/interrupted
+      else recordFailure(d);                      // real failure OR cancelled/interrupted
       break;
   }
   maybeFinalize();
@@ -66,6 +70,11 @@ test(SENTINEL_NAME, () => {});
   const buffered = state.pendingEvents;
   state.pendingEvents = [];
   for (const e of buffered) state.onEvent(e);
+}
+
+function formatFailure({ name, file, line, details }) {
+  const { cause, message } = details.error;       // cause: what the test threw (wrapped by node:test)
+  return `\n${c.red(`✖ ${name}`)} ${c.gray(`${file}:${line}`)}\n${(cause && cause.stack) || message}\n`;
 }
 
 function maybeFinalize() {
@@ -83,6 +92,7 @@ function maybeFinalize() {
   // process.exit() *immediately* after write() can truncate piped stdout, so we wait
   // for the write to be handled first.
   process.stdout.write(
+    state.failures.map(formatFailure).join('') +
     `\n${c.bold('test-in-node')} ${c.gray('· node:test')}\n  ` +
     (parts.join(', ') || c.gray('no assertions')) +
     c.gray(` (${state.tests} tests)`) + '\n\n',

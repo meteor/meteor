@@ -40,7 +40,8 @@ you pass `--driver-package test-in-node`. No `SERVER_NODE_OPTIONS` needed.
 
 Standard `node:test`: `describe`/`it`, `node:assert/strict`, async tests, `it.skip`,
 `it.todo`, nested suites — all from Node core, zero extra dependencies. The runner
-reports a compact pass/fail/skip/todo summary and exits non-zero if any test fails.
+prints each failure (name, location, source-mapped stack with the assertion diff),
+then a compact pass/fail/skip/todo summary, and exits non-zero if any test fails.
 
 ## Node version note
 
