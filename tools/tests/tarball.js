@@ -299,3 +299,62 @@ selftest.define("extractTarGz rejects a directory entry over a planted symlink",
   var mode = require('fs').statSync(files.convertToOSPath(outsideDir)).mode;
   await expectEqual(mode & 0o777, 0o700);
 });
+
+selftest.define("extractTarGz rejects a symlink whose target is outside the root", async function () {
+  var scratch = files.mkdtemp("tarfs-link-target");
+  var destPath = files.pathJoin(scratch, "extracted");
+
+  var outsideDir = files.pathJoin(scratch, "outside");
+  files.mkdir_p(outsideDir);
+  var sentinel = files.pathJoin(outsideDir, "sentinel.txt");
+  files.writeFile(sentinel, "ORIGINAL");
+
+  var buffer = await packToTarGz(async function (addEntry) {
+    await addEntry({ name: 'package', type: 'directory', mode: 0o755 });
+    await addEntry({
+      name: 'package/out',
+      type: 'symlink',
+      linkname: files.convertToOSPath(sentinel),
+    });
+  });
+
+  var threw = false;
+  try {
+    await files.extractTarGz(buffer, destPath);
+  } catch (e) {
+    threw = true;
+  }
+
+  selftest.expectTrue(threw);
+  // No later entry writes through the link, so check that it never reaches
+  // the extracted tree, where readers of the package would follow it.
+  var linkPath = files.convertToOSPath(files.pathJoin(destPath, "out"));
+  selftest.expectFalse(require('fs').existsSync(linkPath));
+});
+
+selftest.define("extractTarGz rejects a directory entry beneath a planted symlink", async function () {
+  var scratch = files.mkdtemp("tarfs-dir-ancestor");
+  var destPath = files.pathJoin(scratch, "extracted");
+
+  var outsideDir = files.pathJoin(scratch, "outside");
+  files.mkdir_p(outsideDir);
+
+  var buffer = await packToTarGz(async function (addEntry) {
+    await addEntry({ name: 'package/', type: 'directory', mode: 0o755 });
+    await addEntry({ name: 'package/x', type: 'symlink', linkname: '.' });
+    // `package/A -> x/../..` reaches scratch once `x -> .` is followed.
+    await addEntry({ name: 'package/A', type: 'symlink', linkname: 'x/../..' });
+    // tar-fs creates directory entries without checking their ancestors.
+    await addEntry({ name: 'package/A/outside/pwn/', type: 'directory', mode: 0o755 });
+  });
+
+  var threw = false;
+  try {
+    await files.extractTarGz(buffer, destPath);
+  } catch (e) {
+    threw = true;
+  }
+
+  selftest.expectTrue(threw);
+  await expectEqual(require('fs').readdirSync(files.convertToOSPath(outsideDir)), []);
+});
