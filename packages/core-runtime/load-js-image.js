@@ -58,7 +58,7 @@ function runEagerModules(config, callback) {
         // This allows other packages and the app to `require` the package
         // and for it to work the same, regardless of if it uses TLA or not
         // XXX: this is a temporary hack until we find a better way to do this
-        const reify = config.require('/node_modules/meteor/modules/node_modules/@meteorjs/reify/lib/runtime');
+        var reify = config.require('/node_modules/meteor/modules/node_modules/@meteorjs/reify/lib/runtime');
         reify._requireAsSync(config.mainModulePath);
       }
 
