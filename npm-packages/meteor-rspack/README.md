@@ -9,7 +9,7 @@ When Meteor runs with the Rspack bundler enabled, this package is what generates
 - **Dual client/server builds** with the correct targets, externals, and output paths
 - **SWC-based transpilation** for JS/TS/JSX/TSX with automatic framework detection
 - **React Fast Refresh** in development when React is enabled
-- **Blaze template handling** via ignore-loader when Blaze is enabled
+- **Blaze template handling** through Meteor's compiler, preserving lazy templates behind client-side dynamic imports
 - **Persistent filesystem caching** for fast rebuilds
 - **Asset externals and HTML generation** through custom Rspack plugins
 - **A `defineConfig` helper** that accepts a factory function receiving Meteor environment flags and build utilities
@@ -45,6 +45,32 @@ module.exports = defineConfig((env, argv) => {
 ```
 
 More information is available in the official docs: [Rspack Bundler Integration](https://docs.meteor.com/about/modern-build-stack/rspack-bundler-integration.html#custom-rspack-config-js).
+
+### Lazy Blaze templates
+
+On the client, dynamically importing a controller also defers its paired HTML:
+
+```js
+await import('/imports/ui/pages/tagged-with-page.js');
+```
+
+In `tagged-with-page.js`, import the template normally:
+
+```js
+import './tagged-with-page.html';
+```
+
+Templates used by the initial application remain eager. Templates used only by
+async chunks are compiled by Meteor and fetched through Meteor's dynamic-import
+loader alongside the Rspack chunk. The route's import promise waits for those
+templates before evaluating the controller. The compiled HTML is served separately
+from the Rspack JavaScript chunk, and uses Meteor's normal dynamic-import cache.
+In development, Meteor reloads the page after recompiling the templates, keeping
+them in sync with the updated JavaScript.
+
+`meteor.modules` controls which source files Meteor compiles; it is not required
+to make these HTML imports lazy. Server imports and test configurations that
+bundle dynamic imports eagerly retain their synchronous behavior.
 
 ## Development
 
