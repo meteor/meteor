@@ -2,7 +2,9 @@
 // Sets up the shared completion state on globalThis (the reporter, loaded outside the
 // bundle via --test-reporter, forwards node:test events to state.onEvent). Completion is
 // structured: a root after() sets the barrier, and we finalize OUTSIDE the hook once the
-// reporter has seen every enqueued item complete. No debounce, no stdout parsing, no beforeExit.
+// reporter has seen every enqueued top-level item complete (nested ones finish first, and a
+// test cancelled by a failing hook completes without being enqueued, so only top-level counts
+// balance). No debounce, no stdout parsing, no beforeExit.
 //
 // CommonJS on purpose: loadable directly by Node (for pure-Node smoke tests) AND by isobuild.
 const { after, test } = require('node:test');
@@ -49,10 +51,10 @@ state.onEvent = function (event) {
   const d = event.data || {};
   switch (event.type) {
     case 'test:enqueue':
-      state.enqueued++;
+      if (d.nesting === 0) state.enqueued++;
       break;
     case 'test:complete':              // terminal for EVERY outcome → completed never stalls
-      state.completed++;
+      if (d.nesting === 0) state.completed++;
       if (isSuite(d)) {                           // suites carry details.passed too — exclude
         state.suites++;
         if (failedOnItsOwn(d)) recordFailure(d);
