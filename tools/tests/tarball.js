@@ -26,7 +26,7 @@ selftest.define("create and extract tarball with long paths", async function () 
   var tarballExtractedDir = files.mkdtemp("tarball-extracted");
   await files.extractTarGz(files.readFile(tarballOutputFile), tarballExtractedDir);
   var extractedStampedFile = inputStampedFile.replace(tarballInputDir, tarballExtractedDir);
-  expectEqual(files.readFile(extractedStampedFile, "utf-8"), STAMP);
+  await expectEqual(files.readFile(extractedStampedFile, "utf-8"), STAMP);
 });
 
 function packToTarGz(buildEntries) {
@@ -104,7 +104,7 @@ selftest.define("extractTarGz rejects archives that escape the root", async func
   }
 
   selftest.expectTrue(threw);
-  expectEqual(files.readFile(sentinel, "utf-8"), "ORIGINAL");
+  await expectEqual(files.readFile(sentinel, "utf-8"), "ORIGINAL");
 });
 
 selftest.define("extractTarGz preserves in-tree symlinks", async function () {
@@ -133,8 +133,8 @@ selftest.define("extractTarGz preserves in-tree symlinks", async function () {
   await files.extractTarGz(buffer, destPath);
 
   var linkPath = files.pathJoin(destPath, "node_modules", ".bin", "foo");
-  expectEqual(files.readlink(linkPath), "../foo/cli.js");
-  expectEqual(files.readFile(linkPath, "utf-8"), "REAL");
+  await expectEqual(files.readlink(linkPath), "../foo/cli.js");
+  await expectEqual(files.readFile(linkPath, "utf-8"), "REAL");
 });
 
 selftest.define("extractTarGz rejects a file planted through a symlink", async function () {
@@ -172,7 +172,7 @@ selftest.define("extractTarGz rejects a file planted through a symlink", async f
   }
 
   selftest.expectTrue(threw);
-  expectEqual(files.readFile(sentinel, "utf-8"), "ORIGINAL");
+  await expectEqual(files.readFile(sentinel, "utf-8"), "ORIGINAL");
 });
 
 selftest.define("extractTarGz rejects entries beneath a planted symlink", async function () {
@@ -204,7 +204,7 @@ selftest.define("extractTarGz rejects entries beneath a planted symlink", async 
   }
 
   selftest.expectTrue(threw);
-  expectEqual(files.readFile(sentinel, "utf-8"), "ORIGINAL");
+  await expectEqual(files.readFile(sentinel, "utf-8"), "ORIGINAL");
 });
 
 selftest.define("extractTarGz rejects a symlink to an absolute outside path", async function () {
@@ -240,7 +240,7 @@ selftest.define("extractTarGz rejects a symlink to an absolute outside path", as
   }
 
   selftest.expectTrue(threw);
-  expectEqual(files.readFile(sentinel, "utf-8"), "ORIGINAL");
+  await expectEqual(files.readFile(sentinel, "utf-8"), "ORIGINAL");
 });
 
 // `tar -C dir .` archives start with a "./" root entry.
@@ -262,7 +262,7 @@ selftest.define("extractTarGz accepts a ./ root entry", async function () {
   var destPath = files.pathJoin(scratch, "extracted");
   await files.extractTarGz(buffer, destPath);
 
-  expectEqual(
+  await expectEqual(
     files.readFile(files.pathJoin(destPath, "file.txt"), "utf-8"),
     "DOT ROOT");
 });
@@ -297,5 +297,5 @@ selftest.define("extractTarGz rejects a directory entry over a planted symlink",
   selftest.expectTrue(threw);
   // Read the mode directly: files.stat results are cached.
   var mode = require('fs').statSync(files.convertToOSPath(outsideDir)).mode;
-  expectEqual(mode & 0o777, 0o700);
+  await expectEqual(mode & 0o777, 0o700);
 });
