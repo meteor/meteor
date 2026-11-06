@@ -469,7 +469,10 @@ Object.assign(Session.prototype, {
           return true;
         });
 
-        if (msg.msg in self.protocol_handlers) {
+        if (
+          typeof msg.msg === "string" &&
+          Object.hasOwn(self.protocol_handlers, msg.msg)
+        ) {
           const result = self.protocol_handlers[msg.msg].call(
             self,
             msg,
@@ -477,7 +480,12 @@ Object.assign(Session.prototype, {
           );
 
           if (Meteor._isPromise(result)) {
-            result.finally(() => unblock());
+            // setImmediate runs outside the socket callback; catch rejected handlers here.
+            result
+              .catch((e) => {
+                Meteor._debug("Internal exception while processing message", msg, e);
+              })
+              .finally(() => unblock());
           } else {
             unblock();
           }
@@ -622,6 +630,12 @@ Object.assign(Session.prototype, {
         fence,
       });
 
+      const Instrumentation = Package['instrumentation'] && Package['instrumentation'].Instrumentation;
+      const instrStartedAt = Instrumentation ? Date.now() : 0;
+      if (Instrumentation) {
+        Instrumentation._emit('method.start', { invocation, name: msg.method, args: msg.params });
+      }
+
       async function finish() {
         await fence.arm();
         unblock();
@@ -673,6 +687,12 @@ Object.assign(Session.prototype, {
         if (result !== undefined) {
           payload.result = result;
         }
+        if (Instrumentation) {
+          Instrumentation._emit('method.end', {
+            invocation, name: msg.method, args: msg.params, result,
+            durationMs: Date.now() - instrStartedAt,
+          });
+        }
         self.send(payload);
       } catch (exception) {
         await finish();
@@ -680,6 +700,12 @@ Object.assign(Session.prototype, {
           exception,
           `while invoking method '${msg.method}'`
         );
+        if (Instrumentation) {
+          Instrumentation._emit('method.error', {
+            invocation, name: msg.method, args: msg.params, error: exception,
+            durationMs: Date.now() - instrStartedAt,
+          });
+        }
         self.send(payload);
       };
     }
@@ -987,6 +1013,13 @@ Object.assign(Subscription.prototype, {
     }
 
     const self = this;
+
+    const Instrumentation = Package['instrumentation'] && Package['instrumentation'].Instrumentation;
+    if (Instrumentation) {
+      self._instrStartedAt = Date.now();
+      Instrumentation._emit('publication.start', { subscription: self, name: self._name, args: self._params });
+    }
+
     let resultOrThenable = null;
     try {
       resultOrThenable = DDP._CurrentPublicationInvocation.withValue(
@@ -1106,6 +1139,13 @@ Object.assign(Subscription.prototype, {
     if (this._deactivated)
       return;
     this._deactivated = true;
+    const Instrumentation = Package['instrumentation'] && Package['instrumentation'].Instrumentation;
+    if (Instrumentation && !this._instrErrored) {
+      Instrumentation._emit('publication.stop', {
+        subscription: this, name: this._name, args: this._params,
+        durationMs: this._instrStartedAt ? Date.now() - this._instrStartedAt : undefined,
+      });
+    }
     this._callStopCallbacks().then(() => {
       // Break reference chains to allow GC of the Session and its data.
       // Without this, deactivated subscriptions retain live references
@@ -1167,6 +1207,16 @@ Object.assign(Subscription.prototype, {
     var self = this;
     if (self._isDeactivated())
       return;
+    const Instrumentation = Package['instrumentation'] && Package['instrumentation'].Instrumentation;
+    if (Instrumentation) {
+      // publication.error is this path's terminal event; flag the imminent
+      // _deactivate() so it doesn't also emit a duplicate publication.stop.
+      self._instrErrored = true;
+      Instrumentation._emit('publication.error', {
+        subscription: self, name: self._name, args: self._params, error,
+        durationMs: self._instrStartedAt ? Date.now() - self._instrStartedAt : undefined,
+      });
+    }
     self._session._stopSubscription(self._subscriptionId, error);
   },
 
@@ -1296,6 +1346,13 @@ Object.assign(Subscription.prototype, {
     if (!self._ready) {
       self._session.sendReady([self._subscriptionId]);
       self._ready = true;
+      const Instrumentation = Package['instrumentation'] && Package['instrumentation'].Instrumentation;
+      if (Instrumentation) {
+        Instrumentation._emit('publication.ready', {
+          subscription: self, name: self._name, args: self._params,
+          durationMs: self._instrStartedAt ? Date.now() - self._instrStartedAt : undefined,
+        });
+      }
     }
   }
 });
@@ -1349,10 +1406,10 @@ Server = function (options = {}) {
     debugPrintExceptions: "onMessage callback"
   });
 
-  self.publish_handlers = {};
+  self.publish_handlers = Object.create(null);
   self.universal_publish_handlers = [];
 
-  self.method_handlers = {};
+  self.method_handlers = Object.create(null);
 
   self._publicationStrategies = {};
 
@@ -1814,7 +1871,13 @@ Object.assign(Server.prototype, {
       randomSeed
     });
 
-    return new Promise((resolve, reject) => {
+    const Instrumentation = Package['instrumentation'] && Package['instrumentation'].Instrumentation;
+    const instrStartedAt = Instrumentation ? Date.now() : 0;
+    if (Instrumentation) {
+      Instrumentation._emit('method.start', { invocation, name, args });
+    }
+
+    const resultPromise = new Promise((resolve, reject) => {
       let result;
       try {
         result = DDP._CurrentMethodInvocation.withValue(invocation, () =>
@@ -1833,6 +1896,24 @@ Object.assign(Server.prototype, {
       }
       result.then(r => resolve(r)).catch(reject);
     }).then(EJSON.clone);
+
+    if (!Instrumentation) {
+      return resultPromise;
+    }
+    return resultPromise.then(
+      (result) => {
+        Instrumentation._emit('method.end', {
+          invocation, name, args, result, durationMs: Date.now() - instrStartedAt,
+        });
+        return result;
+      },
+      (error) => {
+        Instrumentation._emit('method.error', {
+          invocation, name, args, error, durationMs: Date.now() - instrStartedAt,
+        });
+        throw error;
+      }
+    );
   },
 
   _urlForSession: function (sessionId) {
