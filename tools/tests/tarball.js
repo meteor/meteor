@@ -358,3 +358,51 @@ selftest.define("extractTarGz rejects a directory entry beneath a planted symlin
   selftest.expectTrue(threw);
   await expectEqual(require('fs').readdirSync(files.convertToOSPath(outsideDir)), []);
 });
+
+selftest.define("extractTarGz rejects a hard link whose source leaves the root through a planted symlink", async function () {
+  var scratch = files.mkdtemp("tarfs-hard-ancestor");
+  var destPath = files.pathJoin(scratch, "extracted");
+
+  var outsideDir = files.pathJoin(scratch, "outside");
+  files.mkdir_p(outsideDir);
+  var sentinel = files.pathJoin(outsideDir, "sentinel.txt");
+  files.writeFile(sentinel, "ORIGINAL");
+
+  var decoy = Buffer.from("DECOY");
+  var payload = Buffer.from("OVERWRITTEN THROUGH HARD LINK");
+  var buffer = await packToTarGz(async function (addEntry) {
+    await addEntry({ name: 'package/', type: 'directory', mode: 0o755 });
+    await addEntry({ name: 'package/outside/', type: 'directory', mode: 0o755 });
+    await addEntry({
+      name: 'package/outside/sentinel.txt',
+      type: 'file',
+      size: decoy.length,
+      mode: 0o644,
+    }, decoy);
+    await addEntry({ name: 'package/x', type: 'symlink', linkname: '.' });
+    // Resolving `..` lexically gives `package`, but the kernel follows
+    // `x -> .` and reaches scratch.
+    await addEntry({ name: 'package/A', type: 'symlink', linkname: 'x/x/../..' });
+    await addEntry({
+      name: 'package/hard-sentinel',
+      type: 'link',
+      linkname: 'package/A/outside/sentinel.txt',
+    });
+    await addEntry({
+      name: 'package/hard-sentinel',
+      type: 'file',
+      size: payload.length,
+      mode: 0o644,
+    }, payload);
+  });
+
+  var threw = false;
+  try {
+    await files.extractTarGz(buffer, destPath);
+  } catch (e) {
+    threw = true;
+  }
+
+  selftest.expectTrue(threw);
+  await expectEqual(files.readFile(sentinel, "utf-8"), "ORIGINAL");
+});
