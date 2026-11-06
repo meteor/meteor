@@ -8,7 +8,7 @@ Before moving production traffic to Change Streams, validate that your MongoDB d
 
 ## Requirements and Limitations
 
-- MongoDB 6.0.9+ or 7+ on a replica set or sharded cluster (Change Streams are not available on standalone or some shared-tier deployments).
+- MongoDB 6.0.9+ or 7+ on a replica set or sharded cluster whose `ping` replies include `operationTime` (Change Streams are not available on standalone deployments, and some shared tiers omit `operationTime`).
 - Works only for unordered observers. Publications that rely on ordered callbacks (`addedBefore`, `movedBefore`) will keep using another driver.
 - Selectors must compile with `Minimongo.Matcher`. Unsupported selectors fall back to the next configured driver.
 - Cursors with `skip` or `limit`, projections Minimongo cannot apply, or `$where`/`$near` selectors are handed to the next configured driver. Live change events are re-matched locally by Minimongo, which cannot evaluate `$where`/`$near` the way MongoDB does; oplog tailing declines those selectors for the same reason.
@@ -81,5 +81,6 @@ Optional tuning is available via `Meteor.settings`:
 ## Troubleshooting
 
 - **No Replica Set**: Change Streams require a replica set or sharded cluster. If you're running MongoDB standalone, it will fall back to `oplog` or `polling`. Ensure your development environment sets up a replica set.
+- **No `operationTime`**: if the server's `ping` reply has no `operationTime` (reported on MongoDB Atlas Flex), Meteor logs `Change Streams unavailable` once and uses the next configured driver. Check with `(await MongoInternals.defaultRemoteCollectionDriver().mongo.db.command({ ping: 1 })).operationTime` in `meteor shell`.
 - **Unsupported Selectors**: If your selector includes operators that Minimongo's Matcher cannot compile natively, the observer drops to the next configured fallback. Simplify complex queries to maximize Change Stream compatibility.
 - **Performance Degradation**: If you see high CPU usage on your MongoDB cluster after switching to Change Streams, you may have publications with very broad filters. Use narrowed selectors, indexes, or revert to `oplog` for those specific collections.
