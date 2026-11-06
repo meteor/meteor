@@ -465,7 +465,7 @@ These dependencies are installed only in the temporary variant used by `regressi
 | Package | Reason |
 |---------|--------|
 | `@apollo/server` | ESM-first GraphQL server |
-| `@apollo/server/express4` | ESM subpath export (middleware from deep path) |
+| `@as-integrations/express5` | ESM-first Express 5 middleware |
 | `graphql` | Peer dependency, dual CJS/ESM package |
 
 ### typescript (`apps/typescript/rspack.config.ts`, `apps/typescript/swc.config.ts`)
@@ -540,8 +540,8 @@ Where each feature is tested across apps and skeletons.
 | Skeleton creation | | all 16 tested skeletons |
 | Body style assertions | | react, tailwind (custom); most others (default) |
 | Custom .gitignore entries | react | |
-| ESM-only packages | react-router, monorepo, babel | |
-| ESM subpath exports | react-router, babel | |
+| ESM-only packages | react-router, monorepo | |
+| ESM subpath exports | react-router | |
 | Native bindings (C++ addon) | react-router | |
 | `node:` protocol imports | monorepo, typescript | |
 | Untranspiled npm deps (`compileWithRspack`) | monorepo | |

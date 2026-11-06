@@ -436,7 +436,7 @@ The `--prototype` option adds packages that make development faster but shouldn'
 <summary><strong>Apollo (GraphQL) App</strong> (--apollo)</summary>
 
 **NPM packages:**
-- `@apollo/client`, `@apollo/server`, `@babel/runtime`, `graphql` `meteor-node-stubs`, `react`, `react-dom`
+- `@apollo/client`, `@apollo/server`, `@as-integrations/express5`, `@babel/runtime`, `graphql`, `meteor-node-stubs`, `react`, `react-dom`
 
 **Meteor packages:**
 - `meteor-base`, `mobile-experience`, `mongo`, `reactive-var`, `standard-minifier-css`,
