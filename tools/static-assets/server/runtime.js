@@ -83,6 +83,14 @@ module.exports = function enable ({ cachePath, createLoader = true } = {}) {
 
   const _compile = Mp._compile;
   Mp._compile = function (content, filename, options) {
+    // Node passes the module format as the third argument. ES modules
+    // (.mjs files, or .js files in "type": "module" packages) must be
+    // evaluated by Node itself, since compiling them with Reify breaks
+    // ESM-only syntax like import.meta (issue #14784).
+    if (options === "module") {
+      return _compile.call(this, content, filename, options);
+    }
+
     // When cache is enabled, the file has already been compiled
     if (!options || !options.compiledWithReify) {
       content = compileContent(content).content;
@@ -92,8 +100,14 @@ module.exports = function enable ({ cachePath, createLoader = true } = {}) {
   };
 
   if (cacheEnabled) {
-    const jsExt = Module._extensions.js;
+    const jsExt = Module._extensions['.js'];
     Module._extensions['.js'] = function (module, filename) {
+      if (isESModuleFile(filename)) {
+        // Let Node detect the module format, so Mp._compile above can
+        // evaluate the ES module natively.
+        return jsExt.call(this, module, filename);
+      }
+
       let stat = fs.statSync(filename);
       let baseKey = createHash("sha1")
         .update(`${reifyVersion}\0${filename}\0${stat.mtimeMs}\0${stat.ino}\0${stat.size}\0`)
@@ -124,6 +138,38 @@ module.exports = function enable ({ cachePath, createLoader = true } = {}) {
 
       return module._compile(content, filename, { compiledWithReify: true });
     }
+  }
+
+  // Mirrors how Node decides whether a file is an ES module, so that the
+  // cached Module._extensions['.js'] above can skip those files.
+  const packageTypeCache = new Map();
+  function isESModuleFile(filename) {
+    const ext = path.extname(filename);
+    return ext === '.mjs' ||
+      (ext === '.js' && getPackageType(path.dirname(filename)) === 'module');
+  }
+
+  function getPackageType(dir) {
+    if (packageTypeCache.has(dir)) {
+      return packageTypeCache.get(dir);
+    }
+
+    let type;
+    try {
+      type = JSON.parse(
+        fs.readFileSync(path.join(dir, 'package.json'), 'utf8')
+      ).type;
+    } catch (e) {
+      const parentDir = path.dirname(dir);
+      if (e.code === 'ENOENT' &&
+          parentDir !== dir &&
+          path.basename(dir) !== 'node_modules') {
+        type = getPackageType(parentDir);
+      }
+    }
+
+    packageTypeCache.set(dir, type);
+    return type;
   }
 
   let immediateTimer = null;
