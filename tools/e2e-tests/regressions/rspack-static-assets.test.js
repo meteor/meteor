@@ -47,7 +47,7 @@ describe('Regressions / Rspack static assets /', () => {
   }
 
   beforeAll(async () => {
-    ({ tempDir } = await setupMeteorApp('assets'));
+    ({ tempDir } = await setupMeteorApp('blaze'));
     await fs.appendFile(path.join(tempDir, 'server/main.js'), `
 import { WebApp, WebAppInternals } from 'meteor/webapp';
 import nodeFs from 'fs';
