@@ -94,6 +94,16 @@ Accounts.config({
 
 The allowlist does not bypass browser cookie policy. Because the login cookie remains `SameSite=Strict`, an allowed page must also be same-site with the cookie endpoint for the browser to persist and send the cookie; different ports or trusted sibling subdomains are supported, while an unrelated cross-site domain is not.
 
+#### Changes in Meteor 3.5.5 {#accounts-httponly-cookies-3-5-5}
+
+Meteor 3.5.5 hardens the cookie endpoints. If your app enabled HttpOnly cookies on an earlier 3.5 release, check these changes before you upgrade:
+
+- The server no longer reads `Meteor.settings.public.packages.accounts.useHttpOnlyCookies`. That public setting now configures only the client. Enable the endpoints on the server with `Accounts.config({ useHttpOnlyCookies: true })` or with `useHttpOnlyCookies` in `Meteor.settings.packages.accounts`. If only the public setting is `true`, the endpoints return `404` and cookie login stops working.
+- Earlier 3.5 releases accepted cookie requests from any site. Now `POST /_accounts/cookie/set` and `POST /_accounts/cookie/clear` return `403` unless the request comes from a trusted origin, and `GET /_accounts/cookie/refresh` returns `403` when the browser marks the request as cross-site.
+- Earlier 3.5 releases wrote any token string they received into the cookie. Now `POST /_accounts/cookie/set` writes the cookie only when the request sends JSON with a valid, unexpired login token.
+- The cookie uses `SameSite=Strict` instead of `SameSite=Lax`. Browsers do not send it on the first navigation from another site to your app, so code that authenticates that first request with the cookie must change. A cookie that an earlier release wrote is replaced the next time the client logs in or resumes its session.
+- The endpoints have a rate limit of 30 requests per 10 seconds per client address. If the cookie refresh request at page load gets a `429` response, the client starts that page load logged out. Behind a reverse proxy, set `HTTP_FORWARDED_COUNT`. Otherwise every browser shares the proxy address and its limit. Use `httpOnlyCookieRateLimit` to change the limit.
+
 <ApiBox name="Meteor.user" hasCustomExample/>
 
 Retrieves the user record for the current user from
