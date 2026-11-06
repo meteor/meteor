@@ -24,3 +24,8 @@ Package.onUse(function(api) {
   api.mainModule('server.js', 'server');
   api.mainModule('client.js', 'client');
 });
+
+Package.onTest(function(api) {
+  api.use(['ecmascript', 'tinytest']);
+  api.mainModule('sunburst-tests.js', 'client');
+});
