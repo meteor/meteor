@@ -3,6 +3,6 @@ Template.configureLoginServiceDialogForMeteorDeveloper.helpers({
 });
 
 Template.configureLoginServiceDialogForMeteorDeveloper.fields = () => [
-  {property: 'clientId', label: 'App ID'},
-  {property: 'secret', label: 'App secret'}
+  {property: 'clientId', label: 'Client ID'},
+  {property: 'secret', label: 'Secret'}
 ];
