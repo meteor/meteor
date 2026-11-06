@@ -486,6 +486,9 @@ does not synchronize Meteor data, queue methods, or replay writes while the
 application is offline; add those capabilities separately if your application
 needs them.
 
+The [Progressive Web Apps](/about/progressive-web-apps) guide covers the service
+worker, installation and deployment in detail.
+
 </details>
 
 <details>
