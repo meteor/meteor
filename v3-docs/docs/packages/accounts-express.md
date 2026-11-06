@@ -195,7 +195,7 @@ const response = await Meteor.fetch(Meteor.absoluteUrl('api/protected'), {
 
 ### HttpOnly Cookies
 
-The client and server must both have HttpOnly cookies enabled. Call `Accounts.config({ useHttpOnlyCookies: true })` from shared code, or set `Meteor.settings.public.packages.accounts.useHttpOnlyCookies` to `true`.
+The client and server must both have HttpOnly cookies enabled. Call `Accounts.config({ useHttpOnlyCookies: true })` from shared code, or set `useHttpOnlyCookies` to `true` in both `Meteor.settings.packages.accounts` (server) and `Meteor.settings.public.packages.accounts` (client). The server does not read the public setting.
 
 When enabled, the server handles the following endpoints. When disabled, these
 paths fall through to later WebApp handlers.
