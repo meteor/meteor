@@ -20,6 +20,7 @@ expectTypeOf<EmailFields>().toBeObject();
 expectTypeOf<AccountsClientOptions>().toBeObject();
 expectTypeOf<Header>().toBeObject();
 expectTypeOf<EmailTemplates>().toBeObject();
+expectTypeOf<EmailLayoutOptions>().toBeObject();
 
 // @ts-expect-error AccountsCommon requires options and reads them immediately.
 new AccountsClient();

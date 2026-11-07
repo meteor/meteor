@@ -92,7 +92,8 @@ Tinytest.addAsync('accounts - shipped email html only accompanies the shipped te
   const user = { _id: 'id', username: 'ada', emails: [{ address: 'ada@example.com' }] };
   const options = () => Accounts.generateOptionsForEmail('ada@example.com', user, URL, 'resetPassword');
   try {
-    Object.assign(template, original);
+    // Start from the shipped pair: other packages' test setups may have replaced the html.
+    Object.assign(template, defaults);
     let email = await options();
     test.isTrue(email.text.includes(URL));
     test.isTrue(email.html.includes(URL), 'default text and html: both sent');
