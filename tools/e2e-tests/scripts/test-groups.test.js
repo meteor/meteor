@@ -14,13 +14,24 @@ const { spawnSync } = require('child_process');
 const { auditTestCoverage } = require('./audit-test-groups');
 
 describe('CLI / E2E test group fallback /', () => {
-  test('keeps server runtime separate and splits the long React and Vue workload', () => {
+  test('assigns split workloads to one group each', () => {
     const matchingGroups = name => Object.entries(EXPLICIT_TEST_GROUPS)
       .filter(([, group]) => new RegExp(group.pattern).test(name))
       .map(([group]) => group);
 
     expect(matchingGroups('Regressions / Server Runtime / builds the app'))
       .toEqual(['server_runtime']);
+    for (const suite of [
+      'Source Maps',
+      'Architecture-specific entrypoints',
+      'Legacy npm dependencies',
+      'Legacy production EJSON',
+      'CordovaModernDefault',
+      'Rspack static assets',
+    ]) {
+      expect(matchingGroups(`Regressions / ${suite} / checks the built app`))
+        .toEqual(['bundling_regressions']);
+    }
     expect(matchingGroups('Regressions / Concurrent Modes / isolates artifacts'))
       .toEqual(['regressions']);
     expect(matchingGroups('Regression / npm-shrinkwrap transitive deps / honours pins'))
