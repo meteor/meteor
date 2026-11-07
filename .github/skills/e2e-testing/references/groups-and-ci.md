@@ -6,7 +6,9 @@ Read when adding/renaming suites, changing selection, or diagnosing local/CI dif
 
 `tools/e2e-tests/test-groups.js` owns anchored full-test-name patterns, path filters, and workflow ownership. Both the local runner and audit use those rules. Suite titles are part of selection: changing a `describe` prefix can move tests even without moving files.
 
-Most groups match name prefixes such as `^Monorepo App Bundling /`; the `monorepo` group also selects pnpm, Yarn, symlink, and generated pnpm scenarios. `server_runtime` is separate from other regressions. Accounts is selected by `accounts.test.js` path and excluded from the modern groups. Preserve the `apps/` discovery exclusion when changing path filters, since Jest CLI options replace configuration-level ignore patterns.
+Most groups match name prefixes such as `^Monorepo App Bundling /`; the `monorepo` group also selects pnpm, Yarn, symlink, and generated pnpm scenarios. Accounts is selected by `accounts.test.js` path and excluded from the modern groups. Preserve the `apps/` discovery exclusion when changing path filters, since Jest CLI options replace configuration-level ignore patterns.
+
+Regression CI jobs are split into `build_regressions` for build/dependency checks and `dev_lifecycle` for development lifecycle checks. The local `npm run test:e2e:group -- regressions` command runs their union without adding another CI job; `server_runtime` remains separate. Assign new regression suites to the appropriate named group in `test-groups.js`. Unmatched suites run in `uncategorized` with an audit warning and are excluded from the local `regressions` aggregate.
 
 Use an existing named group when it fits. Add a group for a useful workload split, not for each test file. Grouping balances setup cost against long jobs; the current definitions combine several related framework/app/skeleton suites to reduce repeated CI setup. Do not duplicate these patterns in workflow YAML.
 
