@@ -4,7 +4,7 @@ import { Accounts } from 'meteor/accounts-base';
 import { Mongo } from 'meteor/mongo';
 import { Random } from 'meteor/random';
 import { Offline } from 'meteor/offline';
-import { Items } from './offline_tests_common.js';
+import { Items, Amount } from './offline_tests_common.js';
 import * as db from './db.js';
 import { hydrate, mirror } from './mirror.js';
 import { replay } from './queue.js';
@@ -301,6 +301,36 @@ Tinytest.addAsync('offline - ObjectID ids survive the copy and the recorded call
     const [record] = await Offline.pending();
     test.instanceOf(record.args[0]._id, Mongo.ObjectID);
     test.isTrue(record.args[0]._id.equals(_id));
+    Meteor.reconnect();
+    await call;
+    await until(async () => (await Offline.pending()).length === 0, 'the record to be cleared');
+  } finally {
+    Meteor.reconnect();
+  }
+});
+
+Tinytest.addAsync('offline - a custom EJSON type survives the copy and the recorded calls', async function (test) {
+  await started();
+  const Local = new Mongo.Collection(`offline_test_amount_${Random.id()}`, { connection: null });
+  const handle = mirror(Local);
+  const rows = async () => (await db.all('documents')).filter((row) => row.collection === Local._name);
+  try {
+    Local.insert({ _id: 'a', amount: new Amount(1250) });
+    await until(async () => (await rows()).length === 1, 'the document to be mirrored');
+  } finally {
+    handle.stop();
+  }
+  Local.remove({});
+  test.equal(await hydrate(Local), 1);
+  test.instanceOf(Local.findOne('a').amount, Amount);
+  test.equal(Local.findOne('a').amount.cents, 1250);
+  Meteor.disconnect();
+  try {
+    const call = Meteor.callAsync('offline_test.setValue', { _id: 'a', value: new Amount(99) });
+    await until(async () => (await Offline.pending()).length === 1, 'the record to be written');
+    const [record] = await Offline.pending();
+    test.instanceOf(record.args[0].value, Amount);
+    test.equal(record.args[0].value.cents, 99);
     Meteor.reconnect();
     await call;
     await until(async () => (await Offline.pending()).length === 0, 'the record to be cleared');
