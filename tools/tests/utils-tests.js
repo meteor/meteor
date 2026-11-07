@@ -1,7 +1,9 @@
 var selftest = require('../tool-testing/selftest.js');
 var utils = require('../utils/utils.js');
 
-import { sha1 } from '../fs/watch';
+import assert from 'node:assert/strict';
+import http from 'node:http';
+import { OfflineError } from '../fs/files';
 import httpHelpers from '../utils/http-helpers';
 
 selftest.define('subset generator', async function () {
@@ -166,59 +168,67 @@ selftest.define("parse url", async function () {
   });
 });
 
-selftest.define("resume downloads", ['net'], async function () {
-  // A reasonably big file that (I think) should take more than 1s to download
-  // and that we know the size of
-  const url = 'https://warehouse.meteor.com/builds/EXSxwGqYjjJKh3WMJ/1467929945102/DRyKg3bYHL/babel-compiler-6.8.4-os+web.browser+web.cordova.tgz';
+async function withDownloadServer(listener, run) {
+  const server = http.createServer(listener);
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  try {
+    await run(`http://127.0.0.1:${server.address().port}/package.tgz`);
+  } finally {
+    server.closeAllConnections();
+    await new Promise(resolve => server.close(resolve));
+  }
+}
 
-  let interruptCount = 0;
-  let bytesSinceLastInterrupt = 0;
+selftest.define("resume downloads", async function () {
+  const payload = Buffer.from('meteor package contents');
+  const ranges = [];
+  let interruptedResponse;
 
-  const resumedPromise = Promise.resolve().then(
-    () => httpHelpers.getUrlWithResuming({
-      url: url,
-      encoding: null,
-      retryDelaySecs: 1,
-      onRequest(request) {
-        request.on("data", chunk => {
-          bytesSinceLastInterrupt += chunk.length
-          if (bytesSinceLastInterrupt > 500000) {
-            bytesSinceLastInterrupt = 0;
-            ++interruptCount;
-            request.emit('error', 'pretend-http-error');
-            request.emit('end');
-            request.abort();
-          }
-        });
-      }
-    })
-  );
-
-  const normalPromise = Promise.resolve().then(
-    () => httpHelpers.getUrl({
+  await withDownloadServer((request, response) => {
+    const range = request.headers.range;
+    ranges.push(range);
+    const start = range ? Number(/^bytes=(\d+)-$/.exec(range)[1]) : 0;
+    response.writeHead(start ? 206 : 200, {
+      'Content-Length': payload.length - start,
+      ...(start ? { 'Content-Range': `bytes ${start}-${payload.length - 1}/${payload.length}` } : {}),
+    });
+    if (ranges.length <= 2) {
+      interruptedResponse = response;
+      response.write(payload.subarray(start, start + 6));
+    } else {
+      response.end(payload.subarray(start));
+    }
+  }, async url => {
+    const body = await httpHelpers.getUrlWithResuming({
       url,
       encoding: null,
-    })
-  );
+      retryDelaySecs: 0,
+      // Progress must allow resuming even when the no-progress budget is zero.
+      maxAttempts: 0,
+      onRequest(request) {
+        request.once('data', () => {
+          // Wait until the client receives the partial body before dropping TCP.
+          interruptedResponse?.destroy();
+          interruptedResponse = null;
+        });
+      },
+    });
+    assert.deepEqual(body, payload);
+    assert.deepEqual(ranges, [undefined, 'bytes=6-', 'bytes=12-']);
+  });
+});
 
-  try {
-    await Promise.all([
-      resumedPromise,
-      normalPromise,
-    ]).then(async bodies => {
-      selftest.expectTrue(interruptCount > 1);
-
-      await selftest.expectEqual(
-        bodies[0].length,
-        bodies[1].length
-      );
-
-      await selftest.expectEqual(
-        sha1(bodies[0]),
-        sha1(bodies[1])
-      );
-    })
-  } catch (e) {
-    // it trows a string pretend-http-error
-  }
+selftest.define("resume downloads - exhausted retries", async function () {
+  let requests = 0;
+  await withDownloadServer((request, response) => {
+    requests++;
+    response.destroy();
+  }, async url => {
+    await assert.rejects(httpHelpers.getUrlWithResuming({
+      url,
+      retryDelaySecs: 0,
+      maxAttempts: 2,
+    }), error => error instanceof OfflineError && error.error.code === 'ECONNRESET');
+    assert.equal(requests, 3, 'the initial request and two retries must run');
+  });
 });
