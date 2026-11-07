@@ -1331,9 +1331,16 @@ Set the fields of the object by assigning to them:
   want e-mails to send correctly, this should be changed to your own domain
   as most e-mail providers will reject mail sent from `example.com`.** Starting in Meteor 3.5, failing to configure a valid custom `from` address will result in a prominent server console warning to help prevent silent email failures in production.
 - `siteName`: The public name of your application. Defaults to the DNS name of
-  the application (eg: `awesome.meteor.com`).
+  the application (eg: `awesome.meteor.com`). Shown at the top of the default
+  emails and in their footer.
+- `logoUrl`: An optional `String` with the absolute URL of an image shown at the
+  top of the default emails instead of `siteName`.
+- `accentColor`: A `String` with the CSS color of the button in the default
+  emails. Defaults to `#de4f4f`.
 - `headers`: An `Object` for custom email headers as described in
   [`Email.send`](./email.md#Email-send).
+- `layout`: A `Function` that renders the frame of the default emails around
+  your own content, see [Reusing the default layout](#reusing-the-default-email-layout).
 - `resetPassword`: An `Object` with the fields:
 - `from`: A `Function` used to override the `from` address defined
   by the `emailTemplates.from` field.
@@ -1348,6 +1355,14 @@ Set the fields of the object by assigning to them:
   new accounts.
 - `verifyEmail`: Same as `resetPassword`, but for verifying the users email
   address.
+- `sendLoginToken`: Same as `resetPassword`, for the code sent by
+  [`accounts-passwordless`](../packages/accounts-passwordless.md).
+
+The emails ship with both a text and an HTML version. The HTML version greets
+the user by `profile.name` or `username`, shows `siteName` or the logo, a button
+in the accent color, the link in clear, and the lifetime of the link. Setting
+`text` alone turns the HTML version off for that email, so a customized text is
+never sent next to the default HTML; set `html` as well to send both.
 
 Example:
 
@@ -1386,6 +1401,43 @@ Accounts.emailTemplates.verifyEmail = {
   },
 };
 ```
+
+<h3 id="reusing-the-default-email-layout">Reusing the default email layout</h3>
+
+`Accounts.emailTemplates.layout` renders the frame of the default emails, so a
+custom email keeps the site name or logo, the card, the button and the footer:
+
+```js
+import { Accounts } from "meteor/accounts-base";
+
+Accounts.emailTemplates.logoUrl = "https://awesome.example.com/logo.png";
+Accounts.emailTemplates.accentColor = "#2563eb";
+
+Accounts.emailTemplates.resetPassword.html = (user, url) =>
+  Accounts.emailTemplates.layout({
+    user, // greets by profile.name, then username; or pass `greeting`
+    heading: "Choose a new password",
+    intro: "We received a request to reset the password of your account.",
+    buttonLabel: "Choose a password",
+    url, // also printed in clear under the button
+    expiresIn: Accounts._getPasswordResetTokenLifetimeMs(),
+    outro: "If this was not you, ignore this email.",
+  });
+```
+
+Every option is optional and every string is HTML-escaped, except `body`, which
+replaces everything inside the card with your own HTML:
+
+```js
+Accounts.emailTemplates.resetPassword.html = (user, url) =>
+  Accounts.emailTemplates.layout({
+    body: `<p>Hi ${user.username},</p><p><a href="${url}">Reset your password</a></p>`,
+  });
+```
+
+`code` shows a one-time code in a monospace box, and `footer` replaces the
+"Sent by" line. Remember to customize `text` too, it is the version shown by
+mail clients that do not render HTML.
 
 <h3 id="enabling-2fa">Enable 2FA for this package</h3>
 

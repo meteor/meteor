@@ -38,6 +38,7 @@ Package.onTest(function (api) {
     'sha',
   ]);
 
+  api.addFiles('passwordless_email_tests.js', 'server');
   api.addFiles('server_utils.js', 'server');
   api.mainModule('server_tests.js', 'server');
 });

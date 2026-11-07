@@ -6,6 +6,7 @@ import {
   EXPIRE_TOKENS_INTERVAL_MS,
 } from './accounts_common.js';
 import { URL } from 'meteor/url';
+import { DEFAULT_EMAIL_ACCENT_COLOR, renderEmailLayout } from './email_layout.js';
 export const _CurrentEndpointInvocation = new Meteor.EnvironmentVariable();
 
 
@@ -52,6 +53,19 @@ export class AccountsServer extends AccountsCommon {
     };
 
     this._initServerPublications();
+
+    // Branding and frame of the emails sent by the accounts packages; the
+    // packages add their templates and the app overrides any field.
+    this.emailTemplates = {
+      siteName: Meteor.absoluteUrl()
+        .replace(/^https?:\/\//, '')
+        .replace(/\/$/, ''),
+      logoUrl: null,
+      accentColor: DEFAULT_EMAIL_ACCENT_COLOR,
+      layout: options => renderEmailLayout(options, this.emailTemplates),
+    };
+    // reason -> { text, html } as shipped, to tell customized templates apart.
+    this._defaultEmailTemplates = {};
 
     // connectionId -> {connection, loginToken}
     this._accountData = {};
@@ -1524,12 +1538,18 @@ export class AccountsServer extends AccountsCommon {
       subject: await this.emailTemplates[reason].subject(user, url, extra),
     };
 
-    if (typeof this.emailTemplates[reason].text === 'function') {
-      options.text = await this.emailTemplates[reason].text(user, url, extra);
+    const template = this.emailTemplates[reason];
+    if (typeof template.text === 'function') {
+      options.text = await template.text(user, url, extra);
     }
 
-    if (typeof this.emailTemplates[reason].html === 'function') {
-      options.html = await this.emailTemplates[reason].html(user, url, extra);
+    // The shipped html only goes with the shipped text: an app that customized
+    // the text keeps text-only emails until it also customizes the html.
+    const defaults = this._defaultEmailTemplates[reason];
+    const customizedTextOnly =
+      defaults && template.text !== defaults.text && template.html === defaults.html;
+    if (typeof template.html === 'function' && !customizedTextOnly) {
+      options.html = await template.html(user, url, extra);
     }
 
     if (typeof this.emailTemplates.headers === 'object') {

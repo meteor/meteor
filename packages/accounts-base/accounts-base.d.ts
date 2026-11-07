@@ -22,8 +22,8 @@ export interface URLS {
 export interface EmailFields {
   from?: ((user: Meteor.User) => string) | undefined;
   subject?: ((user: Meteor.User) => string) | undefined;
-  text?: ((user: Meteor.User, url: string) => string) | undefined;
-  html?: ((user: Meteor.User, url: string) => string) | undefined;
+  text?: ((user: Meteor.User, url: string, extra?: Record<string, unknown>) => string) | undefined;
+  html?: ((user: Meteor.User, url: string, extra?: Record<string, unknown>) => string) | undefined;
 }
 
 export interface AccountsClientOptions {
@@ -197,13 +197,31 @@ export interface Header {
   [id: string]: string;
 }
 
+export interface EmailLayoutOptions {
+  user?: Meteor.User | undefined;
+  greeting?: string | undefined;
+  heading?: string | undefined;
+  intro?: string | undefined;
+  code?: string | undefined;
+  buttonLabel?: string | undefined;
+  url?: string | undefined;
+  expiresIn?: number | undefined;
+  outro?: string | undefined;
+  footer?: string | undefined;
+  body?: string | undefined;
+}
+
 export interface EmailTemplates {
   from: string;
   siteName: string;
+  logoUrl?: string | null | undefined;
+  accentColor?: string | undefined;
   headers?: Header | undefined;
+  layout(options: EmailLayoutOptions): string;
   resetPassword: EmailFields;
   enrollAccount: EmailFields;
   verifyEmail: EmailFields;
+  sendLoginToken?: EmailFields | undefined;
 }
 
 export namespace Accounts {

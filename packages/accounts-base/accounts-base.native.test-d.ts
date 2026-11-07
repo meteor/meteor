@@ -6,6 +6,7 @@ import {
 import type {
   URLS,
   EmailFields,
+  EmailLayoutOptions,
   AccountsClientOptions,
   Header,
   EmailTemplates,
@@ -51,6 +52,11 @@ expectTypeOf(Accounts.urls).toBeObject();
 expectTypeOf(Accounts.loginServiceConfiguration).not.toBeAny();
 expectTypeOf(Accounts.ui).toBeObject();
 expectTypeOf(Accounts.emailTemplates).toBeObject();
+expectTypeOf(Accounts.emailTemplates.layout).parameter(0).toEqualTypeOf<EmailLayoutOptions>();
+expectTypeOf(Accounts.emailTemplates.layout({ heading: "Hi" })).toBeString();
+expectTypeOf(Accounts.emailTemplates.logoUrl).toEqualTypeOf<string | null | undefined>();
+expectTypeOf(Accounts.emailTemplates.accentColor).toEqualTypeOf<string | undefined>();
+expectTypeOf(Accounts.emailTemplates.sendLoginToken).toEqualTypeOf<EmailFields | undefined>();
 
 // --- Accounts user / session functions ---
 expectTypeOf(Accounts.user).toBeFunction();
