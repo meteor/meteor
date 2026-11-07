@@ -88,6 +88,7 @@ selftest.define("'meteor test' eagerly loads correct files", async () => {
   await run.stop();
   run.forbid('foo.test.js');
   run.forbid('foo.app-test.js');
+  const appVersions = s.read('.meteor/versions');
 
   // `meteor test` should load test files, but not app files or app-test files
   run = s.run('test', '--driver-package', 'tmeasday:acceptance-test-driver');
@@ -96,6 +97,8 @@ selftest.define("'meteor test' eagerly loads correct files", async () => {
   await run.stop();
   run.forbid('index.js');
   run.forbid('foo.app-test.js');
+  // The transient driver must not change the normal app's package solution.
+  await expectEqual(s.read('.meteor/versions'), appVersions);
 
   // `meteor test --full-app` should load both test files and app-test files,
   // but not test files
@@ -110,4 +113,5 @@ selftest.define("'meteor test' eagerly loads correct files", async () => {
   await run.match('index.js');
   await run.stop();
   run.forbid('foo.test.js');
+  await expectEqual(s.read('.meteor/versions'), appVersions);
 });
