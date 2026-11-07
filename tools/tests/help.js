@@ -27,6 +27,7 @@ selftest.define("help", async function () {
     await run.match("create a new Meteor app");
     await run.match("Skeleton options:");
     await run.match(/--list\s/);
+    await run.match(/--typescript-tailwind\s/);
     await run.expectExit(0);
   };
 
