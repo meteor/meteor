@@ -1,3 +1,5 @@
+const isNativeError = require("util").types.isNativeError;
+
 const originalEmitWarning = process.emitWarning;
 
 process.emitWarning = function (message) {
@@ -15,8 +17,13 @@ process.emitWarning = function (message) {
    *
    * This warning was, besides being annoying, breaking our tests.
    */
-  if (message.includes("punycode")) {
+  // Recognize Errors across JavaScript realms before checking their message.
+  const warningText = isNativeError(message) ? message.message : message;
+
+  if (typeof warningText === "string" && warningText.includes("punycode")) {
     return;
   }
-  return originalEmitWarning(message);
+
+  // Preserve the original receiver and all arguments.
+  return originalEmitWarning.apply(this, arguments);
 };
