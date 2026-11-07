@@ -1,11 +1,27 @@
 import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
+import { EJSON } from 'meteor/ejson';
 
 // Shared by the client tests and the test server: an isomorphic, idempotent
 // Method (client-generated id, insert-if-absent) and a Method the server
 // rejects. The server counts executions so the tests can check "once".
 export const Items = new Mongo.Collection('offline_test_items');
 const executions = new Map();
+
+// A custom EJSON type registered by the app, as mongo-decimal's Decimal is: the
+// copy and the recorded calls must give it back as an instance.
+export class Amount {
+  constructor(cents) {
+    this.cents = cents;
+  }
+  typeName() {
+    return 'offline_test.Amount';
+  }
+  toJSONValue() {
+    return { cents: this.cents };
+  }
+}
+EJSON.addType('offline_test.Amount', ({ cents }) => new Amount(cents));
 const order = [];
 
 Meteor.methods({

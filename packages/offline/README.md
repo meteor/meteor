@@ -19,6 +19,10 @@ copy in one batch, exactly as a reconnection does. The server stays the source
 of truth: nothing is fetched beyond what your publications already send, and
 there is no sync query.
 
+The copy and the recorded calls are stored as EJSON: dates, binaries,
+`ObjectID`s and the types the app registers with `EJSON.addType` come back as
+they were. Register such a type before `Offline.start`, which loads the copy.
+
 The copy follows the subscriptions of the session. On the first data from the
 server, the documents the current subscriptions do not publish leave Minimongo
 and the copy, as on any reconnection: to keep a set of documents on the device,
@@ -53,6 +57,14 @@ the user is ever kept.
 Listed Methods must be idempotent. Meteor re-sends a call that was sent but
 never answered, and so does this package after a reload: generate the `_id` on
 the client and insert only if absent, prefer `$set` to `$inc`.
+
+```js
+Meteor.methods({
+  async 'links.insert'({ _id, title, url }) {
+    await Links.upsertAsync({ _id }, { $setOnInsert: { title, url, createdAt: new Date() } });
+  },
+});
+```
 
 Limits of this version: documents only, not files; one tab replays the
 recorded calls, two tabs of the same app replay them twice; `wait` and the
