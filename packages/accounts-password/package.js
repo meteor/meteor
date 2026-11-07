@@ -49,6 +49,7 @@ Package.onTest((api) => {
   api.addFiles("password_tests_setup.js", "server");
   api.addFiles("password_tests.js", ["client", "server"]);
   api.addFiles("email_tests_setup.js", "server");
+  api.addFiles("email_templates_tests.js", "server");
   api.addFiles("email_tests.js", "client");
   api.addFiles("password_argon_tests.js", ["client", "server"]);
 });

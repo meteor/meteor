@@ -53,7 +53,7 @@ You can use the function `Accounts.config` in the server to change some settings
 
 <h3 id="passwordless-email-templates">E-mail templates</h3>
 
-`accounts-passwordless` brings new templates that you can edit to change the look of emails which send code to users. The email template is named `sendLoginToken` and beside `user` and `url`, the templates also receive a data object with `sequence` which is the user's code.
+`accounts-passwordless` brings new templates that you can edit to change the look of emails which send code to users. The email template is named `sendLoginToken` and beside `user` and `url`, the templates also receive a data object with `sequence` which is the user's code. The default HTML version uses [`Accounts.emailTemplates.layout`](../api/accounts.md#reusing-the-default-email-layout), with the code in a box and a button that logs the user in.
 
 ```javascript
 sendLoginToken: {
