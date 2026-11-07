@@ -12,6 +12,27 @@ import { pluginVersionsFromStarManifest } from '../cordova/index.js';
 import { closeAllWatchers } from "../fs/safe-watcher";
 import { loadIsopackage } from '../tool-env/isopackets.js';
 import { eachline } from "../utils/eachline";
+import { getMeteorConfig } from '../tool-env/meteor-config';
+
+// Deep-merges `source` into `target`, returning `target`.
+// Plain objects are merged recursively; all other values (including arrays)
+// in `source` replace the corresponding value in `target`.
+var deepMerge = function (target, source) {
+  if (
+    source !== null &&
+    typeof source === 'object' &&
+    !Array.isArray(source) &&
+    target !== null &&
+    typeof target === 'object' &&
+    !Array.isArray(target)
+  ) {
+    Object.keys(source).forEach(function (key) {
+      target[key] = deepMerge(target[key], source[key]);
+    });
+    return target;
+  }
+  return source;
+};
 
 // Minimal shell-like splitter for SERVER_NODE_OPTIONS.
 // Handles single/double quotes and backslash escapes so that values like
@@ -276,9 +297,12 @@ Object.assign(AppProcess.prototype, {
       // Warn the developer that we are not going to use their environment var.
       runLog.log(
         "WARNING: The 'METEOR_SETTINGS' environment variable is set " +
-        "while running in development. This means that settings are not reactive. " +
-        "Use the '--settings settings.json' option to see reactive changes " +
-        "when settings are changed.  For more information, see the " +
+        "while running in development. This replaces all settings and is not reactive. " +
+        "Use the '--settings settings.json' option or 'meteor.settings' in package.json " +
+        "to see reactive changes when settings are changed. " +
+        "To override individual settings use 'METEOR_SETTINGS_<PATH>' environment " +
+        "variables (e.g. METEOR_SETTINGS_PUBLIC_THEME=dark). " +
+        "For more information, see the " +
         "documentation for 'Meteor.settings': " +
         "https://docs.meteor.com/api/core.html#Meteor-settings" +
         "\n");
@@ -750,9 +774,25 @@ Object.assign(AppRunner.prototype, {
       title: "preparing to run",
       rootPath: process.cwd()
     }, async function () {
+      // Build merged settings with the following precedence (lowest → highest):
+      //   1. meteor.settings in package.json  (default / base)
+      //   2. --settings file                  (overrides package.json)
+      //   3. METEOR_SETTINGS_* env vars        (handled at runtime in server_environment.js)
+      const packageJsonSettings = getMeteorConfig()?.settings;
+      const merged = deepMerge({}, packageJsonSettings || {});
+
       if (self.settingsFile) {
-        settings = files.getSettings(self.settingsFile, settingsWatchSet);
+        const fileSettingsStr = files.getSettings(self.settingsFile, settingsWatchSet);
+        if (fileSettingsStr) {
+          try {
+            deepMerge(merged, JSON.parse(fileSettingsStr));
+          } catch (e) {
+            // parse errors are already reported by files.getSettings
+          }
+        }
       }
+
+      settings = JSON.stringify(merged);
     });
     if (settingsMessages.hasMessages()) {
       return {

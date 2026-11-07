@@ -84,7 +84,7 @@ testAsyncMulti('stream - basic disconnect', [
         ) {
           onTestComplete();
         } else if (
-          _.isEqual(history, [
+          isEqual(history, [
             'connecting',
             'connected',
             'offline',
