@@ -89,6 +89,28 @@ describe('node-process-warnings', () => {
     expect(spy.mock.calls[0][0]).toBe(warning);
   });
 
+  it('forwards an Error with a throwing message getter by identity', () => {
+    const warning = new Error('original message');
+
+    Object.defineProperty(warning, 'message', {
+      configurable: true,
+      get() {
+        throw new Error('Cannot read warning message');
+      },
+    });
+
+    // Reading the message getter throws, so the wrapper must not crash.
+    expect(() => {
+      process.emitWarning(warning);
+    }).not.toThrow();
+
+    // The original warning is delegated to Node unchanged. Use identity checks
+    // only: `toHaveBeenCalledWith` performs deep comparison which would itself
+    // access the throwing `message` getter.
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy.mock.calls[0][0]).toBe(warning);
+  });
+
   it('preserves legacy warning arguments (type and code)', () => {
     process.emitWarning('old api', 'DeprecationWarning', 'DEP0999');
 
