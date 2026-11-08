@@ -34,6 +34,7 @@ PUPPETEER_LOCK_HEARTBEAT_PID=""
 cleanup_puppeteer_lock() {
   if [ "$PUPPETEER_LOCK_ACQUIRED" = true ]; then
     if [ -n "$PUPPETEER_LOCK_HEARTBEAT_PID" ]; then
+      pkill -TERM -P "$PUPPETEER_LOCK_HEARTBEAT_PID" 2>/dev/null || true
       kill "$PUPPETEER_LOCK_HEARTBEAT_PID" 2>/dev/null || true
       wait "$PUPPETEER_LOCK_HEARTBEAT_PID" 2>/dev/null || true
     fi
@@ -114,11 +115,10 @@ trap - EXIT INT TERM
 
 export PATH=$METEOR_HOME:$PATH
 
-# Pick a free ephemeral port so concurrent matrix jobs sharing a self-hosted
-# runner cannot collide on a fixed port. Override with TEST_PORT for local
-# debugging. Falls back to 4096 if the node helper is unavailable.
+# Check both the HTTP port and its adjacent Mongo port on shared runners.
+# Override with TEST_PORT for local debugging.
 if [ -z "${TEST_PORT:-}" ]; then
-  TEST_PORT=$(./dev_bundle/bin/node -e 'const s=require("net").createServer();s.listen(0,"127.0.0.1",()=>{const p=s.address().port;s.close(()=>console.log(p))})' 2>/dev/null) || TEST_PORT=4096
+  TEST_PORT=$(./dev_bundle/bin/node packages/test-in-console/find-port.js)
 fi
 export URL="http://127.0.0.1:${TEST_PORT}/"
 export METEOR_PACKAGE_DIRS='packages/deprecated'
@@ -130,14 +130,25 @@ else
   exec 3< <(./meteor test-packages --driver-package test-in-console -p "${TEST_PORT}" --exclude "${TEST_PACKAGES_EXCLUDE:-}")
 fi
 EXEC_PID=$!
+OUTPUT_PID=""
 
 cleanup() {
-  pkill -TERM -P $EXEC_PID 2>/dev/null || true
+  pkill -TERM -P "$EXEC_PID" 2>/dev/null || true
+  kill -TERM "$EXEC_PID" 2>/dev/null || true
+  wait "$EXEC_PID" 2>/dev/null || true
+  if [ -n "$OUTPUT_PID" ]; then
+    wait "$OUTPUT_PID" 2>/dev/null || true
+  fi
 }
 trap cleanup EXIT
-trap "cleanup; exit 1" SIGINT SIGTERM
+trap 'exit 1' SIGINT SIGTERM
 
 sed '/test-in-console listening$/q' <&3
+
+# Keep consuming output after readiness, including while Meteor shuts down.
+# Otherwise its stdout pipe can fill or close beneath the launcher.
+cat <&3 &
+OUTPUT_PID=$!
 
 # If meteor exited before emitting the readiness marker (e.g. failed to bind
 # the port), bail out — otherwise the curl loop below would happily latch onto

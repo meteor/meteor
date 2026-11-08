@@ -388,6 +388,10 @@ If you run `meteor create` without arguments, Meteor will launch an interactive 
  | `--babel`        | React with Babel support | - |
 | `--angular`      | Angular + Typescript    | - |
 
+The TypeScript, TypeScript + Tailwind, Svelte, and Angular templates use
+[native Meteor package declarations](/cli/using-core-types) by default.
+`meteor create` generates `.meteor/types/` so editor types are ready immediately.
+
 ### Project Structure Options
 
 | Option | Description |
@@ -411,7 +415,7 @@ against the nested `apps/app` project. The root `start` and `test` scripts route
 to that application; `meteor npm` is only used above to invoke the root script.
 
 ::: warning Prototype Mode
-The `--prototype` option adds packages that make development faster but shouldn't be used in production. See the [security checklist](/tutorials/security/security#checklist).
+The `--prototype` option adds packages that make development faster but shouldn't be used in production. See the [security checklist](/tutorials/security/security#security-checklist).
 :::
 
 ### Included Packages
@@ -925,7 +929,7 @@ meteor deploy your-app.meteorapp.com
 
 ### Deploy Region
 
-`meteor deploy` finds the app's region by requesting `https://<site>/.well-known/meteor/deploy-url`, or the same address over HTTP when the site has no certificate yet. It only accepts a deploy server on Galaxy's deploy domain, `galaxy-deploy.meteor.com` (for example `eu-west-1.galaxy-deploy.meteor.com`). If the lookup gets no answer, the `us-east-1` region is used.
+`meteor deploy` finds the app's region by requesting `https://<site>/.well-known/meteor/deploy-url`, or the same address over HTTP when the site has no certificate yet. It only accepts an HTTPS deploy server on Galaxy's deploy domain, `galaxy-deploy.meteor.com` (for example `eu-west-1.galaxy-deploy.meteor.com`). If the lookup gets no answer, the `us-east-1` region is used. If discovery instead returns an untrusted deployment URL, Meteor stops rather than sending your credentials there.
 
 To choose a region yourself, or to use any other deploy server, set `DEPLOY_HOSTNAME`:
 

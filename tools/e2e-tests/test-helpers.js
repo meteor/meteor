@@ -34,13 +34,14 @@ import {
   assertPathNotExist,
   assertRspackScriptTag
 } from "./assertions";
+import { withConsoleCapture } from "./console-capture";
 import fs from "fs-extra";
 import path from "path";
 import execa from "execa";
 import waitOn from "wait-on";
 
 const isCI = process.env.GITHUB_ACTIONS === "true";
-// Link local npm-packages/meteor-rspack so tests run against the latest dev version.
+// Install packed local npm-packages/meteor-rspack to test the latest dev version.
 // Set NPM_LINK_RSPACK=false to disable.
 const npmLinkLocalRspack = process.env.NPM_LINK_RSPACK !== 'false';
 if (!npmLinkLocalRspack) {
@@ -62,8 +63,9 @@ const SETUP_HOOK_TIMEOUT_MS = isCI ? 600_000 : 300_000;
 const { linkLocalRspack: _linkLocalRspack } = require('./scripts/link-rspack');
 
 export async function linkLocalRspack(appDir, options = {}) {
-  if (!npmLinkLocalRspack) return;
-  await _linkLocalRspack(appDir, options);
+  const { forceLocal = false, ...installOptions } = options;
+  if (!npmLinkLocalRspack && !forceLocal) return;
+  await _linkLocalRspack(appDir, installOptions);
 }
 
 export async function setupMeteorRspackApp({
@@ -121,7 +123,7 @@ export function testMeteorBundler(options) {
         throw new Error(`setupMeteorApp("${appName}") did not return an app directory`);
       }
 
-      // Link local meteor-rspack so the app picks up the latest dev version
+      // Install packed local meteor-rspack so the app picks up the latest dev version
       await linkLocalRspack(tempDir);
     }, SETUP_HOOK_TIMEOUT_MS);
 
@@ -348,8 +350,17 @@ export function testMeteorRspackBundler(options) {
         checkExitCode: true,
       });
 
-      // Link local meteor-rspack so the app picks up the latest dev version
+      // Install packed local meteor-rspack so the app picks up the latest dev version
       await linkLocalRspack(appDir, { packageManager });
+
+      // Manual-install fixtures still need their build dependencies when the
+      // release lane uses the published package instead of our local tarball.
+      const packageJson = await fs.readJson(path.join(appDir, 'package.json'));
+      if (!npmLinkLocalRspack && packageJson.meteor?.autoInstallDeps === false) {
+        await runMeteorCommand('update', ['--npm'], appDir, {
+          checkExitCode: true,
+        });
+      }
 
       // Set meteor.modern.verbose to true
       if (verbose) {
@@ -519,21 +530,25 @@ export function testMeteorRspackBundler(options) {
 
       // Update the client code
       if (!skipClient) {
-        await appendFileContent(tempDir, filePaths.client, {
-          content: customUpdates.devClient(customMessages.devClient),
-        });
-        const consoleLogs = await waitForPlaywrightConsole(customMessages.devClient, { returnAllLogs: true });
-
-        // Run custom assertions if provided
-        if (customAssertions && customAssertions.afterRunRebuildClient) {
-          await customAssertions.afterRunRebuildClient({
-            tempDir,
-            port,
-            meteorProcess,
-            result,
-            allConsoleLogs: consoleLogs.allLogs
+        await withConsoleCapture(page, async allConsoleLogs => {
+          await appendFileContent(tempDir, filePaths.client, {
+            content: customUpdates.devClient(customMessages.devClient),
           });
-        }
+          await waitForMeteorOutput(allConsoleLogs, customMessages.devClient, {
+            timeout: process.env.CI ? 90000 : 30000,
+          });
+
+          // Run custom assertions if provided
+          if (customAssertions && customAssertions.afterRunRebuildClient) {
+            await customAssertions.afterRunRebuildClient({
+              tempDir,
+              port,
+              meteorProcess,
+              result,
+              allConsoleLogs
+            });
+          }
+        });
       }
 
       // Update the server code
@@ -631,21 +646,25 @@ export function testMeteorRspackBundler(options) {
 
       // Update the client code
       if (!skipClient) {
-        await appendFileContent(tempDir, filePaths.client, {
-          content: customUpdates.prodClient(customMessages.prodClient),
-        });
-        const consoleLogs = await waitForPlaywrightConsole(customMessages.prodClient, { returnAllLogs: true });
-
-        // Run custom assertions if provided
-        if (customAssertions && customAssertions.afterRunProductionRebuildClient) {
-          await customAssertions.afterRunProductionRebuildClient({
-            tempDir,
-            port,
-            meteorProcess,
-            result,
-            allConsoleLogs: consoleLogs.allLogs
+        await withConsoleCapture(page, async allConsoleLogs => {
+          await appendFileContent(tempDir, filePaths.client, {
+            content: customUpdates.prodClient(customMessages.prodClient),
           });
-        }
+          await waitForMeteorOutput(allConsoleLogs, customMessages.prodClient, {
+            timeout: process.env.CI ? 90000 : 30000,
+          });
+
+          // Run custom assertions if provided
+          if (customAssertions && customAssertions.afterRunProductionRebuildClient) {
+            await customAssertions.afterRunProductionRebuildClient({
+              tempDir,
+              port,
+              meteorProcess,
+              result,
+              allConsoleLogs
+            });
+          }
+        });
       }
 
       // Update the server code
@@ -1120,6 +1139,7 @@ export function testMeteorRspackBundler(options) {
  * @param {boolean} options.checkAppTitle - Whether to check the Meteor app title (default: true)
  * @param {Object} options.bodyStyles - Expected CSS styles for the body
  * @param {boolean} options.skipTestClient - Whether to skip client-side tests (default: false)
+ * @param {boolean} options.forceLocalRspack - Test an unpublished Rspack regression with the packed candidate, including on release branches
  * @param {string[]} options.checkBundleFilePaths - Array of file paths to check for existence in the bundle
  * @param {Function} options.beforeAllBehavior - Additional behavior to run in beforeAll
  * @param {Function} options.afterAllBehavior - Additional behavior to run in afterAll
@@ -1132,6 +1152,7 @@ export function testMeteorSkeleton(options) {
     port,
     meteorAppPath = ".",
     packageManager = "npm",
+    forceLocalRspack = false,
     // Rspack dev server port. Defaults to 18080 to avoid colliding with dev servers
     // that some skeletons bundle on :8080 (e.g. Angular CLI's webpack-dev-server).
     devServerPort = 18080,
@@ -1270,8 +1291,8 @@ export function testMeteorSkeleton(options) {
       const packageJsonExists = await fs.pathExists(packageJsonPath);
       expect(packageJsonExists).toBe(true);
 
-      // Link local meteor-rspack so the app picks up the latest dev version
-      await linkLocalRspack(appDir, { packageManager });
+      // Install packed local meteor-rspack so the app picks up the latest dev version
+      await linkLocalRspack(appDir, { packageManager, forceLocal: forceLocalRspack });
 
       // Run custom assertions if provided
       if (customAssertions.afterCreate) {
@@ -1377,7 +1398,7 @@ export function testMeteorSkeleton(options) {
           stdio: "inherit"
         });
       }
-      await linkLocalRspack(appDir, { packageManager });
+      await linkLocalRspack(appDir, { packageManager, forceLocal: forceLocalRspack });
 
       // Run tests once for the app
       const result = await runMeteorTests(appDir, port, {

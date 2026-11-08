@@ -2,6 +2,52 @@ var selftest = require('../tool-testing/selftest.js');
 var files = require('../fs/files');
 var Sandbox = selftest.Sandbox;
 
+for (const skeleton of ["typescript-tailwind", "svelte", "angular"]) {
+  selftest.define(`${skeleton} template generates native declarations`, async function () {
+    const s = new Sandbox();
+    await s.init();
+
+    let run = s.run("create", `--${skeleton}`, "typed-app");
+    run.waitSecs(60);
+    await run.match("Created a new Meteor app in 'typed-app'.");
+    await run.expectExit(0);
+
+    s.cd("typed-app");
+    selftest.expectTrue(s.read(".meteor/types/packages.d.ts") !== null);
+    selftest.expectTrue(s.read(".meteor/types/packages/mongo/index.d.ts") !== null);
+    selftest.expectTrue(s.read(".meteor/local/types/packages.d.ts") === null);
+
+    if (skeleton === "svelte") {
+      run = s.run("node", "node_modules/svelte-check/bin/svelte-check",
+        "--tsconfig", "tsconfig.json");
+    } else {
+      const config = skeleton === "angular" ? "tsconfig.app.json" : "tsconfig.json";
+      run = s.run("node", "node_modules/typescript/bin/tsc",
+        "--noEmit", "--project", config);
+    }
+    run.waitSecs(60);
+    await run.expectExit(0);
+  });
+}
+
+selftest.define("typed template creation reports declaration failures", async function () {
+  const s = new Sandbox();
+  await s.init();
+  s.mkdir("blocked-app");
+  s.mkdir("blocked-app/.meteor");
+  s.write("blocked-app/.meteor/types", "filesystem obstruction\n");
+
+  const run = s.run("create", "--typescript", "blocked-app");
+  run.waitSecs(60);
+  await run.matchErr("=> Errors while creating your project");
+  await run.matchErr("Could not generate package type declarations.");
+  await run.expectExit(1);
+  run.forbidAll("Created a new Meteor app");
+  selftest.expectTrue(
+    s.read("blocked-app/.meteor/types") === "filesystem obstruction\n"
+  );
+});
+
 selftest.define("typescript template works", async function () {
   const s = new Sandbox();
   await s.init();
@@ -11,11 +57,16 @@ selftest.define("typescript template works", async function () {
   run.waitSecs(60);
   await run.match("Created a new Meteor app in 'typescript'.");
   await run.match("To run your new app");
+  await run.expectExit(0);
 
   s.cd("typescript");
 
   const appPackage = JSON.parse(s.read("package.json"));
   selftest.expectTrue(!!appPackage.devDependencies.typescript);
+  selftest.expectTrue(!appPackage.devDependencies["@types/meteor"]);
+  selftest.expectTrue(!/^zodern:types(?:@|\s|$)/m.test(s.read(".meteor/packages")));
+  selftest.expectTrue(s.read(".meteor/types/packages.d.ts") !== null);
+  selftest.expectTrue(s.read(".meteor/local/types/packages.d.ts") === null);
 
   run = s.run("npm", "install", "--include=dev");
   await run.expectExit(0);
@@ -26,63 +77,28 @@ selftest.define("typescript template works", async function () {
     JSON.parse(installedTypeScript).name === "typescript"
   );
 
-  run = s.run("types");
-  run.waitSecs(60);
-  await run.match("Skipped type generation because zodern:types is installed.");
-  await run.expectExit(0);
-
-  // zodern:types is implemented as a linter, so linting materializes its
-  // .meteor/local/types output before the standalone TypeScript check.
-  run = s.run("lint");
-  run.waitSecs(120);
-  await run.expectExit(0);
-
-  const zodernBarrel = s.read(".meteor/local/types/packages.d.ts");
-  selftest.expectTrue(zodernBarrel !== null);
-  selftest.expectTrue(zodernBarrel.includes("random.d"));
-  selftest.expectTrue(!zodernBarrel.includes("random.native"));
-
+  // Check the app with the generated declarations and the unmodified template
+  // configuration before exercising native-only APIs and sub-path imports.
   run = s.run("node", "node_modules/typescript/bin/tsc");
   run.waitSecs(60);
   await run.expectEnd();
   await run.expectExit(0);
 
-  // Removing zodern does not change the template's external-first precedence.
-  // The project explicitly selects native declarations in a derived config.
-  run = s.run("remove", "zodern:types");
-  run.waitSecs(60);
-  await run.expectExit(0);
-
-  run = s.run("types");
-  run.waitSecs(60);
-  await run.match("Generated package type declarations.");
-  await run.expectExit(0);
-  selftest.expectTrue(s.read(".meteor/local/types/packages.d.ts") === null);
   selftest.expectTrue(
     s.read(".meteor/types/packages/random/declarations/index.d.ts")
       .includes("createWithSeeds")
   );
 
-  s.write("tsconfig.native.json", JSON.stringify({
-    extends: "./tsconfig.json",
-    files: ["./.meteor/types/packages.d.ts"],
-    include: ["**/*.ts", "**/*.tsx"],
-    compilerOptions: {
-      paths: {
-        "/*": ["./*"],
-        "meteor/*": ["./.meteor/types/packages/*"],
-      },
-    },
-  }));
-
   s.write("native-types-resolution.ts", `
     import { Random } from "meteor/random";
-    import { Template } from "meteor/templating";
+    import { ReactiveVar } from "meteor/reactive-var";
     import { useTracker } from "meteor/react-meteor-data/suspense";
 
     Random.id();
     Random.createWithSeeds("native-only").id();
-    Template.body.helpers({ value: () => 1 });
+    new ReactiveVar(1).get().toFixed();
+    // @ts-expect-error The generated reactive value is a number, not any.
+    new ReactiveVar(1).get().toUpperCase();
     useTracker("native-types-resolution", async () => 42);
   `);
 
@@ -149,7 +165,7 @@ selftest.define("typescript template works", async function () {
     "node",
     "node_modules/typescript/bin/tsc",
     "--project",
-    "tsconfig.native.json"
+    "tsconfig.json"
   );
   run.waitSecs(60);
   await run.expectEnd();
@@ -191,13 +207,16 @@ selftest.define("ordinary builds do not generate native declarations", async fun
   await run.expectExit(0);
 
   s.cd("types-opt-in");
-  run = s.run("remove", "zodern:types");
-  run.waitSecs(60);
-  await run.expectExit(0);
+  // Creation opts in; a later ordinary build must not regenerate deleted types.
+  await files.rm_recursive(files.pathJoin(s.cwd, ".meteor", "types"));
 
+  // Exercise the colored diagnostics emitted by Rspack in CI.
+  s.set("FORCE_COLOR", "1");
   run = s.run("build", "--directory", "../types-opt-in-build");
   run.waitSecs(180);
-  await run.expectExit(0);
+  // Rspack can insert ANSI color codes between the diagnostic code and message.
+  await run.match(/TS6053:[^\n]*packages\.d\.ts[^\n]*not found/);
+  await run.expectExit(1);
   selftest.expectTrue(s.read(".meteor/types/packages.d.ts") === null);
 });
 
@@ -211,10 +230,6 @@ selftest.define("core package declarations are not client assets", async functio
   await run.expectExit(0);
 
   s.cd("typed-assets");
-  run = s.run("remove", "zodern:types");
-  run.waitSecs(60);
-  await run.expectExit(0);
-
   run = s.run("add", "facts-ui", "jquery");
   run.waitSecs(60);
   await run.expectExit(0);
@@ -326,10 +341,6 @@ selftest.define("transitive zodern:types keeps native declarations", async funct
   await run.expectExit(0);
 
   s.cd("zodern-transitive");
-  run = s.run("remove", "zodern:types");
-  run.waitSecs(60);
-  await run.expectExit(0);
-
   s.mkdir("packages");
   s.mkdir("packages/zodern-types");
   s.write("packages/zodern-types/package.js", `
@@ -375,16 +386,15 @@ selftest.define("type generation failure follows command strictness", async func
   const s = new Sandbox();
   await s.init();
 
-  let run = s.run("create", "--typescript", "types-failure");
+  // Keep this case independent of a skeleton's optional type-checking plugin:
+  // the ordinary bundler can succeed even when the explicit generator fails.
+  let run = s.run("create", "--minimal", "types-failure");
   run.waitSecs(60);
   await run.match("Created a new Meteor app in 'types-failure'.");
   await run.expectExit(0);
 
   s.cd("types-failure");
-  run = s.run("remove", "zodern:types");
-  run.waitSecs(60);
-  await run.expectExit(0);
-
+  s.write("tsconfig.json", JSON.stringify({ compilerOptions: { noEmit: true } }));
   await files.rm_recursive(files.pathJoin(s.cwd, ".meteor", "types"));
   s.write(".meteor/types", "filesystem obstruction\n");
 
