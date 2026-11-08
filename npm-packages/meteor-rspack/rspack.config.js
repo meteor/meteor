@@ -38,6 +38,8 @@ const { extractLocalDependencies } = require('./lib/localDependenciesHelpers.js'
 const { createNativeAddonExternals } = require('./lib/nativeAddonExternals.js');
 
 const { createTestClientNodePolyfillConfig } = require("./lib/testClientNodePolyfills.js");
+const { createOutputTracker } = require('./lib/compilationOutput.js');
+const { keepOutsideContexts } = require('./lib/clean.js');
 
 // Safe require that doesn't throw if the module isn't found
 function safeRequire(moduleName) {
@@ -142,7 +144,7 @@ function createSwcConfig({
         ...(isJsxEnabled && { jsx: true }),
         ...(isAngularEnabled && { decorators: true }),
       },
-      target: isLegacy ? 'es5' : isClient ? 'es2015' : 'es2022',
+      target: isLegacy ? 'es5' : isClient ? 'es2015' : 'es2024',
       ...(isReactEnabled && {
         transform: {
           react: {
@@ -221,16 +223,6 @@ function createRemoteDevServerConfig() {
 
   // If local doesn't provide any extra config
   return {};
-}
-
-// Keep files outside of build folders
-function keepOutsideBuild() {
-  return (p) => {
-    const normalized = '/' + path.normalize(p).replaceAll(path.sep, '/').replace(/^\/+/, '');
-    const isInBuildRoot = /\/build(\/|$)/.test(normalized);
-    const isInBuildStar = /\/build-[^/]+(\/|$)/.test(normalized);
-    return !(isInBuildRoot || isInBuildStar);
-  };
 }
 
 /**
@@ -661,7 +653,9 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       cssChunkFilename: `${clientChunkPrefix}[id]${
         isProd ? ".[contenthash]" : ""
       }.css`,
-      ...(isProd && { clean: clientOutputContext ? true : { keep: keepOutsideBuild() } }),
+      ...(isProd && { clean: clientOutputContext ? true : {
+        keep: keepOutsideContexts(clientOutputDir, [assetsContext, chunksContext]),
+      } }),
     },
     optimization: {
       usedExports: true,
@@ -784,7 +778,9 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       library: { type: "commonjs2" },
       chunkFilename: `${chunksContext}/[id]${isProd ? ".[chunkhash]" : ""}.js`,
       assetModuleFilename,
-      ...(isProd && { clean: { keep: keepOutsideBuild() } }),
+      ...(isProd && { clean: {
+        keep: keepOutsideContexts(serverOutputDir, [assetsContext, chunksContext]),
+      } }),
     },
     optimization: {
       usedExports: true,
@@ -998,6 +994,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   }
 
   // Add MeteorRspackOutputPlugin as the last plugin to output compilation info
+  const trackServerOutput = createOutputTracker();
   const meteorRspackOutputPlugin = new MeteorRspackOutputPlugin({
     getData: (stats, { isRebuild, compilationCount, compiler }) => {
       const generatedAppPaths = [
@@ -1025,7 +1022,13 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         hasErrors: stats.hasErrors(),
         hasWarnings: stats.hasWarnings(),
         hasAppSourceChanges,
-        hash: stats.hash,
+        // Use output changes to decide development server restarts. Production,
+        // test, native, and client compilations keep Rspack's original hash.
+        // Include failed emissions in the version so recovery still restarts
+        // if the output changed before the errors were cleared.
+        hash: isServer && isDevEnvironment
+          ? trackServerOutput(stats)
+          : stats.hash,
         timestamp: Date.now(),
         statsOverrided,
         compilationCount,

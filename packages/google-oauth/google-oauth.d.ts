@@ -55,11 +55,12 @@ export namespace Google {
 
   /**
    * (Server) Retrieve the pending credential for a completed OAuth flow.
+   * Resolves to the stored `Error` when the flow failed.
    */
   export function retrieveCredential(
     credentialToken: string,
     credentialSecret?: string | null
-  ): Promise<OAuthCredential | undefined>;
+  ): Promise<OAuthCredential | Error | undefined>;
 
   /**
    * (Cordova) Sign in using the native Google Sign-In SDK.

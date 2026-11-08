@@ -59,13 +59,18 @@ export namespace Meteor {
    * record's profile field)
    */
   interface UserProfile {}
+  /**
+   * UserServices is left intentionally underspecified here, to allow you
+   * to declare the login services your application uses
+   */
+  interface UserServices extends Record<string, unknown> {}
   interface User {
     _id: string;
     username?: string | undefined;
     emails?: UserEmail[] | undefined;
     createdAt?: Date | undefined;
     profile?: UserProfile;
-    services?: Record<string, unknown>;
+    services?: UserServices;
   }
 
   function user(options?: {

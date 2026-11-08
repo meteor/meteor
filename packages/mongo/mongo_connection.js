@@ -1052,7 +1052,7 @@ MongoConnection.prototype._observeChanges = async function (
             const serverReasons = [];
 
             try {
-              // Change Streams require MongoDB 6+ and replica set or sharded cluster
+              // The large-event split stage requires MongoDB 6.0.9+ / 7+.
               const admin = this.db.admin();
               const serverInfo = await admin.serverInfo();
               const isMasterPromise = admin.command({ isMaster: 1 });
@@ -1060,11 +1060,12 @@ MongoConnection.prototype._observeChanges = async function (
               const versionParts = versionString.split('.').map(Number);
               const major = Number.isFinite(versionParts[0]) ? versionParts[0] : 0;
 
-              // Check MongoDB version (6+)
-              const hasMinVersion = major >= 6;
+              const [, minor = 0, patch = 0] = versionParts;
+              const hasMinVersion = major >= 7 ||
+                (major === 6 && (minor > 0 || (minor === 0 && patch >= 9)));
 
               if (!hasMinVersion) {
-                serverReasons.push(`Change Streams feature require MongoDB 6+ (current ${versionString})`);
+                serverReasons.push(`Change Streams require MongoDB 6.0.9+ or 7+ (current ${versionString})`);
               } else {
                 // Check if we're running on a replica set or sharded cluster.
                 // `isMaster.ismaster` is true on a standalone too (it only means

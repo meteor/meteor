@@ -16,6 +16,7 @@ Twitter.requestCredential(() => {}, () => {});
 
 expectTypeOf(Twitter.retrieveCredential).parameters.toEqualTypeOf<[string, (string | null)?]>();
 expectTypeOf(Twitter.retrieveCredential).returns.toMatchTypeOf<Promise<unknown>>();
+expectTypeOf(Twitter.retrieveCredential).returns.resolves.extract<Error>().toEqualTypeOf<Error>();
 
 expectTypeOf(Twitter.validParamsAuthenticate).toEqualTypeOf<string[]>();
 expectTypeOf(Twitter.whitelistedFields).toEqualTypeOf<string[]>();

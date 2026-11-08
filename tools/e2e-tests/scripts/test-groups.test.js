@@ -14,7 +14,7 @@ const { spawnSync } = require('child_process');
 const { auditTestCoverage } = require('./audit-test-groups');
 
 describe('CLI / E2E test group fallback /', () => {
-  test('keeps server runtime separate and combines short framework suites', () => {
+  test('keeps server runtime separate and splits the long React and Vue workload', () => {
     const matchingGroups = name => Object.entries(EXPLICIT_TEST_GROUPS)
       .filter(([, group]) => new RegExp(group.pattern).test(name))
       .map(([group]) => group);
@@ -41,6 +41,10 @@ describe('CLI / E2E test group fallback /', () => {
       .toEqual(['babel_tailwind']);
     expect(matchingGroups('Vue App Bundling / builds the app'))
       .toEqual(['react_vue']);
+    expect(matchingGroups('Meteor Skeletons / Apollo Skeleton / creates the app'))
+      .toEqual(['react_vue_skeletons']);
+    expect(matchingGroups('Meteor Skeletons / Vue Skeleton / creates the app'))
+      .toEqual(['react_vue_skeletons']);
     expect(matchingGroups('Svelte App Bundling / builds the app'))
       .toEqual(['solid_svelte']);
   });

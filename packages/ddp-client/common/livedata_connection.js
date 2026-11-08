@@ -1455,7 +1455,9 @@ export class Connection {
     const sendMessages = () => self._sendOutstandingMethodBlocksMessages(oldOutstandingMethodBlocks);
     if (promises.length > 0) {
       // Always re-send outstanding methods, even if a callback rejects.
-      Promise.allSettled(promises).then(sendMessages);
+      // Promise.allSettled is not polyfilled on older browsers (#14869).
+      const settled = promises.map(p => Promise.resolve(p).catch(() => {}));
+      Promise.all(settled).then(sendMessages);
     } else {
       sendMessages();
     }
