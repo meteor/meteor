@@ -1,178 +1,178 @@
-Project:Accounts:Password:
-  - changed-files:
-    - any-glob-to-any-file: packages/accounts-password/**/*
+# Area labels applied to pull requests from the paths they change (actions/labeler).
+# Areas are defined in .github/labels.yml and explained in LABELS.md.
 
-Project:Accounts:UI:
+"area: accounts":
   - changed-files:
-    - any-glob-to-any-file:
-      - packages/meteor-developer-config-ui/**/*
-      - packages/github-config-ui/**/*
-      - packages/google-config-ui/**/*
-      - packages/twitter-config-ui/**/*
-      - packages/facebook-config-ui/**/*
-      - packages/accounts-ui/**/*
-      - packages/accounts-ui-unstyled/**/*
+      - any-glob-to-any-file:
+          - packages/accounts-*/**
+          - packages/oauth*/**
+          - packages/*-oauth/**
+          - packages/*-config-ui/**
+          - packages/service-configuration/**
+          - packages/roles/**
+          - packages/sha/**
+          - packages/localstorage/**
+          - packages/deprecated/{facebook,github,google,meetup,meteor-developer,twitter,weibo,srp,npm-bcrypt}/**
 
-Project:CSS:
+"area: blaze":
   - changed-files:
-    - any-glob-to-any-file:
-      - packages/non-core/less/**/*
-      - packages/minifier-css/**/*
-      - packages/standard-minifier-css/**/*
+      - any-glob-to-any-file:
+          - packages/non-core/blaze
+          - packages/non-core/blaze/**
+          - packages/non-core/jquery/**
 
-Project:DDP:
+"area: build":
   - changed-files:
-    - any-glob-to-any-file:
-      - packages/ddp-common/**/*
-      - packages/ddp-rate-limiter/**/*
-      - packages/ddp-server/**/*
-      - packages/ddp-client/**/*
-      - packages/ddp/**/*
-      - packages/socket-stream-client/**/*
+      - any-glob-to-any-file:
+          - tools/isobuild/**
+          - tools/static-assets/server/**
+          - packages/babel-*/**
+          - packages/caching-compiler/**
+          - packages/dynamic-import/**
+          - packages/ecmascript*/**
+          - packages/es5-shim/**
+          - packages/hot-module-replacement/**
+          - packages/react-fast-refresh/**
+          - packages/minifier-*/**
+          - packages/standard-minifier*/**
+          - packages/modern-browsers/**
+          - packages/modules*/**
+          - packages/typescript/**
+          - packages/static-html*/**
+          - packages/non-core/{coffeescript,coffeescript-compiler,coffeescript-test-helper,less}/**
+          - packages/deprecated/{stylus,markdown,jshint}/**
+          - npm-packages/{meteor-babel,babel-preset-meteor,meteor-node-stubs}/**
 
-Project:EJSON:
+"area: cli":
   - changed-files:
-    - any-glob-to-any-file: packages/ejson/**/*
+      - any-glob-to-any-file:
+          - meteor
+          - tools/*.{js,ts}
+          - tools/{cli,console,runners,utils,fs,tool-env,meteor-services,tests,native-tests}/**
+          - packages/{constraint-solver,package-version-parser,logic-solver,shell-server,package-stats-opt-out}/**
+          - npm-packages/meteor-installer/**
 
-Project:HMR:
+"area: core":
   - changed-files:
-    - any-glob-to-any-file:
-      - packages/hot-code-push/**/*
-      - packages/hot-module-replacement/**/*
+      - any-glob-to-any-file:
+          - packages/{meteor,core-runtime,ejson,base64,promise,callback-hook,id-map,ordered-dict,diff-sequence,binary-heap,retry,meteor-base,logging,check,random,geojson-utils,audit-argument-checks}/**
+          - npm-packages/meteor-promise/**
 
-Project:Isobuild:Minifiers:
+"area: create":
   - changed-files:
-    - any-glob-to-any-file:
-      - packages/minifier-css/**/*
-      - packages/minifier-js/**/*
-      - packages/standard-minifier-js/**/*
-      - packages/standard-minifier-css/**/*
-      - packages/standard-minifiers/**/*
+      - any-glob-to-any-file:
+          - tools/static-assets/{skel,scaffolds}-*/**
+          - tools/cli/example-repositories.js
 
-Project:Isobuild:
+"area: ddp":
   - changed-files:
-    - any-glob-to-any-file:
-      - tools/isobuild/**/*
+      - any-glob-to-any-file:
+          - packages/ddp*/**
+          - packages/socket-stream-client/**
+          - packages/rate-limit/**
+          - packages/deprecated/livedata/**
 
-Project:JS Environment:Typescript:
+"area: docs":
   - changed-files:
-    - any-glob-to-any-file:
-      - packages/typescript/**/*
+      - all-globs-to-all-files:
+          - '{docs/**,v3-docs/**,guide/**,**/*.md}'
 
-Project:JS Environment:
+"area: instrumentation":
   - changed-files:
-    - any-glob-to-any-file:
-      - packages/babel-compiler/**/*
-      - packages/babel-runtime/**/*
-      - packages/ecmascript/**/*
-      - packages/ecmascript-runtime/**/*
-      - packages/ecmascript-runtime-client/**/*
-      - packages/ecmascript-runtime-server/**/*
-      - packages/es5-shim/**/*
-      - packages/jshint/**/*
+      - any-glob-to-any-file:
+          - packages/instrumentation*/**
 
-Project:Livequery:
+"area: livequery":
   - changed-files:
-    - any-glob-to-any-file:
-      - packages/livedata/**/*
+      - any-glob-to-any-file:
+          - packages/mongo/**/*{oplog,observe,polling,multiplex,change_stream,changestream,write_fence}*
+          - packages/disable-oplog/**
 
-Project:Minimongo:
+"area: minimongo":
   - changed-files:
-    - any-glob-to-any-file:
-      - packages/minimongo
+      - any-glob-to-any-file:
+          - packages/minimongo/**
 
-Project:Mobile:
+"area: mobile":
   - changed-files:
-    - any-glob-to-any-file:
-      - tools/cordova/**/*
-      - packages/launch-screen/**/*
-      - packages/mobile-experience/**/*
-      - packages/mobile-status-bar/**/*
+      - any-glob-to-any-file:
+          - tools/cordova/**
+          - tools/capacitor/**
+          - packages/{launch-screen,crosswalk}/**
+          - packages/mobile-*/**
+          - packages/capacitor*/**
+          - npm-packages/cordova-plugin-meteor-webapp/**
 
-Project:Mongo Driver:
+"area: mongo":
   - changed-files:
-    - any-glob-to-any-file:
-      - packages/mongo/**/*
-      - packages/mongo-dev-server/**/*
-      - packages/mongo-id/**/*
-      - packages/mongo-livedata/**/*
-      - packages/disable-oplog/**/*
-      - packages/non-core/mongo-decimal/**/*
+      - any-glob-to-any-file:
+          - packages/mongo*/**
+          - packages/npm-mongo*/**
+          - packages/{allow-deny,insecure,autopublish}/**
+          - packages/non-core/mongo-decimal/**
 
-Project:NPM:
+"area: offline":
   - changed-files:
-    - any-glob-to-any-file:
-      - npm-packages/**/*
+      - any-glob-to-any-file:
+          - packages/offline/**
+          - tools/static-assets/skel-pwa/**
 
-Project:Release Process:
+"area: packages":
   - changed-files:
-    - any-glob-to-any-file:
-      - scripts/**/*
+      - any-glob-to-any-file:
+          - packages/{email,fetch,url}/**
+          - packages/facts-*/**
+          - packages/deprecated/**
+          - packages/non-core/{bundle-visualizer,xmlbuilder}/**
+          - npm-packages/eslint-*/**
 
-Project:Tool:
+"area: reactivity":
   - changed-files:
-    - any-glob-to-any-file:
-      - tools/**/*
-      - packages/meteor-tool/**/*
+      - any-glob-to-any-file:
+          - packages/{tracker,session}/**
+          - packages/reactive-*/**
+          - packages/deprecated/deps/**
 
-Project:Tool:Shell:
+"area: release":
   - changed-files:
-    - any-glob-to-any-file:
-      - tools/console/**/*
+      - any-glob-to-any-file:
+          - tools/packaging/**
+          - scripts/admin/**
+          - packages/meteor-tool/**
+          - v3-docs/docs/generators/changelog/**
 
-Project:Utilities:Email:
+"area: rspack":
   - changed-files:
-    - any-glob-to-any-file:
-      - packages/email/**/*
+      - any-glob-to-any-file:
+          - '**/*rspack*'
+          - '**/*rspack*/**'
+          - packages/tools-core/**
 
-Project:Utilities:HTTP:
+"area: testing":
   - changed-files:
-    - any-glob-to-any-file:
-      - packages/deprecated/http/**/*
-      - packages/fetch/**/*
-      - packages/url/**/*
+      - any-glob-to-any-file:
+          - packages/tinytest*/**
+          - packages/test-*/**
+          - tools/{e2e-tests,unit-tests,tool-testing}/**
 
-Project:Webapp:
+"area: types":
   - changed-files:
-    - any-glob-to-any-file:
-      - packages/webapp/**/*
-      - packages/webapp-hashing/**/*
+      - any-glob-to-any-file:
+          - '**/*.d.ts'
+          - '**/{types,typings}/**'
 
-Project:Windows:
+"area: webapp":
   - changed-files:
-    - any-glob-to-any-file:
-      - scripts/windows/**/*
+      - any-glob-to-any-file:
+          - packages/webapp*/**
+          - packages/boilerplate-generator*/**
+          - packages/{server-render,routepolicy,autoupdate,hot-code-push,inter-process-messaging,dev-error-overlay}/**
+          - packages/browser-policy*/**
+          - packages/reload*/**
+          - packages/force-ssl*/**
 
-Project:Webapp:Browser Policy:
+"platform: windows":
   - changed-files:
-    - any-glob-to-any-file:
-      - packages/browser-policy/**/*
-      - packages/browser-policy-common/**/*
-      - packages/browser-policy-content/**/*
-      - packages/browser-policy-framing/**/*
-
-Project:Examples:
-  - changed-files:
-    - any-glob-to-any-file:
-      - tools/cli/example-repositories.js
-
-Project:Dynamic Import:
-  - changed-files:
-    - any-glob-to-any-file:
-      - packages/dynamic-import/**/*
-
-Project:Docs:
-  - changed-files:
-    - any-glob-to-any-file:
-      - docs/**/*
-      - v3-docs/**/*
-
-Project:Guide:
-  - changed-files:
-    - any-glob-to-any-file:
-      - guide/**/*
-
-github_actions:
-  - changed-files:
-    - any-glob-to-any-file:
-      - ./github/**/*
+      - any-glob-to-any-file:
+          - scripts/windows/**
+          - '**/*.{ps1,bat,cmd}'
