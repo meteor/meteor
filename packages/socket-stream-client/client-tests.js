@@ -299,3 +299,81 @@ Tinytest.add(
     }
   }
 );
+
+// A reconnect replaces this.socket before the old socket's queued 'open' has
+// fired. That stale 'open' used to mark the stream connected, so 'reset'
+// called send() on the new, still-CONNECTING socket (InvalidStateError), and
+// the new socket's own 'open' was then ignored as "already connected".
+Tinytest.add(
+  'stream - a stale open from a replaced socket is ignored',
+  function(test) {
+    class FakeWebSocket {
+      constructor() {
+        this.readyState = 0; // CONNECTING
+        this.sent = [];
+        FakeWebSocket.instances.push(this);
+      }
+      send(data) {
+        if (this.readyState !== 1) {
+          throw new Error('InvalidStateError: Still in CONNECTING state.');
+        }
+        this.sent.push(data);
+      }
+      close() {
+        this.readyState = 3;
+      }
+    }
+    FakeWebSocket.instances = [];
+
+    var realWebSocket = window.WebSocket;
+    var realTransport = __meteor_runtime_config__.DDP_TRANSPORT;
+    __meteor_runtime_config__.DDP_TRANSPORT = 'websocket';
+    window.WebSocket = FakeWebSocket;
+
+    var stream;
+    try {
+      stream = new ClientStream('/', { retry: false });
+      stream.on('reset', function() {
+        stream.send('connect');
+      });
+
+      var ws1 = FakeWebSocket.instances[0];
+      var ws1Open = ws1.onopen;
+      test.isTrue(stream.socket === ws1);
+
+      // Reconnect while ws1 is still CONNECTING: ws1 is replaced by ws2.
+      stream._launchConnection();
+      var ws2 = FakeWebSocket.instances[1];
+      test.isTrue(stream.socket === ws2);
+      test.equal(ws1.readyState, 3);
+
+      // ws1's late 'open' (through the detached handler and the original one)
+      // must neither connect the stream nor send anything on ws2.
+      ws1.onopen();
+      ws1Open();
+      test.isFalse(stream.status().connected);
+      test.length(ws2.sent, 0);
+      test.isTrue(stream.socket === ws2);
+
+      // ws2's own 'open' connects the stream and 'reset' sends on ws2.
+      ws2.readyState = 1;
+      ws2.onopen();
+      test.isTrue(stream.status().connected);
+      test.equal(ws2.sent, ['connect']);
+
+      // After disconnect(), the cleaned-up socket's 'open' is a no-op.
+      var ws2Open = ws2.onopen;
+      stream.disconnect();
+      ws2.onopen();
+      ws2Open();
+      test.isFalse(stream.status().connected);
+      test.equal(stream.status().status, 'offline');
+      test.isNull(stream.socket);
+      test.equal(ws2.sent, ['connect']);
+    } finally {
+      window.WebSocket = realWebSocket;
+      __meteor_runtime_config__.DDP_TRANSPORT = realTransport;
+      if (stream) stream.disconnect({ _permanent: true });
+    }
+  }
+);

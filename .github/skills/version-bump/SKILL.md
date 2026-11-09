@@ -115,7 +115,10 @@ Include the npm package in the bump table and apply it after confirmation. Keep
 
 When creating the **first beta** for a release, each changed package needs a version bump from its current stable version. The magnitude depends on the nature of changes.
 
-For subsequent betas, RCs, and official releases, the base version (`X.Y.Z`) stays the same — only the prerelease suffix changes.
+For subsequent betas, RCs, and official releases, normally retain the base version
+(`X.Y.Z`) and change the requested prerelease suffix. Reassess the base when new
+changes require a larger magnitude or another release has occupied the allocation.
+Apply the cross-release checks below before finalizing the target.
 
 ### Magnitude Rules
 
@@ -124,6 +127,39 @@ For subsequent betas, RCs, and official releases, the base version (`X.Y.Z`) sta
 | **Patch** | Bug fixes, performance improvements, type fixes, internal refactors with no API changes | Fix passwordValidator precedence, remove redundant await, TypeScript type corrections |
 | **Minor** | New public APIs, new exported functions/methods, new user-facing features or capabilities | New `getUserIdsInRoleAsync` method, new CSS auto-delegation feature, new test assertion methods |
 | **Major** | Breaking changes, removed APIs, renamed exports, changed function signatures | Removed public method, renamed package export, async migration of sync API |
+
+### Ordinary versions and cross-release allocations
+
+Prefer ordinary patch/minor/major bumps for new upstream changes. A package at
+`1.2.3_1` can advance to an available `1.2.4` for a compatible fix or `1.3.0` for
+new public capabilities. The existing wrap does not require future `_N` versions.
+Reserve another wrap for a compatible fix on an older implementation that must
+stay ordered below a newer published or planned implementation; explain that
+exception in the bump table. Never strip the wrap to reuse an older version.
+
+Package versions are global across Meteor release branches. Before allocating:
+
+1. Check the current official package catalog, including wraps and prereleases,
+   plus pending allocations in maintained release branches and PRs. Use
+   `meteor show <package> --show-all` and inspect the relevant package records.
+2. Check both the exact prerelease and its eventual stable target. An unused RC
+   string does not mean that its `X.Y.Z` target is free. A published version can
+   only be reused for the same shipped implementation and dependency definition.
+3. Compare against security backports with Meteor's package-version parser:
+   `1.2.3-rc360.1 < 1.2.3_1 < 1.2.4-rc360.1`. Review effective dependency
+   constraints and intended recipients as well as ordering. Do not place older
+   code above newer implementations just because a version number is unused.
+4. Choose patch/minor/major from the complete shipped changes and compatibility,
+   not the presence of a wrap or the Meteor release number. Recheck build-plugin
+   cascades and synchronize affected consumers when an allocation changes.
+
+For preparation-only work, also compare with the last published candidate. Keep
+an adequate existing allocation when the package source and dependencies have
+not changed. Fix an insufficient base or collision where needed, but preserve
+the selected release stage until the next beta, RC or official release is chosen.
+Do not republish existing versions or advance every RC counter merely to record
+an audit. A catalog check is a snapshot, not a reservation; repeat it before
+publication, especially after another maintenance release ships.
 
 ### When NOT to Bump
 

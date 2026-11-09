@@ -1,4 +1,5 @@
 var _ = require('underscore');
+var os = require('os');
 
 var buildmessage = require('../utils/buildmessage.js');
 var compiler = require('./compiler.js');
@@ -6,9 +7,46 @@ var files = require('../fs/files');
 var isopackModule = require('./isopack.js');
 var watch = require('../fs/watch');
 var colonConverter = require('../utils/colon-converter.js');
+var meteorNpm = require('./meteor-npm.js');
 var Profile = require('../tool-env/profile').Profile;
 var testRunnerContext = require('../tool-env/test-runner-context.js');
 import { requestGarbageCollection } from "../utils/gc.js";
+
+export async function prefetchNpmDependencies(packageMap, updateDependencies,
+  {
+    maxConcurrency = 8,
+    cpuCount = os.cpus().length,
+    platform = process.platform,
+  } = {}) {
+  const byDir = new Map();
+  const enqueue = (name, dir, deps) => {
+    if (!dir || _.isEmpty(deps) || byDir.has(dir)) return;
+    byDir.set(dir, { name, dir, deps });
+  };
+  for (const [, info] of Object.entries(packageMap._map)) {
+    if (info.kind !== 'local' || !info.packageSource) continue;
+    const source = info.packageSource;
+    enqueue(source.name, source.npmCacheDirectory, source.npmDependencies);
+    enqueue(source.name, source.npmDevCacheDirectory, source.npmDevDependencies);
+  }
+  const tasks = Array.from(byDir.values());
+  if (!tasks.length) return;
+  const platformMaxConcurrency = platform === 'win32' ? 1 : 8;
+  const concurrency = Math.max(
+    1,
+    Math.min(maxConcurrency, cpuCount, platformMaxConcurrency, tasks.length),
+  );
+  let cursor = 0;
+  await buildmessage.capture({ title: 'prefetch npm dependencies' }, async () => {
+    await Promise.all(Array.from({ length: concurrency }, async () => {
+      while (cursor < tasks.length) {
+        const { name, dir, deps } = tasks[cursor++];
+        try { await updateDependencies(name, dir, deps, true); }
+        catch (error) {}
+      }
+    }));
+  });
+}
 
 export class IsopackCache {
   constructor(options) {
@@ -63,6 +101,12 @@ export class IsopackCache {
 
     if (self.cacheDir) {
       files.mkdir_p(self.cacheDir);
+    }
+
+    if (!rootPackageNames) {
+      await Profile.time('IsopackCache prefetch npm dependencies', async () => {
+        await self._prefetchNpmDependencies();
+      });
     }
 
     var onStack = {};
@@ -136,6 +180,10 @@ export class IsopackCache {
     }
 
     return providers;
+  }
+
+  async _prefetchNpmDependencies() {
+    return prefetchNpmDependencies(this._packageMap, meteorNpm.updateDependencies);
   }
 
   async wipeCachedPackages(packages) {
@@ -439,6 +487,10 @@ export class IsopackCache {
                 includeIsopackBuildInfo: true,
                 isopackCache: self,
               });
+              // Record where the isopack now lives on disk so later build
+              // stages (e.g. the types generator, which links each package's
+              // npm/node_modules directory) can find files inside it.
+              isopack.isopackPath = self._isopackDir(name);
             }
           }
 

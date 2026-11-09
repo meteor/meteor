@@ -917,8 +917,8 @@ test("runtime tests prepare Meteor-host plan and package harness first", async (
   assert.equal(plan.refreshProjectMetadata, true);
   assert.deepEqual(manifestOptions, {
     additionalDevDependencies: {
-      "@rspack/core": "2.1.8",
-      "@rspack/cli": "2.1.8",
+      "@rspack/core": "2.2.7",
+      "@rspack/cli": "2.2.7",
       "@meteorjs/rspack": "/repo/npm-packages/meteor-rspack",
     },
     persistMeteorConfig: {

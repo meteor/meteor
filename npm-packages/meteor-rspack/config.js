@@ -18,6 +18,7 @@ function createMeteorSwcRule({
   externalHelpers,
   isDevEnvironment,
   isClient,
+  isLegacy,
   isAngularEnabled,
 }) {
   const defaultConfig = {
@@ -28,7 +29,7 @@ function createMeteorSwcRule({
         ...(isJsxEnabled && { jsx: true }),
         ...(isAngularEnabled && { decorators: true }),
       },
-      target: isClient ? 'es2015' : 'es2022',
+      target: isLegacy ? 'es5' : isClient ? 'es2015' : 'es2024',
       ...(isReactEnabled && {
         transform: {
           react: {
@@ -45,7 +46,7 @@ function createMeteorSwcRule({
     {
       omitPaths: ['jsc.target'],
       warningFn: configPath => console.warn(
-        `[.swcrc] Ignored custom "${configPath}" — reserved for Meteor-Rspack integration.`,
+        `[.swcrc] Ignored custom "${configPath}", reserved for Meteor-Rspack integration.`,
       ),
     },
   );

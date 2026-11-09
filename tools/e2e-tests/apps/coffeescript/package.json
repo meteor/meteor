@@ -18,7 +18,7 @@
     "playwright": "1.59.0",
     "coffee-loader": "^5.0.0",
     "coffeescript": "^2.7.0",
-    "swc-loader": "^0.2.6"
+    "swc-loader": "^0.2.7"
   },
   "meteor": {
     "mainModule": {

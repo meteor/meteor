@@ -416,9 +416,8 @@ function resolveRstestCoverageInstrumentation(npmRoot) {
   const appRequire = createRequire(path.join(path.resolve(npmRoot), "package.json"));
   const coordinatorEntry = appRequire.resolve("@meteorjs/rstest");
   const coordinatorRequire = createRequire(coordinatorEntry);
-  const coverageProviderEntry = coordinatorRequire.resolve("@rstest/coverage-istanbul");
   return {
-    swcPlugin: createRequire(coverageProviderEntry).resolve("swc-plugin-coverage-instrument"),
+    swcPlugin: coordinatorRequire.resolve("swc-plugin-coverage-instrument"),
     babelPlugin: coordinatorRequire.resolve("babel-plugin-istanbul"),
   };
 }

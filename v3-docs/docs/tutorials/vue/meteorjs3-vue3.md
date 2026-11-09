@@ -475,7 +475,7 @@ Inside the function, we are adding a task to the `tasks` collection by calling `
 ### 3.5: Show Newest Tasks First
 
 
-Now, you just need to make a change which will improve user experience: we will show the newest tasks first. We can accomplish this quickly by sorting our [MongoDB](/tutorials/collections/collections#mongo-collections) query.
+Now, you just need to make a change which will improve user experience: we will show the newest tasks first. We can accomplish this quickly by sorting our [MongoDB](/tutorials/collections/collections#mongodb-collections-in-meteor) query.
 
 
 ::: code-group

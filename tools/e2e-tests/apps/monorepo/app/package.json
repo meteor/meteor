@@ -1,5 +1,6 @@
 {
   "name": "app",
+  "version": "0.0.0",
   "private": true,
   "scripts": {
     "start": "meteor run",
@@ -22,6 +23,7 @@
   },
   "devDependencies": {
     "playwright": "1.59.0",
+    "webpack": "^5.91.0",
     "workbox-webpack-plugin": "^7.4.0"
   },
   "meteor": {

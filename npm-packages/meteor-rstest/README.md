@@ -388,6 +388,12 @@ standard `ecmascript` or `typescript` compiler path are supported and retain
 their physical source paths in the report. This does not mock Meteor,
 Atmosphere packages, MongoDB, DDP, or the browser host.
 
+Meteor-hosted compilation uses the coordinator's pinned
+`swc-plugin-coverage-instrument` dependency, matched to Meteor's Rspack and SWC
+versions. Native coverage keeps the plugin supplied by `@rstest/coverage-istanbul`
+for Rstest's own compiler. Preserve these separate dependencies when updating the
+build stack, since their Wasm plugin ABIs can differ.
+
 The current boundary is intentionally narrower in a few places: reports do
 not aggregate across Meteor watch generations; explicitly included but untested
 source files do not receive synthetic zero-hit entries; local sources compiled

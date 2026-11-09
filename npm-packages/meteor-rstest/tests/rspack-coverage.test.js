@@ -110,7 +110,7 @@ test("coverage plans reject stale generations before instrumentation", (t) => {
   );
 });
 
-test("SWC coverage plugin resolves from the app-selected Istanbul provider dependency", (t) => {
+test("hosted coverage resolves separately from the native Istanbul compiler plugin", (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "meteor-rspack-provider-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   fs.writeFileSync(path.join(root, "package.json"), "{}");
@@ -118,7 +118,7 @@ test("SWC coverage plugin resolves from the app-selected Istanbul provider depen
   const coordinatorEntry = path.join(coordinatorRoot, "index.js");
   const providerRoot = path.join(coordinatorRoot, "node_modules", "@rstest", "coverage-istanbul");
   const providerEntry = path.join(providerRoot, "dist", "index.js");
-  const pluginRoot = path.join(providerRoot, "node_modules", "swc-plugin-coverage-instrument");
+  const pluginRoot = path.join(coordinatorRoot, "node_modules", "swc-plugin-coverage-instrument");
   const pluginPath = path.join(pluginRoot, "coverage.wasm");
   fs.mkdirSync(path.dirname(providerEntry), { recursive: true });
   fs.mkdirSync(pluginRoot, { recursive: true });
@@ -146,6 +146,20 @@ test("SWC coverage plugin resolves from the app-selected Istanbul provider depen
     }),
   );
   fs.writeFileSync(pluginPath, "wasm");
+  const nativePluginRoot = path.join(
+    providerRoot,
+    "node_modules",
+    "swc-plugin-coverage-instrument",
+  );
+  fs.mkdirSync(nativePluginRoot, { recursive: true });
+  fs.writeFileSync(
+    path.join(nativePluginRoot, "package.json"),
+    JSON.stringify({
+      name: "swc-plugin-coverage-instrument",
+      main: "native.wasm",
+    }),
+  );
+  fs.writeFileSync(path.join(nativePluginRoot, "native.wasm"), "older compiler ABI");
 
   assert.equal(resolveRstestCoverageSwcPlugin({ npmRoot: root }), fs.realpathSync(pluginPath));
 
@@ -167,4 +181,47 @@ test("SWC coverage plugin resolves from the app-selected Istanbul provider depen
   assert.deepEqual(rule.options.jsc.experimental.plugins, [
     [fs.realpathSync(pluginPath), { unstableExclude: ["**/*.test.js"] }],
   ]);
+});
+
+test("hosted coverage instruments executable code with the supported Rspack compiler", async (t) => {
+  const { rspack } = require("@rspack/core");
+  const { createMeteorSwcRule } = require("@meteorjs/rspack/config");
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "meteor-hosted-coverage-"));
+  const entry = path.join(root, "entry.js");
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  fs.writeFileSync(entry, "export const double = value => value > 0 ? value * 2 : 0;");
+  const rule = createMeteorSwcRule({ root, isClient: false });
+  applyRstestCoverageToSwcRule(rule, {
+    plan: coveragePlan({ root }),
+    pluginPath: resolveRstestCoverageSwcPlugin({ npmRoot: path.resolve(__dirname, "..") }),
+  });
+  const compiler = rspack({
+    mode: "development",
+    devtool: false,
+    context: root,
+    target: "node",
+    entry: "./entry.js",
+    output: { path: path.join(root, "out"), library: { type: "commonjs2" } },
+    module: { rules: [rule] },
+  });
+  try {
+    const stats = await new Promise((resolve, reject) => {
+      compiler.run((error, result) => (error ? reject(error) : resolve(result)));
+    });
+    assert.equal(stats.hasErrors(), false, stats.toString({ all: false, errors: true }));
+    const context = { module: { exports: {} } };
+    require("node:vm").runInNewContext(
+      fs.readFileSync(path.join(root, "out/main.js"), "utf8"),
+      context,
+    );
+    assert.equal(context.module.exports.double(3), 6);
+    assert.equal(context.module.exports.double(-1), 0);
+    const coverage = context.__coverage__[entry];
+    assert.ok(Object.values(coverage.f).some((count) => count === 2));
+    assert.ok(Object.values(coverage.b).some((counts) => counts.every((count) => count > 0)));
+  } finally {
+    await new Promise((resolve, reject) =>
+      compiler.close((error) => (error ? reject(error) : resolve())),
+    );
+  }
 });

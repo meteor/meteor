@@ -70,6 +70,8 @@ export function failFirstCompilation(side, detail) {
  */
 export function setupCompilationTracking() {
   delete process.env.RSPACK_FIRST_COMPILATION_COMPLETE;
+  let serverBuildHash;
+
   // Initialize global state for first compilation tracking
   const clientFirstCompile = {
     resolved: false,
@@ -214,8 +216,24 @@ export function setupCompilationTracking() {
     }
   };
 
-  const onCompileServer = (data) => {
-    bumpServerRuntimeBuildId();
+  const onCompileServer = (data, config) => {
+    const hasServerBuildChanged =
+      serverBuildHash === undefined ||
+      config?.hash === undefined ||
+      config.hash !== serverBuildHash;
+
+    if (
+      config?.isRebuild &&
+      !config?.hasErrors &&
+      config?.hasAppSourceChanges !== false &&
+      hasServerBuildChanged
+    ) {
+      bumpServerRuntimeBuildId();
+    }
+
+    if (!config?.hasErrors && config?.hash !== undefined) {
+      serverBuildHash = config.hash;
+    }
 
     // Resolve the promise if it's the first compilation
     const serverState = getGlobalState(GLOBAL_STATE_KEYS.SERVER_FIRST_COMPILE, serverFirstCompile);

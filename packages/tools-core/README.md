@@ -4,6 +4,30 @@ The tools-core package exposes helpers for managing modern tools in Meteor, prov
 
 These helpers will be useful to integrate a modern bundler like Rspack and a native solution like CapacitorJS.
 
+## Scoping source exclusions to replacement entrypoints
+
+Integrations that replace application entrypoints can use
+`setMeteorAppIgnore(patterns, { root: true, entrypoints })` from `lib/meteor.js` to exclude
+their original sources only when Meteor builds those replacement modules:
+
+```js
+setMeteorAppIgnore('client/** !client/*.html', {
+  root: true,
+  entrypoints: ['_build/client-meteor.js'],
+});
+```
+
+Other architecture-specific main or test modules keep Meteor's normal source
+compilation. Use resolved, app-relative module paths. Without `entrypoints`,
+the patterns apply to all architectures. `root: true` matches paths from the app
+root only, so `test/**` does not also exclude `_build/test/**`. Without `root`,
+patterns retain their recursive, per-directory behavior. Both scopes append
+patterns and preserve the last occurrence of each pattern. Root-scoped rules
+follow `.meteorignore` and recursive exclusions; within each scope, global rules
+precede entrypoint-specific rules.
+
+`setMeteorAppEntrypoints({ mainModule, testModule })` accepts architecture maps alongside the existing client/server shortcuts. Map entries replace only the specified keys and preserve `false` values. Integrations can also restrict a development script to selected browser programs with `setMeteorAppCustomScriptUrl(url, { archs: ['web.browser'] })`; omitting `archs` keeps the existing behavior of injecting it into every browser program.
+
 ## Declaring required npm dependencies
 
 Atmosphere packages that need the host app to install (or stay above a minimum
@@ -12,6 +36,13 @@ version of) one or more npm packages can use the shared engine in
 and `meteor.autoInstallDeps=false` paths, so consumers ship only data. When
 automatic installation is disabled, the warning includes both the manual
 install command and the setting to re-enable automatic management.
+
+The engine detects npm, Yarn, and pnpm from the workspace manifest and
+lockfiles. Installs run from the Meteor app directory so the package manager
+updates the app's dependencies and the workspace's lockfile. Manual guidance
+includes both paths and commands for the detected manager; unsupported
+managers are left for the user to run. Dependencies declared with `file:`,
+`link:`, `portal:`, or `workspace:` are checked against their installed version.
 
 ```js
 const { ensurePackageDependencies } = require('meteor/tools-core/lib/deps');

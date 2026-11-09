@@ -41,8 +41,9 @@ function readRstestCoveragePlan(filename, { generation } = {}) {
 function resolveRstestCoverageSwcPlugin({ npmRoot }) {
   const appRequire = createRequire(path.join(path.resolve(npmRoot), "package.json"));
   const coordinatorEntry = appRequire.resolve("@meteorjs/rstest");
-  const providerEntry = createRequire(coordinatorEntry).resolve("@rstest/coverage-istanbul");
-  return createRequire(providerEntry).resolve("swc-plugin-coverage-instrument");
+  // Meteor's compiler uses a newer SWC ABI than Rstest's native compiler.
+  // Keep its plugin separate from the one owned by coverage-istanbul.
+  return createRequire(coordinatorEntry).resolve("swc-plugin-coverage-instrument");
 }
 
 function applyRstestCoverageToSwcRule(rule, { plan, pluginPath }) {

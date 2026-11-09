@@ -2,7 +2,11 @@ module.exports = {
   preset: 'jest-playwright-preset',
   rootDir: __dirname,
   testMatch: ["**/*.test.js"],
-  testPathIgnorePatterns: ["<rootDir>/apps/", "<rootDir>/scripts/"],
+  testPathIgnorePatterns: [
+    "<rootDir>/apps/",
+    // This helper suite uses node:test and runs via test:rstest.
+    "<rootDir>/scripts/link-modern-tools.test.js",
+  ],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   verbose: true,
   // Increase timeout for CLI operations (longer on CI to absorb host contention)
@@ -24,9 +28,10 @@ module.exports = {
   // jest-playwright-preset only reads from there, not from globals).
   // See that file for HEADED, SLOWMO, DEVTOOLS, RECORD toggles.
   maxWorkers: 1,
-  // Force Jest to exit after all tests complete, even if there are
-  // dangling async operations (e.g., orphan rspack child processes).
-  // Disabled when RECORD=1 so the video flush on context.close() can complete.
+  // Force Jest to exit after all tests complete: jest-playwright-preset leaks
+  // chromium handles past the exit deadline and rspack can leave orphan child
+  // processes. Disabled when RECORD=1 so the video flush on context.close()
+  // can complete.
   forceExit: !process.env.RECORD,
   reporters: [
     'default',

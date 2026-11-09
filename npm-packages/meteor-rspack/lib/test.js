@@ -1,8 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 const {
-  createIgnoreRegex,
   createIgnoreGlobConfig,
+  createIgnoreMatcherSource,
   createProjectIgnoreRegex,
 } = require("./ignore.js");
 
@@ -74,10 +74,11 @@ const generateEagerTestFile = ({
     projectDir,
     createIgnoreGlobConfig(ignoreEntries)
   );
-  // Create regex from meteor ignore entries
-  const excludeMeteorIgnoreRegex = inMeteorIgnoreEntries.length > 0
-    ? createIgnoreRegex(createIgnoreGlobConfig(inMeteorIgnoreEntries))
-    : null;
+  // Build the .meteorignore filter. It is `ignore`-backed rather than a regex
+  // because gitignore's last-match-wins rule cannot be expressed as one, and
+  // collapsing it into one used to drop every `!` pattern, silently loading
+  // zero test files for a sharded run.
+  const meteorIgnoreMatcher = createIgnoreMatcherSource(inMeteorIgnoreEntries);
 
   const prefix = (inPrefix && `${inPrefix}-`) || "";
   const filename = isAppTest
@@ -93,13 +94,16 @@ const generateEagerTestFile = ({
     throw new Error('Test file root must be a project-relative path.');
   }
   const relativeDiscoveryPath = path.relative(projectDir, resolvedDiscoveryRoot);
+  const isExternalDiscoveryRoot = relativeDiscoveryPath === '..' ||
+    relativeDiscoveryPath.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relativeDiscoveryPath);
   const relativeDiscoveryRoot = testFileRoot === undefined
-    ? relativeDiscoveryPath === '..' ||
-      relativeDiscoveryPath.startsWith(`..${path.sep}`) ||
-      path.isAbsolute(relativeDiscoveryPath)
-      ? ''
-      : toPosix(relativeDiscoveryPath)
+    ? isExternalDiscoveryRoot ? '' : toPosix(relativeDiscoveryPath)
     : toPosix(testFileRoot);
+  // Ignore rules use physical app-relative paths, independent of reported IDs.
+  const meteorIgnoreKey = relativeDiscoveryPath
+    ? `${JSON.stringify(`${toPosix(relativeDiscoveryPath)}/`)} + k.replace(/^\\.\\//, '')`
+    : 'k';
   const includedRelativeFiles = includeFiles && includeFiles
     .map(filePath => path.relative(resolvedDiscoveryRoot, filePath))
     .filter(relative => relative && !relative.startsWith(`..${path.sep}`))
@@ -167,9 +171,9 @@ const generateEagerTestFile = ({
   });
   await Promise.all(ctx.keys().filter((k) => {
     ${
-      excludeMeteorIgnoreRegex
-        ? `// Only exclude based on *relative* path segments.
-    return !MeteorIgnoreRegex.test(k);`
+      meteorIgnoreMatcher && !isExternalDiscoveryRoot
+        ? `// Only exclude based on app-relative path segments.
+    return !MeteorIgnoreMatcher(${meteorIgnoreKey});`
         : "return true;"
     }
   })${registrationIteration});
@@ -187,8 +191,9 @@ const generateEagerTestFile = ({
   const content = `${registrationImport}${
     globalImportPath ? `import '${toPosix(globalImportPath)}';\n\n` : ""
   }${
-    excludeMeteorIgnoreRegex
-      ? `const MeteorIgnoreRegex = ${excludeMeteorIgnoreRegex.toString()};`
+    meteorIgnoreMatcher
+      ? `import MeteorIgnore from '${toPosix(meteorIgnoreMatcher.modulePath)}';\n\n` +
+        `const MeteorIgnoreMatcher = ${meteorIgnoreMatcher.source}(MeteorIgnore);`
       : ""
   }
 ${registrationRoot}${setupLoaderMap}

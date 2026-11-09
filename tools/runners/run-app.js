@@ -981,7 +981,7 @@ Object.assign(AppRunner.prototype, {
 
     async function runPostStartupCallbacks(bundleResult) {
       const callbacks = bundleResult.postStartupCallbacks;
-      if (! callbacks) return;
+      if (! callbacks || callbacks.length === 0) return;
 
       const messages = await buildmessage.capture({
         title: "running post-startup callbacks"
@@ -1007,6 +1007,13 @@ Object.assign(AppRunner.prototype, {
           errors: messages,
           watchSet: bundleResult.clientWatchSet,
         };
+      }
+
+      // Delayed client builds add their dependencies to clientWatchSet after
+      // the watcher starts. Recreate it so changes to those files are watched,
+      // while keeping the previous watcher active during the delayed build.
+      if (self.watchForChanges && canRefreshClient) {
+        setupClientWatcher();
       }
     }
 
@@ -1044,10 +1051,15 @@ Object.assign(AppRunner.prototype, {
 
         var oldPromise = self.runPromise = self._makePromise("run");
 
-        refreshClient();
-
         // Establish a watcher on the new files.
         setupClientWatcher();
+
+        // Observe refresh errors, but let a file change or stop request
+        // interrupt the wait if the app stops answering IPC messages.
+        await Promise.race([
+          refreshClient().catch(bundler.ignoreHarmlessErrors),
+          oldPromise,
+        ]);
 
         const postStartupResult = await runPostStartupCallbacks(bundleResult);
         if (postStartupResult) return postStartupResult;

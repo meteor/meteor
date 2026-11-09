@@ -125,6 +125,11 @@ test('Meteor eager entry respects caller-supplied exclusions', t => {
   ]) {
     const absolutePath = path.join(projectRoot, testPath);
     assert.equal(exclusion.test(absolutePath), true, `${testPath} remains TestRunner-owned`);
+    assert.equal(
+      exclusion.test(absolutePath.replace(/\//g, '\\')),
+      true,
+      `${testPath} remains excluded with Windows separators`,
+    );
   }
   assert.equal(
     exclusion.test(path.join(projectRoot, 'tests/test-runner/runtime/server/mongo.test.js')),
@@ -146,6 +151,30 @@ test('Meteor eager entry respects caller-supplied exclusions', t => {
     true,
     'legacy compatibility files can remain owned by actual driver runtimes',
   );
+});
+
+test('runtime discovery applies meteorignore negations relative to the app root', async t => {
+  const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-runtime-ignore-'));
+  const runtimeRoot = path.join(projectRoot, 'tests/runtime');
+  t.after(() => fs.rmSync(projectRoot, { recursive: true, force: true }));
+  fs.mkdirSync(runtimeRoot, { recursive: true });
+  const generated = generateEagerTestFile({
+    isAppTest: false,
+    projectDir: projectRoot,
+    discoveryRoot: runtimeRoot,
+    testFileRoot: 'reported-tests',
+    buildContext: '_build',
+    meteorIgnoreEntries: ['tests/runtime/*.test.js', '!tests/runtime/kept.test.js'],
+  });
+  const loaded = [];
+  const context = file => loaded.push(file);
+  context.keys = () => ['./ignored.test.js', './kept.test.js'];
+  const content = fs.readFileSync(generated, 'utf8')
+    .replace(/^import MeteorIgnore from .*;\n/m, '')
+    .replace(/import\.meta\.webpackContext\([\s\S]*?\n  \}\)/, '__context');
+  const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+  await new AsyncFunction('__context', 'MeteorIgnore', content)(context, require('ignore'));
+  assert.deepEqual(loaded, ['./kept.test.js']);
 });
 
 test('TestRunner runtime eager entry scans only its deterministic Meteor root', t => {
