@@ -25,4 +25,7 @@ appId: com.meteor.capacitortests
     timeout: 60000
 - assertVisible: "WebAppLocalServer shim ready"
 - assertVisible: "WebAppLocalServer native bridge ready"
-- assertVisible: "__cordova paths served"
+# The webDir bundle strips the prefix; an automatic startup HCP may already
+# have replaced it with server assets. The updated flow requires served paths
+# together with the changed client/server versions and the full HCP trace.
+- assertVisible: "__cordova paths (adapted|served)"
