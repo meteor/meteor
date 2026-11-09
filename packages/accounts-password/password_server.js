@@ -310,7 +310,7 @@ const passwordValidator = Match.OneOf(
 //
 // Note that neither password option is secure without SSL.
 //
-Accounts.registerLoginHandler("password", async options => {
+const checkPasswordLogin = async options => {
   if (!options.password)
     return undefined; // don't handle
 
@@ -354,7 +354,12 @@ Accounts.registerLoginHandler("password", async options => {
   }
 
   return result;
-});
+};
+
+// Share the complete credential check with HTTP login, including user lookup,
+// password validation and 2FA. DDP keeps the same registered handler contract.
+Accounts._checkPasswordLogin = checkPasswordLogin;
+Accounts.registerLoginHandler("password", checkPasswordLogin);
 
 ///
 /// CHANGING
