@@ -1,0 +1,57 @@
+name: Labels
+
+# Applies .github/labels.yml to the repository. On pull requests everything is a
+# dry run printed in the log. On devel: create and rename labels, move the items of
+# merged labels (.github/scripts/relabel.js), then delete the labels missing from
+# the manifest once every item has moved. The relabel stops before the hourly API
+# budget runs out, so the daily run finishes a migration larger than one hour.
+
+on:
+  pull_request:
+    paths:
+      - '.github/labels.yml'
+      - '.github/scripts/relabel.js'
+      - '.github/workflows/labels.yml'
+  push:
+    branches:
+      - devel
+    paths:
+      - '.github/labels.yml'
+      - '.github/scripts/relabel.js'
+      - '.github/workflows/labels.yml'
+  schedule:
+    - cron: '30 2 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: labels
+
+jobs:
+  labels:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create and rename labels
+        uses: crazy-max/ghaction-github-labeler@v5
+        with:
+          skip-delete: ${{ github.event_name != 'pull_request' }}
+          dry-run: ${{ github.event_name == 'pull_request' }}
+
+      - name: Move items of merged labels
+        id: relabel
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const relabel = require('./.github/scripts/relabel.js')
+            const left = await relabel({ github, context, dryRun: context.eventName === 'pull_request' })
+            core.setOutput('left', left)
+
+      - name: Delete labels missing from the manifest
+        if: github.event_name != 'pull_request' && steps.relabel.outputs.left == '0'
+        uses: crazy-max/ghaction-github-labeler@v5
