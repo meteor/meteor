@@ -1,62 +1,80 @@
 ## Labels
 
-Labels are used to organize our issues and PRs.
+Labels are defined in [`.github/labels.yml`](.github/labels.yml) and applied to the repository by the [Labels workflow](.github/workflows/labels.yml). To add, rename or remove a label, open a pull request on that file: a label created in the repository settings and missing from the manifest is deleted by the next run.
 
-We should change the labels of issues and PRs when their status changes.
+Every label belongs to one facet, written as a prefix, so the label picker groups them and searches read well: `is:open label:"area: ddp" label:"status: needs-triage"`.
 
-### Status Labels
-Labels to indicate the status of a specific issue or PR. These are the most important labels as they tell us in which stage a specific item is at the moment at a glance.
+### `type:` what the item is
 
-You can filter issues that are missing status labels using this [filter](https://github.com/meteor/meteor/issues?q=is%3Aissue+is%3Aopen+-label%3Aconfirmed+-label%3Anot-ready+-label%3Ain-discussion+-label%3Aneeds-reproduction+-label%3Aready+-label%3Ain-development++-label%3Apending-tests+-label%3Awaiting-feedback): `is:issue is:open -label:confirmed -label:not-ready -label:in-discussion -label:needs-reproduction -label:ready -label:in-development -label:pending-tests -label:waiting-feedback`
+One per item.
 
-#### Stage 1
-- `confirmed`: We want to fix or implement it
-- `not-ready`: Something is missing, we are not able to work on this issue yet
-- `in-discussion`: We are still discussing how to solve or implement it
-- `needs-reproduction`: We can't reproduce so it's blocked
-- `invalid`: We don't need to analyze
+- `type: bug`: something does not work as documented or as it used to. Preset by the bug report template.
+- `type: feature`: new behavior or capability.
+- `type: docs`: documentation is missing, wrong or unclear.
+- `type: maintenance`: repository chores (CI, tooling, dependencies, refactors without behavior change). These items get no area.
+- `type: security`: security hardening. Report vulnerabilities privately, see [SECURITY.md](SECURITY.md).
 
-#### Stage 2
-- `ready`: We've decided how to solve or implement it
-- `in-development`: We are already working on it
+### `area:` which part of Meteor
 
-#### Stage 3
-- `pending-tests`: Tests are not passing, stuck or we need new tests
-- `waiting-feedback`: It's implemented but we need feedback that it is working as expected
+One or more per item. Pull requests get them automatically from the paths they change ([`.github/labeler.yml`](.github/labeler.yml)); on issues, a triager adds them (a best guess is fine).
 
-### Classification Labels
+| Area | Covers |
+|---|---|
+| `area: accounts` | accounts-*, password, passwordless, 2FA, OAuth and login services, roles |
+| `area: blaze` | Blaze integration in this repository (Blaze itself lives in [meteor/blaze](https://github.com/meteor/blaze)) |
+| `area: build` | Isobuild, compilers, minifiers, modules, HMR, CSS, Babel and SWC |
+| `area: cli` | the `meteor` command: tool, shell, installer, version solver, self-tests |
+| `area: core` | runtime packages: meteor, core-runtime, EJSON, check, logging, random |
+| `area: create` | `meteor create`, skeletons and example apps |
+| `area: ddp` | DDP client and server, transports, methods and subscriptions |
+| `area: docs` | pull requests that change the docs or the guide and nothing else |
+| `area: instrumentation` | instrumentation and OpenTelemetry, while this roadmap front is active (then `area: core`) |
+| `area: livequery` | oplog, change streams and the observe drivers |
+| `area: minimongo` | Minimongo: client collections, selectors, modifiers, observe |
+| `area: mobile` | Cordova, Capacitor, iOS and Android builds |
+| `area: mongo` | Mongo collections and driver, allow/deny, npm-mongo |
+| `area: offline` | the offline package and the PWA skeleton, while this roadmap front is active (then `area: webapp`) |
+| `area: packages` | other core packages: email, fetch, url, deprecated and imported packages |
+| `area: reactivity` | Tracker, reactive-var, reactive-dict, session |
+| `area: release` | release process, packaging and version bumps |
+| `area: rspack` | the Rspack bundler integration (the modern build stack) |
+| `area: testing` | the test harness: tinytest, test-in-*, e2e (not the self-tests that come with a CLI change) |
+| `area: types` | TypeScript declarations and type tests |
+| `area: webapp` | webapp, boilerplate, browser policy, autoupdate, server rendering |
 
-Assign a classification (via GH labels) that enables the community to determine how to prioritize which issues to work on. The classification is based on *Severity x Impact* .
+`platform: windows` marks items specific to Windows. It combines with any area.
 
-#### Severity
-_[Severity:has-workaround, Severity:production, Severity:blocks-development]_
+### `status:` where the item stands
 
-- If there is a workaround, apply the `Severity:has-workaround` label.
-- If the issue affects production apps, apply the `Severity:production` label.
-- If the issue blocks development (e.g `meteor run` is broken), apply the `Severity:blocks-development` label.
+One per open issue. Pull requests use GitHub's own states (draft, review, merged) instead.
 
-#### Impact
-_[Impact:few, Impact:some, Impact:most]_
+- `status: needs-triage`: new, nobody looked at it yet. Preset by the bug report template.
+- `status: needs-reproduction`: a minimal reproduction is needed before anyone can work on it.
+- `status: needs-info`: waiting for information from the author.
+- `status: confirmed`: reproduced or accepted; the cause or the design is still open.
+- `status: in-discussion`: the approach is still being discussed.
+- `status: ready`: clear and accepted, nobody on it yet. Pick it up.
+- `status: in-progress`: someone is working on it.
+- `status: blocked`: waiting on something else (a release, another pull request, a decision).
+- `status: stale`: no human comment for 90 days. The weekly [inactive issues script](.github/scripts/inactive-issues.js) adds it, and removes it on its next run after a human comments. It never closes anything.
 
-This is a somewhat subjective label and is interpreted in conjunction with Github's upvotes. As a general guideline:
+The usual path: `needs-triage` → `needs-reproduction`, `needs-info` or `confirmed` (or closed with GitHub's "duplicate" or "not planned" reason) → `in-discussion` when the fix is not obvious, `ready` when it is → `in-progress`.
 
-- `Impact:few` issues would go unnoticed by almost all users, apart from those using a very niche feature, or a feature in an unusual way.
-- `Impact:some` issues would impact users using a feature that is commonly but not universally used.
-- `Impact:most` issues would impact more or less every user of the framework.
+Issues waiting for triage: [`is:issue is:open label:"status: needs-triage"`](https://github.com/meteor/meteor/issues?q=is%3Aissue+is%3Aopen+label%3A%22status%3A+needs-triage%22).
 
-#### Type
-_[Type:Bug, Type:Feature]_
+### `priority:` the roadmap
 
-As a general guideline:
+Set by the Meteor Software team, since it reflects their planning.
 
-- `Type:Bug` a problem is happening because of an issue in Meteor code.
-- `Type:Feature` a new behavior or functionality is desired.
+- `priority: critical`: breaks production apps or every user; may justify a backport.
+- `priority: next`: planned for the next releases.
+- `priority: candidate`: considered for the roadmap, not committed yet.
+- `priority: low`: valid, but not soon.
 
-## Project Labels
+### Standalone labels
 
-They start with `Project:` and they are used to inform the parts of Meteor that are involved in this item.
-
-## Special Labels
-
-- `good first issue`: Used to indicate items friendly to beginners in Meteor
-- `hacktoberfest-accepted`: Used to indicate items accepted for [Hacktoberfest](https://hacktoberfest.digitalocean.com/hacktoberfest-update)
+- `experimental`: exploration or proof of concept, with no commitment to adopt it. It combines with any type, status or priority: a proof of concept inside planned work is `priority: next` + `experimental`, a pure exploration has no priority at all.
+- `good first issue`: a good first contribution for someone new to the codebase.
+- `help wanted`: accepted and open to community contributions.
+- `hacktoberfest-accepted`: accepted for [Hacktoberfest](https://hacktoberfest.com/).
+- `dependencies`: pull requests that update a dependency (Dependabot).
