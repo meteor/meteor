@@ -386,7 +386,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.add(
-  'tools-core - installed dependency checks do not trust package declarations',
+  'tools-core - installed dependency checks validate declarations and installed versions',
   function (test) {
     withTempApp({ devDependencies: { foo: '^1.2.3' } }, (cwd) => {
       const dependencies = [{ name: 'foo', version: '1.0.0', dev: true }];
@@ -402,6 +402,30 @@ Tinytest.add(
       test.equal(detectMissingOrOutdatedDeps(dependencies, {
         cwd, checkNodeModules: true,
       })[0].status, 'outdated');
+
+      fs.writeFileSync(path.join(installed, 'package.json'), JSON.stringify({
+        name: 'foo', version: '1.2.3',
+      }));
+      fs.writeFileSync(path.join(cwd, 'package.json'), JSON.stringify({
+        devDependencies: { foo: '^0.9.0' },
+      }));
+      test.equal(detectMissingOrOutdatedDeps(dependencies, {
+        cwd, checkNodeModules: true,
+      })[0].status, 'outdated');
+
+      fs.writeFileSync(path.join(cwd, 'package.json'), JSON.stringify({}));
+      test.equal(detectMissingOrOutdatedDeps(dependencies, {
+        cwd, checkNodeModules: true,
+      })[0].status, 'outdated');
+
+      for (const spec of ['file:../foo', '../foo', path.join(cwd, 'linked-foo')]) {
+        fs.writeFileSync(path.join(cwd, 'package.json'), JSON.stringify({
+          devDependencies: { foo: spec },
+        }));
+        test.equal(detectMissingOrOutdatedDeps(dependencies, {
+          cwd, checkNodeModules: true,
+        })[0].status, 'ok');
+      }
     });
   },
 );

@@ -116,6 +116,12 @@ export function getDependencyInstallContext(appDir) {
   };
 }
 
+function isLocalDependencySpec(spec) {
+  return typeof spec === 'string' && (
+    path.isAbsolute(spec) || /^(?:file:|link:|portal:|workspace:|\.{1,2}[\\/])/.test(spec)
+  );
+}
+
 function readCurrentVersion(name, cwd) {
   try {
     const packageJsonPath = path.join(cwd, 'package.json');
@@ -182,21 +188,28 @@ export function detectMissingOrOutdatedDeps(dependencies, options = {}) {
       };
     }
 
-    const ok = checkNpmDependencyVersion(dep.name, {
+    const currentVersion = readCurrentVersion(dep.name, cwd);
+    const versionOptions = {
       cwd,
       versionRequirement: dep.version,
       semverCondition: dep.semverCondition || 'gte',
-      // Local protocols describe a source location, not a semver range.
-      checkNodeModules: options.checkNodeModules || /^(file|link|portal|workspace):/.test(
-        readCurrentVersion(dep.name, cwd) || '',
-      ),
+    };
+    const declaredOk = checkNpmDependencyVersion(dep.name, {
+      ...versionOptions,
+      // Local protocols and paths describe a source location, not a semver range.
+      checkNodeModules: isLocalDependencySpec(currentVersion),
+    });
+    // A valid installed version must not hide an absent or outdated declaration.
+    const installedOk = !options.checkNodeModules || checkNpmDependencyVersion(dep.name, {
+      ...versionOptions,
+      checkNodeModules: true,
     });
 
     return {
       name: dep.name,
-      status: ok ? 'ok' : 'outdated',
+      status: declaredOk && installedOk ? 'ok' : 'outdated',
       requiredVersion: dep.version,
-      currentVersion: readCurrentVersion(dep.name, cwd),
+      currentVersion,
       dev,
       existenceOnly,
     };
@@ -416,7 +429,7 @@ export async function ensurePackageDependencies(params = {}) {
     const declaredSpec = readCurrentVersion(change.name, cwd);
     // Preserve checkout links when a test harness needs to reinstall a package.
     // Its published version may not exist yet.
-    const localSpec = /^(?:file:|link:|workspace:|\.{1,2}[\\/]|[\\/])/.test(declaredSpec || '');
+    const localSpec = isLocalDependencySpec(declaredSpec);
     change.installSpec = dependency.spec && dependency.spec !== dependency.version
       ? dependency.spec
       : localSpec ? declaredSpec : dependency.version;
