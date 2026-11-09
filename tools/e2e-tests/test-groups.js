@@ -77,11 +77,17 @@ const EXPLICIT_TEST_GROUPS = Object.freeze({
   },
 });
 
-// Passing this through Jest's CLI replaces the config-level ignore list, so
-// preserve the existing apps/ fixture exclusion while also leaving Accounts
-// to its dedicated workflow.
+// Jest CLI ignore patterns replace the config list. Share these exclusions
+// with the direct runner so grouped CI jobs keep fixtures and Node-only tests
+// outside Jest discovery.
+const E2E_TEST_PATH_IGNORE_PATTERNS = Object.freeze([
+  '[/\\\\]apps[/\\\\]',
+  '[/\\\\]scripts[/\\\\]link-modern-tools\\.test\\.js$',
+]);
+
+// Accounts belongs to its dedicated workflow.
 const GROUP_EXCLUDED_TEST_PATH_PATTERN =
-  '(?:[/\\\\]apps[/\\\\]|accounts\\.test\\.js$)';
+  `(?:${[...E2E_TEST_PATH_IGNORE_PATTERNS, 'accounts\\.test\\.js$'].join('|')})`;
 
 function createUncategorizedPattern(groups = EXPLICIT_TEST_GROUPS) {
   const explicitPatterns = Object.values(groups).map(({ pattern }) => {
@@ -103,7 +109,7 @@ const TEST_GROUPS = Object.freeze({
     label: 'Accounts',
     pattern: '^',
     testPathPattern: 'accounts\\.test\\.js$',
-    testPathIgnorePattern: '[/\\\\]apps[/\\\\]',
+    testPathIgnorePattern: E2E_TEST_PATH_IGNORE_PATTERNS.join('|'),
     workflow: 'accounts',
   },
   uncategorized: {
@@ -156,6 +162,7 @@ function getTestGroupMatrix(workflow = 'e2e') {
 
 module.exports = {
   createUncategorizedPattern,
+  E2E_TEST_PATH_IGNORE_PATTERNS,
   EXPLICIT_TEST_GROUPS,
   getGroupJestArgs,
   getTestGroupMatrix,
