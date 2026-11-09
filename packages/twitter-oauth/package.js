@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Twitter OAuth flow",
-  version: '1.3.5-rc360.1',
+  version: '1.3.5',
 });
 
 Package.onUse(function(api) {
