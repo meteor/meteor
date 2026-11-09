@@ -48,6 +48,10 @@ client). By default the server publishes `username`, `emails`, and
 `profile` (writable by user). See [`Meteor.users`](#meteor_users) for more on
 the fields used in user documents.
 
+On the client, `Meteor.user()` returns `null` when no user is logged in.
+It can also return `undefined` when a user id is set but the matching
+document is not yet in Minimongo, for example during login or logout.
+
 On the server, this will fetch the record from the database. To improve the
 latency of a method that uses the user document multiple times, save the
 returned record to a variable instead of re-calling `Meteor.user()`.

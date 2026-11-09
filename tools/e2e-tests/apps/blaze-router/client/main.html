@@ -1,0 +1,39 @@
+<head>
+  <title>blaze-router</title>
+</head>
+
+<body></body>
+
+<template name="appLayout">
+  <main id="app-layout">
+    <h1>Welcome to Meteor!</h1>
+    <nav>
+      <a id="home-link" href="/">Home</a>
+      <a id="item-link" href="/items/42?filter=active#details">Item</a>
+      <a id="guarded-link" href="/guarded/admin">Guarded</a>
+    </nav>
+    {{> yield}}
+  </main>
+</template>
+
+<template name="home">
+  <section id="home-route">
+    <div id="greeting">{{greeting}}</div>
+  </section>
+</template>
+
+<template name="item">
+  <section id="item-route">
+    <div id="item-id">{{itemId}}</div>
+    <div id="item-filter">{{filter}}</div>
+    <div id="item-hash">{{hash}}</div>
+  </section>
+</template>
+
+<template name="guarded">
+  <section id="guarded-route">{{section}}</section>
+</template>
+
+<template name="notFound">
+  <section id="not-found-route">Route not found</section>
+</template>

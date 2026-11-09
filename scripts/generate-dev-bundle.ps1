@@ -263,6 +263,29 @@ Function Add-Mongo {
   cd "$previousCwd"
 }
 
+# Runs a native command printing its full output (stdout + stderr) to the
+# host and returns its exit code. Under the GitHub Actions PowerShell wrapper
+# ($ErrorActionPreference = 'Stop'), the first stderr line of a native command
+# becomes a terminating NativeCommandError: the script dies mid-command and
+# the rest of the output (the actual error detail) is lost. Routing the merged
+# stream through Write-Host avoids the conversion and keeps everything in the
+# CI log; failures are decided by exit code instead.
+Function Invoke-NativeCommandLoud {
+  Param (
+    [Parameter(Mandatory=$True, Position=0)]
+    [string]$Executable,
+    [Parameter(Position=1)]
+    [string[]]$Arguments = @()
+  )
+
+  $previousEap = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  & $Executable @Arguments 2>&1 | ForEach-Object { Write-Host "$_" }
+  $ErrorActionPreference = $previousEap
+
+  return $LASTEXITCODE
+}
+
 Function Add-NpmModulesFromJsBundleFile {
   Param (
     [Parameter(Mandatory=$True, Position=0)]
@@ -290,16 +313,16 @@ Function Add-NpmModulesFromJsBundleFile {
     Out-File -FilePath $(Join-Path $Destination 'package.json') -Encoding ascii
 
   # No bin-links because historically, they weren't used anyway.
-  & "$($Commands.npm)" install
-  if ($LASTEXITCODE -ne 0) {
-    throw "Couldn't install npm packages."
+  $npmExit = Invoke-NativeCommandLoud "$($Commands.npm)" @('install')
+  if ($npmExit -ne 0) {
+    throw "Couldn't install npm packages (npm exited with code $npmExit)."
   }
 
   # As of npm@5, this just renames `package-lock.json` to `npm-shrinkwrap.json`.
   if ($Shrinkwrap -eq $True) {
-    & "$($Commands.npm)" shrinkwrap
-    if ($LASTEXITCODE -ne 0) {
-      throw "Couldn't make shrinkwrap."
+    $npmExit = Invoke-NativeCommandLoud "$($Commands.npm)" @('shrinkwrap')
+    if ($npmExit -ne 0) {
+      throw "Couldn't make shrinkwrap (npm exited with code $npmExit)."
     }
   }
 

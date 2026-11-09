@@ -30,7 +30,11 @@ Meteor.methods({
       },
       userId(userId) {
         connection.lastRateLimitEvent.userId = userId;
-        return true;
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            resolve(true);
+          }, 2);
+        });
       },
       type(type) {
         // Special check to return proper name since 'getLastRateLimitEvent'

@@ -132,7 +132,7 @@ async function assertRspackDevelopmentArtifacts(appDir) {
   await assertFileExist(appDir, '_build/main-dev/client-rspack.js');
   await assertFileExist(appDir, '_build/main-dev/client-meteor.js');
   await assertFileExist(appDir, '_build/main-dev/server-entry.js');
-  await assertFileExist(appDir, '_build/main-dev/server-rspack.js');
+  await assertFileExist(appDir, '_build/main-dev/server-rspack.cjs');
   await assertFileExist(appDir, '_build/main-dev/server-meteor.js');
   await assertPathNotExist(appDir, '.meteor/local/build/programs/server/npm/node_modules/.cache');
 }
@@ -388,6 +388,10 @@ describe('Capacitor App Web Lifecycle /', () => {
   });
 
   test('"meteor run android" serves web app and prepares Capacitor webDir', async () => {
+    // A previous native run leaves a complete document in the shared build
+    // root. Rspack must not re-include it as an app template during startup.
+    await fs.outputFile(path.join(tempDir, '_build/native-dev/index.html'),
+      '<!DOCTYPE html><html><head><title>Previous native build</title></head><body></body></html>');
     const result = await runMeteorApp(tempDir, PORT, {
       waitForOutput: /Capacitor native run skipped/,
       commandOptions: ['android'],
@@ -427,7 +431,7 @@ describe('Capacitor App Web Lifecycle /', () => {
       content: `Meteor.startup(() => console.log("${SERVER_REBUILD_MESSAGE}"));`,
     });
     await waitForMeteorOutput(result.outputLines, SERVER_REBUILD_MESSAGE);
-    await assertFileExist(tempDir, '_build/main-dev/server-rspack.js');
+    await assertFileExist(tempDir, '_build/main-dev/server-rspack.cjs');
 
     expect(meteorProcess.exitCode).toBe(null);
     expect(meteorProcess.signalCode).toBe(null);

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Helpers for managing modern tools in Meteor",
-  version: '1.1.0',
+  version: '1.4.0-rc360.1',
   devOnly: true,
 });
 
@@ -20,6 +20,7 @@ Package.onTest(function (api) {
     'tests/global_state_tests.js',
     'tests/lifecycle_tests.js',
     'tests/meteor_tests.js',
+    'tests/deps_tests.js',
     'tests/npm_tests.js',
     'tests/process_tests.js',
     'tests/readiness_tests.js',

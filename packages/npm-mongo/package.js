@@ -3,7 +3,7 @@
 
 Package.describe({
   summary: "Wrapper around the mongo npm package",
-  version: "6.16.1",
+  version: "6.18.1-rc360.1",
   documentation: null,
 });
 
@@ -14,5 +14,13 @@ Npm.depends({
 Package.onUse(function (api) {
   api.addFiles("wrapper.js", "server");
   api.export(["NpmModuleMongodb", "NpmModuleMongodbVersion"], "server");
+  api.export("NpmMongoTest", "server", { testOnly: true });
   api.addAssets("index.d.ts", "server");
+  api.addAssets("package-types.json", "server");
+});
+
+Package.onTest(function (api) {
+  api.use(["npm-mongo", "tinytest"], "server");
+  api.addAssets("wrapper.js", "server");
+  api.addFiles("wrapper-tests.js", "server");
 });

@@ -4,10 +4,12 @@ const { createHash } = require("node:crypto");
 const fs = require("fs-extra");
 const execa = require("execa");
 const { buildNativeTestEnv } = require("./env");
+const { configureLocalMeteorWebappPlugin } = require("./cordova-plugin-override");
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..", "..");
 const METEOR_BIN = path.join(REPO_ROOT, "meteor");
 const CAPACITOR_PACKAGE_DIR = path.join(REPO_ROOT, "npm-packages", "meteor-capacitor");
+const METEOR_WEBAPP_PLUGIN_DIR = path.join(REPO_ROOT, "npm-packages", "cordova-plugin-meteor-webapp");
 const NPM_QUIET_INSTALL_FLAGS = ["--no-audit", "--no-fund"];
 const CAPACITOR_WEB_APP_LOCAL_SERVER_SHIM = [
   "<script type=\"text/javascript\">",
@@ -61,7 +63,20 @@ async function findFirst(dir, regex) {
   return null;
 }
 
-async function compileIosForSimulator({ buildDir, scheme }) {
+function buildIosSimulatorArgs({ workspace, derivedData }) {
+  const scheme = path.basename(workspace, ".xcworkspace");
+  return [
+    "-workspace", workspace,
+    "-scheme", scheme,
+    "-configuration", "Debug",
+    "-sdk", "iphonesimulator",
+    "-destination", "generic/platform=iOS Simulator",
+    "-derivedDataPath", derivedData,
+    "build",
+  ];
+}
+
+async function compileIosForSimulator({ buildDir }) {
   // `meteor build` produces an Xcode project under <buildDir>/ios/project/.
   // For Maestro to install on the Simulator, we need a compiled .app, so we
   // invoke xcodebuild ourselves. derivedData lives next to the project so the
@@ -75,16 +90,7 @@ async function compileIosForSimulator({ buildDir, scheme }) {
   }
   await execa(
     "xcodebuild",
-    [
-      "-workspace", workspace,
-      "-scheme", scheme,
-      "-configuration", "Debug",
-      "-sdk", "iphonesimulator",
-      "-destination", "generic/platform=iOS Simulator",
-      "-derivedDataPath", derivedData,
-      "-quiet",
-      "build",
-    ],
+    buildIosSimulatorArgs({ workspace, derivedData }),
     { stdio: "inherit" }
   );
 
@@ -482,6 +488,7 @@ async function prepareCordovaApp({
   const appDir = path.join(workDir, "app");
   const buildDir = path.join(workDir, "build-out");
   await copyAppSource(appConfig.sourceDir, appDir);
+  await configureLocalMeteorWebappPlugin({ appDir, pluginDir: METEOR_WEBAPP_PLUGIN_DIR });
   await installAppDeps(appDir);
   await addPlatform(appDir, platform);
 
@@ -733,6 +740,7 @@ async function cleanup(dir) {
 }
 
 module.exports = {
+  buildIosSimulatorArgs,
   buildMeteorBuildArgs,
   buildMeteorNpmInstallArgs,
   buildLocalCapacitorInstallArgs,

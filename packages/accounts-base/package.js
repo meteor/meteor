@@ -1,6 +1,6 @@
 Package.describe({
   summary: "A user account system",
-  version: '3.2.1',
+  version: '3.4.0-rc360.1',
 });
 
 Package.onUse((api) => {
@@ -14,6 +14,8 @@ Package.onUse((api) => {
   api.use("callback-hook", ["client", "server"]);
   api.use("reactive-var", "client");
   api.use("url", ["client", "server"]);
+  api.use("webapp", "server");
+  api.use("routepolicy", "server");
 
   // needed for getting the currently logged-in user and handling reconnects
   api.use("ddp", ["client", "server"]);
@@ -24,7 +26,7 @@ Package.onUse((api) => {
 
   // If the 'blaze' package is loaded, we'll define some helpers like
   // {{currentUser}}.  If not, no biggie.
-  api.use("blaze", "client", { weak: true });
+  api.use("blaze@3.0.3", "client", { weak: true });
 
   // Allow us to detect 'autopublish', and publish some Meteor.users fields if
   // it's loaded.
@@ -46,6 +48,7 @@ Package.onUse((api) => {
   api.mainModule("client_main.js", "client");
 
   api.addAssets("accounts-base.d.ts", "server");
+  api.types("accounts-base.native.d.ts");
 });
 
 Package.onTest((api) => {
@@ -57,6 +60,7 @@ Package.onTest((api) => {
     "test-helpers",
     "oauth-encryption",
     "ddp",
+    "ddp-rate-limiter",
     "accounts-password",
     "accounts-2fa",
   ]);

@@ -23,6 +23,8 @@ const APPS = {
     wrapper: "cordova",
     sourceDir: path.join(ROOT, "apps", "smoke"),
     flowPath: path.join(ROOT, "flows", "launch.yaml"),
+    hcpInitialFlowPath: path.join(ROOT, "flows", "launch.yaml"),
+    hcpFlowPath: path.join(ROOT, "flows", "hcp-updated.yaml"),
   },
 };
 

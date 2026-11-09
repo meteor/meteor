@@ -1,5 +1,4 @@
 import { waitForHttpReady } from 'meteor/tools-core/lib/readiness';
-import { getMeteorAppPort } from 'meteor/tools-core/lib/meteor';
 
 function parseMeteorPort(value) {
   const raw = String(value || '3000');
@@ -19,7 +18,11 @@ export function getMeteorIndexUrl() {
     return process.env.METEOR_CAPACITOR_READY_URL;
   }
 
-  const { host, port } = parseMeteorPort(getMeteorAppPort());
+  // Read the raw bind option: getMeteorAppPort() deliberately strips the host
+  // for callers that derive other ports, but readiness must reach that host.
+  const portOption = Package?.meteor?.global?.currentCommand?.options?.port ||
+    process.env.PORT || '3000';
+  const { host, port } = parseMeteorPort(portOption);
   return `http://${host}:${port}/`;
 }
 

@@ -8,3 +8,4 @@ export * from './lib/git';
 export * from './lib/string';
 export * from './lib/ignore';
 export * from './lib/lifecycle';
+export * from './lib/deps';

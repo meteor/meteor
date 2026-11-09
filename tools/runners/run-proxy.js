@@ -1,19 +1,6 @@
 var Anser = require("anser");
 var runLog = require('./run-log.js');
 
-function requireHttpProxy() {
-  var util = require('util');
-  var originalExtend = util._extend;
-  // http-proxy 1.18 captures util._extend at require-time; keep the vendored
-  // dependency quiet on modern Node without suppressing other warnings.
-  util._extend = Object.assign;
-  try {
-    return require('http-proxy');
-  } finally {
-    util._extend = originalExtend;
-  }
-}
-
 // options: listenPort, proxyToPort, proxyToHost,
 // onFailure, ignoredUrls
 var Proxy = function (options) {
@@ -32,6 +19,7 @@ var Proxy = function (options) {
   self.websocketQueue = []; // keys: req, socket, head
 
   self.proxy = null;
+  self.proxyAgent = null;
   self.server = null;
 };
 
@@ -50,12 +38,13 @@ Object.assign(Proxy.prototype, {
 
     var http = require('http');
     var net = require('net');
-    var httpProxy = requireHttpProxy();
+    var httpProxy = require('http-proxy-3');
 
+    self.proxyAgent = new http.Agent({ maxSockets: 100 });
     self.proxy = httpProxy.createProxyServer({
       // agent is required to handle keep-alive, and http-proxy 1.0 is a little
       // buggy without it: https://github.com/nodejitsu/node-http-proxy/pull/488
-      agent: new http.Agent({ maxSockets: 100 }),
+      agent: self.proxyAgent,
       xfwd: true
     });
 
@@ -143,6 +132,32 @@ Object.assign(Proxy.prototype, {
       }
     });
 
+    self.proxy.on('proxyReqWs', function (proxyReq, _req, socket) {
+      var proxySocket = null;
+
+      function destroyProxyReq() {
+        if (! proxySocket) {
+          proxyReq.socket?.destroy();
+          proxyReq.destroy();
+        }
+      }
+
+      // If the browser closes while the upstream websocket upgrade is still
+      // pending, make sure the outgoing request is torn down too.
+      socket.once('close', destroyProxyReq);
+
+      proxyReq.once('upgrade', function (_proxyRes, upgradedProxySocket) {
+        proxySocket = upgradedProxySocket;
+        socket.removeListener('close', destroyProxyReq);
+        socket.once('close', function () {
+          proxySocket.destroy();
+        });
+        proxySocket.once('close', function () {
+          socket.destroy();
+        });
+      });
+    });
+
     self.server.listen(self.listenPort, self.listenHost || '0.0.0.0', function () {
       if (self.server) {
         self.started = true;
@@ -171,17 +186,22 @@ Object.assign(Proxy.prototype, {
       // race condition and we could be in the middle of starting to listen! In
       // that case, the listen callback will notice that we nulled out server
       // here.
+      self.proxy = null;
       self.server = null;
+      self.proxyAgent?.destroy();
+      self.proxyAgent = null;
       return;
     }
 
     // This stops listening but allows existing connections to
     // complete gracefully.
-    self.server.close();
+    var proxyAgent = self.proxyAgent;
+    self.server.close(function () {
+      proxyAgent?.destroy();
+    });
     self.server = null;
 
-    // It doesn't seem to be necessary to do anything special to
-    // destroy an httpProxy proxyserver object.
+    self.proxyAgent = null;
     self.proxy = null;
 
     // Drop any held connections.
@@ -201,11 +221,6 @@ Object.assign(Proxy.prototype, {
 
   _tryHandleConnections: function () {
     var self = this;
-
-    function updateProxyTarget() {
-      self.proxy.options.target =
-        'http://' + self.proxyToHost + ':' + self.proxyToPort;
-    }
 
     function attempt(resOrSocket, fn) {
       try {
@@ -229,8 +244,9 @@ Object.assign(Proxy.prototype, {
       if (self.mode === "errorpage") {
         showErrorPage(c.res);
       } else {
-        updateProxyTarget();
-        attempt(c.res, () => self.proxy.web(c.req, c.res));
+        attempt(c.res, () => self.proxy.web(c.req, c.res, {
+          target: 'http://' + self.proxyToHost + ':' + self.proxyToPort
+        }));
       }
     }
 
@@ -240,8 +256,10 @@ Object.assign(Proxy.prototype, {
       }
 
       var c = self.websocketQueue.shift();
-      updateProxyTarget();
-      attempt(c.socket, () => self.proxy.ws(c.req, c.socket, c.head));
+      attempt(c.socket, () => self.proxy.ws(c.req, c.socket, c.head, {
+        target: 'http://' + self.proxyToHost + ':' + self.proxyToPort,
+        agent: false
+      }));
     }
   },
 

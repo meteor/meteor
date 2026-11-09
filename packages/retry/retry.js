@@ -45,21 +45,17 @@ export class Retry {
 
     // fuzz the timeout randomly, to avoid reconnect storms when a
     // server goes down.
-    var timeout = Math.min(
-      this.maxTimeout,
-      this.baseTimeout * Math.pow(this.exponent, count)
-    ) * (
-      Random.fraction() * this.fuzz + (1 - this.fuzz / 2)
-    );
+    const timeout =
+      Math.min(this.maxTimeout, this.baseTimeout * Math.pow(this.exponent, count)) *
+      (Random.fraction() * this.fuzz + (1 - this.fuzz / 2));
 
     return timeout;
   }
 
   // Call `fn` after a delay, based on the `count` of which retry this is.
   retryLater(count, fn) {
-    var timeout = this._timeout(count);
-    if (this.retryTimer)
-      clearTimeout(this.retryTimer);
+    const timeout = this._timeout(count);
+    if (this.retryTimer) clearTimeout(this.retryTimer);
     this.retryTimer = Meteor.setTimeout(fn, timeout);
     return timeout;
   }

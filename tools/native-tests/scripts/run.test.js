@@ -4,6 +4,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const {
   artifactStem,
+  updatedJunitPath,
   getHardTimeoutMs,
   getUpdatedAppReadyChecks,
   getInitialFlowPathForMode,
@@ -491,4 +492,15 @@ test("Capacitor livereload flows verify non-root route reloads", () => {
     assert.match(flow, /Reload route test/, path.basename(flowFile));
     assert.match(flow, /Route reload preserved/, path.basename(flowFile));
   }
+});
+
+
+test("Cordova smoke retains both initial and HCP flows", () => {
+  const app = getAppConfig("smoke");
+  assert.equal(path.basename(getInitialFlowPathForMode("run", app)), "launch.yaml");
+  assert.equal(path.basename(getUpdatedFlowPathForMode("run", app)), "hcp-updated.yaml");
+});
+
+test("uses a distinct JUnit artifact for updated HCP assertions", () => {
+  assert.equal(updatedJunitPath("/tmp/junit/ios-smoke.xml"), "/tmp/junit/ios-smoke-updated.xml");
 });

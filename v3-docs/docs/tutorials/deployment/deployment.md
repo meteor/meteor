@@ -44,7 +44,7 @@ Settings should be used to set environment (i.e. staging vs production) specific
 
 Environment variables are used to set process-specific things, which could conceivably change for different instances of your application's processes. A list of environment variables can be found in the [CLI documentation](/cli/environment-variables).
 
-A final note on storing these settings: It's not a good idea to store settings in the same repository where you keep your app code. Read about good places to put your settings in the [Security article](/tutorials/security/security#api-keys).
+A final note on storing these settings: It's not a good idea to store settings in the same repository where you keep your app code. Read about good places to put your settings in the [Security article](/tutorials/security/security#securing-api-keys).
 
 ## Other considerations
 
@@ -132,8 +132,11 @@ To orchestrate your own container-based deployment there are existing base image
 Here's a basic Dockerfile example for a Meteor 3 application:
 
 ```dockerfile
+# Use the version reported by `meteor node -v` for the release you build with.
+ARG NODE_VERSION=26.11.1
+
 # Build stage
-FROM node:20-alpine AS builder
+FROM node:${NODE_VERSION}-alpine AS builder
 
 RUN apk add --no-cache python3 make g++ git
 
@@ -148,7 +151,7 @@ RUN meteor npm install --production
 RUN meteor build --directory /build --server-only
 
 # Production stage
-FROM node:20-alpine
+FROM node:${NODE_VERSION}-alpine
 
 WORKDIR /app
 
@@ -183,7 +186,10 @@ meteor build /path/to/build --architecture os.linux.x86_64
 
 This will provide you with a bundled application `.tar.gz` which you can extract and run without the `meteor` tool. The environment you choose will need the correct version of Node.js and connectivity to a MongoDB server.
 
-To find out which version of Node you should use, run `meteor node -v` in the development environment, or check the `.node_version.txt` file within the bundle. For Meteor 3.x, you'll need Node.js 20.x.
+To find out which version of Node you should use, run `meteor node -v` in the
+development environment, or check the `.node_version.txt` file within the
+bundle. The build and production stages must use that version. Meteor 3.6 uses
+Node.js 26.11.1; earlier Meteor 3 releases use different Node.js versions.
 
 ::: warning
 If you use a mis-matched version of Node when deploying your application, you will encounter errors!
@@ -200,6 +206,19 @@ MONGO_URL=mongodb://localhost:27017/myapp ROOT_URL=http://my-app.com PORT=3000 n
 - `ROOT_URL` is the base URL for your Meteor project
 - `PORT` is the port at which the application is running
 - `MONGO_URL` is a [Mongo connection string URI](https://docs.mongodb.com/manual/reference/connection-string/)
+
+::: warning Don't skip `npm install` on the target machine
+The `(cd programs/server && npm install)` step above is **not optional**. It runs the bundle's
+`npm-rebuild.js` script, which recompiles native (C/C++) addons for the operating system and
+CPU architecture of the machine that will *run* the app. Skipping it — or copying a
+`node_modules` directory built on a different OS/arch — leads to the "invalid ELF header" error
+:::
+
+#### Key rule
+
+Never copy a built `node_modules` (or an entire bundle's `programs/server/node_modules`) between
+machines with different operating systems or CPU architectures. Always let `npm install` rebuild
+native addons on the machine where the app will actually run.
 
 ## MongoDB options
 
@@ -266,7 +285,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22.x
+          # Match the version reported by `meteor node -v` for your release.
+          node-version: 26.11.1
 
       - name: Install Meteor
         run: curl https://install.meteor.com/ | sh

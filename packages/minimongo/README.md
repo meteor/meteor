@@ -23,6 +23,7 @@ Minimongo implements the following features, mirroring the MongoDB features:
 - Querying with `sort` and `limit`
 - ObjectID generation
 - Geo-positional operator `$near` with GeoJSON parsing
+- Collation support for locale-aware string comparison (via `Intl.Collator`)
 
 Internally, all documents are mapped in a single JS object from `_id` to the
 document. Besides this mapping, Minimongo doesn't implement any types of

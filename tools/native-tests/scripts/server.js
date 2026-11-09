@@ -116,6 +116,7 @@ function buildServerRunOptions({
       DO_NOT_TRACK: "1",
       PORT: String(port),
       ROOT_URL: mobileServerUrl || url,
+      METEOR_FORCE_INCLUDE_ARCHS: "web.cordova",
     }),
     url,
   };

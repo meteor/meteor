@@ -12,6 +12,11 @@ const {
 } = require("./server");
 const { bootSimulator } = require("./simulator");
 const { runFlow } = require("./maestro");
+const {
+  applyCordovaFixtureUpdate,
+  readCordovaManifest,
+  waitForCordovaManifestChange,
+} = require("./cordova-hcp");
 
 const PLATFORMS = new Set(["ios", "android"]);
 const MODES = new Set(["run", "build", "livereload", "hcp"]);
@@ -372,9 +377,10 @@ async function run(argv) {
     cleanup.push(() => cleanupApp(build.workDir));
 
     const sim = await bootSimulator(args.platform, { appId: appConfig.appId });
+    // Cleanup is LIFO: capture logs before uninstalling and shutting down.
+    cleanup.push(() => sim.shutdown());
     cleanup.push(() => sim.uninstall());
     cleanup.push(() => sim.captureLogs(logOut));
-    cleanup.push(() => sim.shutdown());
     await sim.uninstall();
 
     if (shouldUseNativeRunBackedServer({
@@ -418,6 +424,9 @@ async function run(argv) {
     }
 
     const initialFlowPath = getInitialFlowPathForMode(args.mode, appConfig);
+    const initialManifest = appConfig.wrapper === "cordova"
+      ? await readCordovaManifest({ baseUrl: serverConfig.bindUrl })
+      : null;
 
     const { exitCode } = await runFlow({
       flowPath: initialFlowPath,
@@ -429,6 +438,21 @@ async function run(argv) {
 
     if (exitCode !== 0) return EXIT_FLOW_FAIL;
     if (shouldRunUpdatedFlowForMode(args.mode)) {
+      if (appConfig.wrapper === "cordova") {
+        await applyCordovaFixtureUpdate(build.appDir);
+        await waitForCordovaManifestChange({
+          baseUrl: serverConfig.bindUrl,
+          previousVersion: initialManifest.version,
+        });
+        const updated = await runFlow({
+          flowPath: getUpdatedFlowPathForMode(args.mode, appConfig),
+          deviceId: sim.deviceId,
+          junitOut: updatedJunitPath(junitOut),
+          platform: args.platform,
+          retries: 1,
+        });
+        return updated.exitCode === 0 ? EXIT_PASS : EXIT_FLOW_FAIL;
+      }
       const initialCordovaManifest = shouldWaitForUpdatedCordovaManifest({
         mode: args.mode,
         wrapper: appConfig.wrapper,
@@ -497,6 +521,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  updatedJunitPath,
   artifactStem,
   getHardTimeoutMs,
   getUpdatedAppReadyChecks,

@@ -1,4 +1,3 @@
-var url = Npm.require("url");
 import { isLocalConnection, isSslConnection } from 'meteor/force-ssl-common';
 
 // Unfortunately we can't use a connect middleware here since
@@ -23,7 +22,7 @@ httpServer.addListener('request', function (req, res) {
   if (!isLocalConnection(req) && !isSslConnection(req)) {
     // connection is not cool. send a 302 redirect!
 
-    var host = url.parse(Meteor.absoluteUrl()).hostname;
+    var host = new URL(Meteor.absoluteUrl()).hostname;
 
     // strip off the port number. If we went to a URL with a custom
     // port, we don't know what the custom SSL port is anyway.

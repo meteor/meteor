@@ -1,7 +1,7 @@
 {
   "name": "@meteorjs/babel",
   "author": "Meteor <dev@meteor.com>",
-  "version": "7.20.1",
+  "version": "7.20.2-rc.1",
   "license": "MIT",
   "type": "commonjs",
   "description": "Babel wrapper package for use with Meteor",

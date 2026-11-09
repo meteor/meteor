@@ -5,9 +5,10 @@ import {
 
 import { StreamClientCommon } from "./common.js";
 
-// Statically importing SockJS here will prevent native WebSocket usage
-// below (in favor of SockJS), but will ensure maximum compatibility for
-// clients stuck in unusual networking environments.
+// SockJS is imported statically to avoid the startup latency that dynamic
+// import() would introduce in _launchConnection(). When a non-SockJS transport
+// is selected, SockJS remains in the bundle but is never used — the connection
+// goes through native WebSocket directly.
 import SockJS from "./sockjs-1.6.1-min-.js";
 
 export class ClientStream extends StreamClientCommon {
@@ -53,9 +54,14 @@ export class ClientStream extends StreamClientCommon {
   // the floor, and it is up the user of this API to retransmit lost
   // messages on 'reset'
   send(data) {
-    if (this.currentStatus.connected) {
-      this.socket.send(data);
+    if (!this.currentStatus.connected) return;
+    // 0 is CONNECTING (SockJS only has the constant as a static): the one
+    // state where send() throws. A closing socket's own 'close' drives retry.
+    if (this.socket.readyState === 0) {
+      this._lostConnection(new this.ConnectionError("Socket is not open"));
+      return;
     }
+    this.socket.send(data);
   }
 
   // Changes where this connection points
@@ -90,14 +96,19 @@ export class ClientStream extends StreamClientCommon {
   _cleanup(maybeError) {
     this._clearConnectionAndHeartbeatTimers();
     if (this.socket) {
-      this.socket.onmessage = this.socket.onclose = this.socket.onerror = this.socket.onheartbeat = () => {};
+      this.socket.onopen = this.socket.onmessage = this.socket.onclose =
+        this.socket.onerror = this.socket.onheartbeat = () => {};
       this.socket.close();
       this.socket = null;
-    }
 
-    this.forEachCallback('disconnect', callback => {
-      callback(maybeError);
-    });
+      // Only fire disconnect callbacks when there was a socket to close,
+      // matching the node implementation. _cleanup also runs at the top of
+      // every (re)connection attempt, and firing here with no socket sent a
+      // phantom 'disconnect' event to consumers once per retry cycle.
+      this.forEachCallback('disconnect', callback => {
+        callback(maybeError);
+      });
+    }
   }
 
   _clearConnectionAndHeartbeatTimers() {
@@ -117,6 +128,11 @@ export class ClientStream extends StreamClientCommon {
   }
 
   _heartbeat_received() {
+    // The watchdog exists to detect missing SockJS heartbeat frames, which
+    // the server emits every 45s. Native WebSocket transports have no such
+    // frames, so on a quiet connection (e.g. DDP heartbeats disabled) the
+    // timer would be guaranteed to fire and kill a healthy connection.
+    if (this._transport !== 'sockjs') return;
     // If we've already permanently shut down this stream, the timeout is
     // already cleared, and we don't need to set it again.
     if (this._forcedToDisconnect) return;
@@ -157,22 +173,27 @@ export class ClientStream extends StreamClientCommon {
   _launchConnection() {
     this._cleanup(); // cleanup the old socket, if there was one.
 
-    var options = {
-      transports: this._sockjsProtocolsWhitelist(),
-      ...this.options._sockjsOptions
-    };
+    const transport = __meteor_runtime_config__.DDP_TRANSPORT || 'sockjs';
+    this._transport = transport;
 
-    const hasSockJS = typeof SockJS === "function";
-    const disableSockJS = __meteor_runtime_config__.DISABLE_SOCKJS;
-
-    this.socket = hasSockJS && !disableSockJS
+    if (transport === 'sockjs') {
+      const options = {
+        transports: this._sockjsProtocolsWhitelist(),
+        ...this.options._sockjsOptions
+      };
       // Convert raw URL to SockJS URL each time we open a connection, so
       // that we can connect to random hostnames and get around browser
       // per-host connection limits.
-      ? new SockJS(toSockjsUrl(this.rawUrl), undefined, options)
-      : new WebSocket(toWebsocketUrl(this.rawUrl));
+      this.socket = new SockJS(toSockjsUrl(this.rawUrl), undefined, options);
+    } else {
+      // All non-SockJS transports use native WebSocket on the client.
+      this.socket = new WebSocket(toWebsocketUrl(this.rawUrl));
+    }
 
-    this.socket.onopen = data => {
+    const socket = this.socket;
+    socket.onopen = () => {
+      // A replaced socket can still deliver its queued 'open'; ignore it.
+      if (this.socket !== socket) return;
       this.lastError = null;
       this._connected();
     };

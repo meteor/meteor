@@ -126,6 +126,7 @@ test("builds local server command with package stats disabled", () => {
   assert.equal(options.env.EXISTING, "1");
   assert.equal(options.env.PORT, "3212");
   assert.equal(options.env.ROOT_URL, "http://10.0.0.7:3212");
+  assert.equal(options.env.METEOR_FORCE_INCLUDE_ARCHS, "web.cordova");
   assert.equal(options.env.DO_NOT_TRACK, "1");
   assert.equal("NO_COLOR" in options.env, false);
   assert.equal("FORCE_COLOR" in options.env, false);

@@ -45,12 +45,19 @@ npm run test:native:capacitor:ios:hcp        # production build + HCP update flo
 The generic `npm run test:native -- --platform=<ios|android>` form also works; the
 per-platform scripts above are just shorthands.
 
-The old Cordova smoke fixture remains available as a fallback:
+The Cordova smoke fixture remains available and exercises both initial launch
+and a real hot-code update:
 
 ```sh
 cd tools/native-tests
 node scripts/run.js --platform=android --app=smoke
 ```
+
+The Cordova fixture uses this checkout's
+`npm-packages/cordova-plugin-meteor-webapp`. After `launch.yaml` passes, the
+runner mutates the temporary fixture, waits for its Cordova manifest version to
+change, and runs `hcp-updated.yaml`. Publishing plugin changes still requires
+publishing the plugin and updating `packages/webapp`'s `Cordova.depends` pin.
 
 For debugging, keep the temporary app and simulator running:
 
@@ -66,7 +73,9 @@ node scripts/run.js --platform=android --keep-running
 | `apps/capacitor-tests/` | Default Capacitor app under test |
 | `apps/smoke/` | Legacy Cordova smoke fixture |
 | `flows/capacitor-tests.yaml` | Default Capacitor runtime flow |
-| `flows/launch.yaml` | Legacy smoke flow |
+| `flows/launch.yaml` | Cordova initial render/runtime/style/DDP/route assertions |
+| `flows/hcp-updated.yaml` | Cordova updated render/runtime/DDP/HCP assertions |
+| `scripts/cordova-hcp.js` | Cordova fixture mutation and manifest change helpers |
 | `scripts/run.js` | Entrypoint, wires the pipeline |
 | `scripts/build-app.js` | Prepares app fixtures and native platforms |
 | `scripts/server.js` | Starts `meteor run` and waits for ready |

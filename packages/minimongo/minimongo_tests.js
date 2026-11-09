@@ -1,3 +1,155 @@
+Tinytest.add('minimongo - projections preserve own prototype fields and exclude secrets', test => {
+  const collection = new LocalCollection();
+  collection.insert(JSON.parse('{"_id":"projection","profile":{"__proto__":{"secret":"hidden"},"public":"visible"},"items":[{"__proto__":{"secret":"hidden"},"public":"visible"}]}'));
+  for (const fields of [
+    {'profile.__proto__': 0, 'items.__proto__': 0},
+    {'profile.__proto__.secret': 0, 'items.__proto__.secret': 0},
+    {'profile.public': 1, 'items.public': 1},
+  ]) {
+    const result = collection.findOne('projection', {fields});
+    test.isFalse(EJSON.stringify(result).includes('hidden'));
+    test.equal(result.profile.public, 'visible');
+    test.equal(result.items[0].public, 'visible');
+    test.equal(Object.getPrototypeOf(result.profile), Object.prototype);
+    test.equal(Object.getPrototypeOf(result.items[0]), Object.prototype);
+  }
+  const included = collection.findOne('projection', {fields: {'profile.__proto__': 1}});
+  test.isTrue(Object.prototype.hasOwnProperty.call(included.profile, '__proto__'));
+  test.equal(included.profile.__proto__, {secret: 'hidden'});
+  test.equal(Object.getPrototypeOf(included.profile), Object.prototype);
+});
+
+Tinytest.add('minimongo - upserts preserve own prototype fields', test => {
+  for (const selector of [JSON.parse('{"__proto__":{"safe":true}}'), {'__proto__.safe': true}]) {
+    const collection = new LocalCollection();
+    collection.upsert(selector, {$set: {public: 'visible'}});
+    const doc = collection.findOne();
+    test.isTrue(Object.prototype.hasOwnProperty.call(doc, '__proto__'));
+    test.equal(doc.__proto__, {safe: true});
+    test.equal(Object.getPrototypeOf(doc), Object.prototype);
+    test.equal(doc.public, 'visible');
+  }
+  const collection = new LocalCollection();
+  collection.upsert({_id: 'replacement'}, JSON.parse('{"__proto__":{"safe":true},"public":"visible"}'));
+  const doc = collection.findOne('replacement');
+  test.isTrue(Object.prototype.hasOwnProperty.call(doc, '__proto__'));
+  test.equal(doc.__proto__, {safe: true});
+  test.equal(Object.getPrototypeOf(doc), Object.prototype);
+  test.equal(doc.public, 'visible');
+});
+
+Tinytest.addAsync('minimongo - observers deliver own prototype field changes', async test => {
+  const collection = new LocalCollection();
+  collection.insert({_id: 'observed', public: 'visible'});
+  const changes = [];
+  const handle = await collection.find().observeChangesAsync({
+    changed(id, fields) { changes.push({id, fields}); },
+  });
+  try {
+    await collection.updateAsync('observed', {$set: JSON.parse('{"__proto__":{"safe":true}}')});
+    test.equal(changes.length, 1);
+    if (changes.length) {
+      test.equal(changes[0].id, 'observed');
+      test.isTrue(Object.prototype.hasOwnProperty.call(changes[0].fields, '__proto__'));
+      test.equal(changes[0].fields.__proto__, {safe: true});
+      test.equal(Object.getPrototypeOf(changes[0].fields), Object.prototype);
+    }
+    await collection.updateAsync('observed', {$unset: JSON.parse('{"__proto__":1}')});
+    test.equal(changes.length, 2);
+    if (changes.length > 1) {
+      test.isTrue(Object.prototype.hasOwnProperty.call(changes[1].fields, '__proto__'));
+      test.isUndefined(changes[1].fields.__proto__);
+    }
+    test.equal(collection.findOne('observed').public, 'visible');
+  } finally {
+    await handle.stop();
+  }
+});
+
+Tinytest.add('minimongo - modifiers only traverse own document fields', test => {
+  const marker = 'meteorModifierPrototypeMarker';
+  try {
+    for (const prefix of ['__proto__', 'constructor.prototype', 'nested.__proto__', 'items.0.__proto__']) {
+      const doc = {_id: 'safe', items: [{}]};
+      LocalCollection._modify(doc, {$set: {[`${prefix}.${marker}`]: 7}});
+      test.isFalse(Object.prototype.hasOwnProperty.call(Object.prototype, marker));
+      test.equal(Object.getPrototypeOf(doc), Object.prototype);
+      test.equal(prefix.split('.').reduce((value, key) => value[key], doc)[marker], 7);
+    }
+
+    // Non-creating operators must not read or mutate inherited fields.
+    const doc = {_id: 'safe', kept: 1};
+    Object.prototype[marker] = 3;
+    LocalCollection._modify(doc, {$unset: {[`__proto__.${marker}`]: 1}});
+    test.equal(Object.prototype[marker], 3);
+    delete Object.prototype[marker];
+    LocalCollection._modify(doc, {$rename: {constructor: 'copied'}});
+    test.isFalse(Object.prototype.hasOwnProperty.call(doc, 'copied'));
+    test.equal(typeof Object.prototype.toString, 'function');
+
+    LocalCollection._modify(doc, {$rename: {kept: `__proto__.${marker}`}});
+    test.equal(doc.__proto__[marker], 1);
+    test.isFalse(Object.prototype.hasOwnProperty.call(Object.prototype, marker));
+  } finally {
+    delete Object.prototype[marker];
+  }
+});
+
+Tinytest.add('minimongo - prototype names remain ordinary own fields', test => {
+  for (const field of ['__proto__', 'constructor', 'toString']) {
+    for (const [operator, argument, expected] of [
+      ['$set', {safe: true}, {safe: true}],
+      ['$inc', 2, 2], ['$mul', 2, 0], ['$min', 2, 2], ['$max', 2, 2],
+      ['$push', 2, [2]], ['$pushAll', [2], [2]], ['$addToSet', 2, [2]],
+    ]) {
+      const doc = {_id: 'safe'};
+      LocalCollection._modify(doc, {[operator]: {[field]: argument}});
+      test.isTrue(Object.prototype.hasOwnProperty.call(doc, field));
+      test.equal(doc[field], expected);
+      test.equal(Object.getPrototypeOf(doc), Object.prototype);
+    }
+  }
+  const replacement = JSON.parse('{"__proto__":{"safe":true},"_id":"safe"}');
+  const doc = {_id: 'safe'};
+  LocalCollection._modify(doc, replacement);
+  test.isTrue(Object.prototype.hasOwnProperty.call(doc, '__proto__'));
+  test.equal(Object.getPrototypeOf(doc), Object.prototype);
+  LocalCollection._modify(doc, {$set: {'__proto__.safe': false}});
+  test.equal(doc.__proto__.safe, false);
+  LocalCollection._modify(doc, {$set: {items: [{n: 1}]}});
+  LocalCollection._modify(doc, {$inc: {'items.$.n': 2}}, {arrayIndices: [0]});
+  test.equal(doc.items, [{n: 3}]);
+});
+
+Tinytest.add('minimongo - id fast path requires an own id field', test => {
+  const inheritedId = Object.create({_id: 'inherited'});
+  inheritedId.name = 'not-an-id-selector';
+  test.isFalse(LocalCollection._selectorIsIdPerhapsAsObject(inheritedId));
+  test.isTrue(LocalCollection._selectorIsIdPerhapsAsObject({_id: 'own'}));
+  test.isTrue(LocalCollection._selectorIsIdPerhapsAsObject('shorthand'));
+  test.isFalse(LocalCollection._selectorIsIdPerhapsAsObject({_id: 'own', name: 'extra'}));
+  test.isFalse(Boolean(LocalCollection._selectorIsIdPerhapsAsObject(null)));
+});
+
+Tinytest.add('minimongo - non-creating array modifiers ignore inherited fields', test => {
+  const marker = 'meteorModifierInheritedArray';
+  const inherited = [1, 2, 3];
+  Object.prototype[marker] = inherited;
+  try {
+    for (const [operator, argument] of [['$pop', 1], ['$pull', 2], ['$pullAll', [2]]]) {
+      for (const prefix of ['', '__proto__.']) {
+        const doc = {_id: 'safe'};
+        LocalCollection._modify(doc, {[operator]: {[prefix + marker]: argument}});
+        test.equal(inherited, [1, 2, 3]);
+        test.isFalse(Object.prototype.hasOwnProperty.call(doc, marker));
+        test.isFalse(Object.prototype.hasOwnProperty.call(doc, '__proto__'));
+      }
+    }
+  } finally {
+    delete Object.prototype[marker];
+  }
+});
+
 Tinytest.add('minimongo - wrapTransform', test => {
   const wrap = LocalCollection.wrapTransform;
 
@@ -87,6 +239,287 @@ Tinytest.add('minimongo - bulk remove with $in operator removes all matching doc
   // Verify the other documents still exist
   test.isNotUndefined(coll.findOne('id3'));
   test.isNotUndefined(coll.findOne('id4'));
+});
+
+// ---- Collation support ----
+
+Tinytest.add('minimongo - collation - _createCollator maps MongoDB options to Intl.Collator', test => {
+  // strength 2 → case-insensitive (sensitivity 'accent')
+  const collator = LocalCollection._createCollator({locale: 'en', strength: 2});
+  test.equal(collator.compare('abc', 'ABC'), 0);
+  test.equal(collator.compare('abc', 'abc'), 0);
+  test.notEqual(collator.compare('abc', 'ábc'), 0); // accents differ at strength 2
+
+  // strength 1 → base only (case + accents ignored)
+  const base = LocalCollection._createCollator({locale: 'en', strength: 1});
+  test.equal(base.compare('abc', 'ABC'), 0);
+  test.equal(base.compare('abc', 'ábc'), 0); // accents ignored at strength 1
+
+  // strength 3 (default) → case-sensitive
+  const strict = LocalCollection._createCollator({locale: 'en', strength: 3});
+  test.notEqual(strict.compare('abc', 'ABC'), 0);
+
+  // numericOrdering
+  const numeric = LocalCollection._createCollator({locale: 'en', numericOrdering: true});
+  test.isTrue(numeric.compare('2', '10') < 0); // numeric: 2 < 10
+  const lexical = LocalCollection._createCollator({locale: 'en'});
+  test.isTrue(lexical.compare('2', '10') > 0); // lexical: '2' > '10'
+
+  // caseFirst: 'upper' → uppercase sorts before lowercase
+  const upperFirst = LocalCollection._createCollator({locale: 'en', caseFirst: 'upper', strength: 3});
+  test.isTrue(upperFirst.compare('A', 'a') < 0);
+
+  // caseLevel true at strength 1
+  const caseLevel = LocalCollection._createCollator({locale: 'en', strength: 1, caseLevel: true});
+  test.notEqual(caseLevel.compare('a', 'A'), 0); // case matters
+  test.equal(caseLevel.compare('a', 'á'), 0);    // accents still ignored
+});
+
+Tinytest.add('minimongo - collation - Matcher equality (case-insensitive)', test => {
+  const collation = {locale: 'en', strength: 2};
+
+  const matchCI = (selector, doc) => {
+    return new Minimongo.Matcher(selector, undefined, collation).documentMatches(doc).result;
+  };
+
+  // Plain value selector: {field: value}
+  test.isTrue(matchCI({name: 'john'}, {name: 'John'}));
+  test.isTrue(matchCI({name: 'john'}, {name: 'JOHN'}));
+  test.isTrue(matchCI({name: 'John'}, {name: 'john'}));
+  test.isTrue(matchCI({name: 'café'}, {name: 'café'}));
+  test.isFalse(matchCI({name: 'cafe'}, {name: 'café'})); // accents differ at strength 2
+  test.isFalse(matchCI({name: 'john'}, {name: 'jane'}));
+
+  // $eq operator
+  test.isTrue(matchCI({name: {$eq: 'john'}}, {name: 'JOHN'}));
+  test.isFalse(matchCI({name: {$eq: 'john'}}, {name: 'jane'}));
+
+  // $ne operator
+  test.isFalse(matchCI({name: {$ne: 'john'}}, {name: 'JOHN'}));
+  test.isTrue(matchCI({name: {$ne: 'john'}}, {name: 'jane'}));
+
+  // $in operator
+  test.isTrue(matchCI({name: {$in: ['john', 'jane']}}, {name: 'JOHN'}));
+  test.isTrue(matchCI({name: {$in: ['john', 'jane']}}, {name: 'Jane'}));
+  test.isFalse(matchCI({name: {$in: ['john', 'jane']}}, {name: 'bob'}));
+
+  // $nin operator
+  test.isFalse(matchCI({name: {$nin: ['john', 'jane']}}, {name: 'JOHN'}));
+  test.isTrue(matchCI({name: {$nin: ['john', 'jane']}}, {name: 'bob'}));
+
+  // Without collation, same selectors should be case-sensitive
+  const matchCS = (selector, doc) => {
+    return new Minimongo.Matcher(selector).documentMatches(doc).result;
+  };
+  test.isFalse(matchCS({name: 'john'}, {name: 'John'}));
+  test.isFalse(matchCS({name: {$in: ['john']}}, {name: 'JOHN'}));
+});
+
+Tinytest.add('minimongo - collation - Matcher inequality operators', test => {
+  const collation = {locale: 'en', strength: 2};
+
+  const matchCI = (selector, doc) => {
+    return new Minimongo.Matcher(selector, undefined, collation).documentMatches(doc).result;
+  };
+
+  // $lt / $gt with collation — 'b' > 'a' regardless of case
+  test.isTrue(matchCI({name: {$gt: 'a'}}, {name: 'B'}));
+  test.isTrue(matchCI({name: {$gt: 'a'}}, {name: 'b'}));
+  test.isFalse(matchCI({name: {$gt: 'b'}}, {name: 'A'}));
+
+  test.isTrue(matchCI({name: {$lt: 'b'}}, {name: 'A'}));
+  test.isTrue(matchCI({name: {$lt: 'b'}}, {name: 'a'}));
+  test.isFalse(matchCI({name: {$lt: 'a'}}, {name: 'B'}));
+
+  // $gte / $lte — equality is case-insensitive
+  test.isTrue(matchCI({name: {$gte: 'john'}}, {name: 'JOHN'}));
+  test.isTrue(matchCI({name: {$lte: 'john'}}, {name: 'JOHN'}));
+  test.isTrue(matchCI({name: {$gte: 'john'}}, {name: 'zoe'}));
+  test.isFalse(matchCI({name: {$gte: 'john'}}, {name: 'alice'}));
+});
+
+Tinytest.add('minimongo - collation - Matcher with non-string values is unaffected', test => {
+  const collation = {locale: 'en', strength: 2};
+
+  const matchCI = (selector, doc) => {
+    return new Minimongo.Matcher(selector, undefined, collation).documentMatches(doc).result;
+  };
+
+  // Numbers, booleans, null — collation should not affect these
+  test.isTrue(matchCI({age: 25}, {age: 25}));
+  test.isFalse(matchCI({age: 25}, {age: 30}));
+  test.isTrue(matchCI({active: true}, {active: true}));
+  test.isFalse(matchCI({active: true}, {active: false}));
+  test.isTrue(matchCI({val: null}, {val: null}));
+  test.isTrue(matchCI({age: {$gt: 10}}, {age: 20}));
+  test.isFalse(matchCI({age: {$gt: 30}}, {age: 20}));
+});
+
+Tinytest.add('minimongo - collation - Sorter', test => {
+  const collation = {locale: 'en', strength: 2};
+  const sorter = new Minimongo.Sorter({name: 1}, collation);
+  const cmp = sorter.getComparator();
+
+  // Case-insensitive: 'alice' and 'Alice' should be equal
+  test.equal(cmp({name: 'alice'}, {name: 'Alice'}), 0);
+  test.equal(cmp({name: 'BOB'}, {name: 'bob'}), 0);
+
+  // Order: alice < bob regardless of case
+  test.isTrue(cmp({name: 'alice'}, {name: 'Bob'}) < 0);
+  test.isTrue(cmp({name: 'ALICE'}, {name: 'bob'}) < 0);
+  test.isTrue(cmp({name: 'Bob'}, {name: 'alice'}) > 0);
+
+  // Descending sort
+  const descSorter = new Minimongo.Sorter({name: -1}, collation);
+  const descCmp = descSorter.getComparator();
+  test.isTrue(descCmp({name: 'alice'}, {name: 'Bob'}) > 0);
+  test.isTrue(descCmp({name: 'Bob'}, {name: 'alice'}) < 0);
+
+  // Without collation — case-sensitive (uppercase < lowercase in ASCII)
+  const csSorter = new Minimongo.Sorter({name: 1});
+  const csCmp = csSorter.getComparator();
+  test.notEqual(csCmp({name: 'alice'}, {name: 'Alice'}), 0);
+});
+
+Tinytest.add('minimongo - collation - Sorter with numericOrdering', test => {
+  const collation = {locale: 'en', numericOrdering: true};
+  const sorter = new Minimongo.Sorter({val: 1}, collation);
+  const cmp = sorter.getComparator();
+
+  // Numeric ordering: '2' < '10' < '20'
+  test.isTrue(cmp({val: '2'}, {val: '10'}) < 0);
+  test.isTrue(cmp({val: '10'}, {val: '20'}) < 0);
+  test.isTrue(cmp({val: '2'}, {val: '20'}) < 0);
+
+  // Without numericOrdering, lexical: '10' < '2' < '20'
+  const lexSorter = new Minimongo.Sorter({val: 1});
+  const lexCmp = lexSorter.getComparator();
+  test.isTrue(lexCmp({val: '10'}, {val: '2'}) < 0); // '1' < '2' lexically
+});
+
+Tinytest.add('minimongo - collation - LocalCollection.find with collation', test => {
+  const c = new LocalCollection();
+  c.insert({_id: '1', name: 'Alice'});
+  c.insert({_id: '2', name: 'bob'});
+  c.insert({_id: '3', name: 'CHARLIE'});
+  c.insert({_id: '4', name: 'alice'});
+
+  const collation = {locale: 'en', strength: 2};
+
+  // find with equality — should match case-insensitively
+  const results = c.find({name: 'alice'}, {collation}).fetch();
+  test.length(results, 2);
+  const ids = results.map(d => d._id).sort();
+  test.equal(ids, ['1', '4']);
+
+  // find with $in
+  const inResults = c.find({name: {$in: ['bob', 'charlie']}}, {collation}).fetch();
+  test.length(inResults, 2);
+  const inIds = inResults.map(d => d._id).sort();
+  test.equal(inIds, ['2', '3']);
+
+  // find with sort — case-insensitive ordering
+  const sorted = c.find({}, {collation, sort: {name: 1}}).fetch();
+  // alice, Alice, bob, CHARLIE (alice/Alice equal under collation, order stable)
+  test.equal(sorted[0].name.toLowerCase(), 'alice');
+  test.equal(sorted[1].name.toLowerCase(), 'alice');
+  test.equal(sorted[2].name, 'bob');
+  test.equal(sorted[3].name, 'CHARLIE');
+
+  // findOne with collation
+  const one = c.findOne({name: 'BOB'}, {collation});
+  test.equal(one._id, '2');
+
+  // Without collation — case-sensitive, no match
+  const noMatch = c.find({name: 'alice'}).fetch();
+  test.length(noMatch, 1);
+  test.equal(noMatch[0]._id, '4');
+});
+
+Tinytest.add('minimongo - collation - strength 1 ignores accents and case', test => {
+  const collation = {locale: 'en', strength: 1};
+
+  const matchBase = (selector, doc) => {
+    return new Minimongo.Matcher(selector, undefined, collation).documentMatches(doc).result;
+  };
+
+  test.isTrue(matchBase({name: 'cafe'}, {name: 'café'}));
+  test.isTrue(matchBase({name: 'cafe'}, {name: 'CAFÉ'}));
+  test.isTrue(matchBase({name: 'resume'}, {name: 'résumé'}));
+});
+
+Tinytest.add('minimongo - collation - Matcher and Sorter accept pre-built Intl.Collator', test => {
+  // Verify that passing an Intl.Collator instance directly works the same
+  // as passing a collation spec (this is the path used by Cursor).
+  const collator = LocalCollection._createCollator({locale: 'en', strength: 2});
+
+  // Matcher with pre-built collator
+  const matcher = new Minimongo.Matcher({name: 'alice'}, undefined, collator);
+  test.isTrue(matcher.documentMatches({name: 'Alice'}).result);
+  test.isTrue(matcher.documentMatches({name: 'ALICE'}).result);
+  test.isFalse(matcher.documentMatches({name: 'Bob'}).result);
+
+  // Sorter with pre-built collator
+  const sorter = new Minimongo.Sorter({name: 1}, collator);
+  const cmp = sorter.getComparator();
+  test.equal(cmp({name: 'alice'}, {name: 'Alice'}), 0);
+  test.isTrue(cmp({name: 'alice'}, {name: 'Bob'}) < 0);
+});
+
+Tinytest.add('minimongo - collation - _createCollator validates in development', test => {
+  // Missing locale
+  test.throws(() => {
+    LocalCollection._createCollator({strength: 2});
+  }, /collation\.locale must be a non-empty string/);
+
+  // Empty locale
+  test.throws(() => {
+    LocalCollection._createCollator({locale: ''});
+  }, /collation\.locale must be a non-empty string/);
+
+  // Falsy input returns null (no error).
+  test.equal(LocalCollection._createCollator(null), null);
+  test.equal(LocalCollection._createCollator(undefined), null);
+
+  // A pre-built Intl.Collator is returned as-is.
+  const existing = new Intl.Collator('en');
+  test.equal(LocalCollection._createCollator(existing), existing);
+
+  // Non-object spec
+  test.throws(() => {
+    LocalCollection._createCollator('en');
+  }, /collation must be an object/);
+
+  // Invalid strength
+  test.throws(() => {
+    LocalCollection._createCollator({locale: 'en', strength: 0});
+  }, /collation\.strength must be an integer between 1 and 5/);
+
+  test.throws(() => {
+    LocalCollection._createCollator({locale: 'en', strength: 6});
+  }, /collation\.strength must be an integer between 1 and 5/);
+});
+
+Tinytest.add('minimongo - collation - _id matching with collation', test => {
+  const collation = {locale: 'en', strength: 2};
+  const c = new LocalCollection();
+  c.insert({_id: 'ABC', val: 1});
+
+  // Scalar _id selector uses collation when specified
+  const result = c.findOne('abc', {collation});
+  test.isNotUndefined(result);
+  test.equal(result._id, 'ABC');
+
+  // Document selector {_id: 'abc'} also uses collation
+  const result2 = c.findOne({_id: 'abc'}, {collation});
+  test.isNotUndefined(result2);
+  test.equal(result2._id, 'ABC');
+
+  // Without collation, case-sensitive — no match
+  const result3 = c.findOne('abc');
+  test.isUndefined(result3);
+  const result4 = c.findOne({_id: 'abc'});
+  test.isUndefined(result4);
 });
 
 if (Meteor.isClient) {

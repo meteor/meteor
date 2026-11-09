@@ -101,10 +101,10 @@ Copyright 2011 Marcel Laverdet
 
 
 ----------
-http-proxy: https://github.com/nodejitsu/node-http-proxy
+http-proxy-3: https://github.com/sagemathinc/http-proxy-3
 ----------
 
-Copyright (c) 2010 Charlie Robbins, Mikeal Rogers, Fedor Indutny, & Marak Squires
+Copyright (c) 2010-2025 William Stein, Charlie Robbins, Jarrett Cruger & the Contributors.
 
 
 ----------
@@ -803,7 +803,7 @@ Copyright 2009–2014 Kristopher Michael Kowal. All rights reserved.
 querystring-es3: https://github.com/mike-spainhower/querystring
 ----------
 
-Copyright 2012 Irakli Gozalishvili. All rights reserved. 
+Copyright 2012 Irakli Gozalishvili. All rights reserved.
 
 
 ----------
@@ -1073,7 +1073,7 @@ Copyright (C) 2012-2014 by Jun Woong and Tim Oxley.
 adm-zip: https://github.com/cthackers/adm-zip
 ----------
 
-Copyright (c) 2012 Another-D-Mention Software and other contributors, 
+Copyright (c) 2012 Another-D-Mention Software and other contributors,
 http://www.another-d-mention.ro/
 
 

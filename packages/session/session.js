@@ -1,6 +1,6 @@
-import { ReactiveDict } from 'meteor/reactive-dict';
+import { ReactiveDict } from "meteor/reactive-dict";
 
-export const Session = new ReactiveDict('session');
+export const Session = new ReactiveDict("session");
 
 // Documentation here is really awkward because the methods are defined
 // elsewhere

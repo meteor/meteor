@@ -3,7 +3,6 @@ import { readFileSync, chmodSync, chownSync } from 'fs';
 import { createServer } from 'http';
 import { userInfo } from 'os';
 import { join as pathJoin, dirname as pathDirname } from 'path';
-import { parse as parseUrl } from 'url';
 import { createHash } from 'crypto';
 import express from 'express';
 import compress from 'compression';
@@ -17,8 +16,8 @@ import {
   removeExistingSocketFile,
   registerSocketFileCleanup,
 } from './socket_file.js';
-import cluster from 'cluster';
 import { execSync } from 'child_process';
+import { onMessage } from 'meteor/inter-process-messaging';
 
 var SHORT_SOCKET_TIMEOUT = 5 * 1000;
 var LONG_SOCKET_TIMEOUT = 120 * 1000;
@@ -72,6 +71,15 @@ var sha1 = function(contents) {
 function shouldCompress(req, res) {
   if (req.headers['x-no-compression']) {
     // don't compress responses with this request header
+    return false;
+  }
+
+  if (
+    Meteor.settings.packages?.webapp?.skipCompressionWithContentLength &&
+    res.getHeader('Content-Length')
+  ) {
+    // Leave responses that already declare a Content-Length uncompressed, so the
+    // header survives (compressing switches them to chunked and removes it).
     return false;
   }
 
@@ -176,7 +184,7 @@ WebApp.categorizeRequest = function(req) {
     modern,
     path,
     arch: WebApp.defaultArch,
-    url: parseUrl(req.url, true),
+    url: { query: Object.fromEntries(new URL(req.url, 'http://localhost').searchParams) },
     dynamicHead: req.dynamicHead,
     dynamicBody: req.dynamicBody,
     headers: req.headers,
@@ -251,9 +259,6 @@ WebApp.categorizeRequest = function(req) {
   return categorized;
 };
 
-// HTML attribute hooks: functions to be called to determine any attributes to
-// be added to the '<html>' tag. Each function is passed a 'request' object (see
-// #BrowserIdentification) and should return null or object.
 var htmlAttributeHooks = [];
 var getHtmlAttributes = function(request) {
   var combinedAttributes = {};
@@ -266,6 +271,17 @@ var getHtmlAttributes = function(request) {
   });
   return combinedAttributes;
 };
+
+/**
+ * @summary Registers a callback that runs whenever Meteor generates app HTML.
+ * Attributes returned by all registered callbacks are merged onto the
+ * `<html>` element. If callbacks return the same attribute, the callback
+ * registered last takes precedence.
+ * @locus Server
+ * @param {Function} hook A callback that receives information about the request
+ * for app HTML and returns an object of HTML attribute names and values, or
+ * `null` to add no attributes for that request.
+ */
 WebApp.addHtmlAttributeHook = function(hook) {
   htmlAttributeHooks.push(hook);
 };
@@ -483,7 +499,86 @@ WebApp.addRuntimeConfigHook = function(callback) {
   return runtimeConfig.hooks.register(callback);
 };
 
+// Per-arch snapshot of the PUBLIC_SETTINGS that are currently baked into the
+// cached runtime config, so we only re-encode when they actually change.
+const lastPublicSettingsByArch = Object.create(null);
+
+// The encoded runtime config (including PUBLIC_SETTINGS) is generated once at
+// startup and cached per arch. Apps are documented to be able to mutate
+// `Meteor.settings.public` at runtime and have the change picked up by new
+// client connections, so before serving we refresh the cached config whenever
+// the live public settings differ from what was last encoded. See #13489.
+function refreshRuntimeConfigPublicSettings(arch) {
+  const livePublicSettings =
+    (typeof __meteor_runtime_config__ === 'object' &&
+      __meteor_runtime_config__.PUBLIC_SETTINGS) ||
+    {};
+  const serialized = JSON.stringify(livePublicSettings);
+  if (lastPublicSettingsByArch[arch] === serialized) {
+    return;
+  }
+
+  let changed = false;
+  let failed = false;
+
+  const boilerplate = boilerplateByArch[arch];
+  if (boilerplate && boilerplate.baseData &&
+      boilerplate.baseData.meteorRuntimeConfig) {
+    try {
+      const decoded = WebApp.decodeRuntimeConfig(
+        boilerplate.baseData.meteorRuntimeConfig
+      );
+      decoded.PUBLIC_SETTINGS = livePublicSettings;
+      const encoded = WebApp.encodeRuntimeConfig(decoded);
+      boilerplate.baseData = Object.assign({}, boilerplate.baseData, {
+        meteorRuntimeConfig: encoded,
+        meteorRuntimeHash: sha1(encoded),
+      });
+      changed = true;
+    } catch (e) {
+      // Leave the cached config untouched if it cannot be decoded, and keep
+      // the snapshot stale so the refresh is retried on the next request.
+      failed = true;
+      Log.debug(
+        'refreshRuntimeConfigPublicSettings: could not decode boilerplate ' +
+        'runtime config for arch ' + arch + ': ' + e
+      );
+    }
+  }
+
+  const program = WebApp.clientPrograms[arch];
+  if (program && typeof program.meteorRuntimeConfig === 'string') {
+    try {
+      const parsed = JSON.parse(program.meteorRuntimeConfig);
+      parsed.PUBLIC_SETTINGS = livePublicSettings;
+      program.meteorRuntimeConfig = JSON.stringify(parsed);
+      changed = true;
+    } catch (e) {
+      // Leave the cached config untouched if it cannot be parsed, and keep
+      // the snapshot stale so the refresh is retried on the next request.
+      failed = true;
+      Log.debug(
+        'refreshRuntimeConfigPublicSettings: could not parse client program ' +
+        'runtime config for arch ' + arch + ': ' + e
+      );
+    }
+  }
+
+  if (changed) {
+    // Let runtime-config hooks know the config changed for this arch so any
+    // caches they keep are refreshed on this request.
+    runtimeConfig.isUpdatedByArch[arch] = true;
+  }
+  // Only advance the snapshot when the refresh fully succeeded. If a decode or
+  // parse step threw, leaving the snapshot stale ensures the next request
+  // retries instead of short-circuiting on a value that was never applied.
+  if (!failed) {
+    lastPublicSettingsByArch[arch] = serialized;
+  }
+}
+
 async function getBoilerplateAsync(request, arch, response) {
+  refreshRuntimeConfigPublicSettings(arch);
   let boilerplate = boilerplateByArch[arch];
   await runtimeConfig.hooks.forEachAsync(async hook => {
     const meteorRuntimeConfig = await hook({
@@ -624,6 +719,7 @@ WebAppInternals.generateBoilerplateInstance = function(
 // - type: the type of file to be served
 // - cacheable: optionally, whether the file should be cached or not
 // - sourceMapUrl: optionally, the url of the source map
+// - onNotFound: optionally, a response handler for a missing file or directory
 //
 // Info also contains one of the following:
 // - content: the stringified content that should be served at this path
@@ -635,7 +731,8 @@ WebAppInternals.staticFilesMiddleware = async function(
   staticFilesByArch,
   req,
   res,
-  next
+  next,
+  resolveStaticFile = getStaticFileInfo
 ) {
   var pathname = parseRequest(req).pathname;
   try {
@@ -692,15 +789,18 @@ WebAppInternals.staticFilesMiddleware = async function(
     path === '/meteor_runtime_config.js' &&
     !WebAppInternals.inlineScriptsAllowed()
   ) {
+    refreshRuntimeConfigPublicSettings(arch);
     serveStaticJs(
       `__meteor_runtime_config__ = ${program.meteorRuntimeConfig};`
     );
     return;
   }
 
-  const info = getStaticFileInfo(staticFilesByArch, pathname, path, arch);
+  // Resolve only after the client resumes: rebuilding replaces its manifest.
+  // Integrations can supply request-local metadata without changing that map.
+  const info = resolveStaticFile(staticFilesByArch, pathname, path, arch);
   if (!info) {
-    next();
+    if (!res.writableEnded) next();
     return;
   }
   // "send" will handle HEAD & GET requests
@@ -777,11 +877,19 @@ WebAppInternals.staticFilesMiddleware = async function(
       lastModified: false, // don't set last-modified based on the file date
     })
       .on('error', function(err) {
+        if (err.status === 404 && info.onNotFound && !res.headersSent) {
+          info.onNotFound(res);
+          return;
+        }
         Log.error('Error serving static file ' + err);
         res.writeHead(500);
         res.end();
       })
       .on('directory', function() {
+        if (info.onNotFound && !res.headersSent) {
+          info.onNotFound(res);
+          return;
+        }
         Log.error('Unexpected directory ' + info.absolutePath);
         res.writeHead(500);
         res.end();
@@ -833,6 +941,8 @@ function getStaticFileInfo(staticFilesByArch, originalPath, path, arch) {
   return info;
 }
 
+WebAppInternals.getStaticFileInfo = getStaticFileInfo;
+
 // Parse the passed in port value. Return the port as-is if it's a String
 // (e.g. a Windows Server style named pipe), otherwise return the port as an
 // integer.
@@ -847,8 +957,6 @@ WebAppInternals.parsePort = port => {
   return parsedPort;
 };
 
-import { onMessage } from 'meteor/inter-process-messaging';
-
 onMessage('webapp-pause-client', async ({ arch }) => {
   await WebAppInternals.pauseClient(arch);
 });
@@ -862,7 +970,7 @@ async function runWebAppServer() {
   var syncQueue = new Meteor._AsynchronousQueue();
 
   var getItemPathname = function(itemUrl) {
-    return decodeURIComponent(parseUrl(itemUrl).pathname);
+    return decodeURIComponent(new URL(itemUrl, 'http://localhost').pathname);
   };
 
   WebAppInternals.reloadClientPrograms = async function() {
@@ -1150,7 +1258,7 @@ async function runWebAppServer() {
   // Strip off the path prefix, if it exists.
   app.use(function(request, response, next) {
     const pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX;
-    const { pathname, search } = parseUrl(request.url);
+    const { pathname, search } = new URL(request.url, 'http://localhost');
 
     // check if the path in the url starts with the path prefix
     if (pathPrefix) {
@@ -1476,7 +1584,15 @@ async function runWebAppServer() {
     let unixSocketPath = process.env.UNIX_SOCKET_PATH;
 
     if (unixSocketPath) {
-      if (cluster.isWorker) {
+      // Lazy-load cluster only when needed (UNIX_SOCKET_PATH with workers).
+      // Avoids loading the module in the common case where it is unused.
+      let cluster;
+      try {
+        cluster = require('cluster');
+      } catch (e) {
+        // cluster module unavailable in this runtime; continue without worker suffix.
+      }
+      if (cluster?.isWorker && cluster.worker) {
         const workerName = cluster.worker.process.env.name || cluster.worker.id;
         unixSocketPath += '.' + workerName + '.sock';
       }
@@ -1501,7 +1617,15 @@ async function runWebAppServer() {
         if (unixSocketGroupInfo === null) {
           throw new Error('Invalid UNIX_SOCKET_GROUP name specified');
         }
-        chownSync(unixSocketPath, userInfo().uid, unixSocketGroupInfo.gid);
+        try {
+          chownSync(unixSocketPath, userInfo().uid, unixSocketGroupInfo.gid);
+        } catch (error) {
+          if (error.code === 'EPERM' || error.code === 'EACCES') {
+            console.error(`Skipping UNIX_SOCKET_GROUP change for "${unixSocketGroup}" because current user lacks permission.`);
+          } else {
+            throw error;
+          }
+        }
       }
 
       registerSocketFileCleanup(unixSocketPath);

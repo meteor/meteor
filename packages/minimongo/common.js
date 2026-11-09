@@ -2,6 +2,17 @@ import LocalCollection from './local_collection.js';
 
 export const hasOwn = Object.prototype.hasOwnProperty;
 
+// Field names are data, including the legacy prototype setter name.
+export function setOwnProperty(target, field, value) {
+  if (field === '__proto__') {
+    Object.defineProperty(target, field, {
+      value, enumerable: true, configurable: true, writable: true
+    });
+  } else {
+    target[field] = value;
+  }
+}
+
 export class MiniMongoQueryError extends Error {}
 // Each element selector contains:
 //  - compileElementSelector, a function with args:
@@ -37,11 +48,12 @@ export const ELEMENT_OPERATORS = {
     },
   },
   $in: {
-    compileElementSelector(operand) {
+    compileElementSelector(operand, valueSelector, matcher) {
       if (!Array.isArray(operand)) {
         throw new MiniMongoQueryError('$in needs an array');
       }
 
+      const collator = matcher && matcher._collator;
       const elementMatchers = operand.map(option => {
         if (option instanceof RegExp) {
           return regexpElementMatcher(option);
@@ -51,7 +63,7 @@ export const ELEMENT_OPERATORS = {
           throw new MiniMongoQueryError('cannot nest $ under $in');
         }
 
-        return equalityElementMatcher(option);
+        return equalityElementMatcher(option, collator);
       });
 
       return value => {
@@ -325,23 +337,25 @@ const LOGICAL_OPERATORS = {
 // "match each branched value independently and combine with
 // convertElementMatcherToBranchedMatcher".
 const VALUE_OPERATORS = {
-  $eq(operand) {
+  $eq(operand, valueSelector, matcher) {
     return convertElementMatcherToBranchedMatcher(
-      equalityElementMatcher(operand)
+      equalityElementMatcher(operand, matcher && matcher._collator)
     );
   },
   $not(operand, valueSelector, matcher) {
     return invertBranchedMatcher(compileValueSelector(operand, matcher));
   },
-  $ne(operand) {
-    return invertBranchedMatcher(
-      convertElementMatcherToBranchedMatcher(equalityElementMatcher(operand))
-    );
-  },
-  $nin(operand) {
+  $ne(operand, valueSelector, matcher) {
     return invertBranchedMatcher(
       convertElementMatcherToBranchedMatcher(
-        ELEMENT_OPERATORS.$in.compileElementSelector(operand)
+        equalityElementMatcher(operand, matcher && matcher._collator)
+      )
+    );
+  },
+  $nin(operand, valueSelector, matcher) {
+    return invertBranchedMatcher(
+      convertElementMatcherToBranchedMatcher(
+        ELEMENT_OPERATORS.$in.compileElementSelector(operand, valueSelector, matcher)
       )
     );
   },
@@ -628,7 +642,7 @@ function compileValueSelector(valueSelector, matcher, isRoot) {
   }
 
   return convertElementMatcherToBranchedMatcher(
-    equalityElementMatcher(valueSelector)
+    equalityElementMatcher(valueSelector, matcher && matcher._collator)
   );
 }
 
@@ -680,8 +694,9 @@ function distanceCoordinatePairs(a, b) {
 }
 
 // Takes something that is not an operator object and returns an element matcher
-// for equality with that thing.
-export function equalityElementMatcher(elementSelector) {
+// for equality with that thing.  When a collator (Intl.Collator) is provided,
+// string equality uses locale-aware comparison.
+export function equalityElementMatcher(elementSelector, collator) {
   if (isOperatorObject(elementSelector)) {
     throw new MiniMongoQueryError('Can\'t create equalityValueSelector for operator object');
   }
@@ -694,7 +709,7 @@ export function equalityElementMatcher(elementSelector) {
     return value => value == null;
   }
 
-  return value => LocalCollection._f._equal(elementSelector, value);
+  return value => LocalCollection._f._equal(elementSelector, value, collator);
 }
 
 function everythingMatcher(docOrBranchedValues) {
@@ -824,7 +839,7 @@ function insertIntoDocument(document, key, value) {
     }
   });
 
-  document[key] = value;
+  setOwnProperty(document, key, value);
 }
 
 // Returns a branched matcher that matches iff the given matcher does not.
@@ -878,7 +893,7 @@ export function isOperatorObject(valueSelector, inconsistentOK) {
 // Helper for $lt/$gt/$lte/$gte.
 function makeInequality(cmpValueComparator) {
   return {
-    compileElementSelector(operand) {
+    compileElementSelector(operand, valueSelector, matcher) {
       // Arrays never compare false with non-arrays for any inequality.
       // XXX This was behavior we observed in pre-release MongoDB 2.5, but
       //     it seems to have been reverted.
@@ -894,6 +909,7 @@ function makeInequality(cmpValueComparator) {
       }
 
       const operandType = LocalCollection._f._type(operand);
+      const collator = matcher && matcher._collator;
 
       return value => {
         if (value === undefined) {
@@ -906,7 +922,7 @@ function makeInequality(cmpValueComparator) {
           return false;
         }
 
-        return cmpValueComparator(LocalCollection._f._cmp(value, operand));
+        return cmpValueComparator(LocalCollection._f._cmp(value, operand, collator));
       };
     },
   };
@@ -1155,13 +1171,13 @@ export function pathsToTree(paths, newLeafFn, conflictFn, root = {}) {
     // use .every just for iteration with break
     const success = pathArray.slice(0, -1).every((key, i) => {
       if (!hasOwn.call(tree, key)) {
-        tree[key] = {};
+        setOwnProperty(tree, key, {});
       } else if (tree[key] !== Object(tree[key])) {
-        tree[key] = conflictFn(
+        setOwnProperty(tree, key, conflictFn(
           tree[key],
           pathArray.slice(0, i + 1).join('.'),
           path
-        );
+        ));
 
         // break out of loop if we are failing for this path
         if (tree[key] !== Object(tree[key])) {
@@ -1177,9 +1193,9 @@ export function pathsToTree(paths, newLeafFn, conflictFn, root = {}) {
     if (success) {
       const lastKey = pathArray[pathArray.length - 1];
       if (hasOwn.call(tree, lastKey)) {
-        tree[lastKey] = conflictFn(tree[lastKey], path, path);
+        setOwnProperty(tree, lastKey, conflictFn(tree[lastKey], path, path));
       } else {
-        tree[lastKey] = newLeafFn(path);
+        setOwnProperty(tree, lastKey, newLeafFn(path));
       }
     }
   });

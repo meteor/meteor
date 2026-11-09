@@ -114,12 +114,15 @@ DDPRateLimiter.printRules = () => rateLimiter.rules;
  */
 DDPRateLimiter.removeRule = id => rateLimiter.removeRule(id);
 
-// This is accessed inside livedata_server.js, but shouldn't be called by any
-// user.
 DDPRateLimiter._increment = (input) => {
   rateLimiter.increment(input);
 };
 
+// This is accessed inside livedata_server.js, but shouldn't be called by any
+// user.
+DDPRateLimiter._incrementRules = (rules, input) => rateLimiter.incrementRules(rules, input);
 DDPRateLimiter._check = input => rateLimiter.check(input);
 
+DDPRateLimiter.findAllMatchingRulesAsync = (input) => rateLimiter._findAllMatchingRulesAsync(input);
+DDPRateLimiter._checkRules = (rules, input) => rateLimiter.checkRules(rules, input);
 export { DDPRateLimiter };

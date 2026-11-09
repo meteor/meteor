@@ -16,6 +16,7 @@ export default defineConfig(async Meteor => {
     options: {
       browser: Meteor.mainClientEntry,
       index: Meteor.mainClientHtmlEntry,
+      styles: ['client/main.css'],
     },
   });
 

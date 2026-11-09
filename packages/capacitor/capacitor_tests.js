@@ -10,6 +10,7 @@ import {
   WEB_APP_LOCAL_SERVER_SHIM,
 } from './lib/constants.js';
 import {
+  getMeteorIndexUrl,
   isMeteorIndexReadyResponse,
 } from './lib/readiness.js';
 import {
@@ -188,6 +189,21 @@ Tinytest.add('capacitor - dependencies - declaration must be in expected section
     dependencyByName('@capacitor/cli'),
     { dependencies: { '@capacitor/cli': '^7.4.3' } }
   ));
+});
+
+Tinytest.add('capacitor - readiness - preserves the server bind address', test => {
+  withEnv({ PORT: '192.168.8.134:3060', METEOR_CAPACITOR_READY_URL: undefined }, () => {
+    test.equal(getMeteorIndexUrl(), 'http://192.168.8.134:3060/');
+  });
+  withEnv({ PORT: '3060', METEOR_CAPACITOR_READY_URL: undefined }, () => {
+    test.equal(getMeteorIndexUrl(), 'http://127.0.0.1:3060/');
+  });
+  withEnv({ PORT: '0.0.0.0:3060', METEOR_CAPACITOR_READY_URL: undefined }, () => {
+    test.equal(getMeteorIndexUrl(), 'http://127.0.0.1:3060/');
+  });
+  withEnv({ PORT: '3060', METEOR_CAPACITOR_READY_URL: 'http://localhost:4000/ready' }, () => {
+    test.equal(getMeteorIndexUrl(), 'http://localhost:4000/ready');
+  });
 });
 
 Tinytest.add('capacitor - readiness - accepts Meteor index HTML', test => {
@@ -820,7 +836,7 @@ Tinytest.add('capacitor - run - environment variables mapping', test => {
     test.isTrue(args.includes('--list'));
     test.isTrue(args.includes('--some-new-future-option=hello'));
     test.isTrue(args.includes('--forwardPorts=8080:80'));
-    
+
     // Ensure internal ones are excluded
     process.env.METEOR_CAPACITOR_AUTO_PICK_TARGET = 'true';
     test.isFalse(_getCapRunArgsFromEnv().includes('--auto-pick-target'));
@@ -919,7 +935,7 @@ Tinytest.add('capacitor - run - env vars merge with extraArgs', test => {
 
     test.isTrue(merged.includes('--target=manual-target'));
     test.isTrue(merged.includes('--no-sync'));
-    
+
     // Ensure no duplication of --target
     const targetFlags = merged.filter(a => a.startsWith('--target'));
     test.equal(targetFlags.length, 1);
@@ -932,7 +948,7 @@ Tinytest.add('capacitor - run - deduplication avoids false positives', test => {
   const originalEnv = { ...process.env };
   try {
     process.env.METEOR_CAPACITOR_TARGET = 'env-target';
-    
+
     // --target-name should not collide with --target
     const extraArgs = ['--target-name=MyiPhone'];
     const merged = _mergeExtraArgsWithEnv(extraArgs);

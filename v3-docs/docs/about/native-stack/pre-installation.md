@@ -22,7 +22,9 @@ This page covers shared platform setup only. Use the Capacitor and Cordova secti
 
 ### Java
 
-For Android development, install the JDK.
+For Android development, install the JDK. The commands below install Java 17
+for Cordova. Capacitor 7 requires Java 21; select that version when preparing a
+Capacitor project.
 
 ``` sh
 # On Debian/Ubuntu:
@@ -78,7 +80,19 @@ $env:PATH += ";%JAVA_HOME%\bin"
 
 For Android builds, you need the Android SDK. You can install it via [Android Studio](https://developer.android.com/studio).
 
-Once Android Studio is installed, go to **SDK Manager** and install the required SDK packages. The minimum required version is Android SDK 35. Install the `Android SDK Command-line Tools (latest)` as well.
+Once Android Studio is installed, go to **SDK Manager** and install the SDK
+packages required by your integration:
+
+- Capacitor 7 uses Android SDK Platform 35 and Build Tools 35.0.0.
+- Starting with Meteor 3.5.2, Cordova uses `cordova-android@15.1.0`, which
+  requires Android SDK Platform 36 and Build Tools 36.0.0.
+
+Install the `Android SDK Command-line Tools (latest)` as well. For Cordova, the
+platform and build tools can also be installed from the command line:
+
+```sh
+sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+```
 
 Ensure `ANDROID_HOME` environment variable is set by adding it to `~/.bashrc` or `~/.zshrc`:
 
