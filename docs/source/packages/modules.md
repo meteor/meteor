@@ -288,6 +288,27 @@ Package.onUse((api) => {
 
 Now `server.js` and `client.js` can import other files from the package source directory, even if those files have not been added using the `api.addFiles` function.
 
+Packages that expose many named modules can also use `api.mainModules` to
+generate a package entry point from multiple files:
+
+```js
+Package.onUse((api) => {
+  api.use('modules');
+  api.mainModules('src/**/*.js', 'client');
+});
+```
+
+This is equivalent to using a main module that re-exports every matching source
+file:
+
+```js
+export * from './src/button.js';
+export * from './src/card.js';
+```
+
+The package is still imported through one package namespace, such as
+`import { Button, Card } from 'meteor/my-modular-package'`.
+
 When you use `api.mainModule`, the exports of the main module are exposed globally as `Package['my-modular-package']`, along with any symbols exported by `api.export`, and thus become available to any code that imports the package. In other words, the main module gets to decide what value of `Foo` will be exported by `api.export`, as well as providing other properties that can be explicitly imported from the package:
 
 ```js
