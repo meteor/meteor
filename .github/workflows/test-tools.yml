@@ -1,6 +1,9 @@
 name: Test Tools
 
 on:
+  push:
+    branches:
+      - 'security/backport-3.4.4-ddp-oplog-qs'
   workflow_dispatch:
   pull_request:
     paths:
