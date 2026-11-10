@@ -327,7 +327,17 @@ async function setupExecPath() {
     await appendPathToFile('.zshrc');
   } else {
     await appendPathToFile('.bashrc');
-    await appendPathToFile('.bash_profile');
+    // A bash login shell reads the first of ~/.bash_profile, ~/.bash_login,
+    // ~/.profile. Only append to a bash-specific login file if one already
+    // exists; otherwise append to ~/.profile. Creating ~/.bash_profile when it
+    // is absent would make bash stop sourcing the user's existing ~/.profile.
+    if (fs.existsSync(`${rootPath}/.bash_profile`)) {
+      await appendPathToFile('.bash_profile');
+    } else if (fs.existsSync(`${rootPath}/.bash_login`)) {
+      await appendPathToFile('.bash_login');
+    } else {
+      await appendPathToFile('.profile');
+    }
   }
 }
 async function fixOwnership() {
