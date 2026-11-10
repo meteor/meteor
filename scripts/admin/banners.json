@@ -1,33 +1,81 @@
 {
   "track": "METEOR",
-  "banners": [{
-    "versions": [
-      "1.4",
-      "1.4.0.1",
-      "1.4.1",
-      "1.4.1.1",
-      "1.4.1.2",
-      "1.4.1.3",
-      "1.4.2",
-      "1.4.2.1",
-      "1.4.2.3",
-      "1.4.2.7",
-      "1.4.3.1",
-      "1.4.3.2",
-      "1.4.4.1",
-      "1.4.4.3"
-    ],
-    "banner": {
-      "text": "=> Meteor 1.4.4.4: An important security update for Meteor 1.4.x:\n   https://forums.meteor.com/t/meteor-allow-deny-vulnerability-disclosure/39500"
+  "banners": [
+    {
+      "versions": [
+        "3.3-beta.0",
+        "3.3-beta.1",
+        "3.3-rc.0",
+        "3.3",
+        "3.3.1-rc.0",
+        "3.3.1-rc.1",
+        "3.3.1-rc.2",
+        "3.3.1",
+        "3.3.2"
+      ],
+      "banner": {
+        "text": "=> Meteor 3.3.3: An important security update for Meteor 3.3.x.\n   Update with: meteor update --release 3.3.3\n   https://forums.meteor.com/t/meteor-security-releases-3-3-3-3-4-2-and-3-5-3/64836"
+      }
+    },
+    {
+      "versions": [
+        "3.4-beta.0",
+        "3.4-beta.1",
+        "3.4-beta.2",
+        "3.4-beta.3",
+        "3.4-beta.4",
+        "3.4-beta.5",
+        "3.4-beta.6",
+        "3.4-beta.7",
+        "3.4-beta.8",
+        "3.4-beta.9",
+        "3.4-beta.10",
+        "3.4-beta.11",
+        "3.4-beta.12",
+        "3.4-beta.13",
+        "3.4-beta.14",
+        "3.4-rc.0",
+        "3.4-rc.1",
+        "3.4-rc.2",
+        "3.4-rc.3",
+        "3.4-rc.4",
+        "3.4",
+        "3.4.1-beta.0",
+        "3.4.1-beta.1",
+        "3.4.1-patch.0",
+        "3.4.1-rc.0",
+        "3.4.1-rc.1",
+        "3.4.1"
+      ],
+      "banner": {
+        "text": "=> Meteor 3.4.2: An important security update for Meteor 3.4.x.\n   Update with: meteor update --release 3.4.2\n   https://forums.meteor.com/t/meteor-security-releases-3-3-3-3-4-2-and-3-5-3/64836"
+      }
+    },
+    {
+      "versions": [
+        "3.5-beta.1",
+        "3.5-beta.2",
+        "3.5-beta.3",
+        "3.5-beta.4",
+        "3.5-beta.6",
+        "3.5-beta.7",
+        "3.5-beta.8",
+        "3.5-beta.9",
+        "3.5-beta.10",
+        "3.5-beta.11",
+        "3.5-beta.12",
+        "3.5-rc.1",
+        "3.5-rc.2",
+        "3.5",
+        "3.5.1-beta.0",
+        "3.5.1",
+        "3.5.2-beta.0",
+        "3.5.2-rc.0",
+        "3.5.2"
+      ],
+      "banner": {
+        "text": "=> Meteor 3.5.3: An important security update for Meteor 3.5.x.\n   Update with: meteor update --release 3.5.3\n   https://forums.meteor.com/t/meteor-security-releases-3-3-3-3-4-2-and-3-5-3/64836"
+      }
     }
-  }, {
-    "versions": [
-      "1.5",
-      "1.5.1",
-      "1.5.2"
-    ],
-    "banner": {
-      "text": "=> Meteor 1.5.2.1: An important security update for Meteor 1.5.x:\n   https://forums.meteor.com/t/meteor-allow-deny-vulnerability-disclosure/39500"
-    }
-  }]
+  ]
 }
