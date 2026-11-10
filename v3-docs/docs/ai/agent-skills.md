@@ -17,7 +17,7 @@ versions before applying a release-specific capability.
 For a reproducible installation, select a published tag from the
 [Agent Skills releases](https://github.com/meteor/agent-skills/releases) and
 use the commands in that release's notes. The catalog sources below follow
-the repository's default branch; the Skills CLI installer is pinned separately.
+the repository's default branch.
 
 ## Quick start
 
@@ -43,37 +43,45 @@ claude plugin install meteor@meteor
 
 The open `skills` CLI can install the catalog into Claude Code, Cursor, Codex, Copilot, Gemini CLI, OpenCode, and other compatible assistants.
 
-Use the tested installer version below for compatibility with Meteor 3's
-Node runtimes, including Meteor 3.0's Node 20.15.1. Installing the catalog does
-not require upgrading your application's Node version. The newer
-`skills@latest` currently requires Node 22.20.0+.
+Requires Node.js 22.20.0 or later in the shell running `npx`, as specified by
+[Skills CLI](https://github.com/vercel-labs/skills#install-a-skill). This is an
+installer requirement; your Meteor application can keep its own Node version.
+See the older-Node fallback below if your shell uses Node 20 or early Node 22.
 
 List the available skills:
 
 ```bash
-npx skills@1.5.18 add meteor/agent-skills --list
+npx skills add meteor/agent-skills --list
 ```
 
 Select skills interactively:
 
 ```bash
-npx skills@1.5.18 add meteor/agent-skills
+npx skills add meteor/agent-skills
 ```
 
 Install one skill directly:
 
 ```bash
-npx skills@1.5.18 add meteor/agent-skills --skill migrate-to-meteor-3
+npx skills add meteor/agent-skills --skill migrate-to-meteor-3
 ```
 
 For every published skill, select the agent explicitly and skip the picker:
 
 ```bash
-npx skills@1.5.18 add meteor/agent-skills --agent codex --yes
+npx skills add meteor/agent-skills --agent codex --yes
 ```
 
-With this installer, `--all` also selects internal maintainer skills and all
-agents. Use the command above for the public catalog. See the
+For Node 20 or early Node 22, use the tested compatible installer:
+
+```bash
+npx skills@1.5.18 add meteor/agent-skills
+```
+
+Use the same installer pin for other Skills CLI commands on those runtimes.
+For a full non-interactive install with this fallback, append `--agent codex --yes`.
+Avoid `--all` in Skills CLI 1.5.18: it also selects internal maintainer skills
+and all agents. See the
 [full catalog and install options](https://github.com/meteor/agent-skills#install)
 for other agents, plugin installations and manual ZIP downloads.
 
