@@ -59,11 +59,10 @@ Object.assign(exports, {
     };
 
     handlersByType[PONG] = function ({ id }) {
-      const resolve = readyResolvers.get(id);
-      if (typeof resolve === "function") {
-        readyResolvers.delete(id);
+      const entry = readyResolvers.get(id);
+      if (entry) {
         // This resolves the child.readyForMessages Promise created above.
-        resolve();
+        entry.resolve();
       }
     };
 
@@ -179,19 +178,42 @@ Object.assign(exports, {
         const pingMessage = { type: PING, id: uuid() };
         const backoff_factor = 1.1;
         let delay_ms = 50;
+        let timer;
 
-        readyResolvers.set(pingMessage.id, resolve);
+        function cleanup() {
+          readyResolvers.delete(pingMessage.id);
+          clearTimeout(timer);
+        }
+
+        const entry = {
+          resolve() {
+            cleanup();
+            resolve();
+          },
+          reject(error) {
+            cleanup();
+            reject(error);
+          },
+        };
+        readyResolvers.set(pingMessage.id, entry);
 
         function poll() {
           if (readyResolvers.has(pingMessage.id)) {
-            otherProcess.send(pingMessage, error => {
-              if (error) {
-                reject(error);
-              } else {
-                setTimeout(poll, delay_ms);
-                delay_ms *= backoff_factor;
-              }
-            });
+            try {
+              otherProcess.send(pingMessage, error => {
+                if (error) {
+                  entry.reject(error);
+                } else if (readyResolvers.has(pingMessage.id)) {
+                  // A PONG or shutdown may arrive before the write callback.
+                  timer = setTimeout(poll, delay_ms);
+                  delay_ms *= backoff_factor;
+                }
+              });
+            } catch (error) {
+              // Retries run outside the Promise executor, so synchronous
+              // send failures must also reach the caller through rejection.
+              entry.reject(error);
+            }
           }
         }
 
@@ -199,11 +221,9 @@ Object.assign(exports, {
       });
     }
 
-    otherProcess.on("exit", (code, signal) => {
-      const error = new Error("process exited");
-      Object.assign(error, { code, signal });
-
-      // Terminate any pending messages.
+    function handleShutdown(error) {
+      // Terminate both readiness handshakes and messages awaiting responses.
+      readyResolvers.forEach(entry => entry.reject(error));
       pendingMessages.forEach(entry => entry.reject(error));
 
       // Prevent future messages from being sent.
@@ -211,6 +231,16 @@ Object.assign(exports, {
 
       // Silence UnhandledPromiseRejectionWarning
       otherProcess.readyForMessages.catch(() => {});
+    }
+
+    otherProcess.on("disconnect", () => {
+      handleShutdown(new Error("channel closed"));
+    });
+
+    otherProcess.on("exit", (code, signal) => {
+      const error = new Error("process exited");
+      Object.assign(error, { code, signal });
+      handleShutdown(error);
     });
 
     return otherProcess;

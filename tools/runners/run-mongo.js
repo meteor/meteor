@@ -525,8 +525,10 @@ var launchMongo = async function(options) {
     }
 
     proc = spawnMongod(mongod_path, port, dbPath, replSetName);
+    var stdout = proc.stdout;
 
     function stop() {
+      stdout.removeListener('data', stdoutOnData);
       if (proc) {
         proc.removeListener('exit', procExitHandler);
         proc.kill('SIGINT');
@@ -558,12 +560,14 @@ var launchMongo = async function(options) {
     var readyToTalkPromise = new Promise(function(resolve) {
       maybeReadyToTalk = function() {
         if (
+          proc &&
+          !stopped &&
           resolve &&
           listening &&
           (noOplog || replSetReadyToBeInitiated || replSetReady)
         ) {
 
-          proc.stdout.removeListener('data', stdoutOnData);
+          stdout.removeListener('data', stdoutOnData);
           resolve();
           resolve = null;
         }
