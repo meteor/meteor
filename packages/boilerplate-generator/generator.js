@@ -23,6 +23,7 @@ export class Boilerplate {
     const { headTemplate, closeTemplate } = getTemplate(arch);
     this.headTemplate = headTemplate;
     this.closeTemplate = closeTemplate;
+    this.arch = arch;
     this.baseData = null;
 
     this._generateBoilerplateFromManifest(
@@ -99,6 +100,7 @@ export class Boilerplate {
   } = {}) {
 
     const boilerplateBaseData = {
+      arch: this.arch,
       css: [],
       js: [],
       head: '',

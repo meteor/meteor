@@ -1,0 +1,13 @@
+{
+  "name": "~name~",
+  "private": true,
+  "description": "A Meteor pnpm monorepo workspace",
+  "scripts": {
+    "start": "cd apps/app && meteor run",
+    "test": "cd apps/app && meteor test --once --driver-package meteortesting:mocha"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "packageManager": "pnpm@10.13.1"
+}
