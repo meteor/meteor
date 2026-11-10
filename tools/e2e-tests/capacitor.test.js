@@ -148,11 +148,16 @@ async function assertRspackProductionArtifacts(appDir) {
 }
 
 async function assertNoNativeLaunch(outputLines) {
-  expectOutputNotContains(outputLines, /Capacitor launching on/);
+  expectOutputNotContains(outputLines, /Capacitor:?(?: launching on| launching) /);
   expectOutputNotContains(outputLines, /emulator/i);
   expectOutputNotContains(outputLines, /simulator/i);
   expectOutputNotContains(outputLines, /Android Studio/i);
-  expectOutputNotContains(outputLines, /Xcode/i);
+  // cap sync on Linux skips an optional Xcode clean. This warning says no
+  // tool was invoked; all other Xcode output must still fail this assertion.
+  const launchOutput = outputLines.filter(line => !line.includes(
+    'Unable to find "xcodebuild". Skipping xcodebuild clean step...'
+  ));
+  expectOutputNotContains(launchOutput, /Xcode/i);
 }
 
 async function assertNoCordovaNativeBuild(outputLines) {
