@@ -18,7 +18,8 @@ const fs = require('fs');
 const {
   isMeteorAppDebug,
   isMeteorAppConfigModernVerbose,
-  hasMeteorAppConfigAutoInstallDeps,
+  getMeteorAppPlatforms,
+  isMeteorAppUpdate,
   setMeteorAppIgnore,
 } = require('meteor/tools-core/lib/meteor');
 const {
@@ -66,7 +67,10 @@ const {
 } = require('./lib/command');
 const { getCapacitorHcpMode } = require('./lib/hcp');
 
-if (isCapacitorOptIn()) {
+if (isMeteorAppUpdate() && Package.meteor.global.currentCommand.options.npm) {
+  // Updating npm dependencies must not scaffold projects, sync, or launch a device.
+  await ensureCapacitorInstalled({ platforms: getMeteorAppPlatforms() });
+} else if (isCapacitorOptIn()) {
   await runCapacitorPlugin();
 }
 
@@ -105,13 +109,13 @@ async function runCapacitorPlugin() {
         // time. Keep rspack's main-* outputs under the same _build/ root visible.
         setMeteorAppIgnore(getCapacitorIgnoreCandidates().join(' '));
 
-        if (hasMeteorAppConfigAutoInstallDeps()) {
-          // Top-level await: build plugins are evaluated as ESM with TLA enabled.
-          await ensureCapacitorInstalled({
-            platforms: (
-              isCapacitorAddPlatformOptIn() || isCapacitorRunOptIn()
-            ) ? context.state.platforms : null,
-          });
+        const dependencyResult = await ensureCapacitorInstalled({
+          platforms: (
+            isCapacitorAddPlatformOptIn() || isCapacitorRunOptIn()
+          ) ? context.state.platforms : null,
+        });
+        if (dependencyResult.mode === 'manual-warning') {
+          throw new Error('Install the required Capacitor npm dependencies using the commands above.');
         }
 
         ensureCapacitorBuildContextExists();

@@ -15,7 +15,6 @@ import {
 } from './lib/readiness.js';
 import {
   getCapacitorDependenciesForPlatforms,
-  isCapacitorDepDeclared,
 } from './lib/dependencies.js';
 import {
   getCapacitorEnv,
@@ -170,25 +169,6 @@ Tinytest.add('capacitor - dependencies - native packages are runtime dependencie
   test.isFalse(dependencyByName('@capacitor/ios').dev);
   test.isTrue(dependencyByName('@capacitor/cli').dev);
   test.isTrue(dependencyByName('@meteorjs/capacitor').dev);
-});
-
-Tinytest.add('capacitor - dependencies - declaration must be in expected section', test => {
-  test.isTrue(isCapacitorDepDeclared(
-    dependencyByName('@capacitor/android'),
-    { dependencies: { '@capacitor/android': '^7.4.3' } }
-  ));
-  test.isFalse(isCapacitorDepDeclared(
-    dependencyByName('@capacitor/android'),
-    { devDependencies: { '@capacitor/android': '^7.4.3' } }
-  ));
-  test.isTrue(isCapacitorDepDeclared(
-    dependencyByName('@capacitor/cli'),
-    { devDependencies: { '@capacitor/cli': '^7.4.3' } }
-  ));
-  test.isFalse(isCapacitorDepDeclared(
-    dependencyByName('@capacitor/cli'),
-    { dependencies: { '@capacitor/cli': '^7.4.3' } }
-  ));
 });
 
 Tinytest.add('capacitor - readiness - preserves the server bind address', test => {

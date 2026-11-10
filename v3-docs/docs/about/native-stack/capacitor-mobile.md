@@ -69,6 +69,13 @@ meteor add capacitor
 
 When the package is present, Meteor routes native Android and iOS commands through Capacitor.
 
+Capacitor uses the shared npm dependency manager, including npm, Yarn, and pnpm
+workspaces. Set `meteor.autoInstallDeps` to `false` in `package.json` to manage
+dependencies yourself; missing or outdated dependencies produce install commands
+before native preparation starts. `meteor update --npm` explicitly installs or
+updates the required packages even with automatic installation disabled. It
+does not create native projects or run `cap sync`.
+
 ### TypeScript applications
 
 Capacitor participates in Meteor's opt-in package type generation. In an app with

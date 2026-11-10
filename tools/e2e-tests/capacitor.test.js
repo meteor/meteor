@@ -358,8 +358,8 @@ describe('Capacitor App Web Lifecycle /', () => {
   });
 
   test('"meteor add-platform android" installs deps and creates native context', async () => {
-    expectOutputContains(addPlatformOutput, /Capacitor: installing .* npm package/);
-    expectOutputContains(addPlatformOutput, /Capacitor: installed npm packages/);
+    expectOutputContains(addPlatformOutput, /Capacitor: updating npm dependencies/);
+    expectOutputContains(addPlatformOutput, /Capacitor dependencies are up to date/);
     expectOutputContains(addPlatformOutput, /Capacitor: added android platform|android: added platform/);
 
     const packageJson = await readJson(tempDir, 'package.json');
@@ -380,6 +380,45 @@ describe('Capacitor App Web Lifecycle /', () => {
     await assertFileExist(tempDir, '.gitignore', { content: 'android/app/src/main/assets/capacitor.*.json' });
   });
 
+  test('manual dependency mode blocks native preparation, while "meteor update --npm" repairs missing tools', async () => {
+    const originalManifest = await readJson(tempDir, 'package.json');
+    const configPath = path.join(tempDir, 'capacitor.config.js');
+    const originalConfig = await fs.readFile(configPath, 'utf8');
+    const buildOutputDir = path.join(tempDir, '_build-manual-deps');
+
+    try {
+      await fs.writeJson(path.join(tempDir, 'package.json'), {
+        ...originalManifest,
+        meteor: { ...originalManifest.meteor, autoInstallDeps: false },
+      });
+      await fs.remove(path.join(tempDir, 'node_modules/@capacitor/cli'));
+      const build = await runMeteorCommand('build', [
+        buildOutputDir, '--directory', '--platforms=android', '--server=http://127.0.0.1:3000',
+      ], tempDir, { captureOutput: true, logCapturedOutput: false, env: e2eEnv() });
+      await expect(build.meteorProcess).rejects.toMatchObject({ exitCode: 1 });
+      expectOutputContains(build.outputLines, /Automatic dependency installation is disabled/);
+      expectOutputContains(build.outputLines, /meteor npm install --save-dev @capacitor\/cli@/);
+      expectOutputNotContains(build.outputLines, /Capacitor: syncing/);
+      await assertPathNotExist(tempDir, 'node_modules/@capacitor/cli');
+
+      // The explicit update overrides manual mode without scaffolding a config
+      // or invoking native synchronization. Restore the source config afterward.
+      await fs.remove(configPath);
+      const update = await runMeteorCommand('update', ['--npm'], tempDir, {
+        captureOutput: true, checkExitCode: true, env: e2eEnv(),
+      });
+      await assertFileExist(tempDir, 'node_modules/@capacitor/cli/package.json');
+      await assertPathNotExist(tempDir, 'capacitor.config.js');
+      expectOutputNotContains(update.outputLines, /Capacitor: (?:syncing|adding|launching)/);
+      expect((await readJson(tempDir, 'package.json')).meteor.autoInstallDeps).toBe(false);
+    } finally {
+      await fs.writeFile(configPath, originalConfig);
+      const manifest = await readJson(tempDir, 'package.json');
+      await fs.writeJson(path.join(tempDir, 'package.json'), { ...manifest, meteor: originalManifest.meteor });
+      await cleanupTempDir(buildOutputDir);
+    }
+  });
+
   test('"meteor add-platform ios" installs deps and creates native context', async () => {
     const result = await runMeteorCommand('add-platform', ['ios'], tempDir, {
       captureOutput: true,
@@ -387,8 +426,8 @@ describe('Capacitor App Web Lifecycle /', () => {
       env: e2eEnv(),
     });
 
-    expectOutputContains(result.outputLines, /Capacitor: installing .* npm package/);
-    expectOutputContains(result.outputLines, /Capacitor: installed npm packages/);
+    expectOutputContains(result.outputLines, /Capacitor: updating npm dependencies/);
+    expectOutputContains(result.outputLines, /Capacitor dependencies are up to date/);
     expectOutputContains(result.outputLines, /Capacitor: added ios platform|ios: added platform/);
 
     const packageJson = await readJson(tempDir, 'package.json');
@@ -752,8 +791,8 @@ describe('Capacitor App Web Lifecycle /', () => {
     meteorProcess = result.meteorProcess;
 
     await assertNativeReactApp(PORT);
-    expectOutputNotContains(result.outputLines, /Capacitor: installing .* npm package/);
-    expectOutputNotContains(result.outputLines, /Capacitor: installed npm packages/);
+    expectOutputNotContains(result.outputLines, /Capacitor: updating npm dependencies/);
+    expectOutputNotContains(result.outputLines, /Capacitor dependencies are up to date/);
     await assertFileExist(tempDir, '_build/native-dev/capacitor.config.json');
   });
 });

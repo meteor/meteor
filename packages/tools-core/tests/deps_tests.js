@@ -146,14 +146,14 @@ Tinytest.add(
 );
 
 Tinytest.add(
-  'tools-core - formatInstallCommands - regular only emits --save command',
+  'tools-core - formatInstallCommands - regular only emits --save-prod command',
   function (test) {
     const cmds = formatInstallCommands({
       changes: [
         { name: 'a', requiredVersion: '1.0.0', dev: false, status: 'missing' },
       ],
     });
-    test.equal(cmds.regularCommand, 'meteor npm install --save a@1.0.0');
+    test.equal(cmds.regularCommand, 'meteor npm install --save-prod a@1.0.0');
     test.isUndefined(cmds.devCommand);
   },
 );
@@ -168,7 +168,7 @@ Tinytest.add(
       ],
     });
     test.equal(cmds.devCommand, 'meteor npm install --save-dev a@1.0.0');
-    test.equal(cmds.regularCommand, 'meteor npm install --save b@2.0.0');
+    test.equal(cmds.regularCommand, 'meteor npm install --save-prod b@2.0.0');
   },
 );
 
@@ -207,7 +207,7 @@ Tinytest.add('tools-core - dependencies - pnpm commands and unsupported managers
   ];
   test.equal(formatInstallCommands({ changes, packageManager: 'pnpm', yarn: true }), {
     devCommand: 'pnpm add --save-dev compiler@2.0.0',
-    regularCommand: 'pnpm add runtime@1.0.0',
+    regularCommand: 'pnpm add --save-prod runtime@1.0.0',
   });
   test.equal(formatInstallCommands({ changes, packageManager: 'unsupported' }), {});
 });

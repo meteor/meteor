@@ -269,6 +269,9 @@ function buildNpmInstallArgs(dependencies, options = {}) {
   // Add flags based on options
   if (options.dev) {
     args.push('--save-dev');
+  } else if (options.dev === false) {
+    // npm otherwise preserves an existing devDependencies entry.
+    args.push('--save-prod');
   }
 
   if (options.exact) {
@@ -334,6 +337,8 @@ function buildPnpmInstallArgs(dependencies, options = {}) {
 
   if (options.dev) {
     args.push('--save-dev');
+  } else if (options.dev === false) {
+    args.push('--save-prod');
   }
 
   if (options.exact) {

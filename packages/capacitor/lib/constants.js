@@ -71,7 +71,6 @@ export const DEFAULT_CAPACITOR_VERSION = '7.4.3';
 export const DEFAULT_METEOR_CAPACITOR_VERSION = '0.2.0-alpha.1';
 
 export const GLOBAL_STATE_KEYS = {
-  CAPACITOR_INSTALLATION_CHECKED: 'capacitor.installationChecked',
   CAPACITOR_BUILD_CONTEXT_PREPARED: 'capacitor.buildContextPrepared',
   CAPACITOR_CONFIG_SCAFFOLDED: 'capacitor.configScaffolded',
 };

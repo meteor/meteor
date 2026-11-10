@@ -98,4 +98,18 @@ describe('npm automatic build dependencies in production', () => {
     else expect(manifest.dependencies).toBeUndefined();
     expect(process.env.NODE_ENV).toBe('production');
   });
+
+  test('moves a runtime dependency out of devDependencies when correcting its placement', async () => {
+    const runtime = createPackage('fixture-runtime');
+    expect(await installNpmDependency(runtime, {
+      cwd: appDir, dev: true, includeDev: true,
+    })).toBe(true);
+    expect(await installNpmDependency(runtime, {
+      cwd: appDir, dev: false, includeDev: true,
+    })).toBe(true);
+    const manifest = JSON.parse(fs.readFileSync(path.join(appDir, 'package.json')));
+    expect(manifest.dependencies?.['fixture-runtime']).toBeDefined();
+    expect(manifest.devDependencies?.['fixture-runtime']).toBeUndefined();
+    expect(isInstalled('fixture-runtime')).toBe(true);
+  });
 });
