@@ -45,7 +45,7 @@ Each app lives in `apps/<name>/` and has a matching `<name>.test.js`.
 
 ### source-maps
 
-Small TypeScript fixture for source-map correctness (#14655); focused debugging and build checks replace the default lifecycle.
+Small TypeScript fixture for source-map correctness (#14655); focused debugging and build checks replace the default lifecycle. `regressions/legacy-ejson.test.js` reuses a temporary copy for production package minification (#14847).
 
 | What is covered | Phase |
 |----------------|-------|
@@ -56,6 +56,8 @@ Small TypeScript fixture for source-map correctness (#14655); focused debugging 
 | Debug maps for modern, legacy, and Cordova web programs, plus Rspack's emitted production maps | Build |
 | Babel and SWC legacy map composition; warm Meteor caches update maps when generated JavaScript is unchanged (Rspack cache cleared) | Build (debug) |
 | Debug and production bundles boot and execute eager and lazy browser code | Build |
+| Default Meteor and Rspack production bundles preserve plain/nested object equality and key-order options in modern and legacy browser programs | Build |
+| Object-parameter subscriptions retain their ID and ready state across reactive reruns in both bundlers' modern and legacy production programs | Build |
 | App paths containing spaces and Unicode; inline and external map references accepted | All |
 
 A separate warm-Rspack-cache regression is skipped pending a fix for stale upstream maps after edits that only shift source locations; see the fixture README.
@@ -533,6 +535,7 @@ Where each feature is tested across apps and skeletons.
 | Portable build (no isDev/isProd defines) | typescript | |
 | Source-map paths, contents, exact breakpoint/step/exception locations, lazy code, and rebuilds | source-maps | |
 | Modern, legacy, and Cordova web source maps in built output | source-maps | |
+| Legacy production EJSON equality and subscription reuse with Meteor and Rspack | source-maps | |
 | `Meteor.extendSwcConfig` (path aliases) | typescript | |
 | CSS auto-delegation (entry folder filtering) | vue | |
 | `meteor.modules` config (preserve files for Meteor) | react-router, vue | |
