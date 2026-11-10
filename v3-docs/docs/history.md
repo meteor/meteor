@@ -9,7 +9,7 @@ This is a complete history of changes for Meteor releases.
 [//]: # (If you want to change something in this file)
 
 [//]: # (go to meteor/v3-docs/docs/generators/changelog/versions)
-## v3.6.0, 2026-11-09
+## v3.6.0, 2026-11-10
 
 ### Highlights
 
@@ -108,6 +108,19 @@ This is a complete history of changes for Meteor releases.
 - Re-send outstanding DDP methods after reconnecting on browsers without `Promise.allSettled`, and stop `Accounts.config` from throwing on browsers without `Object.hasOwn`, [PR#14879](https://github.com/meteor/meteor/pull/14879), [#14869](https://github.com/meteor/meteor/issues/14869).
 
 See [all merged PRs for Meteor 3.6](https://github.com/meteor/meteor/pulls?q=is%3Apr+is%3Amerged+base%3Arelease-3.6)
+
+#### Meteor Agent Skills
+
+This Meteor release was tested with [Agent Skills v1.1.0](https://github.com/meteor/agent-skills/releases/tag/v1.1.0).
+
+Install or update Meteor Agent Skills with Node.js 22.20.0 or later in the installation shell:
+
+```bash
+npx skills add 'meteor/agent-skills#v1.1.0'
+```
+
+See the [Meteor Agent Skills guide](https://docs.meteor.com/ai/agent-skills) for more
+installation options, including the older-Node installer fallback.
 
 #### Breaking Changes
 
