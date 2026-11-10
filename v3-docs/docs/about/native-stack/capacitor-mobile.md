@@ -69,6 +69,19 @@ meteor add capacitor
 
 When the package is present, Meteor routes native Android and iOS commands through Capacitor.
 
+### TypeScript applications
+
+Capacitor participates in Meteor's opt-in package type generation. In an app with
+a `tsconfig.json`, run `meteor types` and include `.meteor/types/packages.d.ts` in
+the configuration's `files` list. See [Using core types](../../cli/using-core-types.md)
+for the complete setup and migration from other type providers.
+
+The generated declarations include `Meteor.isCapacitor` and the server-side
+WebApp architecture detector hook. `Meteor.isCapacitor` is a boolean: it is true
+inside a Capacitor native WebView and false in an ordinary browser or on the
+server. The npm package `@meteorjs/capacitor` also ships types for `defineConfig`
+and the native Hot Code Push plugin.
+
 ### Configure the app id and name
 
 Meteor scaffolds `capacitor.config.js` when it is missing:

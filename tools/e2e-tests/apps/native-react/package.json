@@ -15,7 +15,9 @@
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "playwright": "1.59.0"
+    "@types/node": "^24.0.0",
+    "playwright": "1.59.0",
+    "typescript": "^5.9.3"
   },
   "meteor": {
     "mainModule": {

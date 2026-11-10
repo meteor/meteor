@@ -387,6 +387,8 @@ React app using both Rspack and Capacitor, with web-only native lifecycle covera
 | What is covered | Phase |
 |----------------|-------|
 | Local `@meteorjs/rspack` and `@meteorjs/capacitor` packages linked into the app | Init |
+| `meteor types` + `tsc` resolve Capacitor exports, `Meteor.isCapacitor`, WebApp hooks and npm configuration types | Init |
+| TypeScript runtime flag helper is compiled and rendered in the browser | Run, Prod |
 | `meteor add-platform android` installs Capacitor npm deps and creates `android/` | Init |
 | `.meteor/platforms` and Capacitor `.gitignore` entries are updated | Init |
 | `meteor run android` includes `web.cordova`, transforms it into `_build/native-dev`, and runs `cap sync` | Run |

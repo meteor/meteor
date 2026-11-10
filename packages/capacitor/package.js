@@ -74,6 +74,7 @@ Package.onUse(function (api) {
 
   api.mainModule('capacitor_client.js', 'client');
   api.mainModule('capacitor_server.js', 'server');
+  api.types('capacitor.d.ts');
 });
 
 Package.onTest(function (api) {

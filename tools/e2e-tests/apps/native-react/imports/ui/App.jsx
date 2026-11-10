@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Device } from '@capacitor/device';
+import { nativeRuntimeLabel } from '../native';
 
 import './main.css';
 
@@ -62,6 +63,7 @@ export const App = () => {
     <main data-testid="native-react-root" className="native-react">
       <h1>Welcome to Meteor Native React</h1>
       <p data-testid="native-context">Rspack and Capacitor fixture</p>
+      <p data-testid="native-runtime">{nativeRuntimeLabel()}</p>
       <p data-testid="native-device-plugin">{devicePluginStatus}</p>
       <p data-testid="native-app-plugin">{appPluginStatus}</p>
     </main>

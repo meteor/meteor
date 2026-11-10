@@ -70,18 +70,6 @@ export declare namespace WebApp {
 }
 
 export declare namespace WebAppInternals {
-  type ClientArchDetectorResult =
-    | "web.browser"
-    | "web.browser.legacy"
-    | "web.cordova"
-    | {
-      arch: "web.browser" | "web.browser.legacy" | "web.cordova";
-      path?: string | undefined;
-    }
-    | null
-    | false
-    | undefined;
-
   var NpmModules: {
     [key: string]: {
       version: string;
@@ -97,28 +85,6 @@ export declare namespace WebAppInternals {
   function registerBoilerplateDataCallback(
     key: string,
     callback: Function
-  ): Function;
-  function registerClientArchDetector(
-    key: string,
-    callback: (
-      request: http.IncomingMessage,
-      categorizedRequest: {
-        browser: {
-          name: string;
-          major: string;
-          minor: string;
-          patch: string;
-        };
-        modern: boolean;
-        path: string;
-        arch: "web.browser" | "web.browser.legacy" | "web.cordova";
-        url: any;
-        dynamicHead?: string | undefined;
-        dynamicBody?: string | undefined;
-        headers: http.IncomingHttpHeaders;
-        cookies?: any;
-      }
-    ) => ClientArchDetectorResult
   ): Function;
   function generateBoilerplateInstance(
     arch: string,

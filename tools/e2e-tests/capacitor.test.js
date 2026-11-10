@@ -268,6 +268,7 @@ async function assertNativeReactApp(port) {
 
     const context = await page.$eval('[data-testid="native-context"]', el => el.textContent);
     expect(context).toBe('Rspack and Capacitor fixture');
+    expect(await page.$eval('[data-testid="native-runtime"]', el => el.textContent)).toBe('Web');
 
     await page.waitForFunction(() => (
       document.querySelector('[data-testid="native-device-plugin"]')?.textContent ===
@@ -333,6 +334,22 @@ describe('Capacitor App Web Lifecycle /', () => {
 
   afterAll(async () => {
     await cleanupTempDir(tempDir);
+  });
+
+  test('"meteor types" exposes Capacitor runtime and WebApp hooks to TypeScript apps', async () => {
+    await runMeteorCommand('types', [], tempDir, {
+      captureOutput: true,
+      checkExitCode: true,
+      env: e2eEnv(),
+    });
+    await assertFileExist(tempDir, '.meteor/types/packages.d.ts', {
+      content: 'packages/capacitor/index.d.ts',
+    });
+    await runMeteorCommand('node', ['node_modules/typescript/bin/tsc', '--project', 'tsconfig.json'], tempDir, {
+      captureOutput: true,
+      checkExitCode: true,
+      env: e2eEnv(),
+    });
   });
 
   test('"meteor add-platform android" installs deps and creates native context', async () => {
