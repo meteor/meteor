@@ -473,11 +473,16 @@ function applyChangeset(options) {
   });
 
   try {
+    // Signal that changed modules are being re-evaluated, so packages (e.g.
+    // mongo) can reuse existing resources instead of failing on re-declaration.
+    Meteor._hmrApplying = true;
     toRerun.forEach(function (moduleId) {
       require(moduleId);
     });
   } catch (error) {
     console.error('HMR: Error while applying changes:', error);
+  } finally {
+    Meteor._hmrApplying = false;
   }
 
   var updateCount = changedFiles.length + addedFiles.length;
