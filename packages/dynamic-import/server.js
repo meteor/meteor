@@ -1,6 +1,5 @@
 "use strict";
 
-const assert = require("assert");
 const { readFileSync } = require("fs");
 const {
   join: pathJoin,
@@ -9,6 +8,14 @@ const {
 const { fetchURL } = require("./common.js");
 const { Meteor } = require("meteor/meteor");
 const hasOwn = Object.prototype.hasOwnProperty;
+
+const {
+  MAX_REQUEST_BYTES, MAX_TREE_DEPTH, MAX_TREE_NODES,
+  MAX_KEYS_PER_OBJECT, MAX_KEY_BYTES, MAX_PATH_BYTES,
+} = require("./request-limits.js");
+
+// Bound failed reads and log once per request.
+const MAX_FAILED_READS = 100;
 
 require("./security.js");
 
@@ -78,11 +85,46 @@ function middleware(request, response) {
 
   } else if (request.method === "POST") {
     const chunks = [];
-    request.on("data", chunk => chunks.push(chunk));
+    let requestBytes = 0;
+    let rejected = false;
+
+    const rejectOversizedRequest = () => {
+      if (rejected) return;
+      rejected = true;
+      chunks.length = 0;
+      response.writeHead(413, {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      });
+      response.end(JSON.stringify("request too large"));
+    };
+
+    const contentLength = Number(request.headers["content-length"]);
+    if (Number.isFinite(contentLength) && contentLength > MAX_REQUEST_BYTES) {
+      rejectOversizedRequest();
+      request.resume();
+      return;
+    }
+
+    request.on("data", chunk => {
+      if (rejected) return;
+      requestBytes += Buffer.byteLength(chunk);
+      if (requestBytes > MAX_REQUEST_BYTES) {
+        rejectOversizedRequest();
+      } else {
+        chunks.push(chunk);
+      }
+    });
+    request.on("aborted", () => {
+      chunks.length = 0;
+    });
     request.on("end", () => {
+      if (rejected) return;
       try {
+        const requestTree = JSON.parse(Buffer.concat(chunks));
+        validateTree(requestTree);
         const tree = JSON.stringify(readTree(
-          JSON.parse(Buffer.concat(chunks)),
+          requestTree,
           getPlatform(request)
         ), null, 2);
 
@@ -114,6 +156,64 @@ function middleware(request, response) {
   }
 }
 
+function validateTree(tree) {
+  const stack = [{ node: tree, depth: 0, pathBytes: 0 }];
+  let nodeCount = 0;
+
+  while (stack.length > 0) {
+    const { node, depth, pathBytes } = stack.pop();
+    nodeCount += 1;
+    if (nodeCount > MAX_TREE_NODES) {
+      throw new Error("dynamic import tree has too many nodes");
+    }
+    if (depth > MAX_TREE_DEPTH) {
+      throw new Error("dynamic import tree is too deeply nested");
+    }
+
+    if (node === 1) {
+      if (depth === 0) {
+        throw new Error("dynamic import tree root must be an object");
+      }
+      continue;
+    }
+    if (!node || typeof node !== "object" || Array.isArray(node)) {
+      throw new Error("dynamic import tree leaves must equal 1");
+    }
+
+    const keys = Object.keys(node);
+    if (keys.length > MAX_KEYS_PER_OBJECT) {
+      throw new Error("dynamic import tree object has too many keys");
+    }
+
+    keys.forEach(name => {
+      const keyBytes = Buffer.byteLength(name);
+      if (
+        name.length === 0 ||
+        name === "." ||
+        name === ".." ||
+        name.includes("\0") ||
+        name.includes("/") ||
+        name.includes("\\")
+      ) {
+        throw new Error("invalid dynamic import path component");
+      }
+      if (keyBytes > MAX_KEY_BYTES) {
+        throw new Error("dynamic import path component is too long");
+      }
+
+      const childPathBytes = pathBytes + (depth > 0 ? 1 : 0) + keyBytes;
+      if (childPathBytes > MAX_PATH_BYTES) {
+        throw new Error("dynamic import path is too long");
+      }
+      stack.push({
+        node: node[name],
+        depth: depth + 1,
+        pathBytes: childPathBytes
+      });
+    });
+  }
+}
+
 function getPlatform(request) {
   // If the __dynamicImport request includes a secret key, and it matches
   // dynamicImportInfo[platform].key, use platform instead of the default
@@ -131,46 +231,69 @@ function getPlatform(request) {
 }
 
 function readTree(tree, platform) {
-  const pathParts = [];
+  let result = null;
+  const failures = { count: 0, skipped: 0, firstError: null };
+  const stack = [{
+    node: tree,
+    pathParts: [],
+    parent: null,
+    key: null,
+    visited: false
+  }];
 
-  function walk(node) {
-    if (! node) {
-      return null;
+  const assignResult = (frame, value) => {
+    if (frame.parent === null) {
+      result = value;
+    } else if (value === null) {
+      delete frame.parent[frame.key];
+    } else {
+      frame.parent[frame.key] = value;
+    }
+  };
+
+  while (stack.length > 0) {
+    const frame = stack.pop();
+    if (frame.node === 1) {
+      assignResult(frame, read(frame.pathParts, platform, failures));
+      continue;
     }
 
-    if (typeof node !== "object") {
-      return read(pathParts, platform);
-    }
-
-    let empty = true;
-
-    Object.keys(node).forEach(name => {
-      pathParts.push(name);
-      const result = walk(node[name]);
-      if (result === null) {
-        // If the read function returns null, omit this module from the
-        // resulting tree.
-        delete node[name];
-      } else {
-        node[name] = result;
-        empty = false;
+    if (!frame.visited) {
+      frame.visited = true;
+      frame.keys = Object.keys(frame.node);
+      stack.push(frame);
+      for (let index = frame.keys.length - 1; index >= 0; index -= 1) {
+        const name = frame.keys[index];
+        stack.push({
+          node: frame.node[name],
+          pathParts: frame.pathParts.concat(name),
+          parent: frame.node,
+          key: name,
+          visited: false
+        });
       }
-      assert.strictEqual(pathParts.pop(), name);
-    });
-
-    if (empty) {
-      // If every recursive call to walk(node[name]) returned null,
-      // remove this node from the resulting tree by returning null.
-      return null;
+      continue;
     }
 
-    return node;
+    const empty = frame.keys.every(name => !hasOwn.call(frame.node, name));
+    assignResult(frame, empty ? null : frame.node);
   }
 
-  return walk(tree);
+  if (failures.count > 0) {
+    console.error(
+      `dynamic-import: failed to read ${failures.count} requested module(s)` +
+        (failures.skipped > 0
+          ? ` and skipped ${failures.skipped} more after ${MAX_FAILED_READS} failures`
+          : "") +
+        "; first error:",
+      failures.firstError.stack || failures.firstError
+    );
+  }
+
+  return result;
 }
 
-function read(pathParts, platform) {
+function read(pathParts, platform, failures) {
   const { dynamicRoot } = dynamicImportInfo[platform];
   const absPath = pathNormalize(pathJoin(
     dynamicRoot,
@@ -187,10 +310,16 @@ function read(pathParts, platform) {
     return cache[absPath];
   }
 
+  if (failures.count >= MAX_FAILED_READS) {
+    failures.skipped += 1;
+    return null;
+  }
+
   try {
     return cache[absPath] = readFileSync(absPath, "utf8");
   } catch (e) {
-    console.error(e.stack || e);
+    failures.count += 1;
+    failures.firstError = failures.firstError || e;
     return null;
   }
 }

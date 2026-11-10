@@ -169,7 +169,40 @@ const response = await Meteor.fetch(Meteor.absoluteUrl('api/protected'), {
 
 The client and server must both have HttpOnly cookies enabled. Call `Accounts.config({ useHttpOnlyCookies: true })` from shared code, or set `Meteor.settings.public.packages.accounts.useHttpOnlyCookies` to `true`.
 
-When enabled, the server handles `POST /_accounts/cookie/set`, `GET /_accounts/cookie/refresh`, and `POST /_accounts/cookie/clear`. When disabled, these paths fall through to later WebApp handlers. The `/set` endpoint accepts request bodies up to 4 KB. Larger bodies receive HTTP 413 with `{ "error": "body_too_large" }`.
+When enabled, the server handles the following endpoints. When disabled, these
+paths fall through to later WebApp handlers.
+
+| Endpoint                        | Requirements and responses                                                                                                                                                                       |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `POST /_accounts/cookie/set`    | Requires a trusted application origin, `Content-Type: application/json`, a body of at most 4 KB, and a valid, unexpired login token. Invalid tokens return `401`; oversized bodies return `413`. |
+| `GET /_accounts/cookie/refresh` | Rejects explicitly cross-site requests. An invalid or expired cookie is cleared and returns `401` with `{ "error": "invalid_cookie" }`.                                                          |
+| `POST /_accounts/cookie/clear`  | Requires a trusted application origin and clears the login cookie.                                                                                                                               |
+
+The origin of `ROOT_URL` and the request `Host` are trusted automatically. Add
+other trusted origins and tune the per-client-address rate limit from server
+code:
+
+```js
+Accounts.config({
+  useHttpOnlyCookies: true,
+  httpOnlyCookieAllowedOrigins: ["https://app.example.com"],
+  httpOnlyCookieRateLimit: { max: 60, windowMs: 10_000 },
+});
+```
+
+All three endpoints allow 30 requests per 10 seconds per client address by
+default and return `429` with `{ "error": "rate_limited" }` when that limit is
+exceeded. Set `httpOnlyCookieRateLimit: false` to disable this separate endpoint
+limit. Behind a reverse proxy, configure `HTTP_FORWARDED_COUNT` so the server
+uses the actual client address.
+
+::: warning SameSite migration
+The `meteor_login_token` cookie uses `SameSite=Strict`. A browser does not send
+it on the initial top-level navigation from another site. Apps that authenticate
+that first request with the cookie, including cookie-protected
+`accounts-express` routes, must adapt their entry flow. An allowed origin does
+not override browser SameSite policy.
+:::
 
 On the client, the auth path also sets `credentials: 'include'` so the browser sends the `meteor_login_token` cookie. If you provide your own `credentials` option, it is not overridden. The credentials handling only kicks in when auth is on, so calling `Meteor.fetch(url)` (auth off by default) does not change credentials behavior.
 
