@@ -90,6 +90,34 @@ if (!IS_CHANGESTREAM) {
 }
 
 // ============================================================================
+// CURSOR SUPPORT TESTS
+// ============================================================================
+
+// $where/$near must fall back, like oplog's cursorSupported already does.
+Tinytest.addAsync(
+  'changestream - cursorSupported rejects $where and $near',
+  async function (test) {
+    // Never written to: the fallback's server-side find only evaluates
+    // $where / $near once the namespace exists.
+    const c = makeCollection();
+
+    const supported = async function (expected, selector) {
+      const handle = await c.find(selector).observeChanges({ added() {} });
+      test.equal(isChangeStreamDriver(handle), expected, EJSON.stringify(selector));
+      handle.stop();
+    };
+
+    await supported(true, { foo: 'asdf' });
+    await supported(true, { $and: [{ foo: 'asdf' }, { bar: 'baz' }] });
+
+    await supported(false, { $where: 'xxx' });
+    await supported(false, { $and: [{ foo: 'adsf' }, { $where: 'xxx' }] });
+    await supported(false, { foo: 'fn', $where() { return true; } });
+    await supported(false, { x: { $near: [1, 1] } });
+  }
+);
+
+// ============================================================================
 // BASIC CRUD OPERATIONS TESTS
 // ============================================================================
 
@@ -2823,6 +2851,534 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
+  'changestream - split support selects a usable driver for each server version (#14787)',
+  async test => {
+    const mongo = defaultMongo();
+    const admin = mongo.db.admin;
+    const supported = mongo._supportsChangeStreams;
+    const reasons = mongo._changeStreamServerReasons;
+    try {
+      for (const [version, expected] of [
+        ['6.0.8', false], ['6.0.9', true], ['6.0.10', true],
+        ['7.0.0', true], ['8.0.0', true], ['unknown', false],
+      ]) {
+        mongo._supportsChangeStreams = undefined;
+        mongo.db.admin = function () {
+          const result = admin.call(this);
+          result.serverInfo = async () => ({ version });
+          return result;
+        };
+        const c = makeCollection();
+        const handle = await c.find({}).observeChanges({ added() {} });
+        try {
+          test.equal(isChangeStreamDriver(handle), expected, `server ${version}`);
+        } finally {
+          await handle.stop();
+        }
+      }
+    } finally {
+      mongo.db.admin = admin;
+      mongo._supportsChangeStreams = supported;
+      mongo._changeStreamServerReasons = reasons;
+    }
+  }
+);
+
+// Every test below consumes real server-generated fragments. A batch size of
+// one lets us interrupt delivery between fragments rather than only between
+// complete events in one getMore batch.
+const withLargeChangeStream = async (test, options, run) => {
+  const c = makeCollection();
+  const raw = c.rawCollection();
+  await raw.insertOne({ _id: 'big', big: 'a'.repeat(9 * 1024 * 1024), v: 0 });
+  if (options.preImages) {
+    await c.rawDatabase().command({ collMod: c._name, changeStreamPreAndPostImages: { enabled: true } });
+  }
+
+  const opens = [];
+  const mongo = defaultMongo();
+  const rawCollection = mongo.rawCollection;
+  const watch = raw.watch;
+  mongo.rawCollection = function (name) {
+    const collection = rawCollection.call(this, name);
+    if (name === c._name) {
+      collection.watch = function (pipeline, watchOptions) {
+        opens.push({ ...watchOptions });
+        return watch.call(this, pipeline, { ...watchOptions, batchSize: 1 });
+      };
+    }
+    return collection;
+  };
+  const events = [];
+  let handle;
+  let shared;
+  let driver;
+  try {
+    handle = await c.find({}, { fields: { big: 0 } }).observeChanges({
+      added: (id, fields) => events.push({ type: 'added', id, fields }),
+      changed: (id, fields) => events.push({ type: 'changed', id, fields }),
+      removed: id => events.push({ type: 'removed', id }),
+    });
+    test.isTrue(isChangeStreamDriver(handle));
+    driver = handle._multiplexer._observeDriver;
+    shared = driver._sharedStream;
+    const state = { c, raw, handle, shared, driver, events, opens, fragments: [], delivered: [], resyncs: 0 };
+    const onDriverChange = driver._onChange;
+    driver._onChange = function (change) {
+      state.delivered.push(change);
+      return onDriverChange.call(this, change);
+    };
+    state.dispatch = shared._onChange.bind(shared);
+    shared._onChange = change => {
+      if (change.splitEvent) state.fragments.push(change);
+      return options.onChange
+        ? options.onChange(change, state)
+        : state.dispatch(change);
+    };
+    const resync = shared._resyncDrivers.bind(shared);
+    shared._resyncDrivers = async (...args) => {
+      state.resyncs++;
+      return resync(...args);
+    };
+    await run(state);
+  } finally {
+    if (shared) {
+      delete shared._onChange;
+      delete shared._resyncDrivers;
+    }
+    if (driver) delete driver._onChange;
+    mongo.rawCollection = rawCollection;
+    if (handle) await handle.stop();
+    await raw.drop();
+  }
+};
+
+for (const scenario of [
+  { name: 'post-image and updateDescription', preImages: false, largeUpdate: true, count: 2 },
+  { name: 'pre-image and post-image', preImages: true, largeUpdate: false, count: 2 },
+  { name: 'pre-image, post-image and updateDescription', preImages: true, largeUpdate: true, count: 3 },
+]) {
+  Tinytest.addAsync(
+    `changestream - split delivers ${scenario.name} without resync (#14787)`,
+    async test => {
+      await withLargeChangeStream(test, scenario, async state => {
+        const { c, events, fragments, opens } = state;
+        const modifier = { v: 1 };
+        if (scenario.largeUpdate) modifier.big = 'b'.repeat(9 * 1024 * 1024);
+        await withFence(() => c.updateAsync('big', { $set: modifier }));
+        test.equal(events.filter(e => e.type === 'changed'), [
+          { type: 'changed', id: 'big', fields: { v: 1 } },
+        ], 'the complete update is delivered exactly once before the fence');
+        test.equal(fragments.map(e => e.splitEvent.fragment),
+          scenario.count === 3 ? [1, 2, 3] : [1, 2]);
+        const update = state.delivered.find(e => e.operationType === 'update');
+        test.isTrue(!!update, 'the driver received the reassembled event');
+        if (update) {
+          test.isUndefined(update.splitEvent, 'fragment metadata is not dispatched');
+          test.equal(update._id, fragments[fragments.length - 1]._id, 'the assembled event has the final token');
+          test.equal(update.fullDocument.big.length, 9 * 1024 * 1024);
+          test.equal(update.fullDocument.big[0], scenario.largeUpdate ? 'b' : 'a');
+          test.equal(update.updateDescription.updatedFields.v, 1, 'updateDescription survives assembly');
+          if (scenario.largeUpdate) {
+            test.equal(update.updateDescription.updatedFields.big.length, 9 * 1024 * 1024);
+            test.equal(update.updateDescription.updatedFields.big.at(-1), 'b');
+          }
+          if (scenario.preImages) {
+            test.equal(update.fullDocumentBeforeChange.v, 0, 'the pre-image survives assembly');
+            test.equal(update.fullDocumentBeforeChange.big.length, 9 * 1024 * 1024);
+            test.equal(update.fullDocumentBeforeChange.big[0], 'a');
+          }
+        }
+        test.equal(opens.length, 1, 'the cursor did not restart');
+        test.equal(state.resyncs, 0, 'the observers did not resync');
+        await withFence(() => c.insertAsync({ _id: 'canary', v: 2 }));
+        test.isTrue(events.some(e => e.type === 'added' && e.id === 'canary'),
+          'subsequent ordinary events still flow');
+      });
+    }
+  );
+}
+
+Tinytest.addAsync(
+  'changestream - split keeps write fences parked until the final fragment (#14787)',
+  async test => {
+    let held;
+    let fenceDone = false;
+    await withLargeChangeStream(test, {
+      preImages: true,
+      onChange(change, state) {
+        if (change.splitEvent && change.splitEvent.fragment === change.splitEvent.of) {
+          held = change;
+          return;
+        }
+        state.dispatch(change);
+      },
+    }, async state => {
+      const pending = withFence(() => state.c.updateAsync('big', {
+        $set: { big: 'b'.repeat(9 * 1024 * 1024), v: 1 },
+      })).then(() => { fenceDone = true; });
+      try {
+        test.isTrue(await waitFor(() => !!held, 5000), 'the last fragment is held');
+        if (!held) return;
+        await new Promise(r => setTimeout(r, 100));
+        test.isFalse(fenceDone, 'an incomplete event cannot release the fence');
+        test.equal(state.events.filter(e => e.type === 'changed'), [],
+          'no partial update reaches an observer');
+        state.dispatch(held);
+        test.isTrue(await waitFor(() => fenceDone, 5000), 'the complete event releases the fence');
+        await pending;
+        test.equal(state.events.filter(e => e.type === 'changed'), [
+          { type: 'changed', id: 'big', fields: { v: 1 } },
+        ]);
+      } finally {
+        if (!fenceDone && held) state.dispatch(held);
+      }
+    });
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - split resumes after each fragment across repeated cursor reconnects (#14787)',
+  async test => {
+    const interrupted = new Set();
+    let discardedStream;
+    await withLargeChangeStream(test, {
+      preImages: true,
+      onChange(change, state) {
+        if (state.shared._changeStream === discardedStream) return;
+        state.dispatch(change);
+        const fragment = change.splitEvent?.fragment;
+        if (fragment && fragment < change.splitEvent.of && !interrupted.has(fragment)) {
+          interrupted.add(fragment);
+          discardedStream = state.shared._changeStream;
+          discardedStream.emit('error', new Error('test connection reset between fragments'));
+        }
+      },
+    }, async state => {
+      let done = false;
+      const pending = withFence(() => state.c.updateAsync('big', {
+        $set: { big: 'b'.repeat(9 * 1024 * 1024), v: 1 },
+      })).then(() => { done = true; });
+      test.isTrue(await waitFor(() => done, 10000), 'reconnects do not strand the write fence');
+      if (!done) return;
+      await pending;
+      test.equal([...interrupted], [1, 2], 'both fragment boundaries were interrupted');
+      test.equal(state.opens.length, 3, 'both interruptions reopened the cursor');
+      for (let i = 1; i < state.opens.length; i++) {
+        const token = state.fragments.find(e => e.splitEvent.fragment === i)._id;
+        test.equal(state.opens[i].startAfter, token, 'resume from the last received fragment');
+      }
+      test.equal(state.resyncs, 0, 'resumable errors preserve the partial event');
+      test.equal(state.events.filter(e => e.type === 'changed'), [
+        { type: 'changed', id: 'big', fields: { v: 1 } },
+      ], 'the reassembled event is applied once');
+      await withFence(() => state.c.insertAsync({ _id: 'after-reconnect' }));
+      test.isTrue(state.events.some(e => e.id === 'after-reconnect'));
+    });
+  }
+);
+
+for (const code of [280, 286]) {
+  Tinytest.addAsync(
+    `changestream - split discards incomplete events and resyncs after error ${code} (#14787)`,
+    async test => {
+      let discardedStream;
+      let interrupted = false;
+      await withLargeChangeStream(test, {
+        preImages: true,
+        onChange(change, state) {
+          if (state.shared._changeStream === discardedStream) return;
+          state.dispatch(change);
+          if (change.splitEvent?.fragment === 1 && !interrupted) {
+            interrupted = true;
+            discardedStream = state.shared._changeStream;
+            discardedStream.emit('error', Object.assign(new Error('test non-resumable gap'), { code }));
+          }
+        },
+      }, async state => {
+        let done = false;
+        const pending = withFence(() => state.c.updateAsync('big', {
+          $set: { big: 'b'.repeat(9 * 1024 * 1024), v: 1 },
+        })).then(() => { done = true; });
+        test.isTrue(await waitFor(() => done, 10000), 'resync completes the skipped write fence');
+        if (!done) return;
+        await pending;
+        test.isTrue(interrupted, 'a real split event was interrupted');
+        test.equal(state.resyncs, 1, 'a non-resumable gap still resyncs');
+        test.equal(state.shared._pendingSplitEvent, null, 'incomplete event was discarded');
+        test.equal(state.events.filter(e => e.type === 'changed'), [
+          { type: 'changed', id: 'big', fields: { v: 1 } },
+        ]);
+        await withFence(() => state.c.updateAsync('big', {
+          $set: { big: 'c'.repeat(9 * 1024 * 1024), v: 2 },
+        }));
+        test.equal(state.events.filter(e => e.type === 'changed').map(e => e.fields.v), [1, 2],
+          'the next split event is assembled independently');
+        test.equal(state.resyncs, 1, 'the next split does not need another resync');
+      });
+    }
+  );
+}
+
+
+Tinytest.addAsync(
+  'changestream - split recovers a missing fragment instead of publishing incomplete data (#14787)',
+  async test => {
+    await withLargeChangeStream(test, {
+      preImages: true,
+      onChange(change, state) {
+        if (change.splitEvent?.fragment === 2) return;
+        state.dispatch(change);
+      },
+    }, async state => {
+      let done = false;
+      const pending = withFence(() => state.c.updateAsync('big', {
+        $set: { big: 'b'.repeat(9 * 1024 * 1024), v: 1 },
+      })).then(() => { done = true; });
+      test.isTrue(await waitFor(() => done, 10000), 'resync releases the skipped write fence');
+      if (!done) return;
+      await pending;
+      test.equal(state.fragments.map(e => e.splitEvent.fragment), [1, 2, 3]);
+      test.equal(state.resyncs, 1, 'a gap takes the non-resumable recovery path');
+      test.equal(state.events.filter(e => e.type === 'changed'), [
+        { type: 'changed', id: 'big', fields: { v: 1 } },
+      ]);
+    });
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - split stops without retaining an incomplete large document (#14787)',
+  async test => {
+    await withLargeChangeStream(test, {
+      preImages: true,
+      onChange(change, state) {
+        if (!change.splitEvent || change.splitEvent.fragment === 1) state.dispatch(change);
+      },
+    }, async state => {
+      await state.c.updateAsync('big', { $set: { big: 'b'.repeat(9 * 1024 * 1024), v: 1 } });
+      test.isTrue(await waitFor(() => state.fragments.length === 3, 5000));
+      test.isTrue(!!state.shared._pendingSplitEvent, 'a real partial event is buffered');
+      await state.handle.stop();
+      test.equal(state.shared._pendingSplitEvent, null, 'stopping releases the large buffer');
+      test.equal(state.events.filter(e => e.type === 'changed'), []);
+      const snapshot = [];
+      const next = await state.c.find({}, { fields: { big: 0 } }).observeChanges({
+        added: (id, fields) => snapshot.push({ id, fields }),
+      });
+      try {
+        test.equal(snapshot, [{ id: 'big', fields: { v: 1 } }],
+          'a new observer starts independently from the current snapshot');
+      } finally {
+        await next.stop();
+      }
+    });
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - split routes consecutive large events to shared selectors (#14787)',
+  async test => {
+    await withLargeChangeStream(test, {}, async state => {
+      const selected = [];
+      const second = await state.c.find({ v: 2 }, { fields: { big: 0 } }).observeChanges({
+        added: (id, fields) => selected.push({ type: 'added', id, fields }),
+        removed: id => selected.push({ type: 'removed', id }),
+      });
+      try {
+        test.equal(second._multiplexer._observeDriver._sharedStream, state.shared);
+        for (const v of [1, 2, 3]) {
+          await withFence(() => state.c.updateAsync('big', {
+            $set: { big: String(v).repeat(9 * 1024 * 1024), v },
+          }));
+        }
+        test.equal(state.events.filter(e => e.type === 'changed').map(e => e.fields.v), [1, 2, 3]);
+        test.equal(selected, [
+          { type: 'added', id: 'big', fields: { v: 2 } },
+          { type: 'removed', id: 'big' },
+        ]);
+        test.equal(state.fragments.map(e => e.splitEvent.fragment), [1, 2, 1, 2, 1, 2]);
+        test.equal(state.opens.length, 1);
+        test.equal(state.resyncs, 0);
+      } finally {
+        await second.stop();
+      }
+    });
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - split recovery blocks later events until resync holds the write fence (#14787)',
+  async test => {
+    let replayed = false;
+    let done = false;
+    await withLargeChangeStream(test, {
+      preImages: true,
+      onChange(change, state) {
+        if (change.splitEvent) return;
+        if (change.documentKey?._id === 'race-canary') {
+          // Replay real events as a lossy connection: fragment two is missing,
+          // and a later write arrives before the scheduled restart can run.
+          state.dispatch(state.fragments[0]);
+          state.dispatch(state.fragments[2]);
+          state.dispatch(change);
+          test.equal(state.shared._resumeToken, null, 'later events cannot repopulate the dropped token');
+          replayed = true;
+          return;
+        }
+        state.dispatch(change);
+      },
+    }, async state => {
+      const pending = withFence(() => state.c.updateAsync('big', {
+        $set: { big: 'b'.repeat(9 * 1024 * 1024), v: 1 },
+      })).then(() => { done = true; });
+      test.isTrue(await waitFor(() => state.fragments.length === 3, 5000));
+      await state.raw.insertOne({ _id: 'race-canary' });
+      test.isTrue(await waitFor(() => replayed, 5000));
+      test.isFalse(done, 'later events cannot release a skipped write before resync');
+      test.isTrue(await waitFor(() => done, 5000), 'resync eventually releases the fence');
+      if (done) await pending;
+      test.equal(state.resyncs, 1);
+      test.equal(state.events.filter(e => e.type === 'changed'), [
+        { type: 'changed', id: 'big', fields: { v: 1 } },
+      ]);
+    });
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - a BSONObjectTooLarge (10334) error is non-resumable and clears the token (#14763)',
+  async function (test) {
+    const c = makeCollection();
+    const handle = await c.find({}).observeChanges({ added: function () { } });
+    test.isTrue(isChangeStreamDriver(handle));
+
+    const shared = handle._multiplexer._observeDriver._sharedStream;
+    const streamBefore = shared._changeStream;
+    shared._resumeToken = { _data: 'token-before-oversized-event' };
+
+    try {
+      // Resuming via startAfter lands on the same >16MB event and fails again
+      // forever, so it must take the non-resumable path.
+      const tooLarge = Object.assign(new Error('BSONObj size: 18874887 is invalid'), {
+        code: 10334, codeName: 'BSONObjectTooLarge',
+      });
+      streamBefore.emit('error', tooLarge);
+
+      test.equal(shared._resumeToken, null, 'token cleared on BSONObjectTooLarge');
+      test.isTrue(shared._historyLost, 'resync flagged on BSONObjectTooLarge');
+    } finally {
+      handle.stop();
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - a live event during a history-lost resync does not release the write fence early (#14763)',
+  async function (test) {
+    const c = makeCollection();
+    await c.rawCollection().insertOne({ _id: 'big', v: 0 });
+
+    const log = [];
+    const handle = await c.find({}, { fields: { big: 0 } }).observeChanges({
+      added: id => log.push(`added:${id}`),
+      changed: (id, fields) => log.push(`changed:${id}:${fields.v}`),
+    });
+    test.isTrue(isChangeStreamDriver(handle));
+    await waitFor(() => log.includes('added:big'), 3000);
+
+    // Stand in for ordinary write traffic: the reopened stream delivers another
+    // write before this driver's resync runs, moving the driver past the write
+    // whose event was skipped.
+    const driver = handle._multiplexer._observeDriver;
+    const shared = driver._sharedStream;
+    const onChange = shared._onChange.bind(shared);
+    let lost = false;
+    shared._onChange = change => {
+      if (!lost && change.operationType === 'update' && change.documentKey._id === 'big') {
+        lost = true;
+        shared._changeStream.emit('error', Object.assign(new Error('test history lost'), { code: 286 }));
+        return;
+      }
+      onChange(change);
+    };
+    let resyncs = 0;
+    const origResync = driver._resyncAfterHistoryLost.bind(driver);
+    driver._resyncAfterHistoryLost = async (caughtUpTo) => {
+      resyncs++;
+      await c.rawCollection().insertOne({ _id: 'live-during-resync' });
+      await waitFor(() => log.includes('added:live-during-resync'), 3000);
+      // Give an early fence release time to surface before the resync runs.
+      await new Promise(r => setTimeout(r, 200));
+      return origResync(caughtUpTo);
+    };
+
+    try {
+      const TIMEOUT = Symbol('timeout');
+      const outcome = await Promise.race([
+        withFence(async () => {
+          await c.updateAsync('big', { $set: { v: 1 } });
+        }),
+        new Promise(r => setTimeout(() => r(TIMEOUT), 10000)),
+      ]);
+      test.isTrue(outcome !== TIMEOUT, 'write fence fires');
+      log.push('fence');
+      test.isTrue(lost, 'the update was skipped due to history loss');
+      test.equal(resyncs, 1, 'the history-lost resync ran');
+
+      await waitFor(() => log.includes('changed:big:1'), 3000);
+      const changedAt = log.indexOf('changed:big:1');
+      test.isTrue(
+        changedAt !== -1 && changedAt < log.indexOf('fence'),
+        `the skipped update is reconciled before the fence fires; log=${log.join(',')}`
+      );
+    } finally {
+      delete shared._onChange;
+      delete driver._resyncAfterHistoryLost;
+      handle.stop();
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - a resync that throws does not keep holding write fences (#14763)',
+  async function (test) {
+    const c = makeCollection();
+    const handle = await c.find({}).observeChanges({ added: function () { } });
+    test.isTrue(isChangeStreamDriver(handle));
+
+    const driver = handle._multiplexer._observeDriver;
+    const shared = driver._sharedStream;
+    let resyncCalls = 0;
+    driver._resyncAfterHistoryLost = async () => {
+      resyncCalls++;
+      throw new Error('resync failed');
+    };
+
+    try {
+      const tooLarge = Object.assign(new Error('BSONObj size: 18874887 is invalid'), {
+        code: 10334, codeName: 'BSONObjectTooLarge',
+      });
+      shared._changeStream.emit('error', tooLarge);
+      await waitFor(() => resyncCalls === 1 && !shared._restarting, 5000);
+      test.isFalse(driver._resyncPending, 'the hold is lifted after a failed resync');
+
+      const TIMEOUT = Symbol('timeout');
+      const outcome = await Promise.race([
+        withFence(async () => {
+          await c.insertAsync({ _id: 'after-failed-resync' });
+        }),
+        new Promise(r => setTimeout(() => r(TIMEOUT), 5000)),
+      ]);
+      test.isTrue(outcome !== TIMEOUT, 'later writes still release their fence');
+    } finally {
+      delete driver._resyncAfterHistoryLost;
+      handle.stop();
+    }
+  }
+);
+
+Tinytest.addAsync(
   'changestream - a live event applied during a resync is recorded so the resync leaves that id alone (#14604)',
   async function (test) {
     const c = makeCollection();
@@ -3528,13 +4084,14 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  'changestream- insert under fence with observer resolves well under 1s',
+  'changestream- insert under fence with observer resolves under 1s',
   async function (test) {
     // Pre-fix pathology was a hard ~2s wait (2x 1000ms timeout) because
     // _waitUntilCaughtUp asked the server for a ts the stream hadn't seen
     // yet. With the fix the fence carries the exact write ts, the change
     // event carries the same ts, and the wait resolves immediately.
-    // 500ms bound catches a regression without flaking on slow CI.
+    // Allow up to 1s for loaded CI runners (659ms was observed), while still
+    // catching the original ~2s wait.
     const c = makeCollection();
     const added = [];
     const handle = await c.find({}).observeChanges({
@@ -3552,7 +4109,7 @@ Tinytest.addAsync(
     const elapsed = Date.now() - t0;
 
     test.isTrue(
-      elapsed < 500,
+      elapsed < 1000,
       `fenced insert+fire should be fast with the fix; elapsed=${elapsed}ms (pre-fix ~2000ms)`
     );
 
