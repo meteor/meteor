@@ -32,6 +32,8 @@ var starJson = JSON.parse(fs.readFileSync(path.join(buildDir, "star.json")));
 // Set up environment
 __meteor_bootstrap__ = {
   startupHooks: [],
+  shutdownHooks: [],
+  shutdownSignal: null,
   serverDir: serverDir,
   configJson: configJson,
   isFibersDisabled: true
@@ -456,6 +458,108 @@ var callStartupHooks = Profile("Call Meteor.startup hooks", async function () {
   __meteor_bootstrap__.startupHooks = null;
 });
 
+let shutdownInProgress = false;
+let shutdownHooksEnabled = false;
+let shutdownTimeoutReported = false;
+let shutdownTimeoutMs = null;
+const MAX_NODE_TIMEOUT_MS = 2147483647;
+
+// METEOR_SHUTDOWN_TIMEOUT_MS caps total shutdown time before forcing exit.
+// 0 = no cap (wait for hooks indefinitely); any positive value = ms.
+// Invalid, negative, or unsupported values fall back to the default with a
+// warning, printed once.
+function getShutdownTimeoutMs() {
+  if (shutdownTimeoutMs === null) {
+    shutdownTimeoutMs = 10000;
+    const rawTimeout = process.env.METEOR_SHUTDOWN_TIMEOUT_MS;
+    if (rawTimeout !== undefined && rawTimeout !== '') {
+      const parsed = rawTimeout.trim() === '' ? NaN : Number(rawTimeout);
+      if (!Number.isFinite(parsed) || parsed < 0 || parsed > MAX_NODE_TIMEOUT_MS) {
+        console.error(
+          '[Meteor.onShutdown] invalid METEOR_SHUTDOWN_TIMEOUT_MS="' + rawTimeout +
+          '", using default ' + shutdownTimeoutMs + 'ms'
+        );
+      } else {
+        shutdownTimeoutMs = parsed;
+      }
+    }
+  }
+  return shutdownTimeoutMs;
+}
+
+// Tell `meteor run` how long the hooks may take, so a restart waits for them
+// instead of sending SIGKILL after its default grace period. sendMessage
+// exists only under the Meteor tool, once inter-process-messaging has loaded.
+function reportShutdownTimeout() {
+  if (shutdownHooksEnabled && !shutdownTimeoutReported &&
+      typeof process.sendMessage === 'function') {
+    shutdownTimeoutReported = true;
+    process.sendMessage('shutdown-timeout', { timeoutMs: getShutdownTimeoutMs() })
+      .catch(function () {});
+  }
+}
+
+const callShutdownHooks = Profile("Call Meteor.onShutdown hooks", async function (signal) {
+  const exitCode = 128 + (signal === 'SIGINT' ? 2 : 15);
+
+  // A second signal while shutdown is already running is the operator's
+  // "force quit" escape hatch (e.g. double Ctrl-C). Exit immediately instead
+  // of waiting for the in-flight hooks or the timeout.
+  if (shutdownInProgress) {
+    console.error('[Meteor.onShutdown] received ' + signal + ' during shutdown, forcing exit');
+    process.exit(exitCode);
+  }
+  shutdownInProgress = true;
+
+  // Give the other signal listeners and their microtasks one event-loop turn
+  // before the hooks run and process.exit is called.
+  await new Promise(function (resolve) { setImmediate(resolve); });
+
+  const hooks = __meteor_bootstrap__.shutdownHooks || [];
+  // Setting this to null tells Meteor.onShutdown that shutdown has begun.
+  __meteor_bootstrap__.shutdownSignal = signal;
+  __meteor_bootstrap__.shutdownHooks = null;
+
+  const timeoutMs = getShutdownTimeoutMs();
+
+  let timer = null;
+  let keepAliveInterval = null;
+  if (timeoutMs === 0) {
+    // A pending Promise does not keep Node alive. Keep one referenced handle
+    // while uncapped hooks run so the process cannot exit early with code 0.
+    keepAliveInterval = setInterval(function () {}, MAX_NODE_TIMEOUT_MS);
+  } else {
+    timer = setTimeout(function () {
+      console.error('[Meteor.onShutdown] timeout after ' + timeoutMs + 'ms, forcing exit');
+      process.exit(exitCode);
+    }, timeoutMs);
+  }
+
+  // LIFO — last registered runs first, mirroring teardown order.
+  while (hooks.length) {
+    const hook = hooks.pop();
+    try {
+      await Profile.time(hook.stack || "(unknown)", function () { return hook(signal); });
+    } catch (e) {
+      console.error('[Meteor.onShutdown] hook threw:', e && e.stack || e);
+    }
+  }
+
+  if (timer) clearTimeout(timer);
+  if (keepAliveInterval) clearInterval(keepAliveInterval);
+  process.exit(exitCode);
+});
+
+// Install signal listeners only when an application registers its first hook.
+// Apps that do not use Meteor.onShutdown retain their existing signal handling.
+__meteor_bootstrap__.enableShutdownHooks = function () {
+  shutdownHooksEnabled = true;
+  ['SIGTERM', 'SIGINT'].forEach(function (signal) {
+    process.on(signal, function () { callShutdownHooks(signal); });
+  });
+  reportShutdownTimeout();
+};
+
 var runMain = Profile("Run main()", async function () {
   // find and run main()
   // XXX hack. we should know the package that contains main.
@@ -500,6 +604,8 @@ var runMain = Profile("Run main()", async function () {
 
   await Profile.run('Server startup', async function() {
     await loadServerBundles();
+    // Report hooks registered before inter-process-messaging was loaded.
+    reportShutdownTimeout();
     await callStartupHooks();
     await runMain();
   });
