@@ -56,8 +56,10 @@ changes still requires publishing that plugin version and then updating
 
 ## CI
 
-See `.github/workflows/native.yml`. Runs nightly at 06:00 UTC and on PRs labeled
-`mobile`.
+See [native.yml](../../.github/workflows/native.yml). It runs nightly at 06:00 UTC
+and when the `mobile` label is added to a PR. Subsequent pushes to an already
+labeled PR do not automatically rerun this workflow; check the tested commit
+before treating a previous run as evidence for new changes.
 
 ## Troubleshooting
 

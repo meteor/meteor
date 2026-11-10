@@ -16,6 +16,7 @@ var config = {
   excludedFiles: Object.create(null),
   babelOptions: null
 };
+var compilationDepth = 0;
 
 function setBabelOptions(options) {
   config.babelOptions = util.deepClone(options);
@@ -79,7 +80,9 @@ enableExtension(".js");
 enableExtension(".ts");
 
 exports.retrieveSourceMap = function(filename) {
-  if (shouldNotTransform(filename)) {
+  // Formatting a stack trace can request a source map while Babel is still
+  // loading its plugins. Compiling here would re-enter an incomplete preset.
+  if (compilationDepth > 0 || shouldNotTransform(filename)) {
     return null;
   }
 
@@ -182,7 +185,12 @@ function getBabelResult(filename) {
 
   babelOptions.filename = filename;
 
-  return meteorBabel.compile(source, babelOptions, {
-    cacheDirectory: config.cacheDirectory
-  });
+  compilationDepth++;
+  try {
+    return meteorBabel.compile(source, babelOptions, {
+      cacheDirectory: config.cacheDirectory
+    });
+  } finally {
+    compilationDepth--;
+  }
 }
