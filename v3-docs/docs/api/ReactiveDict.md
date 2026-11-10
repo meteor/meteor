@@ -97,6 +97,23 @@ Template.main.events({
 
 <ApiBox name="ReactiveDict#delete" instanceName="reactiveDict" />
 
+<ApiBox name="ReactiveDict#has" instanceName="reactiveDict" />
+
+`has` is useful when you need to tell a key that was never set apart from a
+key that was set to `undefined`, since `get` returns `undefined` for both:
+
+```js
+import { ReactiveDict } from "meteor/reactive-dict";
+const state = new ReactiveDict();
+
+state.has("nickname"); // false
+state.set("nickname", undefined);
+state.has("nickname"); // true
+```
+
+Inside a reactive computation, `has` only invalidates when an entry for the
+key is added or removed, not when the value of an existing entry changes.
+
 <ApiBox name="ReactiveDict#equals" instanceName="reactiveDict" />
 
 If value is a scalar, then these two expressions do the same thing:
