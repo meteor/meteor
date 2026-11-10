@@ -1,5 +1,6 @@
 {
   "name": "app",
+  "version": "0.0.0",
   "private": true,
   "scripts": {
     "start": "meteor run",
@@ -10,7 +11,7 @@
   "dependencies": {
     "@babel/runtime": "^7.23.5",
     "@react-email/components": "0.5.3",
-    "@swc/helpers": "^0.5.17",
+    "@swc/helpers": "^0.5.23",
     "grubba-rpc": "^0.12.8",
     "meteor-node-stubs": "^1.2.12",
     "pino": "^9.6.0",
@@ -22,6 +23,7 @@
   },
   "devDependencies": {
     "playwright": "1.59.0",
+    "webpack": "^5.91.0",
     "workbox-webpack-plugin": "^7.4.0"
   },
   "meteor": {

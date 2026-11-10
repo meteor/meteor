@@ -1,3 +1,5 @@
+Accounts.config({ useHttpOnlyCookies: true });
+
 Meteor.methods({
   async removeAccountsExpressTestUser(username) {
     if (typeof username !== "string" || !username) {

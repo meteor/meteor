@@ -9,6 +9,17 @@ Meteor Agent Skills give compatible AI coding assistants focused guidance for bu
 
 Skills are installed for your coding assistant, not as Atmosphere or npm dependencies in your application. A compatible assistant can match your request to a relevant skill, load its instructions when needed, and follow its Meteor-specific decision flow without adding the entire catalog to every conversation.
 
+The catalog version identifies a snapshot of the skills, independently of the
+Meteor version in your app. Guidance for Meteor 3.6 keeps explicit branches
+for earlier supported Meteor and package versions. Check your app's resolved
+versions before applying a release-specific capability.
+
+The first official catalog is
+[Agent Skills v1.1.0](https://github.com/meteor/agent-skills/releases/tag/v1.1.0),
+verified with official Meteor 3.6. For a reproducible installation, use its
+pinned command below or the plugin commands in its release notes. Unpinned
+catalog sources follow the repository's default branch.
+
 ## Quick start
 
 ### Codex
@@ -33,6 +44,14 @@ claude plugin install meteor@meteor
 
 The open `skills` CLI can install the catalog into Claude Code, Cursor, Codex, Copilot, Gemini CLI, OpenCode, and other compatible assistants.
 
+Requires Node.js 22.20.0 or later in the shell running `npx`, as specified by
+[Skills CLI](https://github.com/vercel-labs/skills#install-a-skill). This is an
+installer requirement; your Meteor application can keep its own Node version.
+See the older-Node fallback below if your shell uses Node 20 or early Node 22.
+
+Run the installation commands from your Meteor project root for a project-local
+installation. Add `--global` for a user-wide installation.
+
 List the available skills:
 
 ```bash
@@ -45,13 +64,36 @@ Select skills interactively:
 npx skills add meteor/agent-skills
 ```
 
+Or pin the official catalog version:
+
+```bash
+npx skills add 'meteor/agent-skills#v1.1.0'
+```
+
 Install one skill directly:
 
 ```bash
 npx skills add meteor/agent-skills --skill migrate-to-meteor-3
 ```
 
-Use `--all` to install every skill non-interactively. See the [full catalog and install options](https://github.com/meteor/agent-skills#install) for additional plugin and manual installation options.
+For every published skill, select the agent explicitly and skip the picker:
+
+```bash
+npx skills add meteor/agent-skills --agent codex --yes
+```
+
+For Node 20 or early Node 22, use the tested compatible installer:
+
+```bash
+npx skills@1.5.18 add meteor/agent-skills
+```
+
+Use the same installer pin for other Skills CLI commands on those runtimes.
+For a full non-interactive install with this fallback, append `--agent codex --yes`.
+Avoid `--all` in Skills CLI 1.5.18: it also selects internal maintainer skills
+and all agents. See the
+[full catalog and install options](https://github.com/meteor/agent-skills#install)
+for other agents, plugin installations and manual ZIP downloads.
 
 ## How skills work
 
@@ -74,8 +116,11 @@ The catalog focuses on Meteor workflows where framework context, version boundar
 
 | Scope | Skills | What they cover |
 | --- | --- | --- |
+| CLI installation and recovery | `meteor-cli-installation` | Installing or repairing the CLI, selecting releases, resolving PATH problems, and preparing retained local data before upgrades. |
+| TypeScript and JavaScript declarations | `meteor-typescript` | Declaration providers, native Meteor 3.6 types, generation, compiler configuration, and JavaScript IntelliSense. |
+| Native applications | `meteor-native` | Cordova setup, Android/iOS builds, device debugging, native plugins, and mobile release boundaries. |
 | Meteor 3 migration | `migrate-to-meteor-3`, `migrate-to-rspack` | Fibers removal, async API migration, Promise call chains, package triage, and moving Meteor 3.4+ applications to Rspack. |
-| Modern build stack | `meteor-modern-build-stack` | SWC, file watching, Meteor Bundler optimizations, Rspack setup, version pairing, and build diagnostics. |
+| Modern build stack and project setup | `meteor-modern-build-stack` | App scaffold selection, pnpm workspaces, SWC, file watching, Meteor Bundler optimizations, Rspack setup, version pairing, and build diagnostics. |
 | Data and application APIs | `meteor-methods`, `meteor-pubsub`, `meteor-mongo-minimongo` | Methods, validation, latency compensation, publications, subscriptions, Mongo queries, indexes, Minimongo, oplog, and Change Streams. |
 | User interfaces | `meteor-react`, `meteor-blaze` | Reactive data, Suspense, Fast Refresh, Spacebars, Tracker, async rendering, lifecycle behavior, and bundler-specific refresh behavior. |
 | Application foundations | `meteor-accounts`, `meteor-security`, `meteor-testing` | Authentication, OAuth, password flows, authorization, rate limiting, CSP, unit and integration tests, and browser end-to-end testing. |
