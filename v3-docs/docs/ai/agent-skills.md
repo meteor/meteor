@@ -9,6 +9,16 @@ Meteor Agent Skills give compatible AI coding assistants focused guidance for bu
 
 Skills are installed for your coding assistant, not as Atmosphere or npm dependencies in your application. A compatible assistant can match your request to a relevant skill, load its instructions when needed, and follow its Meteor-specific decision flow without adding the entire catalog to every conversation.
 
+The catalog version identifies a snapshot of the skills, independently of the
+Meteor version in your app. Guidance for Meteor 3.6 keeps explicit branches
+for earlier supported Meteor and package versions. Check your app's resolved
+versions before applying a release-specific capability.
+
+For a reproducible installation, select a published tag from the
+[Agent Skills releases](https://github.com/meteor/agent-skills/releases) and
+use the commands in that release's notes. The unpinned commands below follow
+the repository's default branch.
+
 ## Quick start
 
 ### Codex
@@ -74,6 +84,9 @@ The catalog focuses on Meteor workflows where framework context, version boundar
 
 | Scope | Skills | What they cover |
 | --- | --- | --- |
+| Installation and project setup | `meteor-cli-installation` | Installing the CLI, creating applications, package managers, workspaces, and preparing retained local data before upgrades. |
+| TypeScript and JavaScript declarations | `meteor-typescript` | Declaration providers, native Meteor 3.6 types, generation, compiler configuration, and JavaScript IntelliSense. |
+| Native applications | `meteor-native` | Cordova setup, Android/iOS builds, device debugging, native plugins, and mobile release boundaries. |
 | Meteor 3 migration | `migrate-to-meteor-3`, `migrate-to-rspack` | Fibers removal, async API migration, Promise call chains, package triage, and moving Meteor 3.4+ applications to Rspack. |
 | Modern build stack | `meteor-modern-build-stack` | SWC, file watching, Meteor Bundler optimizations, Rspack setup, version pairing, and build diagnostics. |
 | Data and application APIs | `meteor-methods`, `meteor-pubsub`, `meteor-mongo-minimongo` | Methods, validation, latency compensation, publications, subscriptions, Mongo queries, indexes, Minimongo, oplog, and Change Streams. |
