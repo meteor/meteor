@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Meteor's latency-compensated distributed data server",
-  version: '3.4.2-rc360.0',
+  version: '3.6.0',
   documentation: null,
 });
 
@@ -73,6 +73,7 @@ Package.onTest(function (api) {
   api.use("livedata", ["client", "server"]);
   api.use("mongo", ["client", "server"]);
   api.use("test-helpers", ["client", "server"]);
+  api.use(["socket-stream-client", "webapp"], "server");
   api.use([
     "tinytest",
     "random",

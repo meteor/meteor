@@ -1,6 +1,23 @@
 import { EJSON } from "./ejson";
 import EJSONTest from "./custom_models_for_tests";
 
+Tinytest.add("ejson - preserves prototype-named data properties", (test) => {
+  const input = JSON.parse('{"__proto__":{"owner":"synthetic"},"date":{"$date":123}}');
+  const values = [
+    EJSON.clone(input),
+    EJSON.fromJSONValue(input),
+    EJSON.fromJSONValue({ $escape: input }),
+    EJSON._adjustTypesFromJSONValue({ $escape: input }),
+    EJSON.toJSONValue(EJSON.fromJSONValue(input)),
+  ];
+  for (const value of values) {
+    test.isTrue(Object.getPrototypeOf(value) === Object.prototype);
+    test.isTrue(Object.prototype.hasOwnProperty.call(value, "__proto__"));
+    test.equal(value.__proto__, { owner: "synthetic" });
+    test.isTrue(value.owner === undefined);
+  }
+});
+
 Tinytest.add("ejson - keyOrderSensitive", (test) => {
   test.isTrue(
     EJSON.equals(

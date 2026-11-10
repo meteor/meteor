@@ -63,7 +63,7 @@ Different Meteor versions bundle different Node.js runtimes:
 | Meteor 3.3     | Node.js 20              |
 | Meteor 3.4     | Node.js 22              |
 | Meteor 3.5     | Node.js 24              |
-| Meteor 3.6     | Node.js 26.11.1          |
+| Meteor 3.6     | Node.js 26.12.1          |
 
 Meteor 3.6's development bundle also includes npm 11.20.0. To confirm the
 runtime bundled with the Meteor release installed on your machine, run
@@ -110,10 +110,10 @@ For a MongoDB 7 server, FCV must be `"7.0"` before upgrading to MongoDB 8. If it
 db.adminCommand({ setFeatureCompatibilityVersion: "7.0", confirm: true })
 ```
 
-Exit the database shell and stop the app before updating Meteor. For this release candidate:
+Exit the database shell and stop the app. Then update to Meteor 3.6 and restart the app.
 
 ```bash
-meteor update --release 3.6-rc.0
+meteor update --release 3.6
 meteor run
 ```
 

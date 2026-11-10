@@ -381,7 +381,7 @@ Tinytest.addAsync(
       onSubscription[serverConn.id] = function (subscription) {
         delete onSubscription[serverConn.id];
         test.equal(subscription.connection.id, serverConn.id);
-        clientConn.disconnect();
+        clientConn.close();
         onComplete();
       };
       clientConn.subscribe("livedata_server_test_sub", serverConn.id);
@@ -396,7 +396,7 @@ Tinytest.addAsync(
       onSubscription[serverConn.id] = function (id) {
         delete onSubscription[serverConn.id];
         test.equal(id, serverConn.id);
-        clientConn.disconnect();
+        clientConn.close();
         onComplete();
       };
       clientConn.subscribe("livedata_server_test_sub_method", serverConn.id);
@@ -420,7 +420,7 @@ Tinytest.addAsync(
         test.isNotUndefined(publicationInvocation, "Should have been defined");
         if (this.userId === userId && fromOnStop) {
           delete onSubscription[serverConn.id];
-          clientConn.disconnect();
+          clientConn.close();
           onComplete();
         }
       };
@@ -463,10 +463,11 @@ Tinytest.addAsync(
     makeTestConnection(test, function (clientConn, serverConn) {
       let testsLength = 0;
 
-      onSubscriptions = function (subscription) {
-        clientConn.disconnect();
+      onSubscriptions = function () {
         testsLength++;
-        if (testsLength == 3) {
+        if (testsLength === 3) {
+          onSubscriptions = null;
+          clientConn.close();
           onComplete();
         }
       };
@@ -530,6 +531,7 @@ Tinytest.addAsync(
         handlers.map((sub) => sub.ready()).filter((o) => o).length === 1,
         true
       );
+      clientConn.close();
       onComplete();
     })
 );
@@ -1286,6 +1288,7 @@ Tinytest.addAsync(
       'Async onStop callback should have completed on disconnect'
     );
 
+    clientConn.close();
     delete asyncCleanupTracker[trackerId];
   }
 );
@@ -1356,6 +1359,114 @@ Tinytest.addAsync(
         });
       });
       test.isTrue(true, 'subscription became ready without a handler error');
+    } finally {
+      clientConn.disconnect();
+    }
+  }
+);
+
+Tinytest.addAsync(
+  "livedata server - method registry excludes inherited methods",
+  function (test, onComplete) {
+    makeTestConnection(test, async (clientConn) => {
+      const names = ["valueOf", "toString", "constructor", "hasOwnProperty", "__proto__"];
+      try {
+        for (const name of names) {
+          for (const invoke of [
+            () => clientConn.callAsync(name),
+            () => Meteor.server.applyAsync(name, []),
+          ]) {
+            let error;
+            try {
+              await invoke();
+            } catch (caught) {
+              error = caught;
+            }
+            test.equal(error && error.error, 404, name);
+          }
+        }
+
+        for (const name of names) {
+          const methods = Object.create(null);
+          methods[name] = function () { return "registered method"; };
+          Meteor.methods(methods);
+          try {
+            test.equal(await clientConn.callAsync(name), "registered method");
+            test.equal(await Meteor.server.applyAsync(name, []), "registered method");
+            test.throws(() => Meteor.methods(methods), /already defined/);
+          } finally {
+            delete Meteor.server.method_handlers[name];
+          }
+        }
+        test.equal(await clientConn.callAsync("livedata_server_test_inner"),
+          clientConn._lastSessionId);
+      } catch (error) {
+        test.exception(error);
+      } finally {
+        clientConn.disconnect();
+        onComplete();
+      }
+    }, onComplete);
+  }
+);
+
+// Resolves with "ready", the nosub error code, or "no response".
+function subscribeOutcome(clientConn, name, ...params) {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve("no response"), 2000);
+    clientConn.subscribe(name, ...params, {
+      onReady() {
+        clearTimeout(timer);
+        resolve("ready");
+      },
+      onStop(error) {
+        clearTimeout(timer);
+        resolve(error ? error.error : "stopped");
+      },
+    });
+  });
+}
+
+Tinytest.addAsync(
+  "livedata server - publish registry excludes inherited names",
+  async function (test) {
+    const names = ["valueOf", "toString", "constructor", "hasOwnProperty", "__proto__"];
+    const { clientConn } = await getTestConnections(test);
+
+    try {
+      for (const name of names) {
+        test.equal(await subscribeOutcome(clientConn, name), 404, name);
+      }
+
+      for (const name of names) {
+        Meteor.publish(name, function () {
+          this.ready();
+        });
+        try {
+          test.equal(await subscribeOutcome(clientConn, name), "ready", name);
+        } finally {
+          delete Meteor.server.publish_handlers[name];
+        }
+      }
+    } finally {
+      clientConn.disconnect();
+    }
+  }
+);
+
+Tinytest.addAsync(
+  "livedata server - inherited publication names cannot run with client params",
+  async function (test) {
+    const { clientConn } = await getTestConnections(test);
+
+    try {
+      // Reject inherited names before interpreting client-supplied results.
+      test.equal(
+        await subscribeOutcome(clientConn, "constructor", [{ _publishCursor: 1 }]),
+        404
+      );
+      test.equal(await clientConn.callAsync("livedata_server_test_inner"),
+        clientConn._lastSessionId);
     } finally {
       clientConn.disconnect();
     }

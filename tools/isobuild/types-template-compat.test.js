@@ -2,6 +2,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const semver = require("semver");
 const ts = require("typescript");
 
 const repoRoot = path.resolve(__dirname, "../..");
@@ -49,6 +50,22 @@ describe("Meteor template type providers", () => {
         );
         expect(appConfig.compilerOptions.types).not.toContain("meteor");
       }
+    }
+  );
+
+  test.each(typedTemplates)(
+    "%s keeps stylesheet side-effect imports allowed on TypeScript 6+",
+    (template) => {
+      const packageJson = JSON.parse(
+        fs.readFileSync(assetPath(template, "package.json"), "utf8")
+      );
+      const range = (packageJson.devDependencies || {}).typescript;
+      if (!range || semver.minVersion(range).major < 6) return;
+      const { config } = ts.readConfigFile(
+        assetPath(template, "tsconfig.json"),
+        ts.sys.readFile
+      );
+      expect(config.compilerOptions.noUncheckedSideEffectImports).toBe(false);
     }
   );
 

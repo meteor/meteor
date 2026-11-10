@@ -9,6 +9,7 @@
     "jsx": "preserve",
     "incremental": true,
     "noEmit": true,
+    "noUncheckedSideEffectImports": false,
 
     /* Strict Type-Checking Options */
     "strict": true,
