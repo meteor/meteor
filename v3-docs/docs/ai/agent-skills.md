@@ -16,8 +16,8 @@ versions before applying a release-specific capability.
 
 For a reproducible installation, select a published tag from the
 [Agent Skills releases](https://github.com/meteor/agent-skills/releases) and
-use the commands in that release's notes. The unpinned commands below follow
-the repository's default branch.
+use the commands in that release's notes. The catalog sources below follow
+the repository's default branch; the Skills CLI installer is pinned separately.
 
 ## Quick start
 
@@ -43,25 +43,39 @@ claude plugin install meteor@meteor
 
 The open `skills` CLI can install the catalog into Claude Code, Cursor, Codex, Copilot, Gemini CLI, OpenCode, and other compatible assistants.
 
+Use the tested installer version below for compatibility with Meteor 3's
+Node runtimes, including Meteor 3.0's Node 20.15.1. Installing the catalog does
+not require upgrading your application's Node version. The newer
+`skills@latest` currently requires Node 22.20.0+.
+
 List the available skills:
 
 ```bash
-npx skills add meteor/agent-skills --list
+npx skills@1.5.18 add meteor/agent-skills --list
 ```
 
 Select skills interactively:
 
 ```bash
-npx skills add meteor/agent-skills
+npx skills@1.5.18 add meteor/agent-skills
 ```
 
 Install one skill directly:
 
 ```bash
-npx skills add meteor/agent-skills --skill migrate-to-meteor-3
+npx skills@1.5.18 add meteor/agent-skills --skill migrate-to-meteor-3
 ```
 
-Use `--all` to install every skill non-interactively. See the [full catalog and install options](https://github.com/meteor/agent-skills#install) for additional plugin and manual installation options.
+For every published skill, select the agent explicitly and skip the picker:
+
+```bash
+npx skills@1.5.18 add meteor/agent-skills --agent codex --yes
+```
+
+With this installer, `--all` also selects internal maintainer skills and all
+agents. Use the command above for the public catalog. See the
+[full catalog and install options](https://github.com/meteor/agent-skills#install)
+for other agents, plugin installations and manual ZIP downloads.
 
 ## How skills work
 
