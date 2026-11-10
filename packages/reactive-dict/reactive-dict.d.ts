@@ -8,6 +8,11 @@ export declare class ReactiveDict<O = EJSONable> {
    */
   constructor(name?: string, initialValue?: Partial<O>);
   /**
+   * Constructor for a ReactiveDict, which represents a reactive dictionary of key/value pairs.
+   * @param initialValue The default values for the dictionary
+   */
+  constructor(initialValue: Partial<O>);
+  /**
    * Set a value for a key if it hasn't been set before.
    * Otherwise works exactly the same as `ReactiveDict.set`.
    * @param key The key to set, eg, `selectedItem`
