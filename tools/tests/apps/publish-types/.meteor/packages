@@ -1,0 +1,4 @@
+# Meteor packages used by this project, one per line.
+#
+# The app itself stays empty: the fixture exists to publish the
+# TypeScript-authored package in packages/ts-types-package.

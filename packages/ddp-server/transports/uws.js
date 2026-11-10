@@ -1,6 +1,54 @@
 import { EventEmitter } from 'events';
 import net from 'node:net';
 
+export function decodeUwsAddress(address) {
+  return Buffer.from(address).toString();
+}
+
+export function createProxyAddressTracker() {
+  const pending = new Map();
+  const normalizeAddress = address => {
+    const ipVersion = net.isIP(address);
+    if (!ipVersion) return address;
+    return new net.SocketAddress({
+      address,
+      port: 0,
+      family: ipVersion === 6 ? 'ipv6' : 'ipv4',
+    }).address;
+  };
+  const keyFor = (address, port) => `${normalizeAddress(address)}\0${port}`;
+
+  return {
+    record(proxySocket, clientAddress) {
+      if (
+        typeof proxySocket.localAddress !== 'string' ||
+        typeof proxySocket.localPort !== 'number' ||
+        typeof clientAddress !== 'string'
+      ) {
+        return () => {};
+      }
+
+      const key = keyFor(proxySocket.localAddress, proxySocket.localPort);
+      const entry = { clientAddress };
+      pending.set(key, entry);
+
+      // Check the entry identity so cleanup from an older socket cannot erase
+      // a newer connection that reused the same local address and port.
+      return () => {
+        if (pending.get(key) === entry) pending.delete(key);
+      };
+    },
+
+    consume(proxyAddress, proxyPort) {
+      const key = keyFor(proxyAddress, proxyPort);
+      const entry = pending.get(key);
+      if (!entry) return proxyAddress;
+      pending.delete(key);
+      return entry.clientAddress;
+    },
+  };
+}
+
 /**
  * Configuration via Meteor.settings:
  *   { "packages": { "ddp-server": { "transport": "uws", "uws": { "port": 5001, "host": "127.0.0.1", "payloadLength": 48, "timeout": 45 } } } }
@@ -29,6 +77,7 @@ export function createUwsTransport() {
       // livedata_server) can each register a 'close' or 'data' listener.
       const closeListeners = new WeakMap();
       const messageListeners = new WeakMap();
+      const proxyAddresses = createProxyAddressTracker();
 
       const uwsApp = uws.App();
 
@@ -61,6 +110,17 @@ export function createUwsTransport() {
             // uWS manages its own timeouts internally
           };
 
+          // uWS names its two shutdowns the other way round from the socket
+          // contract in ./index.js: close() is documented as "Forcefully
+          // closes this WebSocket [...] No WebSocket close message is sent"
+          // and drops what send() queued, while end() closes gracefully and
+          // delivers it. livedata_server ends DDP version negotiation by
+          // sending 'failed' and closing in the same tick, so close() must
+          // map onto end() or that frame never reaches the client.
+          socket.close = function () {
+            socket.end();
+          };
+
           socket.protocol = 'websocket-raw';
           socket.headers = socket.headers || {};
 
@@ -73,8 +133,16 @@ export function createUwsTransport() {
             headers[key] = value;
           });
 
+          const proxyAddress = decodeUwsAddress(
+            res.getRemoteAddressAsText()
+          );
+          const remoteAddress = proxyAddresses.consume(
+            proxyAddress,
+            res.getRemotePort()
+          );
+
           res.upgrade(
-            { headers },
+            { headers, remoteAddress },
             req.getHeader('sec-websocket-key'),
             req.getHeader('sec-websocket-protocol'),
             req.getHeader('sec-websocket-extensions'),
@@ -142,7 +210,13 @@ export function createUwsTransport() {
 
       // Proxy WebSocket upgrade requests from the main HTTP server to uWS.
       // This is necessary because uWS runs on its own port.
-      proxyWebsocketToUws(httpServer, pathPrefix, uwsProxyHost, uwsPort);
+      proxyWebsocketToUws(
+        httpServer,
+        pathPrefix,
+        uwsProxyHost,
+        uwsPort,
+        proxyAddresses
+      );
 
       return emitter;
     }
@@ -153,7 +227,13 @@ export function createUwsTransport() {
  * Proxy HTTP upgrade requests on /websocket from the main Meteor HTTP server
  * to the uWebSockets.js server via a raw TCP connection.
  */
-function proxyWebsocketToUws(httpServer, pathPrefix, uwsHost, uwsPort) {
+function proxyWebsocketToUws(
+  httpServer,
+  pathPrefix,
+  uwsHost,
+  uwsPort,
+  proxyAddresses
+) {
   const oldUpgradeListeners = httpServer.listeners('upgrade').slice(0);
   httpServer.removeAllListeners('upgrade');
 
@@ -164,7 +244,12 @@ function proxyWebsocketToUws(httpServer, pathPrefix, uwsHost, uwsPort) {
       pathname === pathPrefix + '/websocket/') {
 
       // Build the raw HTTP upgrade request to forward to uWS
+      let forgetProxyAddress = () => {};
       const uwsSocket = net.createConnection(uwsPort, uwsHost, function () {
+        forgetProxyAddress = proxyAddresses.record(
+          uwsSocket,
+          rawSocket.remoteAddress
+        );
         let headers = '';
         for (let i = 0; i < req.rawHeaders.length; i += 2) {
           headers += req.rawHeaders[i] + ': ' + req.rawHeaders[i + 1] + '\r\n';
@@ -182,6 +267,7 @@ function proxyWebsocketToUws(httpServer, pathPrefix, uwsHost, uwsPort) {
       });
 
       uwsSocket.on('error', function () {
+        forgetProxyAddress();
         if (rawSocket.writable) {
           rawSocket.write(
             'HTTP/1.1 502 Bad Gateway\r\n' +
@@ -192,6 +278,10 @@ function proxyWebsocketToUws(httpServer, pathPrefix, uwsHost, uwsPort) {
           );
         }
         rawSocket.destroy();
+      });
+
+      uwsSocket.on('close', function () {
+        forgetProxyAddress();
       });
 
       rawSocket.on('error', function () {
