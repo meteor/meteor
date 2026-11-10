@@ -330,6 +330,11 @@ You can pass any option that works with `meteor run` to customize the profiling 
 
 Create a new Meteor project in a directory called `app-name`.
 
+For assistant guidance on project setup, native TypeScript declarations and
+application development, see [Meteor Agent Skills](/ai/agent-skills). Install
+the skills in your coding assistant separately; `meteor create` does not
+install an assistant plugin.
+
 ```bash
 meteor create [options] app-name
 ```
