@@ -2605,6 +2605,10 @@ async function doTestCommand(options) {
 
     projectContextOptions.projectDir = options.appDir;
     projectContextOptions.projectLocalDir = files.pathJoin(testRunnerAppDir, '.meteor', 'local');
+    // The driver and extra test packages belong to this process's solution.
+    // Writing them to the app's .meteor/versions makes a concurrent `meteor run`
+    // remove them again, repeatedly triggering both commands' watchers.
+    projectContextOptions.neverWritePackageMap = true;
 
     // Copy the existing build and isopacks to speed up the initial start
     async function copyDirIntoTestRunnerApp(allowSymlink, ...parts) {
