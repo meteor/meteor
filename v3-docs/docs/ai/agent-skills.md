@@ -49,6 +49,9 @@ Requires Node.js 22.20.0 or later in the shell running `npx`, as specified by
 installer requirement; your Meteor application can keep its own Node version.
 See the older-Node fallback below if your shell uses Node 20 or early Node 22.
 
+Run the installation commands from your Meteor project root for a project-local
+installation. Add `--global` for a user-wide installation.
+
 List the available skills:
 
 ```bash
@@ -113,11 +116,11 @@ The catalog focuses on Meteor workflows where framework context, version boundar
 
 | Scope | Skills | What they cover |
 | --- | --- | --- |
-| Installation and project setup | `meteor-cli-installation` | Installing the CLI, creating applications, package managers, workspaces, and preparing retained local data before upgrades. |
+| CLI installation and recovery | `meteor-cli-installation` | Installing or repairing the CLI, selecting releases, resolving PATH problems, and preparing retained local data before upgrades. |
 | TypeScript and JavaScript declarations | `meteor-typescript` | Declaration providers, native Meteor 3.6 types, generation, compiler configuration, and JavaScript IntelliSense. |
 | Native applications | `meteor-native` | Cordova setup, Android/iOS builds, device debugging, native plugins, and mobile release boundaries. |
 | Meteor 3 migration | `migrate-to-meteor-3`, `migrate-to-rspack` | Fibers removal, async API migration, Promise call chains, package triage, and moving Meteor 3.4+ applications to Rspack. |
-| Modern build stack | `meteor-modern-build-stack` | SWC, file watching, Meteor Bundler optimizations, Rspack setup, version pairing, and build diagnostics. |
+| Modern build stack and project setup | `meteor-modern-build-stack` | App scaffold selection, pnpm workspaces, SWC, file watching, Meteor Bundler optimizations, Rspack setup, version pairing, and build diagnostics. |
 | Data and application APIs | `meteor-methods`, `meteor-pubsub`, `meteor-mongo-minimongo` | Methods, validation, latency compensation, publications, subscriptions, Mongo queries, indexes, Minimongo, oplog, and Change Streams. |
 | User interfaces | `meteor-react`, `meteor-blaze` | Reactive data, Suspense, Fast Refresh, Spacebars, Tracker, async rendering, lifecycle behavior, and bundler-specific refresh behavior. |
 | Application foundations | `meteor-accounts`, `meteor-security`, `meteor-testing` | Authentication, OAuth, password flows, authorization, rate limiting, CSP, unit and integration tests, and browser end-to-end testing. |
