@@ -1396,7 +1396,8 @@ main.registerCommand({
   const showWhy = options['why'];
 
   if (showWhy) {
-    if (!projectContext.packageMap.getInfo(showWhy)) {
+    const targetInfo = projectContext.packageMap.getInfo(showWhy);
+    if (!targetInfo) {
       Console.error('Package ' + showWhy + ' is not installed in this app.');
       return 1;
     }
@@ -1427,7 +1428,7 @@ main.registerCommand({
       return 0;
     }
 
-    Console.info('Package ' + showWhy + ' is brought into the app by:');
+    Console.info('Package ' + showWhy + '@' + targetInfo.version + ' is brought into the app by:');
     for (const path of result.paths) {
       Console.info();
       for (let index = 0; index < path.length; index++) {

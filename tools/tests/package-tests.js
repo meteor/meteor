@@ -391,8 +391,8 @@ selftest.define("list --why package chains", [], async function () {
   }
 
   run = s.run("list");
-  await run.match("workshop:app");
   await run.match("workshop:admin");
+  await run.match("workshop:app");
   await run.expectExit(0);
 });
 
