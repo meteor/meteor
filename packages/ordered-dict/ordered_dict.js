@@ -70,7 +70,12 @@ export class OrderedDict {
 
   putBefore(key, item, before) {
     if (this._dict[this._k(key)]) throw new Error(`Item ${key} already present in OrderedDict`);
-    const elt = before ? element(key, item, this._dict[this._k(before)]) : element(key, item, null);
+    // Only null/undefined mean "put at the end". Falsy keys such as 0 and
+    // '' are valid destinations and must be looked up, not treated as end.
+    const elt =
+      before !== null && before !== undefined
+        ? element(key, item, this._dict[this._k(before)])
+        : element(key, item, null);
     if (typeof elt.next === "undefined")
       throw new Error("could not find item to put this one before");
     this._linkEltIn(elt);
@@ -173,7 +178,10 @@ export class OrderedDict {
 
   moveBefore(key, before) {
     const elt = this._dict[this._k(key)];
-    const eltBefore = before ? this._dict[this._k(before)] : null;
+    // Only null/undefined mean "move to the end". Falsy keys such as 0 and
+    // '' are valid destinations and must be looked up, not treated as end.
+    const eltBefore =
+      before !== null && before !== undefined ? this._dict[this._k(before)] : null;
     if (typeof elt === "undefined") {
       throw new Error("Item to move is not present");
     }

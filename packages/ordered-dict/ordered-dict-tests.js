@@ -75,6 +75,23 @@ Tinytest.add("ordered-dict - putBefore throws when 'before' key is missing", (te
   );
 });
 
+Tinytest.add("ordered-dict - falsy destination keys", (test) => {
+  [0, ""].forEach((destination) => {
+    const inserted = new OrderedDict();
+    inserted.append(destination, "target");
+    inserted.append("tail", "tail");
+    inserted.putBefore("new", "new", destination);
+    test.equal(keysInOrder(inserted), ["new", destination, "tail"]);
+
+    const moved = new OrderedDict();
+    moved.append(destination, "target");
+    moved.append("tail", "tail");
+    moved.append("new", "new");
+    moved.moveBefore("new", destination);
+    test.equal(keysInOrder(moved), ["new", destination, "tail"]);
+  });
+});
+
 Tinytest.add("ordered-dict - remove unlinks and returns value", (test) => {
   // Remove from the middle.
   let dict = new OrderedDict();
