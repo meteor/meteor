@@ -18,6 +18,7 @@ on:
       - '.github/workflows/e2e-accounts.yml'
   push:
     branches:
+      - 'security/backport-3.6-rc.2-ddp-oplog-qs'
       - 'release-*'
 
 concurrency:

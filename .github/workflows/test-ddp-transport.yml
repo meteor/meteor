@@ -1,6 +1,9 @@
 name: Test DDP Transports
 
 on:
+  push:
+    branches:
+      - 'security/backport-3.6-rc.2-ddp-oplog-qs'
   pull_request:
 
 jobs:
