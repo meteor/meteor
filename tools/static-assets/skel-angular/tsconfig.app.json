@@ -4,7 +4,7 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "./out-tsc/app",
-    "types": ["meteor", "node"],
+    "types": ["node"],
     "skipLibCheck": true
   },
   "include": [
