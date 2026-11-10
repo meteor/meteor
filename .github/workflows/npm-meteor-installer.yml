@@ -1,0 +1,39 @@
+name: NPM meteor-installer
+on:
+  push:
+    paths:
+      - "npm-packages/meteor-installer/**"
+      - ".github/workflows/npm-meteor-installer.yml"
+  pull_request:
+    paths:
+      - "npm-packages/meteor-installer/**"
+      - ".github/workflows/npm-meteor-installer.yml"
+
+permissions:
+  contents: read  #  to fetch code (actions/checkout)
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Unit tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # The installer runs on all three; PATH handling differs per OS.
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    defaults:
+      run:
+        working-directory: npm-packages/meteor-installer
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js 20.x (engines minimum)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+      # The tests only use Node built-ins, so there is no `npm ci`: installing
+      # in this directory would also run the package's own `install` script.
+      - run: npm test
