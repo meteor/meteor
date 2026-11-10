@@ -17,11 +17,7 @@ makeInstallerOptions.fallback = function (id, parentId, error) {
   // the fallback for dependencies installed in node_modules directories.
   if (topLevelIdPattern.test(id)) {
     if (id && id.startsWith('meteor/')) {
-      const [meteorPrefix, packageName] = id.split('/', 2);
-      throw new Error(
-        `Cannot find package "${packageName}". ` +
-        `Try "meteor add ${packageName}".`
-      );
+      throw cannotFindMeteorPackage(id);
     }
     if (typeof Npm === "object" &&
         typeof Npm.require === "function") {
