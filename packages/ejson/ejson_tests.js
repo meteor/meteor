@@ -505,6 +505,70 @@ Tinytest.add("ejson - regexp", (test) => {
   test.equal(obj, roundTrip);
 });
 
+// clone used to return the regex it was given, on the grounds that regexes are
+// immutable. lastIndex is not: running a global or sticky "copy" moved the
+// original's position, so cloning a filter and using the clone changed the
+// thing it was cloned from.
+Tinytest.add("ejson - clone regexp is independent", (test) => {
+  const original = /cat/g;
+  const copy = EJSON.clone(original);
+
+  test.isFalse(copy === original, "the clone is a different object");
+  test.equal(copy.source, original.source);
+  test.equal(copy.flags, original.flags);
+
+  copy.test("cat");
+  test.equal(original.lastIndex, 0, "using the clone left the original alone");
+
+  // The starting position is part of what is cloned, so a regex cloned
+  // mid-iteration resumes where it was.
+  const midway = /a/g;
+  midway.lastIndex = 2;
+  test.equal(EJSON.clone(midway).lastIndex, 2);
+
+  // Nested, which is how a regex usually arrives here: inside a filter.
+  const holder = { re: /x/g, list: [/y/y] };
+  const clonedHolder = EJSON.clone(holder);
+  test.isFalse(clonedHolder.re === holder.re);
+  test.isFalse(clonedHolder.list[0] === holder.list[0]);
+  clonedHolder.re.test("x");
+  clonedHolder.list[0].lastIndex = 5;
+  test.equal(holder.re.lastIndex, 0, "nested regex in an object is independent");
+  test.equal(holder.list[0].lastIndex, 0, "nested regex in an array is independent");
+});
+
+// A RegExp has no own enumerable keys, so before this it fell through to the
+// structural object comparison, where both sides presented zero keys. That made
+// every regex equal to every other regex, and equal to {}.
+Tinytest.add("ejson - equals regexp compares source and flags", (test) => {
+  test.isTrue(EJSON.equals(/a/g, /a/g), "same source and flags are equal");
+  test.isFalse(EJSON.equals(/cat/i, /dog/g), "different source and flags");
+  test.isFalse(EJSON.equals(/a/g, /b/g), "different source");
+  test.isFalse(EJSON.equals(/a/g, /a/i), "different flags");
+
+  // lastIndex is execution state, not part of the value, so it does not make
+  // two otherwise equivalent patterns unequal. This also keeps equality
+  // aligned with the source-and-flags wire representation.
+  const advanced = /a/g;
+  advanced.lastIndex = 3;
+  test.isTrue(EJSON.equals(advanced, /a/g), "lastIndex alone does not matter");
+
+  // Either argument order.
+  test.isFalse(EJSON.equals(/a/, {}), "a regex is not a plain object");
+  test.isFalse(EJSON.equals({}, /a/), "a plain object is not a regex");
+  test.isFalse(EJSON.equals(/a/, new Date(0)), "a regex is not a date");
+
+  // Nested, both ways round.
+  test.isTrue(EJSON.equals({ re: /a/g }, { re: /a/g }));
+  test.isFalse(EJSON.equals({ re: /a/g }, { re: /b/g }));
+  test.isTrue(EJSON.equals([/a/i], [/a/i]));
+  test.isFalse(EJSON.equals([/a/i], [/a/g]));
+
+  // The wire format is unchanged, and a round trip still compares equal.
+  test.equal(EJSON.toJSONValue(/ab/gi), { $regexp: "ab", $flags: "gi" });
+  test.isTrue(EJSON.equals(EJSON.parse(EJSON.stringify(/ab/gi)), /ab/gi));
+});
+
 Tinytest.add("ejson - custom types", (test) => {
   const testSameConstructors = (someObj, compareWith) => {
     test.equal(someObj.constructor, compareWith.constructor);

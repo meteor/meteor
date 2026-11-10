@@ -578,6 +578,24 @@ EJSON.equals = (a, b, options) => {
     return a.valueOf() === b.valueOf();
   }
 
+  // RegExp values compare by pattern and flags, which is exactly what EJSON
+  // serializes for them. lastIndex is execution state rather than part of the
+  // value, so two otherwise equivalent patterns stay equal when it differs.
+  //
+  // The asymmetric case is what made this necessary: a RegExp has no own
+  // enumerable keys, so without this branch a regex fell through to the
+  // structural object comparison below, where both sides presented zero keys
+  // and compared equal -- making every regex equal to every other regex, and
+  // equal to {}.
+  const aIsRegExp = a instanceof RegExp;
+  const bIsRegExp = b instanceof RegExp;
+  if (aIsRegExp || bIsRegExp) {
+    if (!aIsRegExp || !bIsRegExp) {
+      return false;
+    }
+    return a.source === b.source && a.flags === b.flags;
+  }
+
   if (EJSON.isBinary(a) && EJSON.isBinary(b)) {
     if (a.length !== b.length) {
       return false;
@@ -685,10 +703,16 @@ EJSON.clone = (v) => {
     return new Date(v.getTime());
   }
 
-  // RegExps are not really EJSON elements (eg we don't define a serialization
-  // for them), but they're immutable anyway, so we can support them in clone.
+  // RegExps do have an EJSON serialization -- source and flags -- and they are
+  // not immutable: lastIndex is mutable execution state. Returning the same
+  // object meant a clone and its original shared it, so running a global or
+  // sticky "copy" moved the original's lastIndex, including when the regex was
+  // nested inside a cloned object or array. The numeric starting value is
+  // carried over so that cloning mid-iteration stays faithful.
   if (v instanceof RegExp) {
-    return v;
+    const clonedRegExp = new RegExp(v.source, v.flags);
+    clonedRegExp.lastIndex = v.lastIndex;
+    return clonedRegExp;
   }
 
   if (EJSON.isBinary(v)) {
