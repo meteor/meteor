@@ -400,6 +400,7 @@ React app using both Rspack and Capacitor, with web-only native lifecycle covera
 | `meteor run android --production` prepares `_build/native-prod` and syncs Android assets | Prod |
 | Production client and server rebuilds work with the native run target | Prod |
 | `meteor build --directory --platforms=android` prepares Capacitor web output without Cordova or Gradle native build | Build |
+| A nonzero `cap sync` exit fails `meteor build` instead of reporting a successful native build | Build |
 | `meteor reset` clears generated Rspack and Capacitor build artifacts but keeps native project sources | Reset |
 | Repeated native run does not reinstall Capacitor deps | Run |
 

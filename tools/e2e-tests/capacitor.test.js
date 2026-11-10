@@ -758,6 +758,38 @@ describe('Capacitor App Web Lifecycle /', () => {
     }
   });
 
+  test('"meteor build" fails when the Capacitor CLI cannot sync the native project', async () => {
+    const cliPath = path.join(tempDir, 'node_modules/@capacitor/cli/bin/capacitor');
+    const originalCli = await fs.readFile(cliPath, 'utf8');
+    const buildOutputDir = path.join(tempDir, '_build-failed-native-sync');
+
+    try {
+      // Fail at the child-process boundary after the web bundle is generated.
+      // This catches treating a resolved, nonzero exit code as a successful sync.
+      await fs.writeFile(cliPath, originalCli.replace(/^(#![^\n]*\n)/, `$1
+if (process.argv[2] === 'sync') {
+  console.error('intentional native sync failure');
+  process.exit(23);
+}
+`));
+      const build = await runMeteorCommand('build', [
+        buildOutputDir, '--directory', '--platforms=android', '--server=http://127.0.0.1:3000',
+      ], tempDir, { captureOutput: true, logCapturedOutput: false, env: e2eEnv() });
+      const exitCode = await build.meteorProcess.then(
+        result => result.exitCode,
+        error => error.exitCode,
+      );
+      expect(exitCode).toBe(1);
+      expectOutputContains(build.outputLines, /intentional native sync failure/);
+      expectOutputContains(build.outputLines, /cap sync android exited with code 23/);
+      expectOutputNotContains(build.outputLines, /Capacitor: synced/);
+      await assertNoNativeLaunch(build.outputLines);
+    } finally {
+      await fs.writeFile(cliPath, originalCli);
+      await cleanupTempDir(buildOutputDir);
+    }
+  });
+
   test('"meteor reset" clears generated Rspack and Capacitor build artifacts but keeps native project sources', async () => {
     await assertFileExist(tempDir, 'android');
     await assertFileExist(tempDir, 'capacitor.config.js');

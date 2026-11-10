@@ -343,7 +343,10 @@ async function transformAndSync({
     }
 
     try {
-      await runCapSync({ appDir, platform, mode });
+      const exitCode = await runCapSync({ appDir, platform, mode });
+      if (exitCode !== 0) {
+        throw new Error(`cap sync${platform ? ` ${platform}` : ''} exited with code ${exitCode}`);
+      }
       return true;
     } catch (err) {
       return handleTransformFailure(`Capacitor sync failed: ${err.message}`, { fatal });
