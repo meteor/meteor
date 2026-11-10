@@ -4,6 +4,40 @@ import QRCode from 'qrcode-svg';
 import { Meteor } from 'meteor/meteor';
 import { check, Match } from 'meteor/check';
 
+const validateChangeHooks = [];
+
+const registerHook = (hooks, fn) => {
+  hooks.push(fn);
+  return {
+    stop() {
+      const index = hooks.indexOf(fn);
+      if (index >= 0) {
+        hooks.splice(index, 1);
+      }
+    },
+  };
+};
+
+const runHooks = async (hooks, payload) => {
+  for (const hook of [...hooks]) {
+    await hook(payload);
+  }
+};
+
+/**
+ * @summary Reject an activation or a deactivation.
+ * Throw a `Meteor.Error` from the callback to refuse the change and report
+ * the reason to the user. Any other exception reaches the client as a 500
+ * (`Internal server error`).
+ * @locus Server
+ * @param {Function} fn Receives `{ type, stage, user, connection }`.
+ * `type` is `activation` or `deactivation`. When `type` is `activation`,
+ * `stage` is `setup` (a secret is about to be issued) or `confirm` (2FA is
+ * about to be turned on, including when it is already on).
+ * @returns {{stop: Function}} Call `stop()` to remove the callback.
+ */
+Accounts.validate2faChange = fn => registerHook(validateChangeHooks, fn);
+
 const TOTP_ALGORITHM = 'SHA1';
 const TOTP_DIGITS = 6;
 const TOTP_PERIOD = 30;
@@ -90,6 +124,13 @@ Meteor.methods({
       );
     }
 
+    await runHooks(validateChangeHooks, {
+      type: 'activation',
+      stage: 'setup',
+      user,
+      connection: this.connection,
+    });
+
     const emails = user.emails || [];
     const { secret, uri } = generateActivationData({
       issuer: appName.trim(),
@@ -128,6 +169,14 @@ Meteor.methods({
         'The user does not have a secret generated. You may have to call the function generateSvgCode first.'
       );
     }
+
+    await runHooks(validateChangeHooks, {
+      type: 'activation',
+      stage: 'confirm',
+      user,
+      connection: this.connection,
+    });
+
     if (!Accounts._isTokenValid(twoFactorAuthentication.secret, code)) {
       Accounts._handleError('Invalid 2FA code', true, 'invalid-2fa-code');
     }
@@ -145,11 +194,18 @@ Meteor.methods({
     );
   },
   async disableUser2fa() {
-    const userId = Meteor.userId();
+    const user = await Meteor.userAsync();
+    const userId = user?._id;
 
     if (!userId) {
       throw new Meteor.Error(400, 'No user logged in.');
     }
+
+    await runHooks(validateChangeHooks, {
+      type: 'deactivation',
+      user,
+      connection: this.connection,
+    });
 
     await Meteor.users.updateAsync(
       { _id: userId },
