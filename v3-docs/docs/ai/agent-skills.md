@@ -14,10 +14,11 @@ Meteor version in your app. Guidance for Meteor 3.6 keeps explicit branches
 for earlier supported Meteor and package versions. Check your app's resolved
 versions before applying a release-specific capability.
 
-For a reproducible installation, select a published tag from the
-[Agent Skills releases](https://github.com/meteor/agent-skills/releases) and
-use the commands in that release's notes. The catalog sources below follow
-the repository's default branch.
+The first official catalog is
+[Agent Skills v1.1.0](https://github.com/meteor/agent-skills/releases/tag/v1.1.0),
+verified with official Meteor 3.6. For a reproducible installation, use its
+pinned command below or the plugin commands in its release notes. Unpinned
+catalog sources follow the repository's default branch.
 
 ## Quick start
 
@@ -58,6 +59,12 @@ Select skills interactively:
 
 ```bash
 npx skills add meteor/agent-skills
+```
+
+Or pin the official catalog version:
+
+```bash
+npx skills add 'meteor/agent-skills#v1.1.0'
 ```
 
 Install one skill directly:
