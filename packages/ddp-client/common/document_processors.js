@@ -161,6 +161,12 @@ export class DocumentProcessors {
       });
       delete self._documentsWrittenByStub[methodId];
 
+      // Methods that failed on reset have already run their callbacks.
+      if (self._methodsFailedOnReset[methodId]) {
+        delete self._methodsFailedOnReset[methodId];
+        return;
+      }
+
       // We want to call the data-written callback, but we can't do so until all
       // currently buffered messages are flushed.
       const callbackInvoker = self._methodInvokers[methodId];

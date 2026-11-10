@@ -5,7 +5,7 @@ import { EJSON } from 'meteor/ejson';
 import { Random } from 'meteor/random';
 import { MongoID } from 'meteor/mongo-id';
 import { DDP } from './namespace.js';
-import { MethodInvoker } from './method_invoker';
+import { MethodInvoker, validateMaxRetries } from './method_invoker';
 import {
   hasOwn,
   slice,
@@ -113,6 +113,9 @@ export class Connection {
     // of their writes to be written to the local cache). Map from method ID to
     // MethodInvoker object.
     self._methodInvokers = Object.create(null);
+
+    // IDs of methods that failed on reset because they could not be re-sent.
+    self._methodsFailedOnReset = Object.create(null);
 
     // Tracks methods which the user has called but whose result messages have not
     // arrived yet.
@@ -626,6 +629,7 @@ export class Connection {
    * @param {Function} [asyncCallback] Optional callback; same semantics as in [`Meteor.call`](#meteor_call).
    */
   apply(name, args, options, callback) {
+    validateMaxRetries(options && options.maxRetries);
     const { stubInvocation, invocation, ...stubOptions } = this._stubCall(name, EJSON.clone(args));
 
     if (stubOptions.hasStub) {
@@ -695,6 +699,9 @@ export class Connection {
     return promise;
   }
   async _applyAsyncStubInvocation(name, args, options) {
+    // An error thrown here rejects the applyAsync promise. The client queue in
+    // queue_stub_helpers.js does not catch a synchronous throw from applyAsync.
+    validateMaxRetries(options && options.maxRetries);
     const { stubInvocation, invocation, ...stubOptions } = this._stubCall(name, EJSON.clone(args), options);
     if (stubOptions.hasStub) {
       if (

@@ -163,10 +163,8 @@ export class ConnectionStreamHandlers {
     const currentMethodBlock = blocks[0].methods;
     blocks[0].methods = currentMethodBlock.filter(
       methodInvoker => {
-        // Methods which were never sent are always kept. A sent method is
-        // about to be re-sent, which consumes one retry: methods with the
-        // 'noRetry' option never re-send, and methods with 'maxRetries'
-        // re-send at most that many times.
+        // Unsent methods are always kept. A sent method is re-sent only if it
+        // still has retries left ('noRetry' allows none, 'maxRetries' caps them).
         if (!methodInvoker.sentMessage || methodInvoker.consumeRetry()) {
           return true;
         }
@@ -180,6 +178,7 @@ export class ConnectionStreamHandlers {
               : 'Failing because the `maxRetries` limit was reached.')
           )
         );
+        this._connection._methodsFailedOnReset[methodInvoker.methodId] = true;
         return false;
       }
     );

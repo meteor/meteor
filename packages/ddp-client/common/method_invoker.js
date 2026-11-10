@@ -46,10 +46,7 @@ export class MethodInvoker {
     this._connection._send(this._message);
   }
   // Called when a dropped connection has been recovered and this method,
-  // which had already been sent, is about to be re-sent. Consumes one retry
-  // from the maxRetries budget. Returns false if the method may not be
-  // re-sent: either noRetry was set, or the method has already been re-sent
-  // maxRetries times. An unset maxRetries allows unlimited re-sends.
+  // which had already been sent, is about to be re-sent.
   consumeRetry() {
     if (this.noRetry) return false;
     if (this._maxRetries === null) return true;
@@ -94,5 +91,11 @@ export class MethodInvoker {
   // True if receiveResult has been called.
   gotResult() {
     return !!this._methodResult;
+  }
+}
+
+export function validateMaxRetries(maxRetries) {
+  if (maxRetries != null && !(Number.isInteger(maxRetries) && maxRetries >= 0)) {
+    throw new Error('maxRetries must be a non-negative integer');
   }
 }
