@@ -1,6 +1,8 @@
 var selftest = require('../tool-testing/selftest.js');
 var files = require('../fs/files');
 var expectEqual = selftest.expectEqual;
+// tar-fs does not extract link entries on Windows.
+var defineLinkTest = process.platform === "win32" ? selftest.skip.define : selftest.define;
 
 selftest.define("create and extract tarball with long paths", async function () {
   var STAMP = "stamp";
@@ -62,7 +64,7 @@ function packToTarGz(buildEntries) {
   });
 }
 
-selftest.define("extractTarGz rejects archives that escape the root", async function () {
+defineLinkTest("extractTarGz rejects archives that escape the root", async function () {
   var scratch = files.mkdtemp("tarfs-escape");
 
   var outsideDir = files.pathJoin(scratch, "outside");
@@ -107,7 +109,7 @@ selftest.define("extractTarGz rejects archives that escape the root", async func
   await expectEqual(files.readFile(sentinel, "utf-8"), "ORIGINAL");
 });
 
-selftest.define("extractTarGz preserves in-tree symlinks", async function () {
+defineLinkTest("extractTarGz preserves in-tree symlinks", async function () {
   var scratch = files.mkdtemp("tarfs-legit");
 
   var buffer = await packToTarGz(async function (addEntry) {
@@ -137,7 +139,7 @@ selftest.define("extractTarGz preserves in-tree symlinks", async function () {
   await expectEqual(files.readFile(linkPath, "utf-8"), "REAL");
 });
 
-selftest.define("extractTarGz rejects a file planted through a symlink", async function () {
+defineLinkTest("extractTarGz rejects a file planted through a symlink", async function () {
   var scratch = files.mkdtemp("tarfs-leaf");
   var destPath = files.pathJoin(scratch, "extracted");
 
@@ -175,7 +177,7 @@ selftest.define("extractTarGz rejects a file planted through a symlink", async f
   await expectEqual(files.readFile(sentinel, "utf-8"), "ORIGINAL");
 });
 
-selftest.define("extractTarGz rejects entries beneath a planted symlink", async function () {
+defineLinkTest("extractTarGz rejects entries beneath a planted symlink", async function () {
   var scratch = files.mkdtemp("tarfs-ancestor");
   var destPath = files.pathJoin(scratch, "extracted");
 
@@ -207,7 +209,7 @@ selftest.define("extractTarGz rejects entries beneath a planted symlink", async 
   await expectEqual(files.readFile(sentinel, "utf-8"), "ORIGINAL");
 });
 
-selftest.define("extractTarGz rejects a symlink to an absolute outside path", async function () {
+defineLinkTest("extractTarGz rejects a symlink to an absolute outside path", async function () {
   var scratch = files.mkdtemp("tarfs-direct");
   var destPath = files.pathJoin(scratch, "extracted");
 
@@ -267,7 +269,7 @@ selftest.define("extractTarGz accepts a ./ root entry", async function () {
     "DOT ROOT");
 });
 
-selftest.define("extractTarGz rejects a directory entry over a planted symlink", async function () {
+defineLinkTest("extractTarGz rejects a directory entry over a planted symlink", async function () {
   var scratch = files.mkdtemp("tarfs-dir-leaf");
   var destPath = files.pathJoin(scratch, "extracted");
 
@@ -300,7 +302,7 @@ selftest.define("extractTarGz rejects a directory entry over a planted symlink",
   await expectEqual(mode & 0o777, 0o700);
 });
 
-selftest.define("extractTarGz rejects a symlink whose target is outside the root", async function () {
+defineLinkTest("extractTarGz rejects a symlink whose target is outside the root", async function () {
   var scratch = files.mkdtemp("tarfs-link-target");
   var destPath = files.pathJoin(scratch, "extracted");
 
@@ -332,7 +334,7 @@ selftest.define("extractTarGz rejects a symlink whose target is outside the root
   selftest.expectFalse(require('fs').existsSync(linkPath));
 });
 
-selftest.define("extractTarGz rejects a directory entry beneath a planted symlink", async function () {
+defineLinkTest("extractTarGz rejects a directory entry beneath a planted symlink", async function () {
   var scratch = files.mkdtemp("tarfs-dir-ancestor");
   var destPath = files.pathJoin(scratch, "extracted");
 
@@ -359,7 +361,7 @@ selftest.define("extractTarGz rejects a directory entry beneath a planted symlin
   await expectEqual(require('fs').readdirSync(files.convertToOSPath(outsideDir)), []);
 });
 
-selftest.define("extractTarGz rejects a hard link whose source leaves the root through a planted symlink", async function () {
+defineLinkTest("extractTarGz rejects a hard link whose source leaves the root through a planted symlink", async function () {
   var scratch = files.mkdtemp("tarfs-hard-ancestor");
   var destPath = files.pathJoin(scratch, "extracted");
 
@@ -405,4 +407,21 @@ selftest.define("extractTarGz rejects a hard link whose source leaves the root t
 
   selftest.expectTrue(threw);
   await expectEqual(files.readFile(sentinel, "utf-8"), "ORIGINAL");
+});
+
+defineLinkTest("extractTarGz rejects standalone symlinks outside the relocated package", async function () {
+  const assert = require("assert").strict;
+  const scratch = files.mkdtemp("tarfs-relocated-link");
+  const destination = files.pathJoin(scratch, "extracted");
+
+  for (const target of ["..", "x/x/../.."]) {
+    const archive = await packToTarGz(async function (addEntry) {
+      await addEntry({ name: "package/", type: "directory", mode: 0o755 });
+      await addEntry({ name: "package/link", type: "symlink", linkname: target });
+      // Resolve links again after extraction, including forward references.
+      await addEntry({ name: "package/x", type: "symlink", linkname: "." });
+    });
+    await assert.rejects(files.extractTarGz(archive, destination));
+    assert.equal(files.exists(destination), false);
+  }
 });
