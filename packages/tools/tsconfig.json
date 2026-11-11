@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "strict": true,
+    "esModuleInterop": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "meteor/tinytest": ["./tinytest.d.ts"]
+    }
+  },
+  "include": ["*.ts", "*.d.ts"]
+}
