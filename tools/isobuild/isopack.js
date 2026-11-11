@@ -2,7 +2,6 @@ import { getMeteorConfig } from "../tool-env/meteor-config";
 
 var compiler = require('./compiler.js');
 var archinfo = require('../utils/archinfo');
-var _ = require('underscore');
 var linker = require('./linker.js');
 var buildmessage = require('../utils/buildmessage.js');
 import Builder from './builder.js';
@@ -85,7 +84,7 @@ var Isopack = function () {
   // Plugins are package-supplied classes and functions that can change the
   // build process: introduce a new source processor (compiler, minifier,
   // linter)
-  self.plugins = {};
+  self.plugins = Object.create(null);
 
   self.cordovaDependencies = {};
 
@@ -159,7 +158,7 @@ Isopack.knownFormats = ["unipackage-pre2", "isopack-1", "isopack-2"];
 // actual semantic changes involved. So they are not actually used as much as
 // they were before.
 Isopack.convertOneStepForward = function (data, fromFormat) {
-  var convertedData = _.clone(data);
+  var convertedData = {...data};
   // XXX COMPAT WITH 0.9.3
   if (fromFormat === "unipackage-pre2") {
     convertedData.builds = convertedData.unibuilds;
@@ -172,7 +171,7 @@ Isopack.convertOneStepForward = function (data, fromFormat) {
   }
 };
 Isopack.convertOneStepBackward = function (data, fromFormat) {
-  var convertedData = _.clone(data);
+  var convertedData = {...data};
   if (fromFormat === "isopack-1") {
     convertedData.unibuilds = convertedData.builds;
     convertedData.format = "unipackage-pre2";
@@ -316,7 +315,7 @@ Object.assign(Isopack.prototype, {
     var sourceFiles = {};
     var anySourceFiles = false;
     var addSourceFilesFromWatchSet = function (watchSet) {
-      _.each(watchSet.files, function (hash, filename) {
+      Object.entries(watchSet.files).forEach(function ([filename, hash]) {
         if (! hash) {
           // If a file has a falsy hash, that means the file does/should
           // not exist.
@@ -333,7 +332,7 @@ Object.assign(Isopack.prototype, {
       });
     };
     addSourceFilesFromWatchSet(self.pluginWatchSet);
-    _.each(self.unibuilds, function (u) {
+    self.unibuilds.forEach(function (u) {
       addSourceFilesFromWatchSet(u.watchSet);
     });
 
@@ -350,14 +349,14 @@ Object.assign(Isopack.prototype, {
   architectures: Profile("Isopack#architectures", function () {
     var self = this;
     var archSet = {};
-    _.each(self.unibuilds, function (unibuild) {
+    self.unibuilds.forEach(function (unibuild) {
       archSet[unibuild.arch] = true;
     });
-    _.each(self._toolArchitectures(), function (arch) {
+    self._toolArchitectures().forEach(function (arch) {
       archSet[arch] = true;
     });
-    _.each(self.plugins, function (plugin, name) {
-      _.each(plugin, function (plug, arch) {
+    Object.values(self.plugins).forEach(function (plugin) {
+      Object.keys(plugin).forEach(function (arch) {
         archSet[arch] = true;
       });
     });
@@ -368,8 +367,8 @@ Object.assign(Isopack.prototype, {
     // tool (eg, in meteor-tool).  This would confuse catalog.getBuildsForArches
     // into thinking that it would work for Linux, since the 'os' means
     // 'works on any Node server'.
-    if (_.any(arches, function (a) { return a.match(/^os\./); })) {
-      arches = _.without(arches, 'os');
+    if (arches.some(function (a) { return a.match(/^os\./); })) {
+      arches = arches.filter(a => a !== 'os');
     }
     return arches;
   }),
@@ -408,7 +407,7 @@ Object.assign(Isopack.prototype, {
   // binary builds)
   platformSpecific: function () {
     var self = this;
-    return _.any(self.architectures(), function (arch) {
+    return self.architectures().some(function (arch) {
       return arch.match(/^os\./);
     });
   },
@@ -420,9 +419,9 @@ Object.assign(Isopack.prototype, {
 
   _toolArchitectures: function () {
     var self = this;
-    var toolArches = _.pluck(self.toolsOnDisk, 'arch');
+    var toolArches = self.toolsOnDisk.map(t => t.arch);
     self.includeTool && toolArches.push(archinfo.host());
-    return _.uniq(toolArches).sort();
+    return [...new Set(toolArches)].sort();
   },
 
   // Return the unibuild of the package to use for a given target architecture
@@ -432,14 +431,14 @@ Object.assign(Isopack.prototype, {
     var self = this;
 
     let chosenArch = archinfo.mostSpecificMatch(
-      arch, _.pluck(self.unibuilds, 'arch'));
+      arch, self.unibuilds.map(u => u.arch));
     if (! chosenArch && arch.match(/^os\./)) {
       // Special-case: we're looking for a specific server platform and
       // it's not available. (eg, we're deploying from a Mac to Linux and
       // are processing a local package with binary npm deps).  Search
       // again for the host version, which might find the Mac version.
       chosenArch =
-        archinfo.mostSpecificMatch(archinfo.host(), _.pluck(self.unibuilds, 'arch'));
+        archinfo.mostSpecificMatch(archinfo.host(), self.unibuilds.map(u => u.arch));
     }
     if (! chosenArch) {
       buildmessage.error(
@@ -449,7 +448,7 @@ Object.assign(Isopack.prototype, {
       // recover by returning by no unibuilds
       return null;
     }
-    return _.findWhere(self.unibuilds, { arch: chosenArch });
+    return self.unibuilds.find(u => u.arch === chosenArch);
   }),
 
   _checkPluginsInitialized: function () {
@@ -872,8 +871,7 @@ Object.assign(Isopack.prototype, {
   initFromPath: Profile(
     "Isopack#initFromPath", async function (name, dir, options) {
     var self = this;
-    options = _.clone(options || {});
-    options.firstIsopack = true;
+    options = {...(options || {}), firstIsopack: true};
 
     if (options.pluginCacheDir) {
       self.pluginCacheDir = options.pluginCacheDir;
@@ -904,7 +902,7 @@ Object.assign(Isopack.prototype, {
     }
 
     // isopacks didn't used to know their name, but they should.
-    if (_.has(mainJson, 'name') && name !== mainJson.name) {
+    if (('name' in mainJson) && name !== mainJson.name) {
       throw new Error("isopack " + name + " thinks its name is " +
                       mainJson.name);
     }
@@ -924,9 +922,9 @@ Object.assign(Isopack.prototype, {
       // read from json files
 
       // Read the watch sets for each unibuild
-      _.each(
-        options.isopackBuildInfoJson.unibuildDependencies,
-        function (watchSetJSON, unibuildTag) {
+      Object.entries(
+        options.isopackBuildInfoJson.unibuildDependencies || {}
+      ).forEach(function ([unibuildTag, watchSetJSON]) {
           unibuildWatchSets[unibuildTag] =
             watch.WatchSet.fromJSON(watchSetJSON);
         });
@@ -960,11 +958,11 @@ Object.assign(Isopack.prototype, {
 
       var plugin = await bundler.readJsImage(files.pathJoin(dir, pluginMeta.path));
 
-      if (!_.has(self.plugins, pluginMeta.name)) {
-        self.plugins[pluginMeta.name] = {};
+      if (!(pluginMeta.name in self.plugins)) {
+        self.plugins[pluginMeta.name] = Object.create(null);
       }
       // If we already loaded a plugin of this name/arch, just ignore this one.
-      if (!_.has(self.plugins[pluginMeta.name], plugin.arch)) {
+      if (!(plugin.arch in self.plugins[pluginMeta.name])) {
         self.plugins[pluginMeta.name][plugin.arch] = plugin;
       }
     }
@@ -975,7 +973,7 @@ Object.assign(Isopack.prototype, {
       rejectBadPath(unibuildMeta.path);
 
       // Skip unibuilds we already have.
-      var alreadyHaveUnibuild = _.find(self.unibuilds, function (unibuild) {
+      var alreadyHaveUnibuild = self.unibuilds.find(function (unibuild) {
         return unibuild.arch === unibuildMeta.arch;
       });
       if (alreadyHaveUnibuild) {
@@ -1008,7 +1006,7 @@ Object.assign(Isopack.prototype, {
 
     self.cordovaDependencies = mainJson.cordovaDependencies || null;
 
-    _.each(mainJson.tools, function (toolMeta) {
+    (mainJson.tools || []).forEach(function (toolMeta) {
       toolMeta.rootDir = dir;
       // XXX check for overlap
       self.toolsOnDisk.push(toolMeta);
@@ -1019,7 +1017,7 @@ Object.assign(Isopack.prototype, {
 
   hasCordovaUnibuild: function () {
     var self = this;
-    return _.any(self.unibuilds, function (unibuild) {
+    return self.unibuilds.some(function (unibuild) {
       return unibuild.arch === 'web.cordova';
     });
   },
@@ -1117,7 +1115,7 @@ Object.assign(Isopack.prototype, {
       if (self.typesModules) {
         mainJson.typesModules = self.typesModules;
       }
-      if (! _.isEmpty(self.cordovaDependencies)) {
+      if (self.cordovaDependencies && Object.keys(self.cordovaDependencies).length > 0) {
         mainJson.cordovaDependencies = self.cordovaDependencies;
       }
 
@@ -1261,7 +1259,7 @@ Object.assign(Isopack.prototype, {
       // Next, what about other tools we may be merging from other isopacks?
       // XXX check for overlap
       for (let toolMeta of self.toolsOnDisk) {
-        toolMeta = _.clone(toolMeta);
+        toolMeta = {...toolMeta};
         var rootDir = toolMeta.rootDir;
         delete toolMeta.rootDir;
         await builder.copyDirectory({
@@ -1277,7 +1275,7 @@ Object.assign(Isopack.prototype, {
 
       var mainLegacyJson = null;
       if (writeLegacyBuilds) {
-        mainLegacyJson = _.clone(mainJson);
+        mainLegacyJson = {...mainJson};
         delete mainLegacyJson.typesEntry;
         delete mainLegacyJson.typesDir;
         delete mainLegacyJson.typesModules;
@@ -1299,7 +1297,7 @@ Object.assign(Isopack.prototype, {
 
           unibuildJson.format = 'unipackage-unibuild-pre1';
           var newResources = [];
-          _.each(unibuildJson.resources, function (resource) {
+          unibuildJson.resources.forEach(function (resource) {
             if (resource.type !== 'source') {
               newResources.push(resource);
             } else if (resource.extension === 'css') {
@@ -1339,9 +1337,9 @@ Object.assign(Isopack.prototype, {
             // Determine captured variables, legacy way. First, start with the
             // exports. We'll add the package variables after running prelink.
             packageVariables = [];
-            var packageVariableNames = {};
-            _.each(unibuild.declaredExports, function (symbol) {
-              if (_.has(packageVariableNames, symbol.name)) {
+            var packageVariableNames = Object.create(null);
+            (unibuild.declaredExports || []).forEach(function (symbol) {
+              if (symbol.name in packageVariableNames) {
                 return;
               }
               packageVariables.push({
@@ -1372,8 +1370,8 @@ Object.assign(Isopack.prototype, {
               prelinkFile = results.files[0];
               prelinkData = Buffer.from(prelinkFile.source, 'utf8');
 
-              _.each(results.assignedVariables, function (name) {
-                if (_.has(packageVariableNames, name)) {
+              results.assignedVariables.forEach(function (name) {
+                if (name in packageVariableNames) {
                   return;
                 }
                 packageVariables.push({
@@ -1401,9 +1399,9 @@ Object.assign(Isopack.prototype, {
               // XX - Not 100% sure what prelinkFile.sourceMap _can_ be,
               //      so here's some exhaustive checking of things buffer
               //      _will_ accept.
-              var acceptedByBuffer = _.isString(prelinkFile.sourceMap)
-                  || _.isNumber(prelinkFile.sourceMap)
-                  || _.isArray(prelinkFile.sourceMap)
+              var acceptedByBuffer = typeof prelinkFile.sourceMap === 'string'
+                  || typeof prelinkFile.sourceMap === 'number'
+                  || Array.isArray(prelinkFile.sourceMap)
                   || (prelinkFile.sourceMap instanceof Buffer);
               if (!acceptedByBuffer) {
                 prelinkFile.sourceMap = JSON.stringify(prelinkFile.sourceMap);
@@ -1495,7 +1493,7 @@ Object.assign(Isopack.prototype, {
     //    Babel attempts to transpile those text files here and throws a SyntaxError, crashing the build.
     // NOTE: This _writeTool method is only ever executed when compiling the `meteor-tool` 
     // package itself from a checkout, so these exclusions have zero impact on normal Meteor apps.
-    pathsToCopy = _.filter(pathsToCopy.split('\n'), function (f) {
+    pathsToCopy = pathsToCopy.split('\n').filter(function (f) {
       return f && !f.match(/^examples\/other/) &&
         !f.match(/^examples\/unfinished/) &&
         !f.match(/^tools\/e2e-tests/);
@@ -1557,7 +1555,7 @@ Object.assign(Isopack.prototype, {
 
     // Include the dev bundle, but drop a few things that are only used by
     // self-test (which isn't supported from release).
-    var devBundleIgnore = _.clone(bundler.ignoreFiles);
+    var devBundleIgnore = [...bundler.ignoreFiles];
     devBundleIgnore.push(/BrowserStackLocal/, /browserstack-webdriver/);
     await builder.copyDirectory({
       from: files.pathJoin(files.getDevBundle()),
@@ -1623,7 +1621,7 @@ Object.assign(Isopack.prototype, {
   getMergedWatchSet: Profile("Isopack#getMergedWatchSet", function () {
     var self = this;
     var watchSet = self.pluginWatchSet.clone();
-    _.each(self.unibuilds, function (unibuild) {
+    self.unibuilds.forEach(function (unibuild) {
       watchSet.merge(unibuild.watchSet);
     });
     return watchSet;
@@ -1631,7 +1629,7 @@ Object.assign(Isopack.prototype, {
 
   getClientWatchSet: Profile("Isopack#getClientWatchSet", function () {
     var watchSet = this.pluginWatchSet.clone();
-    _.each(this.unibuilds, function (unibuild) {
+    this.unibuilds.forEach(function (unibuild) {
       if (/^web\./.test(unibuild.arch)) {
         watchSet.merge(unibuild.watchSet);
       }
@@ -1641,7 +1639,7 @@ Object.assign(Isopack.prototype, {
 
   getServerWatchSet: Profile("Isopack#getServerWatchSet", function () {
     var watchSet = this.pluginWatchSet.clone();
-    _.each(this.unibuilds, function (unibuild) {
+    this.unibuilds.forEach(function (unibuild) {
       if (! /^web\./.test(unibuild.arch)) {
         watchSet.merge(unibuild.watchSet);
       }
@@ -1671,9 +1669,9 @@ Object.assign(Isopack.prototype, {
       packages[use.package] = true;
     };
 
-    _.each(self.unibuilds, function (unibuild) {
-      _.each(unibuild.uses, processUse);
-      _.each(unibuild.implies, processUse);
+    self.unibuilds.forEach(function (unibuild) {
+      (unibuild.uses || []).forEach(processUse);
+      (unibuild.implies || []).forEach(processUse);
     });
     return Object.keys(packages);
   }),

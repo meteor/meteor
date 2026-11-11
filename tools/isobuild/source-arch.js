@@ -1,4 +1,3 @@
-import {isString, isFunction} from 'underscore';
 import {WatchSet} from '../fs/watch';
 
 function reportMissingOption(name) {
@@ -23,10 +22,10 @@ export default class SourceArch {
     // compile time when the sources are actually read.
     watchSet = new WatchSet(),
   }) {
-    isString(kind) || reportMissingOption('kind');
-    isString(arch) || reportMissingOption('arch');
-    isString(sourceRoot) || reportMissingOption('sourceRoot');
-    isFunction(getFiles) || reportMissingOption('getFiles');
+    typeof kind === 'string' || reportMissingOption('kind');
+    typeof arch === 'string' || reportMissingOption('arch');
+    typeof sourceRoot === 'string' || reportMissingOption('sourceRoot');
+    typeof getFiles === 'function' || reportMissingOption('getFiles');
 
     this.pkg = pkg;
 

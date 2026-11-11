@@ -1,5 +1,3 @@
-var _ = require('underscore');
-
 var archinfo = require('../utils/archinfo');
 var buildmessage = require('../utils/buildmessage.js');
 var isopack = require('./isopack.js');
@@ -55,7 +53,7 @@ compiler.compile = Profile(function (packageSource, options) {
   var includeCordovaUnibuild = options.includeCordovaUnibuild;
 
   var pluginWatchSet = packageSource.pluginWatchSet.clone();
-  var plugins = {};
+  var plugins = Object.create(null);
 
   var pluginProviderPackageNames = {};
 
@@ -99,13 +97,13 @@ compiler.compile = Profile(function (packageSource, options) {
         return;
       }
 
-      _.each(buildResult.usedPackageNames, function (packageName) {
+      buildResult.usedPackageNames.forEach(function (packageName) {
         pluginProviderPackageNames[packageName] = true;
       });
 
       // Register the built plugin's code.
-      if (!_.has(plugins, info.name)) {
-        plugins[info.name] = {};
+      if (!(info.name in plugins)) {
+        plugins[info.name] = Object.create(null);
       }
       plugins[info.name][buildResult.image.arch] = buildResult.image;
     });
@@ -164,13 +162,12 @@ compiler.compile = Profile(function (packageSource, options) {
   packageSource.architectures.forEach((sourceArch) => {
     if (global.includedWebArchs != null && ![...global.includedWebArchs, 'os'].includes(sourceArch.arch)) return;
     sourceArch.uses.forEach((use) => {
-      if (!use.weak && isIsobuildFeaturePackage(use.package) &&
-          isobuildFeatures.indexOf(use.package) === -1) {
+      if (!use.weak && isIsobuildFeaturePackage(use.package)) {
         isobuildFeatures.push(use.package);
       }
     });
   });
-  isobuildFeatures = _.uniq(isobuildFeatures);
+  isobuildFeatures = [...new Set(isobuildFeatures)];
 
   var isopk = new isopack.Isopack();
   isopk.initFromOptions({
@@ -195,14 +192,13 @@ compiler.compile = Profile(function (packageSource, options) {
   });
 
   for (const architecture of packageSource.architectures) {
-    if (architecture.arch === 'web.cordova' && ! includeCordovaUnibuild) {
+    if (architecture.arch === 'web.cordova' && !includeCordovaUnibuild) {
       continue;
     }
     if (global.includedWebArchs != null && ![...global.includedWebArchs, 'os'].includes(architecture.arch)) continue;
 
-    // TODO -> Maybe this withCache will bring some problems in other commands.
     await files.withCache(async () => {
-      var unibuildResult = await compileUnibuild({
+      const unibuildResult = await compileUnibuild({
         isopack: isopk,
         sourceArch: architecture,
         isopackCache: isopackCache,
@@ -240,9 +236,7 @@ compiler.lint = Profile(function (packageSource, options) {
   let linted = false;
 
   for (const architecture of packageSource.architectures) {
-    // skip Cordova if not required
-    if (! options.includeCordovaUnibuild
-        && architecture.arch === 'web.cordova') {
+    if (!options.includeCordovaUnibuild && architecture.arch === 'web.cordova') {
       continue;
     }
     if (global.includedWebArchs != null && ![...global.includedWebArchs, 'os'].includes(architecture.arch)) continue;
@@ -276,13 +270,13 @@ compiler.getMinifiers = async function (packageSource, options) {
     for (const otherPkg of activePluginPackages) {
       await otherPkg.ensurePluginsInitialized();
 
-      _.each(otherPkg.sourceProcessors.minifier.allSourceProcessors, (sp) => {
+      otherPkg.sourceProcessors.minifier.allSourceProcessors.forEach((sp) => {
         minifiers.push(sp);
       });
     }
   }
 
-  minifiers = _.uniq(minifiers);
+  minifiers = [...new Set(minifiers)];
   // check for extension-wise uniqness
   ['js', 'css'].forEach(function (ext) {
     var plugins = minifiers.filter(function (plugin) {
@@ -290,7 +284,7 @@ compiler.getMinifiers = async function (packageSource, options) {
     });
 
     if (plugins.length > 1) {
-      var packages = _.map(plugins, function (p) { return p.isopack.name; });
+      var packages = plugins.map(function (p) { return p.isopack.name; });
       buildmessage.error(packages.join(', ') + ': multiple packages registered minifiers for extension "' + ext + '".');
     }
   });
@@ -334,8 +328,7 @@ var lintUnibuild = async function ({isopack, isopackCache, sourceArch}) {
     return null;
   }
 
-  const unibuild = _.find(
-    isopack.unibuilds,
+  const unibuild = isopack.unibuilds.find(
     unibuild => archinfo.matches(unibuild.arch, sourceArch.arch)
   );
 
@@ -441,7 +434,7 @@ var compileUnibuild = Profile(function (options) {
     nodeModulesDirectories[nmd.sourcePath] = nmd;
   }
 
-  _.each(inputSourceArch.localNodeModulesDirs, (info, dir) => {
+  Object.entries(inputSourceArch.localNodeModulesDirs).forEach(([dir, info]) => {
     addNodeModulesDirectory({
       packageName: inputSourceArch.pkg.name,
       sourceRoot: inputSourceArch.sourceRoot,
@@ -453,7 +446,7 @@ var compileUnibuild = Profile(function (options) {
       // The values of inputSourceArch.localNodeModulesDirs are usually
       // just `true`, but if `info` is an object, then we let its
       // properties override the properties defined above.
-      ...(_.isObject(info) ? info : Object.prototype),
+      ...((typeof info === 'object' && info !== null) ? info : {}),
     });
   });
 
@@ -528,7 +521,7 @@ var compileUnibuild = Profile(function (options) {
   }
 
   // Add all assets
-  _.values(assets).forEach((asset) => {
+  Object.values(assets).forEach((asset) => {
     const relPath = asset.relPath;
     const absPath = files.pathResolve(inputSourceArch.sourceRoot, relPath);
 
@@ -542,7 +535,7 @@ var compileUnibuild = Profile(function (options) {
   // Add and compile all source files
   for (const source of sources) {
     const relPath = source.relPath;
-    const fileOptions = _.clone(source.fileOptions) || {};
+    const fileOptions = source.fileOptions ? {...source.fileOptions} : {};
     const absPath = files.pathResolve(inputSourceArch.sourceRoot, relPath);
     const filename = files.pathBasename(relPath);
 
@@ -687,8 +680,8 @@ api.addAssets('${relPath}', 'client').`);
   }
 
   // *** Determine captured variables
-  var declaredExports = _.map(inputSourceArch.declaredExports, function (symbol) {
-    return _.pick(symbol, ['name', 'testOnly']);
+  var declaredExports = (inputSourceArch.declaredExports || []).map(function (symbol) {
+    return { name: symbol.name, testOnly: symbol.testOnly };
   });
 
   // By default, consider this isopack "portable" unless
@@ -716,7 +709,7 @@ api.addAssets('${relPath}', 'client').`);
 
     if (process.env.METEOR_ALLOW_NON_PORTABLE ||
         isopk.name === "meteor-tool") {
-      isPortable = _.every(nodeModulesDirectories, nmd => nmd.isPortable());
+      isPortable = Object.values(nodeModulesDirectories).every(nmd => nmd.isPortable());
     }
   }
 
@@ -808,7 +801,7 @@ async function runLinters({inputSourceArch, isopackCache, sources,
     if (unibuild.pkg.name === inputSourceArch.pkg.name) {
       return;
     }
-    _.each(unibuild.declaredExports, (symbol) => {
+    unibuild.declaredExports.forEach((symbol) => {
       if (! symbol.testOnly || inputSourceArch.isTest) {
         globalImports.push(symbol.name);
       }
@@ -817,7 +810,7 @@ async function runLinters({inputSourceArch, isopackCache, sources,
 
   // sourceProcessor.id -> {sourceProcessor, sources: [WrappedSourceItem]}
   const sourceItemsForLinter = {};
-  _.values(sources).forEach((sourceItem) => {
+  Object.values(sources).forEach((sourceItem) => {
     const { relPath, fileOptions } = sourceItem;
     const classification = sourceProcessorSet.classifyFilename(
       files.pathBasename(relPath), inputSourceArch.arch);
@@ -962,13 +955,13 @@ export async function getActivePluginPackages(isopk, {
     if (pluginProviderWatchSet) {
       pluginProviderWatchSet.merge(unibuild.pkg.pluginWatchSet);
     }
-    if (_.isEmpty(unibuild.pkg.plugins)) {
+    if (!unibuild.pkg.plugins || Object.keys(unibuild.pkg.plugins).length === 0) {
       return;
     }
     activePluginPackages.push(unibuild.pkg);
   });
 
-  activePluginPackages = _.uniq(activePluginPackages);
+  activePluginPackages = [...new Set(activePluginPackages)];
   return activePluginPackages;
 }
 
@@ -984,21 +977,21 @@ compiler.eachUsedUnibuild = async function (
   var arch = options.arch;
   var isopackCache = options.isopackCache;
 
-  var acceptableWeakPackages = options.acceptableWeakPackages || {};
+  var acceptableWeakPackages = options.acceptableWeakPackages || Object.create(null);
 
-  var processedUnibuildId = {};
+  var processedUnibuildId = Object.create(null);
   var usesToProcess = [];
-  _.each(dependencies, function (use) {
+  dependencies.forEach(function (use) {
     if (options.skipUnordered && use.unordered) {
       return;
     }
-    if (use.weak && !_.has(acceptableWeakPackages, use.package)) {
+    if (use.weak && !(use.package in acceptableWeakPackages)) {
       return;
     }
     usesToProcess.push(use);
   });
 
-  while (! _.isEmpty(usesToProcess)) {
+  while (usesToProcess.length > 0) {
     var use = usesToProcess.shift();
 
     // We only care about real packages, not isobuild:* psuedo-packages.
@@ -1029,7 +1022,7 @@ compiler.eachUsedUnibuild = async function (
       continue;
     }
 
-    if (_.has(processedUnibuildId, unibuild.id)) {
+    if (unibuild.id in processedUnibuildId) {
       continue;
     }
     processedUnibuildId[unibuild.id] = true;
@@ -1039,7 +1032,7 @@ compiler.eachUsedUnibuild = async function (
       weak: !!use.weak
     });
 
-    _.each(unibuild.implies, function (implied) {
+    (unibuild.implies || []).forEach(function (implied) {
       usesToProcess.push(implied);
     });
   }
