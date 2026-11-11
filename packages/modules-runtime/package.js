@@ -7,11 +7,11 @@ Package.describe({
 });
 
 Npm.depends({
-  install: "0.13.0"
+  "@meteorjs/install": "0.14.0"
 });
 
 Package.onUse(function(api) {
-  api.addFiles(".npm/package/node_modules/install/install.js", [
+  api.addFiles(".npm/package/node_modules/@meteorjs/install/install.js", [
     "client",
     "server"
   ], {
