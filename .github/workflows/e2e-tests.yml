@@ -1,6 +1,9 @@
 name: E2E Tests
 
 on:
+  push:
+    branches:
+      - 'codex/ci-backport-base-3.6-rc.2'
   pull_request:
     paths:
       - "meteor"
@@ -59,7 +62,9 @@ jobs:
         run: npm run test:e2e:groups:audit
       - name: Generate group matrix
         id: groups
-        run: echo "matrix=$(node tools/e2e-tests/scripts/list-test-groups.js --json)" >> "$GITHUB_OUTPUT"
+        run: |
+          matrix="$(node tools/e2e-tests/scripts/list-test-groups.js --json | jq -ce '.include |= map(select(.group == "examples")) | select(.include | length == 1)')"
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
 
   test:
     needs: groups

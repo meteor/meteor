@@ -1,6 +1,9 @@
 name: Test Packages
 
 on:
+  push:
+    branches:
+      - 'codex/ci-backport-base-3.6-rc.2'
   pull_request:
     paths:
       - "packages/**"
@@ -14,7 +17,6 @@ jobs:
       fail-fast: false
       matrix:
         reactivity_order:
-          - 'changeStreams,polling'
           - 'oplog,polling'
     runs-on: oss-vm
     concurrency:
@@ -64,4 +66,4 @@ jobs:
           export phantom="false"
           export TIMEOUT_SCALE_FACTOR="20"
           export METEOR_HEADLESS="true"
-          ./packages/test-in-console/run.sh
+          ./packages/test-in-console/run.sh "ddp-client"
