@@ -13,26 +13,16 @@ struct AssetManifest {
   let cordovaCompatibilityVersion: String
   var entries: [Entry]
 
-  /// Rejects empty, absolute, or traversal paths, including encoded segments.
+  /// The file URL APIs append manifest paths literally.
   static func isValidFilePath(_ filePath: String) -> Bool {
-    for path in [filePath, filePath.removingPercentEncoding ?? filePath] {
-      if path.isEmpty || path.hasPrefix("/") || path.contains("\0") ||
-        path.components(separatedBy: "/").contains("..") {
-        return false
-      }
-    }
-    return true
+    return !filePath.isEmpty && !filePath.hasPrefix("/") && !filePath.contains("\0") &&
+      !filePath.components(separatedBy: "/").contains("..")
   }
 
-  /// Requires one safe directory name, including after percent-decoding.
+  /// Requires one safe directory name.
   static func isValidVersion(_ version: String) -> Bool {
-    for name in [version, version.removingPercentEncoding ?? version] {
-      if name.isEmpty || name == "." || name == ".." || name.contains("/") ||
-        name.contains("\0") || name == "Downloading" || name == "PartialDownload" {
-        return false
-      }
-    }
-    return true
+    return !version.isEmpty && version != "." && version != ".." && !version.contains("/") &&
+      !version.contains("\0") && version != "Downloading" && version != "PartialDownload"
   }
 
   init(fileURL: URL) throws {

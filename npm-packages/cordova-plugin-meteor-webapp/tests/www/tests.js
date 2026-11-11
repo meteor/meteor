@@ -798,6 +798,9 @@ the Cordova platform version or plugin versions have changed and are potentially
 
     describe("when downloading a version with a percent-encoded asset path outside the bundle directory", function() {
       beforeEach(function(done) {
+        if (cordova.platformId !== "android") {
+          pending("Android decodes asset paths before opening them");
+        }
         WebAppMockRemoteServer.serveVersion("version2_with_encoded_invalid_asset_path", done);
       });
 

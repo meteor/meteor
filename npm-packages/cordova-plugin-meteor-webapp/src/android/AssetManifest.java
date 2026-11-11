@@ -100,14 +100,9 @@ final class AssetManifest {
         return true;
     }
 
-    /** Requires one safe directory name, including after percent-decoding. */
+    /** Version directory names are passed to File without decoding. */
     static boolean isValidVersion(String version) {
-        for (String name : new String[] { version, Uri.decode(version) }) {
-            if (name.isEmpty() || name.equals(".") || name.equals("..") || name.contains("/")
-                || name.indexOf(0) != -1 || name.equals("Downloading") || name.equals("PartialDownload")) {
-                return false;
-            }
-        }
-        return true;
+        return !version.isEmpty() && !version.equals(".") && !version.equals("..") && !version.contains("/")
+            && version.indexOf(0) == -1 && !version.equals("Downloading") && !version.equals("PartialDownload");
     }
 }
