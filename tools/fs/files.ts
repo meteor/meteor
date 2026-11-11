@@ -803,7 +803,8 @@ export async function extractTarGz(
 ) {
   const parentDir = pathDirname(destPath);
   const tempDir = pathJoin(parentDir, '.tmp' + utils.randomToken());
-  mkdir_p(tempDir);
+  mkdir_p(parentDir);
+  mkdir(tempDir, 0o700);
 
   if (! hasOwnProperty.call(options, "verbose")) {
     options.verbose = require("../console/console.js").Console.verbose;
@@ -811,23 +812,24 @@ export async function extractTarGz(
 
   const startTime = +new Date;
 
-  // standardize only one way of extracting, as native ones can be tricky
-  await tryExtractWithNpmTar(buffer, tempDir, options);
+  try {
+    await tryExtractWithNpmTar(buffer, tempDir, options);
 
-  // succeed!
-  const topLevelOfArchive = readdir(tempDir)
-    // On Windows, the 7z.exe tool sometimes creates an auxiliary
-    // PaxHeader directory.
-    .filter(file => ! file.startsWith("PaxHeader"));
+    const topLevelOfArchive = readdir(tempDir)
+      // On Windows, the 7z.exe tool sometimes creates an auxiliary
+      // PaxHeader directory.
+      .filter(file => ! file.startsWith("PaxHeader"));
 
-  if (topLevelOfArchive.length !== 1) {
-    throw new Error(
-      "Extracted archive '" + tempDir + "' should only contain one entry");
+    if (topLevelOfArchive.length !== 1) {
+      throw new Error(
+        "Extracted archive '" + tempDir + "' should only contain one entry");
+    }
+
+    const extractDir = pathJoin(tempDir, topLevelOfArchive[0]);
+    await rename(extractDir, destPath);
+  } finally {
+    await rm_recursive(tempDir);
   }
-
-  const extractDir = pathJoin(tempDir, topLevelOfArchive[0]);
-  await rename(extractDir, destPath);
-  await rm_recursive(tempDir);
 
   if (options.verbose) {
     console.log("Finished extracting in", Date.now() - startTime, "ms");
@@ -851,14 +853,14 @@ function isWithinRoot(root: string, candidate: string) {
 // before following the links before it, so it can place a source inside the
 // root that the kernel resolves outside. Treat a source that cannot be
 // resolved as unsafe.
-function hardLinkEscapesRoot(root: string, source: string) {
+function resolveHardLinkSource(root: string, source: string) {
   let real;
   try {
     real = fs.realpathSync.native(source);
   } catch (e) {
-    return true;
+    return null;
   }
-  return ! isWithinRoot(root, real);
+  return isWithinRoot(root, real) ? archivePath.relative(root, real) : null;
 }
 
 // The native realpath fails on some Windows virtual drives. Fall back for the
@@ -906,14 +908,10 @@ function extractedSymlinkEscapesRoot(root: string, linkPath: string) {
 
 // An existing non-directory ancestor can redirect a later entry outside the
 // root, even when the entry's own path appears to be inside it.
-function destinationHasUnsafeAncestor(
-  root: string,
-  dest: string,
-  symlinks: ReadonlyMap<string, string>,
-) {
+function destinationHasUnsafeAncestor(root: string, dest: string) {
   let current = archivePath.dirname(dest);
   while (current !== root) {
-    if (! isWithinRoot(root, current) || symlinks.has(current)) {
+    if (! isWithinRoot(root, current)) {
       return true;
     }
     let stat;
@@ -960,7 +958,7 @@ function tryExtractWithNpmTar(
     // real paths with the root it was given.
     const realRoot = realpathNativeOrJs(osTempDir);
     const lexicalRoot = archivePath.resolve(realRoot);
-    const symlinks = new Map<string, string>();
+    const symlinks = new Set<string>();
     let securityError: Error | null = null;
 
     const rejectEntry = (header: any) => {
@@ -991,7 +989,7 @@ function tryExtractWithNpmTar(
           return header.type === "directory" ? false : rejectEntry(header);
         }
 
-        if (destinationHasUnsafeAncestor(lexicalRoot, name, symlinks)) {
+        if (destinationHasUnsafeAncestor(lexicalRoot, name)) {
           return rejectEntry(header);
         }
 
@@ -1007,19 +1005,29 @@ function tryExtractWithNpmTar(
               !isWithinRoot(lexicalRoot, archivePath.resolve(archivePath.dirname(name), target))) {
             return rejectEntry(header);
           }
-          // Install links after extracting files. This lets us preserve safe
-          // chains without allowing the archive to write through them.
-          symlinks.set(name, target);
+          // Install links in archive order for later hard-link entries.
+          // Every later write is checked against the staging filesystem.
+          try {
+            fs.mkdirSync(archivePath.dirname(name), { recursive: true });
+            if (fs.lstatSync(name, { throwIfNoEntry: false })) fs.unlinkSync(name);
+            fs.symlinkSync(target, name);
+            symlinks.add(name);
+          } catch (error: any) {
+            securityError = securityError || error;
+          }
           return true;
         }
-
-        if (symlinks.has(name)) return rejectEntry(header);
 
         if (header.type === "link") {
           // Resolve hard link sources from the extraction root, as tar-fs does.
           const source = archivePath.join(lexicalRoot, archivePath.join("/", header.linkname));
-          return hardLinkEscapesRoot(realRoot, source)
-            ? rejectEntry(header) : false;
+          const resolved = resolveHardLinkSource(realRoot, source);
+          if (!resolved) return rejectEntry(header);
+
+          // Pass the validated referent to tar-fs, which unlinks the
+          // destination before resolving the source again.
+          header.linkname = resolved;
+          return false;
         }
 
         // Link entries replace their destination and are checked above.
@@ -1043,16 +1051,7 @@ function tryExtractWithNpmTar(
         if (securityError) return reject(securityError);
 
         try {
-          for (const [link, target] of symlinks) {
-            if (destinationHasUnsafeAncestor(lexicalRoot, link, symlinks)) {
-              throw new Error("Archive contains an invalid symlink destination: " + link);
-            }
-            fs.mkdirSync(archivePath.dirname(link), { recursive: true });
-            if (fs.lstatSync(link, { throwIfNoEntry: false })) fs.unlinkSync(link);
-            fs.symlinkSync(target, link);
-          }
-
-          for (const link of symlinks.keys()) {
+          for (const link of symlinks) {
             const relative = archivePath.relative(lexicalRoot, link);
             const root = archivePath.join(lexicalRoot, relative.split(archivePath.sep)[0]);
             if (link === root || extractedSymlinkEscapesRoot(root, link)) {
