@@ -429,6 +429,10 @@ export default defineConfig({
                 link: "/packages/modules",
               },
               {
+                text: "mongo-schema",
+                link: "/packages/mongo-schema",
+              },
+              {
                 text: "random",
                 link: "/packages/random",
               },
