@@ -48,6 +48,11 @@ var utils = require('../utils/utils.js');
 // url base.
 var WAREHOUSE_URLBASE = process.env.METEOR_WAREHOUSE_URLBASE || 'https://warehouse.meteor.com';
 
+function isWarehouseEntryName(name) {
+  return typeof name === 'string' && name !== '' && name !== '.' &&
+    name !== '..' && name.indexOf('/') === -1 && name.indexOf('\\') === -1;
+}
+
 var warehouse = exports;
 Object.assign(warehouse, {
   // An exception meaning that you asked for a release that doesn't
@@ -75,11 +80,22 @@ Object.assign(warehouse, {
   },
 
   getToolsDir: function (version) {
+    if (!isWarehouseEntryName(version)) {
+      throw new Error("Invalid legacy tools version: " + JSON.stringify(version));
+    }
     return files.pathJoin(warehouse.getWarehouseDir(), 'tools', version);
   },
 
   getToolsFreshFile: function (version) {
-    return files.pathJoin(warehouse.getWarehouseDir(), 'tools', version, '.fresh');
+    return files.pathJoin(warehouse.getToolsDir(version), '.fresh');
+  },
+
+  _releaseManifestPath: function (release) {
+    if (!isWarehouseEntryName(release)) {
+      throw new warehouse.NoSuchReleaseError;
+    }
+    return files.pathJoin(
+      warehouse.getWarehouseDir(), 'releases', release + '.release.json');
   },
 
   _latestReleaseSymlinkPath: function () {
@@ -130,10 +146,8 @@ Object.assign(warehouse, {
   // Returns true if we already have the release file on disk, and it's not a
   // fake "red pill" release --- we should never springboard to those!
   realReleaseExistsInWarehouse: function (version) {
-    var releasesDir = files.pathJoin(warehouse.getWarehouseDir(), 'releases');
-    var releaseManifestPath = files.pathJoin(releasesDir,
-                                        version + '.release.json');
     try {
+      var releaseManifestPath = warehouse._releaseManifestPath(version);
       var manifest = JSON.parse(files.readFile(releaseManifestPath, 'utf8'));
       return !manifest.redPill;
     } catch (e) {
@@ -192,10 +206,9 @@ Object.assign(warehouse, {
   // all of the missing versioned packages referenced from the release manifest
   // @param releaseVersion {String} eg "0.1"
   _populateWarehouseForRelease: async function (releaseVersion, showInstalling) {
+    var releaseManifestPath = warehouse._releaseManifestPath(releaseVersion);
     var releasesDir = files.pathJoin(warehouse.getWarehouseDir(), 'releases');
     files.mkdir_p(releasesDir, 0o755);
-    var releaseManifestPath = files.pathJoin(releasesDir,
-                                             releaseVersion + '.release.json');
 
     // If the release already exists, we don't have to do anything, except maybe
     // print a message if this release has never been used before (and we only
