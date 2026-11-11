@@ -24,7 +24,7 @@ Npm.strip({
 
 // whitelist plugin is now included in the core
 Cordova.depends({
-  "cordova-plugin-meteor-webapp": "2.0.4",
+  "cordova-plugin-meteor-webapp": "2.0.5",
 });
 
 Package.onUse(function (api) {
