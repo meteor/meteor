@@ -871,38 +871,6 @@ function realpathNativeOrJs(path: string) {
   }
 }
 
-// A symlink target may not exist yet. Check its lexical path and reject any
-// existing symlink along that path, which could redirect it outside the root.
-function symLinkEscapesRoot(root: string, linkPath: string, linkname: string) {
-  const target = archivePath.resolve(archivePath.dirname(linkPath), linkname);
-  if (! isWithinRoot(root, target)) {
-    return true;
-  }
-
-  let current = target;
-  while (current !== root) {
-    if (! isWithinRoot(root, current)) {
-      return true;
-    }
-    let stat;
-    try {
-      stat = fs.lstatSync(current);
-    } catch (e: any) {
-      if (e.code === "ENOENT" || e.code === "EPERM") {
-        current = archivePath.dirname(current);
-        continue;
-      }
-      return true;
-    }
-    if (stat.isSymbolicLink()) {
-      return true;
-    }
-    current = archivePath.dirname(current);
-  }
-
-  return false;
-}
-
 // Check the final target after all entries have been extracted, so links to
 // later entries cannot escape when the archive's top-level directory is moved.
 function extractedSymlinkEscapesRoot(root: string, linkPath: string) {
@@ -938,10 +906,14 @@ function extractedSymlinkEscapesRoot(root: string, linkPath: string) {
 
 // An existing non-directory ancestor can redirect a later entry outside the
 // root, even when the entry's own path appears to be inside it.
-function destinationHasUnsafeAncestor(root: string, dest: string) {
+function destinationHasUnsafeAncestor(
+  root: string,
+  dest: string,
+  symlinks: ReadonlyMap<string, string>,
+) {
   let current = archivePath.dirname(dest);
   while (current !== root) {
-    if (! isWithinRoot(root, current)) {
+    if (! isWithinRoot(root, current) || symlinks.has(current)) {
       return true;
     }
     let stat;
@@ -984,11 +956,11 @@ function tryExtractWithNpmTar(
 
   return new Promise((resolve, reject) => {
     const osTempDir = convertToOSPath(tempDir);
-    // Use the same lexical root as tar-fs; compare hard link sources against
-    // the real root after following symlinks.
-    const lexicalRoot = archivePath.resolve(osTempDir);
+    // Give tar-fs the canonical root too. Its hard link check compares
+    // real paths with the root it was given.
     const realRoot = realpathNativeOrJs(osTempDir);
-    const symlinks = new Set<string>();
+    const lexicalRoot = archivePath.resolve(realRoot);
+    const symlinks = new Map<string, string>();
     let securityError: Error | null = null;
 
     const rejectEntry = (header: any) => {
@@ -1000,7 +972,7 @@ function tryExtractWithNpmTar(
     };
 
     const gunzip = zlib.createGunzip().on('error', reject);
-    const extractor = tar.extract(osTempDir, {
+    const extractor = tar.extract(lexicalRoot, {
       /* the following lines guarantees that archives created on windows
       are going to be readable and writable on unixes */
       readable: true, // all dirs and files should be readable
@@ -1019,7 +991,7 @@ function tryExtractWithNpmTar(
           return header.type === "directory" ? false : rejectEntry(header);
         }
 
-        if (destinationHasUnsafeAncestor(lexicalRoot, name)) {
+        if (destinationHasUnsafeAncestor(lexicalRoot, name, symlinks)) {
           return rejectEntry(header);
         }
 
@@ -1030,16 +1002,22 @@ function tryExtractWithNpmTar(
         }
 
         if (header.type === "symlink") {
-          if (symLinkEscapesRoot(lexicalRoot, name, header.linkname)) {
+          const target = header.linkname;
+          if (typeof target !== "string" || !target || archivePath.isAbsolute(target) ||
+              !isWithinRoot(lexicalRoot, archivePath.resolve(archivePath.dirname(name), target))) {
             return rejectEntry(header);
           }
-          symlinks.add(name);
-          return false;
+          // Install links after extracting files. This lets us preserve safe
+          // chains without allowing the archive to write through them.
+          symlinks.set(name, target);
+          return true;
         }
+
+        if (symlinks.has(name)) return rejectEntry(header);
 
         if (header.type === "link") {
           // Resolve hard link sources from the extraction root, as tar-fs does.
-          const source = archivePath.join(osTempDir, archivePath.join("/", header.linkname));
+          const source = archivePath.join(lexicalRoot, archivePath.join("/", header.linkname));
           return hardLinkEscapesRoot(realRoot, source)
             ? rejectEntry(header) : false;
         }
@@ -1065,7 +1043,16 @@ function tryExtractWithNpmTar(
         if (securityError) return reject(securityError);
 
         try {
-          for (const link of symlinks) {
+          for (const [link, target] of symlinks) {
+            if (destinationHasUnsafeAncestor(lexicalRoot, link, symlinks)) {
+              throw new Error("Archive contains an invalid symlink destination: " + link);
+            }
+            fs.mkdirSync(archivePath.dirname(link), { recursive: true });
+            if (fs.lstatSync(link, { throwIfNoEntry: false })) fs.unlinkSync(link);
+            fs.symlinkSync(target, link);
+          }
+
+          for (const link of symlinks.keys()) {
             const relative = archivePath.relative(lexicalRoot, link);
             const root = archivePath.join(lexicalRoot, relative.split(archivePath.sep)[0]);
             if (link === root || extractedSymlinkEscapesRoot(root, link)) {
