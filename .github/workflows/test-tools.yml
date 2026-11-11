@@ -82,7 +82,7 @@ jobs:
 
       - name: Verify Meteor Node runtime
         run: |
-          ./meteor node -e "if (process.version !== 'v24.22.1') throw new Error('Unexpected Meteor runtime: ' + process.version); console.log(process.version)"
+          ./meteor node -e "if (process.version !== 'v24.22.3') throw new Error('Unexpected Meteor runtime: ' + process.version); console.log(process.version)"
 
       - name: Prepare Meteor
         # Run on every workflow so the package catalog at .meteor/package-metadata

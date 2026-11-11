@@ -47,7 +47,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24.22.1
+          node-version: 24.22.3
 
       - name: Expose globally-installed puppeteer to Node.js
         # puppeteer@23.6.0 is pre-installed on oss-vm via `npm install -g`.
@@ -68,7 +68,7 @@ jobs:
             ${{ runner.os }}-meteor-
       - name: Verify Meteor Node runtime
         run: |
-          ./meteor node -e "if (process.version !== 'v24.22.1') throw new Error('Unexpected Meteor runtime: ' + process.version); console.log(process.version)"
+          ./meteor node -e "if (process.version !== 'v24.22.3') throw new Error('Unexpected Meteor runtime: ' + process.version); console.log(process.version)"
 
       - name: Run test-in-console suite
         run: |
