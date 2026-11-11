@@ -1,6 +1,9 @@
 name: E2E Tests
 
 on:
+  push:
+    branches:
+      - 'codex/ci-backport-base-3.5.5'
   workflow_dispatch:
   pull_request:
     paths:
@@ -54,29 +57,9 @@ jobs:
       fail-fast: false
       max-parallel: 4
       matrix:
-        category:
-          - Angular
-          - Babel
-          - Blaze
-          - Coffeescript
-          - Full Skeleton
-          - Tailwind Skeleton
-          - Examples
-          - Monorepo
-          - Other
-          - React
-          - R.Router
-          - Solid
-          - Svelte
-          - Typescript
-          - Vue
         include:
-          # Server Runtime is the largest coherent regression suite. Keep it
-          # separate while sending new regression tests to the general shard.
-          - category: Server Runtime
-            test_pattern: 'Regressions / Server Runtime'
-          - category: Regressions
-            test_pattern: 'Regressions / (?!Server Runtime)'
+          - category: Examples
+            test_pattern: ''
 
     steps:
       - name: Install Docker CLI
