@@ -1593,7 +1593,8 @@ if (Meteor.isServer) (() => {
       const user1 = await Meteor.users.findOneAsync(userId);
       test.isTrue(!!user1.services.password.reset);
 
-      await Accounts._expirePasswordResetTokens(new Date(), userId);
+      // Expiry requires the issue time to be strictly before the cutoff.
+      await Accounts._expirePasswordResetTokens(new Date(+user1.services.password.reset.when + 1), userId);
       const user2 = await Meteor.users.findOneAsync(userId);
       test.isUndefined(user2.services.password.reset);
     });
@@ -1618,7 +1619,7 @@ if (Meteor.isServer) (() => {
       test.isTrue(!!user1.services.password.reset);
       test.isUndefined(user1.services.password.reset.reason);
 
-      await Accounts._expirePasswordResetTokens(new Date(), userId);
+      await Accounts._expirePasswordResetTokens(new Date(+user1.services.password.reset.when + 1), userId);
       const user2 = await Meteor.users.findOneAsync(userId);
       test.isUndefined(user2.services.password.reset);
     });
@@ -1703,7 +1704,7 @@ if (Meteor.isServer) (() => {
       await Accounts.sendEnrollmentEmail(userId, email);
       const user1 = await Meteor.users.findOneAsync(userId);
       test.isTrue(!!user1.services.password.enroll);
-      await Accounts._expirePasswordEnrollTokens(new Date(), userId);
+      await Accounts._expirePasswordEnrollTokens(new Date(+user1.services.password.enroll.when + 1), userId);
       const user2 = await Meteor.users.findOneAsync(userId);
       test.isUndefined(user2.services.password.enroll);
     });
