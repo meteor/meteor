@@ -1916,7 +1916,8 @@ const getSelfConnectionUrl = function () {
 if (Meteor.isServer) {
   Meteor.methods({
     reverse: function (arg) {
-      // Return something notably different from reverse.meteor.com.
+      // Distinguish the primary server from the secondary fixture.
+      check(arg, String);
       return (
         arg
           .split('')
@@ -1927,47 +1928,36 @@ if (Meteor.isServer) {
   });
 }
 
-testAsyncMulti('livedata connection - reconnect to a different server', [
-  function (test, expect) {
-    const self = this;
-    self.conn = DDP.connect('reverse.meteor.com');
-    pollUntil(
-      expect,
-      function () {
-        return self.conn.status().connected;
-      },
-      5000,
-      100,
-      false
-    );
-  },
-  function (test, expect) {
-    const self = this;
-    self.doTest = self.conn.status().connected;
-    if (self.doTest) {
-      self.conn.call(
-        'reverse',
-        'foo',
-        expect(function (err, res) {
-          test.equal(res, 'oof');
-        })
-      );
-    }
-  },
-  function (test, expect) {
-    const self = this;
-    if (self.doTest) {
-      self.conn.reconnect({ url: getSelfConnectionUrl() });
-      self.conn.call(
-        'reverse',
-        'bar',
-        expect(function (err, res) {
-          test.equal(res, 'rab LOCAL');
-        })
-      );
-    }
+Tinytest.addAsync('livedata connection - reconnect to a different server', async function (test) {
+  const fixtureId = Random.id();
+  let connection;
+
+  function withinTimeout(promise, action) {
+    let timer;
+    const timeout = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`Timed out waiting to ${action}`)), 10_000);
+    });
+    return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
   }
-]);
+
+  try {
+    const url = await withinTimeout(
+      Meteor.callAsync('ddp-client/reconnect/start', fixtureId), 'start the fixture'
+    );
+    const connected = new Promise(resolve => {
+      connection = DDP.connect(url, { retry: false, onConnected: resolve });
+    });
+    await withinTimeout(connected, 'connect to the secondary server');
+    test.isTrue(connection.status().connected);
+    test.equal(await withinTimeout(connection.callAsync('reverse', 'foo'), 'call the secondary server'), 'oof');
+
+    connection.reconnect({ url: getSelfConnectionUrl() });
+    test.equal(await withinTimeout(connection.callAsync('reverse', 'bar'), 'call the primary server'), 'rab LOCAL');
+  } finally {
+    connection?.close();
+    await withinTimeout(Meteor.callAsync('ddp-client/reconnect/stop', fixtureId), 'stop the fixture');
+  }
+});
 
 Tinytest.addAsync(
   'livedata connection - version negotiation requires renegotiating',
