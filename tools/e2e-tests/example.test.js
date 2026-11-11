@@ -4,6 +4,9 @@ import os from 'os';
 
 import { runMeteorCommand, cleanupTempDir } from './helpers';
 
+// Pin a revision whose package constraints support this Meteor checkout.
+const SIMPLE_TASKS_REF = '88b572234aa9caf8a7d7255421b9bda1a3759695';
+
 function tempApp(prefix) {
   const suffix = Math.random().toString(36).substring(2, 10);
   const appName = `meteortest-${prefix}-${suffix}`;
@@ -36,7 +39,11 @@ describe('Examples /', () => {
     const { appName, tempDir } = tempApp('from');
     try {
       await runMeteorCommand(
-        'create', ['--from', 'https://github.com/fredmaiaarantes/simpletasks', appName], os.tmpdir(),
+        'create', [
+          '--from', 'https://github.com/fredmaiaarantes/simpletasks',
+          '--from-branch', SIMPLE_TASKS_REF,
+          appName
+        ], os.tmpdir(),
         { checkExitCode: true }
       );
       expect(fs.existsSync(path.join(tempDir, '.meteor'))).toBe(true);
