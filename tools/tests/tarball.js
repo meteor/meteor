@@ -129,6 +129,7 @@ defineLinkTest("extractTarGz preserves in-tree symlinks", async function () {
       type: 'symlink',
       linkname: '../foo/cli.js',
     });
+    await addEntry({ name: "package/tools", type: "symlink", linkname: "node_modules/.bin" });
   });
 
   var destPath = files.pathJoin(scratch, "extracted");
@@ -137,6 +138,25 @@ defineLinkTest("extractTarGz preserves in-tree symlinks", async function () {
   var linkPath = files.pathJoin(destPath, "node_modules", ".bin", "foo");
   await expectEqual(files.readlink(linkPath), "../foo/cli.js");
   await expectEqual(files.readFile(linkPath, "utf-8"), "REAL");
+  await expectEqual(files.readFile(files.pathJoin(destPath, "tools", "foo"), "utf-8"), "REAL");
+});
+
+defineLinkTest("extractTarGz preserves in-tree hard links under a symlinked parent", async function () {
+  const scratch = files.mkdtemp("tarfs-hardlink-parent");
+  const actual = files.pathJoin(scratch, "actual");
+  const alias = files.pathJoin(scratch, "alias");
+  files.mkdir_p(actual);
+  require("fs").symlinkSync(files.convertToOSPath(actual), files.convertToOSPath(alias));
+
+  const archive = await packToTarGz(async function (addEntry) {
+    await addEntry({ name: "package/", type: "directory", mode: 0o755 });
+    await addEntry({ name: "package/target", type: "file", size: 1 }, Buffer.from("x"));
+    await addEntry({ name: "package/link", type: "link", linkname: "package/target" });
+  });
+
+  const destination = files.pathJoin(alias, "extracted");
+  await files.extractTarGz(archive, destination);
+  await expectEqual(files.readFile(files.pathJoin(destination, "link"), "utf-8"), "x");
 });
 
 defineLinkTest("extractTarGz rejects a file planted through a symlink", async function () {
@@ -417,7 +437,7 @@ defineLinkTest("extractTarGz rejects standalone symlinks outside the relocated p
   for (const target of ["..", "x/x/../..", "../package/present.txt"]) {
     const archive = await packToTarGz(async function (addEntry) {
       await addEntry({ name: "package/", type: "directory", mode: 0o755 });
-      await addEntry({ name: "package/present.txt", type: "file", size: 0 });
+      await addEntry({ name: "package/present.txt", type: "file", size: 1 }, Buffer.from("x"));
       await addEntry({ name: "package/link", type: "symlink", linkname: target });
       // Resolve links again after extraction, including forward references.
       await addEntry({ name: "package/x", type: "symlink", linkname: "." });
