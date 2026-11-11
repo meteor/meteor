@@ -60,7 +60,7 @@ jobs:
         run: npm install
 
       - name: Run DDP server tests (${{ matrix.transport }})
-        run: ./packages/test-in-console/run.sh "ddp-server"
+        run: bash scripts/ci/run-ddp-transport-tests.sh "ddp-server"
 
       - name: Run DDP client tests (${{ matrix.transport }})
-        run: ./packages/test-in-console/run.sh "ddp-client"
+        run: bash scripts/ci/run-ddp-transport-tests.sh "ddp-client"
