@@ -414,9 +414,10 @@ defineLinkTest("extractTarGz rejects standalone symlinks outside the relocated p
   const scratch = files.mkdtemp("tarfs-relocated-link");
   const destination = files.pathJoin(scratch, "extracted");
 
-  for (const target of ["..", "x/x/../.."]) {
+  for (const target of ["..", "x/x/../..", "../package/present.txt"]) {
     const archive = await packToTarGz(async function (addEntry) {
       await addEntry({ name: "package/", type: "directory", mode: 0o755 });
+      await addEntry({ name: "package/present.txt", type: "file", size: 0 });
       await addEntry({ name: "package/link", type: "symlink", linkname: target });
       // Resolve links again after extraction, including forward references.
       await addEntry({ name: "package/x", type: "symlink", linkname: "." });
