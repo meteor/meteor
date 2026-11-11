@@ -152,11 +152,23 @@ defineLinkTest("extractTarGz preserves in-tree hard links under a symlinked pare
     await addEntry({ name: "package/", type: "directory", mode: 0o755 });
     await addEntry({ name: "package/target", type: "file", size: 1 }, Buffer.from("x"));
     await addEntry({ name: "package/link", type: "link", linkname: "package/target" });
+    await addEntry({ name: "package/shortcut", type: "symlink", linkname: "target" });
+    await addEntry({ name: "package/via-shortcut", type: "link", linkname: "package/shortcut" });
+    await addEntry({ name: "package/replaced", type: "file", size: 1 }, Buffer.from("y"));
+    await addEntry({ name: "package/replaced", type: "symlink", linkname: "target" });
+    await addEntry({ name: "package/via-replaced", type: "link", linkname: "package/replaced" });
+    await addEntry({ name: "package/shortcut", type: "link", linkname: "package/target" });
   });
 
   const destination = files.pathJoin(alias, "extracted");
   await files.extractTarGz(archive, destination);
-  await expectEqual(files.readFile(files.pathJoin(destination, "link"), "utf-8"), "x");
+  const fs = require("fs");
+  const target = fs.statSync(files.convertToOSPath(files.pathJoin(destination, "target")));
+  for (const name of ["link", "via-shortcut", "via-replaced", "shortcut"]) {
+    const link = fs.lstatSync(files.convertToOSPath(files.pathJoin(destination, name)));
+    selftest.expectTrue(link.isFile());
+    await expectEqual(link.ino, target.ino);
+  }
 });
 
 defineLinkTest("extractTarGz rejects a file planted through a symlink", async function () {
@@ -444,5 +456,6 @@ defineLinkTest("extractTarGz rejects standalone symlinks outside the relocated p
     });
     await assert.rejects(files.extractTarGz(archive, destination));
     assert.equal(files.exists(destination), false);
+    assert.deepEqual(files.readdir(scratch), []);
   }
 });
