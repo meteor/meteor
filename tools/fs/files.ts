@@ -912,24 +912,28 @@ function extractedSymlinkEscapesRoot(root: string, linkPath: string) {
   if (archivePath.isAbsolute(target)) return true;
 
   const dir = archivePath.dirname(linkPath);
-  if (!isWithinRoot(root, archivePath.resolve(dir, target))) return true;
-
   const realRoot = fs.realpathSync.native(root);
-  // Keep the raw components so the OS follows symlinks before resolving "..".
-  let candidate = dir + archivePath.sep + target;
-  while (true) {
+  let lexicalPath = dir;
+  let rawPath = dir;
+  for (const component of target.split(archivePath.sep)) {
+    if (!component) continue;
+
+    // A link must not leave the package even if a later component names the
+    // old directory again. The directory is about to be renamed.
+    lexicalPath = archivePath.resolve(lexicalPath, component);
+    if (!isWithinRoot(root, lexicalPath)) return true;
+
+    // Let the OS follow symlinks before resolving each ".." component.
+    rawPath += archivePath.sep + component;
     try {
-      return !isWithinRoot(realRoot, fs.realpathSync.native(candidate));
+      if (!isWithinRoot(realRoot, fs.realpathSync.native(rawPath))) return true;
     } catch (error: any) {
+      // A dangling path is allowed if its existing ancestors are in-tree.
       if (error.code !== "ENOENT") throw error;
     }
-
-    // Preserve dangling in-tree links. Resolve the deepest existing parent
-    // to catch a dangling target that already points outside the package.
-    const parent = archivePath.dirname(candidate);
-    if (parent === candidate) return true;
-    candidate = parent;
   }
+
+  return false;
 }
 
 // An existing non-directory ancestor can redirect a later entry outside the
