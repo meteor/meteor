@@ -1,6 +1,9 @@
 name: Test Packages
 
 on:
+  push:
+    branches:
+      - 'codex/ci-backport-base-3.4.4'
   workflow_dispatch:
   pull_request:
     paths:
@@ -65,6 +68,6 @@ jobs:
           export TIMEOUT_SCALE_FACTOR="20"
           export METEOR_HEADLESS="true"
           set -o pipefail
-          ./packages/test-in-console/run.sh 2>&1 | tee "$RUNNER_TEMP/meteor-package-tests.log"
+          ./packages/test-in-console/run.sh "ddp-client" 2>&1 | tee "$RUNNER_TEMP/meteor-package-tests.log"
           grep -Eq '^Tests complete with 0 failures$' "$RUNNER_TEMP/meteor-package-tests.log"
           grep -Eq '^Tests complete with [1-9][0-9]* passes$' "$RUNNER_TEMP/meteor-package-tests.log"
