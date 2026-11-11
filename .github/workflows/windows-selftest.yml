@@ -48,7 +48,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22.23.4
+          node-version: 22.23.5
 
       - name: Cache dependencies
         id: meteor-cache
