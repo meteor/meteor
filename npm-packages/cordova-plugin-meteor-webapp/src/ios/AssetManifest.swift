@@ -16,7 +16,8 @@ struct AssetManifest {
   /// Rejects empty, absolute, or traversal paths, including encoded segments.
   static func isValidFilePath(_ filePath: String) -> Bool {
     for path in [filePath, filePath.removingPercentEncoding ?? filePath] {
-      if path.isEmpty || path.hasPrefix("/") || path.components(separatedBy: "/").contains("..") {
+      if path.isEmpty || path.hasPrefix("/") || path.contains("\0") ||
+        path.components(separatedBy: "/").contains("..") {
         return false
       }
     }
@@ -26,7 +27,8 @@ struct AssetManifest {
   /// Requires one safe directory name, including after percent-decoding.
   static func isValidVersion(_ version: String) -> Bool {
     for name in [version, version.removingPercentEncoding ?? version] {
-      if name.isEmpty || name == "." || name == ".." || name.contains("/") {
+      if name.isEmpty || name == "." || name == ".." || name.contains("/") ||
+        name.contains("\0") || name == "Downloading" || name == "PartialDownload" {
         return false
       }
     }
