@@ -92,7 +92,7 @@ final class AssetManifest {
     /** Rejects empty, absolute, or traversal paths, including encoded segments. */
     static boolean isValidFilePath(String filePath) {
         for (String path : new String[] { filePath, Uri.decode(filePath) }) {
-            if (path.isEmpty() || path.startsWith("/")) return false;
+            if (path.isEmpty() || path.startsWith("/") || path.indexOf(0) != -1) return false;
             for (String segment : path.split("/", -1)) {
                 if (segment.equals("..")) return false;
             }
@@ -103,7 +103,10 @@ final class AssetManifest {
     /** Requires one safe directory name, including after percent-decoding. */
     static boolean isValidVersion(String version) {
         for (String name : new String[] { version, Uri.decode(version) }) {
-            if (name.isEmpty() || name.equals(".") || name.equals("..") || name.contains("/")) return false;
+            if (name.isEmpty() || name.equals(".") || name.equals("..") || name.contains("/")
+                || name.indexOf(0) != -1 || name.equals("Downloading") || name.equals("PartialDownload")) {
+                return false;
+            }
         }
         return true;
     }
