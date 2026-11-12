@@ -8,10 +8,73 @@
 
 [//]: # (go to meteor/docs/generators/changelog/docs)
 
-## v3.4.3, 2026-10-23
+## v3.4.4, 2026-11-12
 
 ### Highlights
 
+- Update Node.js to 22.23.5, preserving this release line’s Node major, with the [November 11 security fixes](https://nodejs.org/en/blog/vulnerability/november-2026-security-releases).
+- Harden archive extraction, including symlink containment, and update the dev bundle to tar-fs 2.1.5.
+- Expire email verification tokens, restrict client-side OAuth configuration in production, and reject malformed DDP messages without stalling connections.
+- Fall back to MongoDB polling for selectors that cannot be safely re-evaluated locally, and preserve top-level `__proto__` data in oplog conversion.
+- Prevent credential leakage through the HMR server and remove deployment settings from the legacy deployment information URL.
+- Update the Cordova webapp plugin to reject unsafe asset paths and update the HTTP query parser.
+- Update the npm installer dependencies and protect its JavaScript extraction fallback against paths and links escaping the installation directory.
+- Validate malformed passwordless login requests before user lookup and preserve custom user data.
+- Fix the Rspack static-asset manifest and legacy warehouse handling.
+
+#### Breaking Changes
+
+No general API removals. Security restrictions on previously unsafe behavior are described in Migration Steps.
+
+#### Internal API changes
+
+N/A
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+meteor update --release 3.4.4
+```
+
+- Email verification tokens now expire after three days. Configure `emailVerificationTokenExpirationInDays` or `emailVerificationTokenExpiration` through `Accounts.config` on the server when a different lifetime is required.
+- Configure OAuth services on the server or through settings in production. Client calls to `configureLoginService` require explicit server opt-in with `allowClientServiceConfiguration`.
+- Queries using selectors that cannot be safely matched locally may use polling; monitor query load after updating.
+- Unsafe archive or Cordova asset paths are rejected. Keep assets and extraction links within their intended directories.
+
+#### Bumped Meteor Packages
+
+- accounts-base@3.2.2
+- accounts-password@3.2.5
+- accounts-passwordless@3.1.0_2
+- ddp-server@3.2.3
+- minimongo@2.1.2
+- mongo@2.3.2
+- rspack@1.1.1
+- webapp@2.1.4
+- meteor-tool@3.4.4
+
+#### Bumped NPM Packages
+
+- cordova-plugin-meteor-webapp@2.0.5
+- qs@6.16.1
+- tar-fs@2.1.5 (dev bundle)
+- tar@7.5.23 (npm installer)
+- tmp@0.2.7 (npm installer)
+- rimraf@6.1.4 (npm installer)
+
+#### Special thanks to
+
+- [@Grubba27](https://github.com/Grubba27)
+- [@italojs](https://github.com/italojs)
+## v3.4.3, 2026-10-27
+
+### Highlights
+
+- Prevent crafted proxy headers from crashing or stalling production apps using `force-ssl`, while preserving HTTPS and local-connection detection. [Parser fix](https://github.com/meteor/meteor/commit/7e704f28845337076c2bad3ae56c5ec5283f8e06)
+- Update `webapp` compression to 1.8.2 and OAuth body parsing to 1.20.9. HTTP responses can now use Brotli when clients advertise `br`; gzip-only clients retain gzip. [Dependency updates](https://github.com/meteor/meteor/commit/02ce188a351dc4c22087a797701b37756a3edab4)
+- Honor release-required package wrap versions when resolving indirect dependencies.
 - Prevent concurrent reuse of email-verification and Meteor-generated passwordless login tokens, and enforce configured two-factor authentication for user-level passwordless tokens. [Security backports](https://github.com/meteor/meteor/commit/38eb8accd85b429f8c5207039d8950a67c9f2a3e).
 - Preserve prototype-named fields as ordinary data through EJSON, Minimongo, change notifications and Meteor's MongoDB integration, including projections, authorization checks and oplog replacements. [Field-boundary fixes](https://github.com/meteor/meteor/commit/b3c82cec8ca27146db0f2cc0448d803f7f457cfc), [oplog replacement fix](https://github.com/meteor/meteor/commit/30a830c7fa7955889c2a8ed149a0835f08fbad96).
 - Reject inherited, unregistered DDP method and publication names while preserving explicitly registered names. [Security backports](https://github.com/meteor/meteor/commit/38eb8accd85b429f8c5207039d8950a67c9f2a3e).
@@ -34,16 +97,21 @@ Please run the following command to update your project:
 meteor update --release 3.4.3
 ```
 
+Update the Meteor release to receive the complete security fixes. A package-only update on an older release does not include the new EJSON minor version and its companion Mongo and Minimongo fixes.
+
 - If you use user-level tokens delivered through `Accounts.onCreateLoginToken`, ensure custom login flows supply a valid two-factor code when 2FA is enabled. These tokens are single-use and do not verify an email address. Successful use also invalidates the email codes from the same issuance; request a new token after it has been consumed.
 - Check extensions accessing internal DDP method or publication registries for inherited-object assumptions.
 
 #### Bumped Meteor Packages
 
+- force-ssl-common@1.1.1_1
+- oauth@3.0.2_1
+- webapp@2.1.3
 - accounts-password@3.2.4
 - accounts-passwordless@3.1.0_1
 - ddp-server@3.2.2
 - diff-sequence@1.1.4
-- ejson@1.1.6
+- ejson@1.3.0
 - minimongo@2.1.1
 - mongo@2.3.1
 - npm-mongo@6.17.0
@@ -51,6 +119,8 @@ meteor update --release 3.4.3
 
 #### Bumped NPM Packages
 
+- compression@1.8.2
+- body-parser@1.20.9
 - npm@10.9.9
 
 #### Special thanks to
@@ -59,7 +129,7 @@ meteor update --release 3.4.3
 
 - [@italojs](https://github.com/italojs), for implementing and adapting the security fixes.
 - [@nachocodoner](https://github.com/nachocodoner), for the Node.js and npm bundle update, reproductions and substantive review.
-- [@Grubba27](https://github.com/Grubba27), for testing and reviewing the account-token fixes and release consolidation.
+- [@Grubba27](https://github.com/Grubba27), for implementing the proxy-header fix and dependency updates, and testing and reviewing the account-token fixes and release consolidation.
 
 ✨✨✨
 ## v3.4.2, 2026-10-13
@@ -1999,6 +2069,7 @@ For making this great framework even better!
 - [@StorytellerCZ](https://github.com/sponsors/StorytellerCZ/)
 
 For making this great framework even better!
+
 ## v2.16.0, 2024-05-14
 
 ### Highlights
