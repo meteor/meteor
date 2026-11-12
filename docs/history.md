@@ -8,7 +8,66 @@
 
 [//]: # (go to meteor/docs/generators/changelog/docs)
 
-## v3.6.0, 2026-11-09
+## v3.6.1, 2026-11-12
+
+### Highlights
+
+- Update Node.js to 26.13.1, preserving this release line’s Node major, with the [November 11 security fixes](https://nodejs.org/en/blog/vulnerability/november-2026-security-releases).
+- Harden archive extraction, including symlink containment, and update the dev bundle to tar-fs 2.1.5.
+- Expire email verification tokens, restrict client-side OAuth configuration in production, and reject malformed DDP messages without stalling connections.
+- Fall back to MongoDB polling for selectors that cannot be safely re-evaluated locally, and preserve top-level `__proto__` data in oplog conversion.
+- Prevent credential leakage through the HMR server and remove deployment settings from the legacy deployment information URL.
+- Update the Cordova webapp plugin to reject unsafe asset paths and update the HTTP query parser.
+- Update the npm installer dependencies and protect its JavaScript extraction fallback against paths and links escaping the installation directory.
+- Restrict automatic accounts-express credential forwarding to trusted origins.
+
+#### Breaking Changes
+
+No general API removals. Security restrictions on previously unsafe behavior are described in Migration Steps.
+
+#### Internal API changes
+
+N/A
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+meteor update --release 3.6.1
+```
+
+- Email verification tokens now expire after three days. Configure `emailVerificationTokenExpirationInDays` or `emailVerificationTokenExpiration` through `Accounts.config` on the server when a different lifetime is required.
+- Configure OAuth services on the server or through settings in production. Client calls to `configureLoginService` require explicit server opt-in with `allowClientServiceConfiguration`.
+- Queries using selectors that cannot be safely matched locally may use polling; monitor query load after updating.
+- Unsafe archive or Cordova asset paths are rejected. Keep assets and extraction links within their intended directories.
+- For automatic authentication to a separate trusted API origin, configure `Meteor.settings.public.packages["accounts-express"].authFetchAllowedOrigins`. Explicit Authorization headers remain supported.
+
+#### Bumped Meteor Packages
+
+- accounts-base@3.4.1
+- accounts-express@1.0.1
+- accounts-password@3.3.3
+- ddp-server@3.6.1
+- minimongo@2.2.2
+- mongo@2.6.1
+- webapp@2.4.1
+- meteor-tool@3.6.1
+
+#### Bumped NPM Packages
+
+- cordova-plugin-meteor-webapp@2.0.5
+- qs@6.16.1
+- tar-fs@2.1.5 (dev bundle)
+- tar@7.5.23 (npm installer)
+- tmp@0.2.7 (npm installer)
+- rimraf@6.1.4 (npm installer)
+
+#### Special thanks to
+
+- [@Grubba27](https://github.com/Grubba27)
+- [@italojs](https://github.com/italojs)
+## v3.6.0, 2026-11-10
 
 ### Highlights
 
@@ -107,6 +166,19 @@
 - Re-send outstanding DDP methods after reconnecting on browsers without `Promise.allSettled`, and stop `Accounts.config` from throwing on browsers without `Object.hasOwn`, [PR#14879](https://github.com/meteor/meteor/pull/14879), [#14869](https://github.com/meteor/meteor/issues/14869).
 
 See [all merged PRs for Meteor 3.6](https://github.com/meteor/meteor/pulls?q=is%3Apr+is%3Amerged+base%3Arelease-3.6)
+
+#### Meteor Agent Skills
+
+This Meteor release was tested with [Agent Skills v1.1.0](https://github.com/meteor/agent-skills/releases/tag/v1.1.0).
+
+Install or update Meteor Agent Skills with Node.js 22.20.0 or later in the installation shell:
+
+```bash
+npx skills add 'meteor/agent-skills#v1.1.0'
+```
+
+See the [Meteor Agent Skills guide](https://docs.meteor.com/ai/agent-skills) for more
+installation options, including the older-Node installer fallback.
 
 #### Breaking Changes
 
