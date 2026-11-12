@@ -9,10 +9,79 @@ This is a complete history of changes for Meteor releases.
 [//]: # (If you want to change something in this file)
 
 [//]: # (go to meteor/v3-docs/docs/generators/changelog/versions)
-## v3.5.4, 2026-10-23
+## v3.5.5, 2026-11-12
 
 ### Highlights
 
+- Update Node.js to 24.22.3, preserving this release line’s Node major, with the [November 11 security fixes](https://nodejs.org/en/blog/vulnerability/november-2026-security-releases).
+- Harden archive extraction, including symlink containment, and update the dev bundle to tar-fs 2.1.5.
+- Expire email verification tokens, restrict client-side OAuth configuration in production, and reject malformed DDP messages without stalling connections.
+- Fall back to MongoDB polling for selectors that cannot be safely re-evaluated locally, and preserve top-level `__proto__` data in oplog conversion.
+- Prevent credential leakage through the HMR server and remove deployment settings from the legacy deployment information URL.
+- Update the Cordova webapp plugin to reject unsafe asset paths and update the HTTP query parser.
+- Update the npm installer dependencies and protect its JavaScript extraction fallback against paths and links escaping the installation directory.
+- Validate malformed passwordless login requests before user lookup and preserve custom user data.
+- Fix the Rspack static-asset manifest and legacy warehouse handling.
+- Restrict automatic accounts-express credential forwarding to trusted origins.
+- Require server opt-in for HttpOnly cookie endpoints, validate request origins, rate-limit requests, and restore client retry behavior.
+
+#### Breaking Changes
+
+No general API removals. Security restrictions on previously unsafe behavior are described in Migration Steps.
+
+#### Internal API changes
+
+N/A
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+meteor update --release 3.5.5
+```
+
+- Email verification tokens now expire after three days. Configure `emailVerificationTokenExpirationInDays` or `emailVerificationTokenExpiration` through `Accounts.config` on the server when a different lifetime is required.
+- Configure OAuth services on the server or through settings in production. Client calls to `configureLoginService` require explicit server opt-in with `allowClientServiceConfiguration`.
+- Queries using selectors that cannot be safely matched locally may use polling; monitor query load after updating.
+- Unsafe archive or Cordova asset paths are rejected. Keep assets and extraction links within their intended directories.
+- For automatic authentication to a separate trusted API origin, configure `Meteor.settings.public.packages["accounts-express"].authFetchAllowedOrigins`. Explicit Authorization headers remain supported.
+- If using HttpOnly login cookies, enable them on the server as well as the client. Configure `httpOnlyCookieAllowedOrigins` for additional trusted origins and review the default endpoint rate limit of 30 requests per 10 seconds.
+
+#### Bumped Meteor Packages
+
+- accounts-base@3.3.2
+- accounts-express@1.0.0_1
+- accounts-password@3.3.1_2
+- accounts-passwordless@3.1.1_2
+- ddp-server@3.5.1
+- minimongo@2.2.0_2
+- mongo@2.5.2
+- rspack@1.3.2
+- webapp@2.3.1
+- meteor-tool@3.5.5
+
+#### Bumped NPM Packages
+
+- cordova-plugin-meteor-webapp@2.0.5
+- qs@6.16.1
+- tar-fs@2.1.5 (dev bundle)
+- tar@7.5.23 (npm installer)
+- tmp@0.2.7 (npm installer)
+- rimraf@6.1.4 (npm installer)
+
+#### Special thanks to
+
+- [@Grubba27](https://github.com/Grubba27)
+- [@italojs](https://github.com/italojs)
+## v3.5.4, 2026-10-27
+
+### Highlights
+
+- Prevent crafted proxy headers from crashing or stalling production apps using `force-ssl`, while preserving HTTPS and local-connection detection. [Parser fix](https://github.com/meteor/meteor/commit/e7d6fa3d80b910f1a73af0fe57b4feff63615e84)
+- Update `webapp` compression to 1.8.2 and OAuth body parsing to 1.20.9. HTTP responses can now use Brotli when clients advertise `br`; gzip-only clients retain gzip. [Dependency updates](https://github.com/meteor/meteor/commit/2ed57b40f84fff01f8850bc6a0eccc21139a887c)
+- Keep generated Rspack development and production HTML out of test builds, preventing stale chunk references and browser errors after switching modes.
+- Honor release-required package wrap versions when resolving indirect dependencies.
 - Consume email-verification and passwordless tokens atomically to prevent concurrent reuse, and enforce two-factor authentication for user-level passwordless tokens. [Changes](https://github.com/meteor/meteor/commit/9e6e2e4712e2205ac3b226802b8e888be28c6f8c)
 - Preserve document fields such as `__proto__` as own data throughout EJSON conversion, document diffs, Minimongo updates, and MongoDB replication, and prevent update paths from traversing inherited properties. [Changes](https://github.com/meteor/meteor/commit/ff00a31642435a3d60475e7899cd83b73a2c8beb)
 - Preserve document ownership fields when processing oplog replacement events. [Changes](https://github.com/meteor/meteor/commit/2c04b6a948491ba803fe5b1a027612202d3d8763)
@@ -38,23 +107,31 @@ Please run the following command to update your project:
 meteor update --release 3.5.4
 ```
 
+Update the Meteor release to receive the complete security fixes. A package-only update on an older release does not include the new EJSON minor version and its companion Mongo and Minimongo fixes.
+
 - **Passwordless integrations:** Supply the required two-factor authentication code when signing in with a user-level token for an account with two-factor authentication enabled. Treat login tokens as single-use credentials and request a fresh token after one has been consumed.
 - **uWS deployments:** Review custom IP-based rate limits or access checks that use `clientAddress`. For deployments behind external proxies, keep `HTTP_FORWARDED_COUNT` consistent with the trusted proxy chain; do not add a hop for Meteor's internal uWS connection. See [HTTP_FORWARDED_COUNT](https://docs.meteor.com/cli/environment-variables#http-forwarded-count).
 
 #### Bumped Meteor Packages
 
-- accounts-password@3.3.2
-- accounts-passwordless@3.1.2
+- force-ssl-common@1.1.1_1
+- oauth@3.0.4_1
+- webapp@2.3.0_1
+- accounts-password@3.3.1_1
+- accounts-passwordless@3.1.1_1
 - ddp-server@3.5.0
 - diff-sequence@1.2.0
-- ejson@1.2.1
+- ejson@1.4.0
 - meteor-tool@3.5.4
-- minimongo@2.2.1
-- mongo@2.5.2
+- minimongo@2.2.0_1
+- mongo@2.5.1_1
 - npm-mongo@6.18.0
+- rspack@1.3.1
 
 #### Bumped NPM Packages
 
+- compression@1.8.2
+- body-parser@1.20.9
 - npm@11.19.1
 
 #### Special thanks to
@@ -63,7 +140,7 @@ meteor update --release 3.5.4
 
 - [@italojs](https://github.com/italojs), for implementing and integrating the security fixes.
 - [@nachocodoner](https://github.com/nachocodoner), for updating the runtime bundle and validating passwordless token races.
-- [@Grubba27](https://github.com/Grubba27), for reviewing and testing account-token fixes.
+- [@Grubba27](https://github.com/Grubba27), for implementing the proxy-header fix and dependency updates, and reviewing and testing account-token fixes.
 
 ✨✨✨
 ## v3.5.3, 2026-10-13

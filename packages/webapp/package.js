@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Serves a Meteor app over HTTP",
-  version: '2.3.0_1',
+  version: '2.3.1',
 });
 
 Npm.depends({
