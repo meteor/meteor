@@ -1,10 +1,11 @@
 {
   "name": "meteor",
-  "version": "3.5.4",
+  "version": "3.5.5",
   "description": "Install Meteor",
   "main": "install.js",
   "scripts": {
-    "install": "node cli.js install"
+    "install": "node cli.js install",
+    "test": "node --test extract.test.js"
   },
   "author": "zodern",
   "license": "MIT",
@@ -15,10 +16,10 @@
     "https-proxy-agent": "^5.0.1",
     "node-7z": "^2.1.2",
     "node-downloader-helper": "^2.1.9",
-    "rimraf": "^6.0.1",
+    "rimraf": "^6.1.4",
     "semver": "^7.3.7",
-    "tar": "^6.1.11",
-    "tmp": "^0.2.1"
+    "tar": "^7.5.23",
+    "tmp": "^0.2.7"
   },
   "bin": {
     "meteor-installer": "cli.js"
