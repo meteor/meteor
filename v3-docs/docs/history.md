@@ -9,7 +9,7 @@ This is a complete history of changes for Meteor releases.
 [//]: # (If you want to change something in this file)
 
 [//]: # (go to meteor/v3-docs/docs/generators/changelog/versions)
-## v3.6.0, 2026-11-09
+## v3.6.0, 2026-11-10
 
 ### Highlights
 
@@ -109,6 +109,19 @@ This is a complete history of changes for Meteor releases.
 
 See [all merged PRs for Meteor 3.6](https://github.com/meteor/meteor/pulls?q=is%3Apr+is%3Amerged+base%3Arelease-3.6)
 
+#### Meteor Agent Skills
+
+This Meteor release was tested with [Agent Skills v1.1.0](https://github.com/meteor/agent-skills/releases/tag/v1.1.0).
+
+Install or update Meteor Agent Skills with Node.js 22.20.0 or later in the installation shell:
+
+```bash
+npx skills add 'meteor/agent-skills#v1.1.0'
+```
+
+See the [Meteor Agent Skills guide](https://docs.meteor.com/ai/agent-skills) for more
+installation options, including the older-Node installer fallback.
+
 #### Breaking Changes
 
 - **Native Google and Facebook sign-in tokens must belong to your application.** For Google Sign-In SDKs, send an ID token for an accepted client or list your own native OAuth client IDs in the Google service configuration's `additionalClientIds`. Facebook native tokens must be valid for the configured Facebook app. Web OAuth configuration is unchanged.
@@ -140,7 +153,7 @@ See [all merged PRs for Meteor 3.6](https://github.com/meteor/meteor/pulls?q=is%
 **Before updating, prepare your local database:** back up existing data and set MongoDB 7's FCV to `7.0` while still running MongoDB 7. Follow the [MongoDB upgrade prerequisites](https://www.mongodb.com/docs/v8.0/release-notes/8.0-upgrade-replica-set/#prerequisites). External databases configured through `MONGO_URL` are not upgraded by Meteor. Check the [installation requirements](/about/install#prereqs-os) as well. Then update:
 
 ```bash
-meteor update --release 3.6-rc.1
+meteor update --release 3.6
 ```
 
 Update the Meteor release to receive the complete security fixes. A package-only update on an older release does not include the new EJSON minor version and its companion Mongo and Minimongo fixes.
