@@ -648,7 +648,7 @@ describe('Meteor Skeletons /', () => {
   // to `links.insert` on the device. Production only, so that the app shell
   // comes from the service worker while the server is down.
   describe('PWA Skeleton / offline data /', () => {
-    const port = 3216;
+    const port = 3217;
     const origin = `http://localhost:${port}`;
     let tempDir;
     let meteorProcess;
