@@ -1,11 +1,11 @@
-const sevenBin = require('7zip-bin');
-const child_process = require('child_process');
-const fs = require('fs');
-const Seven = require('node-7z');
-const { resolve, dirname } = require('path');
-const tar = require('tar');
+const sevenBin = require("7zip-bin");
+const child_process = require("child_process");
+const fs = require("fs");
+const Seven = require("node-7z");
+const { resolve, dirname, relative, isAbsolute, win32, sep } = require("path");
+const tar = require("tar");
 
-const { isLinux } = require('./config.js');
+const { isLinux } = require("./config.js");
 
 function extractWith7Zip(tarPath, destination, onProgress) {
   return new Promise((resolve, reject) => {
@@ -13,35 +13,54 @@ function extractWith7Zip(tarPath, destination, onProgress) {
       $progress: true,
       $bin: sevenBin.path7za,
     });
-    stream.on('progress', function (progress) {
+    stream.on("progress", function (progress) {
       onProgress(progress);
     });
 
-    stream.on('error', function (err) {
+    stream.on("error", function (err) {
       return reject(err);
     });
 
-    stream.on('end', function () {
+    stream.on("end", function () {
       return resolve();
     });
   });
 }
 
 function createSymlinks(symlinks, baseDir) {
+  baseDir = fs.realpathSync(baseDir);
+  const inside = (target) => {
+    const name = relative(baseDir, target);
+    if (isAbsolute(name) || name === ".." || name.startsWith(`..${sep}`)) {
+      throw new Error("Archive link escapes the extraction directory");
+    }
+    return target;
+  };
   symlinks.forEach(({ path, linkPath }) => {
     try {
-      const resolveBase = resolve(baseDir, dirname(path));
-      const result = fs.statSync(resolve(resolveBase, linkPath));
+      if (
+        win32.isAbsolute(path) ||
+        win32.isAbsolute(linkPath) ||
+        /^[a-z]:/i.test(path) ||
+        /^[a-z]:/i.test(linkPath)
+      ) {
+        throw new Error("Absolute archive links are not supported");
+      }
+      const output = inside(resolve(baseDir, path.replace(/\\/g, "/")));
+      inside(fs.realpathSync(dirname(output)));
+      const target = inside(resolve(dirname(output), linkPath.replace(/\\/g, "/")));
+      inside(fs.realpathSync(target));
+      const result = fs.statSync(target);
 
       if (result.isDirectory()) {
-        fs.symlinkSync(linkPath, path, 'junction');
+        fs.symlinkSync(target, output, "junction");
       } else {
-        fs.copyFileSync(resolve(resolveBase, linkPath), resolve(baseDir, path));
+        fs.copyFileSync(target, output, fs.constants.COPYFILE_EXCL);
       }
     } catch (e) {
       console.log(path, linkPath);
       console.error(e);
-      throw new Error('Unable to create symlink');
+      throw new Error("Unable to create symlink");
     }
   });
 }
@@ -55,12 +74,12 @@ function extractWithNativeTar(tarPath, destination) {
       cwd: process.cwd(),
       env: process.env,
       stdio: [process.stdin, process.stdout, process.stderr],
-      encoding: 'utf-8',
+      encoding: "utf-8",
     },
   );
 }
 
-function extractWithTar(tarPath, destination, onProgress) {
+async function extractWithTar(tarPath, destination, onProgress) {
   const symlinks = [];
 
   let total = 0;
@@ -76,50 +95,40 @@ function extractWithTar(tarPath, destination, onProgress) {
   let started = 0;
   let timeout = null;
 
-  return new Promise((resolve, reject) => {
-    tar.x(
-      {
-        file: tarPath,
-        preservePaths: true,
-        cwd: destination,
-        filter(path, entry) {
-          if (entry.type === 'SymbolicLink') {
-            symlinks.push({
-              path: entry.path,
-              linkPath: entry.linkpath,
+  try {
+    await tar.x({
+      file: tarPath,
+      strict: true,
+      cwd: destination,
+      filter(path, entry) {
+        if (entry.type === "SymbolicLink") {
+          symlinks.push({
+            path: entry.path,
+            linkPath: entry.linkpath,
+          });
+          return false;
+        }
+
+        return true;
+      },
+      onentry() {
+        started += 1;
+
+        if (!timeout) {
+          timeout = setTimeout(() => {
+            timeout = null;
+            onProgress({
+              percent: (started / total) * 100,
+              fileCount: started,
             });
-            return false;
-          }
-
-          return true;
-        },
-        onentry() {
-          started += 1;
-
-          if (!timeout) {
-            timeout = setTimeout(() => {
-              timeout = null;
-              onProgress({
-                percent: (started / total) * 100,
-                fileCount: started,
-              });
-            }, 300);
-          }
-        },
-      },
-      err => {
-        if (timeout) {
-          clearTimeout(timeout);
+          }, 300);
         }
-
-        if (err) {
-          return reject(err);
-        }
-        createSymlinks(symlinks, destination);
-        resolve();
       },
-    );
-  });
+    });
+    createSymlinks(symlinks, destination);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
 }
 
 module.exports = {
