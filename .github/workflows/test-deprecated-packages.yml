@@ -1,8 +1,13 @@
 name: Test Deprecated Packages
 
-# Keep this legacy suite opt-in while its Puppeteer setup is maintained.
-on:
-  workflow_dispatch:
+# Disabled until we figure out how to fix the error from puppeteer
+# Runs on Travis CI for now
+#
+#on:
+#  push:
+#    branches:
+#      - main
+#  pull_request:
 
 jobs:
   build:
@@ -20,15 +25,15 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libnss3 g++-12
 
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v3
         with:
           node-version: 20.15.1
 
       - name: Cache Node.js modules
-        uses: actions/cache@v4
+        uses: actions/cache@v3
         with:
           path: |
             ~/.npm
