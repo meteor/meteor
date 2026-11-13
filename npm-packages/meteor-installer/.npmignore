@@ -1,0 +1,5 @@
+# npm stops reading .gitignore once .npmignore exists, so repeat its rules.
+node_modules
+
+# Unit tests are run from the repository; they are not part of the package.
+*.test.js
