@@ -10,7 +10,6 @@ on:
       - '.github/workflows/unit-tests.yml'
   push:
     branches:
-      - 'codex/security-validation-3.4.4'
       - devel
 
 concurrency:
