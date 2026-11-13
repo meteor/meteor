@@ -21,6 +21,9 @@ expectTypeOf(dict.get<"count">).parameters.toEqualTypeOf<["count"]>();
 expectTypeOf(dict.get<"count">).returns.toEqualTypeOf<number | undefined>();
 expectTypeOf(dict.get<"name">).returns.toEqualTypeOf<string | undefined>();
 
+expectTypeOf(dict.has<"count">).parameters.toEqualTypeOf<["count"]>();
+expectTypeOf(dict.has<"count">).returns.toBeBoolean();
+
 expectTypeOf(dict.equals).toBeFunction();
 expectTypeOf(dict.equals<"count">).parameters.toEqualTypeOf<
   ["count", string | number | boolean | undefined | null | Date]

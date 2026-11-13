@@ -336,6 +336,66 @@ selftest.define("add packages to app", [], async function () {
   await run.expectExit(0);
 });
 
+selftest.define("list --why package chains", [], async function () {
+  var s = new Sandbox();
+  await s.init();
+  await s.createApp("myapp", "empty");
+  s.cd("myapp");
+  s.mkdir("packages");
+
+  await s.cd("packages", async function () {
+    await s.createPackage("workshop-app", "workshop:app", "package-for-show");
+    await s.createPackage("workshop-admin", "workshop:admin", "package-for-show");
+    await s.createPackage("workshop-ui", "workshop:ui", "package-for-show");
+    await s.createPackage("workshop-shared", "workshop:shared", "package-for-show");
+  });
+
+  s.write("packages/workshop-app/package.js", [
+    "Package.describe({ name: 'workshop:app', summary: 'Workshop app root', version: '1.0.0' });",
+    "Package.onUse(function (api) { api.use('workshop:ui'); });"
+  ].join("\n"));
+  s.write("packages/workshop-admin/package.js", [
+    "Package.describe({ name: 'workshop:admin', summary: 'Workshop admin root', version: '1.0.0' });",
+    "Package.onUse(function (api) { api.use('workshop:shared'); });"
+  ].join("\n"));
+  s.write("packages/workshop-ui/package.js", [
+    "Package.describe({ name: 'workshop:ui', summary: 'Workshop UI', version: '1.0.0' });",
+    "Package.onUse(function (api) { api.use('workshop:shared'); });"
+  ].join("\n"));
+  s.write("packages/workshop-shared/package.js", [
+    "Package.describe({ name: 'workshop:shared', summary: 'Workshop shared package', version: '1.0.0' });"
+  ].join("\n"));
+
+  s.write(".meteor/packages", [
+    "workshop:app",
+    "workshop:admin",
+    ""
+  ].join("\n"));
+
+  var run = s.run("list", "--why", "workshop:shared");
+  await run.match(
+    /Package workshop:shared@1\.0\.0 is brought into the app by:\r?\n\r?\nworkshop:admin@1\.0\.0 \(direct\)\r?\n  -> workshop:shared@1\.0\.0\r?\n\r?\nworkshop:app@1\.0\.0 \(direct\)\r?\n  -> workshop:ui@1\.0\.0\r?\n  -> workshop:shared@1\.0\.0/,
+    false,
+    true
+  );
+  await run.expectExit(0);
+
+  run = s.run("list", "--why", "workshop:not-installed");
+  await run.matchErr("Package workshop:not-installed is not installed in this app.");
+  await run.expectExit(1);
+
+  for (const option of ["--tree", "--json", "--details", "--weak"]) {
+    run = s.run("list", "--why", "workshop:shared", option);
+    await run.matchErr("list: --why cannot be used with " + option + ".");
+    await run.expectExit(1);
+  }
+
+  run = s.run("list");
+  await run.match("workshop:admin");
+  await run.match("workshop:app");
+  await run.expectExit(0);
+});
+
 selftest.define(
   "add package with both debugOnly and prodOnly",
   [],

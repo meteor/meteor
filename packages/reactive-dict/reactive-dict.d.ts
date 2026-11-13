@@ -46,6 +46,14 @@ export declare class ReactiveDict<O = EJSONable> {
    */
   get<P extends keyof O>(key: P): O[P] | undefined;
   /**
+   * Test if the ReactiveDict has an entry for a key. Unlike `ReactiveDict.get`,
+   * this tells a missing entry apart from an entry that was explicitly set to
+   * `undefined`. If inside a reactive computation, invalidate the computation
+   * the next time an entry for this key is added or removed.
+   * @param key The key to check, eg, `selectedItem`
+   */
+  has<P extends keyof O>(key: P): boolean;
+  /**
    * Test if the stored entry for a key is equal to a value. If inside a
    * reactive computation, invalidate the computation the next
    * time the variable changes to or from the value.

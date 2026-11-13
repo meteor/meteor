@@ -22,6 +22,7 @@ var packageVersionParser = require('../packaging/package-version-parser.js');
 var updater = require('../packaging/updater.js');
 var packageMapModule = require('../packaging/package-map.js');
 var packageClient = require('../packaging/package-client.js');
+var packageWhy = require('./package-why.js');
 var tropohouse = require('../packaging/tropohouse.js');
 var {
   TYPES_BUILD_DIR,
@@ -1359,10 +1360,26 @@ main.registerCommand({
     'json': { type: Boolean },
     'weak': { type: Boolean },
     'details': { type: Boolean },
+    'why': { type: String },
     'allow-incompatible-update': { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, async function (options) {
+  if (options['why']) {
+    const incompatibleOptions = [];
+    if (options['tree']) incompatibleOptions.push('--tree');
+    if (options['json']) incompatibleOptions.push('--json');
+    if (options['details']) incompatibleOptions.push('--details');
+    if (options['weak']) incompatibleOptions.push('--weak');
+
+    if (incompatibleOptions.length) {
+      Console.error(
+        'list: --why cannot be used with ' + incompatibleOptions.join(', ') + '.');
+      Console.error("Try 'meteor help list' for help.");
+      return 1;
+    }
+  }
+
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
     allowIncompatibleUpdate: options['allow-incompatible-update']
@@ -1376,6 +1393,61 @@ main.registerCommand({
   // of the packages anyway!
   const showJson = !!options['json'];
   const showTree = !!options['tree'];
+  const showWhy = options['why'];
+
+  if (showWhy) {
+    const targetInfo = projectContext.packageMap.getInfo(showWhy);
+    if (!targetInfo) {
+      Console.error('Package ' + showWhy + ' is not installed in this app.');
+      return 1;
+    }
+
+    const packageDetails = new Map;
+    await projectContext.packageMap.eachPackage(async function (name, info) {
+      packageDetails.set(
+        name,
+        await projectContext.projectCatalog.getVersion(name, info.version)
+      );
+    });
+
+    const directDependencies = [];
+    projectContext.projectConstraintsFile.eachConstraint(function (constraint) {
+      if (!compiler.isIsobuildFeaturePackage(constraint.package) &&
+          constraint.package !== 'meteor') {
+        directDependencies.push(constraint.package);
+      }
+    });
+
+    const result = packageWhy.findPackageReasons(
+      packageDetails, directDependencies, showWhy);
+
+    if (result.status === 'no-path') {
+      Console.info(
+        'Package ' + showWhy +
+        ' is installed, but no strong dependency chain reaches it from a direct application dependency.');
+      return 0;
+    }
+
+    Console.info('Package ' + showWhy + '@' + targetInfo.version + ' is brought into the app by:');
+    for (const path of result.paths) {
+      Console.info();
+      for (let index = 0; index < path.length; index++) {
+        const packageName = path[index];
+        const mapInfo = projectContext.packageMap.getInfo(packageName);
+        const record = packageDetails.get(packageName);
+        const version = mapInfo ? mapInfo.version :
+          (record && record.version ? record.version : 'unknown');
+        const suffix = index === 0 ? ' (direct)' : '';
+
+        if (index === 0) {
+          Console.info(packageName + '@' + version + suffix);
+        } else {
+          Console.info('  -> ' + packageName + '@' + version + suffix);
+        }
+      }
+    }
+    return 0;
+  }
 
   const suffixes = {
     topLevel: '(top level)',
