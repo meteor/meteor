@@ -377,7 +377,7 @@ If you run `meteor create` without arguments, Meteor will launch an interactive 
 | `--vue`          | Vue 3 + Tailwind CSS | [Meteor 3 with Vue](https://docs.meteor.com/tutorials/vue/meteorjs3-vue3.html), [Meteor 2 with Vue](https://vue3-tutorial.meteor.com/) |
 | `--svelte`       | Svelte                  | [Meteor 2 with Svelte](https://svelte-tutorial.meteor.com/) |
 | `--blaze`        | Basic Blaze app         | [Meteor 2 with Blaze](https://blaze-tutorial.meteor.com/) |
-| `--pwa`          | Blaze app installable as a PWA (manifest, service worker, offline page) | - |
+| `--pwa`          | Blaze app installable as a PWA (manifest, service worker, offline page, data kept on the device by the [`offline`](/api/offline) package) | - |
 | `--solid`        | Solid               | [Meteor 2 with Solid Example](https://github.com/fredmaiaarantes/meteor-solid-app/releases/tag/milestone-2.0) |
 | `--apollo`       | React + Apollo (GraphQL) | [Meteor 2 with GraphQL](https://react-tutorial.meteor.com/simple-todos-graphql/) |
 | `--typescript`   | React + TypeScript      | [TypeScript Guide](/about/build-tool#typescript) |
@@ -459,13 +459,13 @@ The `--prototype` option adds packages that make development faster but shouldn'
 <details>
 <summary><strong>PWA App</strong> (--pwa)</summary>
 
-Blaze app plus a web app manifest, icons, a dependency-free service worker and an offline page.
+Blaze app plus a web app manifest, icons, a dependency-free service worker, an offline page, and a links list kept on the device by the [`offline`](/api/offline) package.
 
 **NPM packages:**
 - `@babel/runtime`, `@swc/helpers`, `jquery`, `meteor-node-stubs`
 
 **Meteor packages:**
-- `meteor-base`, `mobile-experience`, `mongo`, `blaze-html-templates`, `jquery`, `reactive-var`, `tracker`, `standard-minifier-css`, `standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`, `hot-module-replacement`, `blaze-hot`, `rspack`
+- `meteor-base`, `mobile-experience`, `mongo`, `offline`, `blaze-html-templates`, `jquery`, `reactive-var`, `tracker`, `standard-minifier-css`, `standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`, `hot-module-replacement`, `blaze-hot`, `rspack`
 
 **Service worker behavior:**
 
@@ -481,10 +481,11 @@ Blaze app plus a web app manifest, icons, a dependency-free service worker and a
 local development. A browser on a phone or another device requires the app to
 be served over HTTPS before offering installation.
 
-The skeleton provides an installable app shell and offline fallback page. It
-does not synchronize Meteor data, queue methods, or replay writes while the
-application is offline; add those capabilities separately if your application
-needs them.
+The skeleton provides an installable app shell, an offline fallback page and,
+through the `offline` package, a links list that keeps working without network:
+the published links stay on the device and a link added offline reaches the
+server once the connection is back. See the [Offline API](/api/offline) for
+what the package does and does not do.
 
 </details>
 
