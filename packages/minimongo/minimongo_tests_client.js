@@ -2736,6 +2736,29 @@ Tinytest.addAsync('minimongo - modify', async test => {
   await modify({a: {b: 1}}, {$set: {'a.c': 9}}, {a: {b: 1, c: 9}});
   await modify({}, {$set: {'x._id': 4}}, {x: {_id: 4}});
 
+  // undefined values are ignored, like the server does with ignoreUndefined
+  // (meteor/meteor#14837)
+  const ignoresUndefined = expected => (actual, desc) => {
+    test.equal(actual, expected, desc);
+    test.equal(Object.keys(actual).sort(), Object.keys(expected).sort(), desc);
+  };
+  await modify({a: 'initial'}, {$set: {a: undefined}},
+    ignoresUndefined({a: 'initial'}));
+  await modify({a: 1}, {$set: {a: undefined, b: 2}},
+    ignoresUndefined({a: 1, b: 2}));
+  await modify({}, {$set: {a: undefined}}, ignoresUndefined({}));
+  await modify({}, {$set: {'a.b': undefined}}, ignoresUndefined({}));
+  await modify({a: 1}, {$unset: {a: undefined}}, ignoresUndefined({a: 1}));
+  await modify({a: 1}, {$inc: {a: undefined}}, ignoresUndefined({a: 1}));
+  await modify({a: [1]}, {$push: {a: undefined}}, ignoresUndefined({a: [1]}));
+  {
+    const coll = new LocalCollection;
+    await coll.upsertAsync(
+      {a: 1}, {$set: {b: undefined}, $setOnInsert: {c: undefined}});
+    const {_id, ...actual} = await coll.findOneAsync();
+    ignoresUndefined({a: 1})(actual, 'upsert ignores undefined');
+  }
+
   // Changing _id is disallowed
   await exception({}, {$set: {_id: 4}});
   await exception({_id: 1}, {$set: {_id: 4}});
