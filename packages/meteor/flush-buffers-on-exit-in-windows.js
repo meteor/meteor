@@ -1,4 +1,11 @@
-if (process.platform === "win32") {
+// This file can be evaluated more than once in the same process (it is
+// required by the command-line tool and also added to the meteor package),
+// so only wrap process.exit once. Wrapping it twice would make the outer
+// wrapper replace stream.write with a no-op before the inner wrapper writes
+// to wait for the drain, so the inner callback would never run and the
+// process would hang instead of exiting.
+if (process.platform === "win32" &&
+    ! process.exit._meteorFlushesBuffersOnExit) {
   /*
    * Based on https://github.com/cowboy/node-exit
    *
@@ -37,4 +44,5 @@ if (process.platform === "win32") {
       origProcessExit(exitCode);
     });
   };
+  process.exit._meteorFlushesBuffersOnExit = true;
 }
