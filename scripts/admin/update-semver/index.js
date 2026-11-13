@@ -8,6 +8,7 @@ const semver = require('semver');
 const fs = require('fs');
 const { exec } = require("child_process");
 const { readdir } = require("fs/promises");
+const { loadPackages, cascade } = require('./build-plugin-cascade');
 
 /**
  *
@@ -94,22 +95,13 @@ async function main() {
 
   if (args[0].startsWith('@auto')) {
     const [_, type] = args[0].split('.');
-    // List of packages that for some reason are not in the diff.
-    // If there is a change in one of them please do not forget
-    // to add it to the list.
-    // List:
-    // ddp-common
-
     const p = await getPackages();
+    const changed = [...new Set(p.split('\n').map((line) => line.split('/')[1]).filter(Boolean))];
     console.log('****************')
     console.log('Will be updating the following packages:');
-    console.dir(p)
+    console.dir(changed)
     console.log('****************')
-    const packages = p.concat(`packages/meteor-tool.${ type }`);
-    args = packages
-      .split('/')
-      .filter((packageName) => packageName !== 'packages' && packageName !== "\npackages" && packageName !== "\n")
-      .map((packageName) => `${ packageName }.${ type }`);
+    args = changed.concat('meteor-tool').map((packageName) => `${ packageName }.${ type }`);
   }
 
   /**
@@ -121,6 +113,19 @@ async function main() {
   })
     // we remove duplicates by name
     .filter((value, index, self) => self.findIndex((v) => v.name === value.name) === index);
+
+  // Build plugin packages ship their dependencies compiled in, so they must be
+  // republished whenever an embedded package is bumped.
+  const RELEASE_RANK = ['beta', 'rc', 'patch', 'minor', 'major'];
+  const cascaded = cascade(loadPackages(`../../../${ dir }`), packages.map(({ name }) => name));
+  for (const [name, embeds] of Object.entries(cascaded)) {
+    const release = packages
+      .filter((p) => embeds.includes(p.name))
+      .map((p) => p.release)
+      .sort((a, b) => RELEASE_RANK.indexOf(b) - RELEASE_RANK.indexOf(a))[0];
+    console.log(`Cascade: ${ name }.${ release } (its build plugin embeds ${ embeds.join(', ') })`);
+    packages.push({ name, release });
+  }
 
   for (const { name, release } of packages) {
     const filePath = `../../../${ dir }/${ name }/package.js`;
