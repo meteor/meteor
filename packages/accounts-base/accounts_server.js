@@ -1875,9 +1875,8 @@ const setupUsersCollection = async users => {
   ///
   /// RESTRICTING WRITES TO USER OBJECTS
   ///
-  // Collections created with `defineMutationMethods: false` have no
-  // allow/deny validators (and no client mutation methods to protect);
-  // don't let allow() throw and skip every index below.
+  // Collections created with `defineMutationMethods: false` have no client
+  // mutation methods, so the profile rule would have nothing to guard.
   if (users._validators) users.allow({
     // clients can modify the profile field of their own document, and
     // nothing else.
