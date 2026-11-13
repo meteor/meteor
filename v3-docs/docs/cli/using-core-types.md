@@ -306,7 +306,11 @@ TypeScript 6 enables `noUncheckedSideEffectImports` by default, so
 `import './App.css'` reports `TS2882`. The TypeScript templates set it to
 `false`; add `"noUncheckedSideEffectImports": false` to `compilerOptions` in an
 existing app, or declare the stylesheet modules yourself
-(`declare module '*.css';`) in a `.d.ts` your `tsconfig.json` includes.
+(`declare module '*.css';`) in a `.d.ts` that your `tsconfig.json` includes and
+that has no top-level `import` or `export`. In a module file TypeScript treats
+the declaration as an augmentation and the import still reports `TS2882`. Put a
+typed `declare module '*.module.css'` above the bare `*.css` wildcard in the
+same file, or the wildcard turns CSS module imports into `any`.
 
 ## Publishing Types from an Atmosphere Package
 
