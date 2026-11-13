@@ -1427,9 +1427,18 @@ export class Connection {
     self._outstandingMethodBlocks.push(...oldOutstandingMethodBlocks);
   }
 
-  _callOnReconnectAndSendAppropriateOutstandingMethods() {
+  _callOnReconnectAndSendAppropriateOutstandingMethods(sessionResumed) {
     const self = this;
     const oldOutstandingMethodBlocks = self._outstandingMethodBlocks;
+    oldOutstandingMethodBlocks.forEach(block => {
+      block.methods.forEach(methodInvoker => {
+        methodInvoker._serverOwnsInvocation =
+          sessionResumed && methodInvoker._retryOnReconnect;
+        if (methodInvoker._serverOwnsInvocation) {
+          methodInvoker._retryOnReconnect = false;
+        }
+      });
+    });
     self._outstandingMethodBlocks = [];
 
     const promises = [];
