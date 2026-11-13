@@ -196,17 +196,18 @@ CollectionPrototype._defineMutationMethods = function(options) {
             return self[validatedMethodName].apply(self, args);
           } else if (self._isInsecure()) {
             if (generatedId !== null) args[0]._id = generatedId;
-            // In insecure mode we use the server _collection methods, and these sync methods
-            // do not exist in the server anymore, so we have this mapper to call the async methods
-            // instead.
+            // The sync methods do not exist on the server anymore, so map them
+            // to the async methods.
             const syncMethodsMapper = {
               insert: "insertAsync",
               update: "updateAsync",
               remove: "removeAsync",
             };
 
-
             // In insecure mode, allow any mutation (with a simple selector).
+            // Go through the collection's own mutator so that behaviour added
+            // to it (overrides in a subclass, collection extensions) applies
+            // to client writes too. See #ClientWritesThroughMutators.
             // XXX This is kind of bogus.  Instead of blindly passing whatever
             //     we get from the network to this function, we should actually
             //     know the correct arguments for the function and pass just
@@ -217,7 +218,7 @@ CollectionPrototype._defineMutationMethods = function(options) {
             //     invoke it. Bam, broken DDP connection.  Probably should just
             //     take this whole method and write it three times, invoking
             //     helpers for the common code.
-            return self._collection[syncMethodsMapper[method] || method].apply(self._collection, args);
+            return self[syncMethodsMapper[method] || method].apply(self, args);
           } else {
             // In secure mode, if we haven't called allow or deny, then nothing
             // is permitted.
@@ -312,7 +313,14 @@ CollectionPrototype._validatedInsertAsync = async function(userId, doc,
   if (generatedId !== null)
     doc._id = generatedId;
 
-  return self._collection.insertAsync.call(self._collection, doc);
+  // #ClientWritesThroughMutators
+  // Accepted client writes go through the collection's own mutators rather
+  // than straight to the driver, so behaviour added to the collection (an
+  // overridden mutator in a subclass, a collection extension) applies to them
+  // as well. On the server the mutators add nothing a client write has to
+  // avoid: the _id was generated above, upserts were rejected, and the
+  // selector is already a single id.
+  return self.insertAsync(doc);
 };
 
 // Simulate a mongo `update` operation while validating that the access
@@ -414,8 +422,8 @@ CollectionPrototype._validatedUpdateAsync = async function(
   // avoid races, but since selector is guaranteed to already just be an ID, we
   // don't have to any more.
 
-  return self._collection.updateAsync.call(
-    self._collection, selector, mutator, options);
+  // See #ClientWritesThroughMutators.
+  return self.updateAsync(selector, mutator, options);
 };
 
 // Only allow these operations in validated updates. Specifically
@@ -467,7 +475,8 @@ CollectionPrototype._validatedRemoveAsync = async function(userId, selector) {
   // Mongo to avoid races, but since selector is guaranteed to already just be
   // an ID, we don't have to any more.
 
-  return self._collection.removeAsync.call(self._collection, selector);
+  // See #ClientWritesThroughMutators.
+  return self.removeAsync(selector);
 };
 
 CollectionPrototype._callMutatorMethodAsync = function _callMutatorMethodAsync(name, args, options = {}) {
