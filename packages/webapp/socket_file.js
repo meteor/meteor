@@ -1,4 +1,4 @@
-import { statSync, unlinkSync } from 'fs';
+import { statSync, unlinkSync } from 'node:fs';
 
 // Track registered cleanup handlers per EventEmitter to prevent
 // listener accumulation across hot code reloads.

@@ -38,16 +38,13 @@ Package.onUse(api => {
   api.types('oauth.d.ts');
 });
 
-Npm.depends({
-  'body-parser': '1.20.9',
-});
-
 Package.onTest(api => {
   api.use('tinytest');
   api.use('random');
   api.use('ecmascript');
   api.use('service-configuration', 'server');
   api.use('oauth', ['client', 'server']);
+  api.use(['webapp', 'fetch'], 'server');
   api.addFiles("oauth_tests.js", 'server');
   api.addFiles("oauth_browser_tests.js", 'web.browser');
 });
