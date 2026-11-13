@@ -26,14 +26,24 @@ export class Retry {
     this.minCount = minCount;
     this.fuzz = fuzz;
     this.retryTimer = null;
+    this._releaseSignal = null;
   }
 
-  // Reset a pending retry, if any.
+   // Reset a pending retry, if any.
   clear() {
     if (this.retryTimer) {
       clearTimeout(this.retryTimer);
     }
     this.retryTimer = null;
+    this._releaseAbortListener();
+  }
+
+  // Remove the abort listener of the pending attempt, if any. Safe to call
+  // several times.
+  _releaseAbortListener() {
+    const release = this._releaseSignal;
+    this._releaseSignal = null;
+    if (release) release();
   }
 
   // Calculate how long to wait in milliseconds to retry, based on the
@@ -53,10 +63,41 @@ export class Retry {
   }
 
   // Call `fn` after a delay, based on the `count` of which retry this is.
-  retryLater(count, fn) {
+  // Returns the calculated delay in milliseconds.
+  //
+  // options.signal (optional AbortSignal): if it is aborted before `fn`
+  // starts, the pending call is cancelled. Aborting after `fn` has started
+  // has no effect. A new retryLater() call always replaces the pending one.
+  retryLater(count, fn, { signal } = {}) {
     const timeout = this._timeout(count);
-    if (this.retryTimer) clearTimeout(this.retryTimer);
-    this.retryTimer = Meteor.setTimeout(fn, timeout);
+
+    // A new call always replaces the pending attempt, even when the new
+    // signal is already aborted.
+    this.clear();
+
+    // Already aborted: schedule nothing, but keep the numeric return value.
+    if (signal && signal.aborted) {
+      return timeout;
+    }
+
+    if (signal) {
+      const onAbort = () => {
+        // Only cancel if this attempt is still the pending one.
+        if (this._releaseSignal === release) {
+          this.clear();
+        }
+      };
+      const release = () => signal.removeEventListener('abort', onAbort);
+      signal.addEventListener('abort', onAbort, { once: true });
+      this._releaseSignal = release;
+    }
+
+    this.retryTimer = Meteor.setTimeout(() => {
+      this.retryTimer = null;
+      this._releaseAbortListener();
+      fn();
+    }, timeout);
+
     return timeout;
   }
 }
