@@ -15,6 +15,8 @@ export class MethodInvoker {
     this._onResultReceived = options.onResultReceived || (() => {});
     this._wait = options.wait;
     this.noRetry = options.noRetry;
+    this._maxRetries = options.maxRetries != null ? options.maxRetries : null;
+    this._retryCount = 0;
     this._methodResult = null;
     this._dataVisible = false;
 
@@ -42,6 +44,14 @@ export class MethodInvoker {
 
     // Actually send the message.
     this._connection._send(this._message);
+  }
+  // Called when a dropped connection has been recovered and this method,
+  // which had already been sent, is about to be re-sent.
+  consumeRetry() {
+    if (this.noRetry) return false;
+    if (this._maxRetries === null) return true;
+    this._retryCount++;
+    return this._retryCount <= this._maxRetries;
   }
   // Invoke the callback, if we have both a result and know that all data has
   // been written to the local cache.
@@ -81,5 +91,11 @@ export class MethodInvoker {
   // True if receiveResult has been called.
   gotResult() {
     return !!this._methodResult;
+  }
+}
+
+export function validateMaxRetries(maxRetries) {
+  if (maxRetries != null && !(Number.isInteger(maxRetries) && maxRetries >= 0)) {
+    throw new Error('maxRetries must be a non-negative integer');
   }
 }

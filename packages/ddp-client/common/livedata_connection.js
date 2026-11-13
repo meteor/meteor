@@ -5,7 +5,7 @@ import { EJSON } from 'meteor/ejson';
 import { Random } from 'meteor/random';
 import { MongoID } from 'meteor/mongo-id';
 import { DDP } from './namespace.js';
-import { MethodInvoker } from './method_invoker';
+import { MethodInvoker, validateMaxRetries } from './method_invoker';
 import {
   hasOwn,
   slice,
@@ -113,6 +113,9 @@ export class Connection {
     // of their writes to be written to the local cache). Map from method ID to
     // MethodInvoker object.
     self._methodInvokers = Object.create(null);
+
+    // IDs of methods that failed on reset because they could not be re-sent.
+    self._methodsFailedOnReset = Object.create(null);
 
     // Tracks methods which the user has called but whose result messages have not
     // arrived yet.
@@ -628,11 +631,13 @@ export class Connection {
    * @param {Boolean} options.wait (Client only) If true, don't send this method until all previous method calls have completed, and don't send any subsequent method calls until this one is completed.
    * @param {Function} options.onResultReceived (Client only) This callback is invoked with the error or result of the method (just like `asyncCallback`) as soon as the error or result is available. The local cache may not yet reflect the writes performed by the method.
    * @param {Boolean} options.noRetry (Client only) if true, don't send this method again on reload, simply call the callback an error with the error code 'invocation-failed'.
+   * @param {Number} options.maxRetries (Client only) If set, the maximum number of times this method may be re-sent on reconnect. Once exceeded, the method fails with an error with the code 'invocation-failed', like `noRetry` (`maxRetries: 0` is equivalent to `noRetry`). If unset, the method is re-sent on every reconnect.
    * @param {Boolean} options.throwStubExceptions (Client only) If true, exceptions thrown by method stubs will be thrown instead of logged, and the method will not be invoked on the server.
    * @param {Boolean} options.returnStubValue (Client only) If true then in cases where we would have otherwise discarded the stub's return value and returned undefined, instead we go ahead and return it. Specifically, this is any time other than when (a) we are already inside a stub or (b) we are in Node and no callback was provided. Currently we require this flag to be explicitly passed to reduce the likelihood that stub return values will be confused with server return values; we may improve this in future.
    * @param {Function} [asyncCallback] Optional callback; same semantics as in [`Meteor.call`](#meteor_call).
    */
   apply(name, args, options, callback) {
+    validateMaxRetries(options && options.maxRetries);
     const { stubInvocation, invocation, ...stubOptions } = this._stubCall(name, EJSON.clone(args));
 
     if (stubOptions.hasStub) {
@@ -671,6 +676,7 @@ export class Connection {
    * @param {Boolean} options.wait (Client only) If true, don't send this method until all previous method calls have completed, and don't send any subsequent method calls until this one is completed.
    * @param {Function} options.onResultReceived (Client only) This callback is invoked with the error or result of the method (just like `asyncCallback`) as soon as the error or result is available. The local cache may not yet reflect the writes performed by the method.
    * @param {Boolean} options.noRetry (Client only) if true, don't send this method again on reload, simply call the callback an error with the error code 'invocation-failed'.
+   * @param {Number} options.maxRetries (Client only) If set, the maximum number of times this method may be re-sent on reconnect. Once exceeded, the method fails with an error with the code 'invocation-failed', like `noRetry` (`maxRetries: 0` is equivalent to `noRetry`). If unset, the method is re-sent on every reconnect.
    * @param {Boolean} options.throwStubExceptions (Client only) If true, exceptions thrown by method stubs will be thrown instead of logged, and the method will not be invoked on the server.
    * @param {Boolean} options.returnStubValue (Client only) If true then in cases where we would have otherwise discarded the stub's return value and returned undefined, instead we go ahead and return it. Specifically, this is any time other than when (a) we are already inside a stub or (b) we are in Node and no callback was provided. Currently we require this flag to be explicitly passed to reduce the likelihood that stub return values will be confused with server return values; we may improve this in future.
    * @param {Boolean} options.returnServerResultPromise (Client only) If true, the promise returned by applyAsync will resolve to the server's return value, rather than the stub's return value. This is useful when you want to ensure that the server's return value is used, even if the stub returns a promise. The same behavior as `callAsync`.
@@ -701,6 +707,9 @@ export class Connection {
     return promise;
   }
   async _applyAsyncStubInvocation(name, args, options) {
+    // An error thrown here rejects the applyAsync promise. The client queue in
+    // queue_stub_helpers.js does not catch a synchronous throw from applyAsync.
+    validateMaxRetries(options && options.maxRetries);
     const { stubInvocation, invocation, ...stubOptions } = this._stubCall(name, EJSON.clone(args), options);
     if (stubOptions.hasStub) {
       if (
@@ -870,7 +879,8 @@ export class Connection {
       onResultReceived: options.onResultReceived,
       wait: !!options.wait,
       message: message,
-      noRetry: !!options.noRetry
+      noRetry: !!options.noRetry,
+      maxRetries: options.maxRetries
     });
 
     let result;
