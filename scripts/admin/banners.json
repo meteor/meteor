@@ -11,10 +11,11 @@
         "3.3.1-rc.1",
         "3.3.1-rc.2",
         "3.3.1",
-        "3.3.2"
+        "3.3.2",
+        "3.3.3"
       ],
       "banner": {
-        "text": "=> Meteor 3.3.3: An important security update for Meteor 3.3.x.\n   Update with: meteor update --release 3.3.3\n   https://forums.meteor.com/t/meteor-security-releases-3-3-3-3-4-2-and-3-5-3/64836"
+        "text": "=> Meteor 3.3.4: An important security update for Meteor 3.3.x.\n   Update with: meteor update --release 3.3.4\n   https://github.com/meteor/meteor/releases/tag/release%2FMETEOR%403.3.4"
       }
     },
     {
@@ -45,10 +46,11 @@
         "3.4.1-patch.0",
         "3.4.1-rc.0",
         "3.4.1-rc.1",
-        "3.4.1"
+        "3.4.1",
+        "3.4.2"
       ],
       "banner": {
-        "text": "=> Meteor 3.4.2: An important security update for Meteor 3.4.x.\n   Update with: meteor update --release 3.4.2\n   https://forums.meteor.com/t/meteor-security-releases-3-3-3-3-4-2-and-3-5-3/64836"
+        "text": "=> Meteor 3.4.3: An important security update for Meteor 3.4.x.\n   Update with: meteor update --release 3.4.3\n   https://github.com/meteor/meteor/releases/tag/release%2FMETEOR%403.4.3"
       }
     },
     {
@@ -71,10 +73,11 @@
         "3.5.1",
         "3.5.2-beta.0",
         "3.5.2-rc.0",
-        "3.5.2"
+        "3.5.2",
+        "3.5.3"
       ],
       "banner": {
-        "text": "=> Meteor 3.5.3: An important security update for Meteor 3.5.x.\n   Update with: meteor update --release 3.5.3\n   https://forums.meteor.com/t/meteor-security-releases-3-3-3-3-4-2-and-3-5-3/64836"
+        "text": "=> Meteor 3.5.4: An important security update for Meteor 3.5.x.\n   Update with: meteor update --release 3.5.4\n   https://github.com/meteor/meteor/releases/tag/release%2FMETEOR%403.5.4"
       }
     }
   ]
