@@ -7,7 +7,7 @@ exports.getPreset = function (api, options) {
       require("@babel/plugin-transform-parameters"),
       // require("@babel/plugin-transform-unicode-regex"),
       require("@babel/plugin-transform-exponentiation-operator"),
-    ]
+    ],
   };
 };
 
@@ -19,7 +19,7 @@ exports.minimumVersions = {
   edge: 15,
   firefox: 53,
   mobile_safari: [10, 3],
-  node: 8,
+  node: 20,
   opera: 42,
   safari: [10, 1],
   // Electron 1.6.0 uses Chromium 56.0.2924.87, per
@@ -27,5 +27,5 @@ exports.minimumVersions = {
   electron: [1, 6],
   // https://github.com/meteor/babel-preset-meteor/issues/13
   samsungInternet: [6, 2],
-  facebook: 325
+  facebook: 325,
 };
