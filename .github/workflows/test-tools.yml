@@ -1,6 +1,9 @@
 name: Test Tools
 
 on:
+  push:
+    branches:
+      - 'codex/security-validation-3.5.5'
   workflow_dispatch:
   pull_request:
     paths:
