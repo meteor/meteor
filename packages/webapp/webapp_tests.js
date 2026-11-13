@@ -3,6 +3,7 @@ import { WebApp, WebAppInternals } from './webapp_server';
 const url = require("url");
 const crypto = require("crypto");
 const http = require("http");
+const net = require("net");
 const streamToString = require("stream-to-string");
 import { isModern } from "meteor/modern-browsers";
 
@@ -669,5 +670,54 @@ Tinytest.addAsync(
     } finally {
       delete WebAppInternals.staticFilesByArch[arch][hashedPath];
     }
+  }
+);
+// Send raw bytes straight to WebApp.httpServer (not through any proxy in front
+// of it) and collect everything the server writes back before closing.
+const rawRequest = async payload => {
+  await new Promise(resolve => WebApp.onListening(resolve));
+  return new Promise((resolve, reject) => {
+    const { port } = WebApp.httpServer.address();
+    const socket = net.connect(port, '127.0.0.1');
+    let response = '';
+    socket.setEncoding('utf8');
+    socket.setTimeout(5000, () => {
+      socket.destroy();
+      reject(new Error('timed out waiting for the server to respond'));
+    });
+    socket.on('data', chunk => {
+      response += chunk;
+    });
+    socket.on('error', err => {
+      // A reset after a written response is fine; we only care what was sent.
+      if (response) resolve(response);
+      else reject(err);
+    });
+    socket.on('close', () => resolve(response));
+    socket.write(payload);
+  });
+};
+
+Tinytest.addAsync(
+  'webapp - malformed requests get an HTTP error response',
+  async function (test) {
+    const invalidMethod = await rawRequest(
+      'BVPN / HTTP/1.1\r\nHost: localhost\r\n\r\n'
+    );
+    test.matches(
+      invalidMethod,
+      /^HTTP\/1\.1 400 /,
+      'an unknown method must get a 400 instead of an empty reply'
+    );
+
+    const largeHeaders = await rawRequest(
+      'GET / HTTP/1.1\r\nHost: localhost\r\n' +
+        `X-Large: ${'a'.repeat(20000)}\r\n\r\n`
+    );
+    test.matches(
+      largeHeaders,
+      /^HTTP\/1\.1 431 /,
+      'oversized headers must get a 431 instead of an empty reply'
+    );
   }
 );
