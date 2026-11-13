@@ -12,3 +12,19 @@ Meteor.startup(async () => {
     console.error('Error fetching client asset:', error);
   }
 });
+
+// Web Worker bundled by Rspack: render its reply and any error it raises.
+Meteor.startup(() => {
+  const workerEvents = document.createElement('div');
+  workerEvents.id = 'worker-events';
+  document.body.appendChild(workerEvents);
+
+  const worker = new Worker(new URL('./echo.worker.js', import.meta.url));
+  worker.onmessage = (event) => {
+    workerEvents.textContent += `message: ${event.data}\n`;
+  };
+  worker.onerror = (event) => {
+    workerEvents.textContent += `error: ${event.message}\n`;
+  };
+  worker.postMessage('ping');
+});

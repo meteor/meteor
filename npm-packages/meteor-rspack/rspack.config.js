@@ -608,7 +608,12 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     name: clientNameConfig,
     target: isLegacy ? ["web", "es5"] : "web",
     mode,
-    entry: clientEntry,
+    // The CommonJS wrapper is declared on the main entry: as `output.library`
+    // it would also wrap Web Worker entries, where `module` does not exist.
+    // See meteor/meteor#15003.
+    entry: {
+      main: { import: clientEntry, library: { type: "commonjs2" } },
+    },
     output: {
       path: clientOutputDir,
       filename: (_module) => {
@@ -625,7 +630,6 @@ module.exports = async function (inMeteor = {}, argv = {}) {
           path.resolve(projectDir, buildContext, outputPath)).replaceAll(path.sep, '/');
         return chunkSuffix;
       },
-      library: { type: "commonjs2" },
       publicPath: clientOutputContext ? `/${clientOutputContext}/` : "/",
       chunkFilename: `${clientChunkPrefix}[id]${isProd ? ".[chunkhash]" : ""}.js`,
       assetModuleFilename,

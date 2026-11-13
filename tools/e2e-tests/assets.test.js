@@ -4,6 +4,16 @@ import {
 } from './helpers';
 import { testMeteorRspackBundler } from './test-helpers';
 
+// A worker created with new Worker(new URL(...)) replies and raises no error
+// of its own (#15003).
+const assertBundledWorker = async () => {
+  await page.waitForFunction(
+    () => document.querySelector('#worker-events')?.textContent.includes('message:')
+  );
+  const workerEvents = await page.$eval('#worker-events', el => el.textContent);
+  expect(workerEvents.trim()).toBe('message: worker got ping');
+};
+
 describe('Assets App Bundling /', () => {
   describe(
     'Meteor+Rspack Bundler /',
@@ -28,6 +38,7 @@ describe('Assets App Bundling /', () => {
           );
           const clientAsset = await page.$eval('#client-asset', el => el.innerText);
           expect(clientAsset.trim()).toBe('Hello from client package asset');
+          await assertBundledWorker();
         },
         afterRunProduction: async ({ result }) => {
           await waitForMeteorOutput(
@@ -40,6 +51,7 @@ describe('Assets App Bundling /', () => {
           );
           const clientAsset = await page.$eval('#client-asset', el => el.innerText);
           expect(clientAsset.trim()).toBe('Hello from client package asset');
+          await assertBundledWorker();
         },
         afterBuild: async ({ buildOutputDir }) => {
           const path = require('path');
