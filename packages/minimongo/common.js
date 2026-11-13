@@ -2,6 +2,17 @@ import LocalCollection from './local_collection.js';
 
 export const hasOwn = Object.prototype.hasOwnProperty;
 
+// Field names are data, including the legacy prototype setter name.
+export function setOwnProperty(target, field, value) {
+  if (field === '__proto__') {
+    Object.defineProperty(target, field, {
+      value, enumerable: true, configurable: true, writable: true
+    });
+  } else {
+    target[field] = value;
+  }
+}
+
 export class MiniMongoQueryError extends Error {}
 // Each element selector contains:
 //  - compileElementSelector, a function with args:
@@ -828,7 +839,7 @@ function insertIntoDocument(document, key, value) {
     }
   });
 
-  document[key] = value;
+  setOwnProperty(document, key, value);
 }
 
 // Returns a branched matcher that matches iff the given matcher does not.
@@ -1160,13 +1171,13 @@ export function pathsToTree(paths, newLeafFn, conflictFn, root = {}) {
     // use .every just for iteration with break
     const success = pathArray.slice(0, -1).every((key, i) => {
       if (!hasOwn.call(tree, key)) {
-        tree[key] = {};
+        setOwnProperty(tree, key, {});
       } else if (tree[key] !== Object(tree[key])) {
-        tree[key] = conflictFn(
+        setOwnProperty(tree, key, conflictFn(
           tree[key],
           pathArray.slice(0, i + 1).join('.'),
           path
-        );
+        ));
 
         // break out of loop if we are failing for this path
         if (tree[key] !== Object(tree[key])) {
@@ -1182,9 +1193,9 @@ export function pathsToTree(paths, newLeafFn, conflictFn, root = {}) {
     if (success) {
       const lastKey = pathArray[pathArray.length - 1];
       if (hasOwn.call(tree, lastKey)) {
-        tree[lastKey] = conflictFn(tree[lastKey], path, path);
+        setOwnProperty(tree, lastKey, conflictFn(tree[lastKey], path, path));
       } else {
-        tree[lastKey] = newLeafFn(path);
+        setOwnProperty(tree, lastKey, newLeafFn(path));
       }
     }
   });

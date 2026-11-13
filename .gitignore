@@ -44,5 +44,9 @@ coverage-ts/
 .cursorignore
 .cursorrules
 
-# claude code
+# LLM
 .claude/*
+.codex/*
+
+# git
+.worktrees/*

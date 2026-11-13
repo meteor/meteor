@@ -1,0 +1,4 @@
+{
+  "extends": "./tsconfig.types.json",
+  "include": ["packages/**/*.d.ts", "packages/**/*.test-d.ts"]
+}

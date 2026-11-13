@@ -1,6 +1,7 @@
 import { Random } from 'meteor/random';
 import { checkToken } from './server_utils';
 import { SHA256 } from 'meteor/sha';
+import './passwordless_method_tests.js';
 
 const USER_TOKEN = '123ABC';
 

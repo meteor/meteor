@@ -35,6 +35,12 @@ async function () {
         `scan errored despite buildingSelfTestCatalog=true:\n${messages.formatMessages(0)}`,
       );
     }
+
+    if (!localCatalog.getPackage('blaze-html-templates')) {
+      selftest.fail(
+        'scan did not discover packages nested in a non-core submodule',
+      );
+    }
   } finally {
     catalog.official.getReleaseVersion = originalGetReleaseVersion;
   }

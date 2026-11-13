@@ -100,7 +100,15 @@ async function deployRpc(options) {
     options.qs.capabilities.push('willPollVersionStatus');
   }
 
-  const deployURLBase = await getDeployURL(options.site);
+  let deployURLBase;
+  try {
+    deployURLBase = await getDeployURL(options.site);
+  } catch (e) {
+    return {
+      statusCode: null,
+      errorMessage: e.message
+    };
+  }
 
   if (options.printDeployURL) {
     Console.info("Talking to Galaxy servers at " + deployURLBase);
@@ -929,11 +937,34 @@ function addScheme(hostOrURL) {
   }
 };
 
-// Maps from "site" to Promise<deploy URL>, so we don't have to re-ping on each
-// RPC (even if the calls to getDeployURL overlap).
+// Discovery may select only Galaxy hosts: deploy RPCs carry the account token.
+const DEFAULT_DEPLOY_URL = "https://us-east-1.galaxy-deploy.meteor.com";
+const GALAXY_DEPLOY_DOMAIN = "galaxy-deploy.meteor.com";
+
+export function trustedGalaxyDeployURL(deployURL) {
+  if (typeof deployURL !== "string") {
+    return null;
+  }
+
+  let parsed;
+  try {
+    parsed = new URL(deployURL);
+  } catch (e) {
+    return null;
+  }
+
+  if (parsed.protocol !== "https:" ||
+      parsed.username || parsed.password || parsed.port ||
+      ! (parsed.hostname === GALAXY_DEPLOY_DOMAIN ||
+         parsed.hostname.endsWith("." + GALAXY_DEPLOY_DOMAIN))) {
+    return null;
+  }
+
+  return parsed.origin + (parsed.pathname === "/" ? "" : parsed.pathname);
+}
+
 const galaxyDiscoveryCache = new Map;
 
-// getDeployURL returns the a Promise for the base deploy URL for the given app.
 // "app" may be falsey for certain RPCs (eg meteor list-sites).
 async function getDeployURL(site) {
   // Always trust explicitly configuration via env.
@@ -941,11 +972,9 @@ async function getDeployURL(site) {
     return Promise.resolve(addScheme(process.env.DEPLOY_HOSTNAME.trim()));
   }
 
-  const defaultURL = "https://us-east-1.galaxy-deploy.meteor.com";
-
   // No site? Just use the default.
   if (!site) {
-    return Promise.resolve(defaultURL);
+    return Promise.resolve(DEFAULT_DEPLOY_URL);
   }
 
   // If we have a site, we can try to do Galaxy discovery.
@@ -955,19 +984,36 @@ async function getDeployURL(site) {
     return galaxyDiscoveryCache.get(site);
   }
 
-  // Otherwise, try https first, then http, then just use the default.
-  const p = await discoverGalaxy(site, "https")
-          .catch(async () => await discoverGalaxy(site, "http"))
-          .catch(() => defaultURL);
-  galaxyDiscoveryCache.set(site, p);
-  return p;
+  // Otherwise, try https, then http, then just use the default. Galaxy only
+  // answers over http for sites without a certificate yet, such as a new
+  // app's first deploy outside us-east-1. Whoever answers discovery chooses
+  // where the account token goes, so either answer must name a Galaxy deploy
+  // server below.
+  let discoveredURL;
+  try {
+    discoveredURL = await discoverGalaxy(site, "https")
+      .catch(() => discoverGalaxy(site, "http"));
+  } catch (e) {
+    galaxyDiscoveryCache.set(site, DEFAULT_DEPLOY_URL);
+    return DEFAULT_DEPLOY_URL;
+  }
+
+  const deployURL = trustedGalaxyDeployURL(discoveredURL);
+  if (! deployURL) {
+    throw new Error(
+      "Galaxy discovery for " + site + " returned " +
+      JSON.stringify(discoveredURL) + ", which is not a Galaxy deploy " +
+      "server (https://*." + GALAXY_DEPLOY_DOMAIN + "). Refusing to send your Meteor credentials there. If " +
+      "you trust this server, set the DEPLOY_HOSTNAME environment variable " +
+      "to it.");
+  }
+
+  galaxyDiscoveryCache.set(site, deployURL);
+  return deployURL;
 }
 
-// discoverGalaxy returns the URL to use for Galaxy discovery, or an error if it
-// couldn't be fetched.
 async function discoverGalaxy(site, scheme) {
-  const discoveryURL =
-          scheme + "://" + site + "/.well-known/meteor/deploy-url";
+  const discoveryURL = scheme + "://" + site + "/.well-known/meteor/deploy-url";
   // If httpHelpers.request throws, the returned Promise will reject, which is
   // fine.
   const { response, body } = await request({

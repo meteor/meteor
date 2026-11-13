@@ -98,9 +98,20 @@ describe('R.Router App Bundling /', () => {
       },
       afterBuild: async ({ result }) => {
         await waitForReactEnvs(result.outputLines, { isTsxEnabled: true });
-        await waitForMeteorOutput(result.outputLines, /.*babel-plugin-react-compiler.*/);
+        // This build can reuse the earlier production compilation. Babel config
+        // execution is checked during initialization and the first production run.
         // Check custom plugin gets loaded from rspack.config.override.js file
         await waitForMeteorOutput(result.outputLines, /.*CustomConsoleLogPlugin.*/);
+      },
+      afterRunBuiltApp: async ({ port }) => {
+        // Routing, Less styles and custom meta tags must survive the build
+        await assert404Page(port, { isProductionMode: true });
+        await assertBodyStyles({
+          'white-space': 'break-spaces',
+        });
+        await assertMetaTags({
+          'theme-color': '#4285f4',
+        });
       },
     }
   }));
