@@ -12,19 +12,16 @@ const findUserWithOptions = async ({ selector }) => {
   if (!selector) {
     Accounts._handleError('A selector is necessary');
   }
-  const { email, id, ...rest } = selector;
+  const fields = { services: 1, emails: 1 };
+  // Same case-insensitive fallback as requestLoginTokenForUser, so an address
+  // typed in another case still finds the account the code was sent to (#12412).
+  if (selector.email) {
+    return Accounts._findUserByQuery(selector, { fields });
+  }
+  const { id, ...rest } = selector;
   return Meteor.users.findOneAsync(
-    {
-      ...rest,
-      ...(id && { _id: id }),
-      ...(email && { 'emails.address': email })
-    },
-    {
-      fields: {
-        services: 1,
-        emails: 1,
-      },
-    }
+    { ...rest, ...(id && { _id: id }) },
+    { fields }
   );
 };
 // Handler to login with an ott.
