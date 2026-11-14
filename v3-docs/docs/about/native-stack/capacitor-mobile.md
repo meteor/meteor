@@ -391,6 +391,12 @@ platform. Native artifacts are written to `../build-output/android/` or
 Meteor builds the configured native platforms. It creates missing native projects
 and reuses existing ones.
 
+Pass platform names separated by commas to build both Android and iOS:
+
+``` bash
+meteor build ../build-output --server=https://your-server-url.com --platforms=android,ios
+```
+
 Set Android flavors, iOS schemes, and platform `buildOptions` in
 `capacitor.config.*`, including signing and export settings. Use a JavaScript or
 TypeScript configuration file to read environment variables. Meteor excludes
@@ -407,6 +413,9 @@ build using the project's Gradle wrapper. On iOS, it selects the Debug
 configuration for the device archive and IPA export. iOS device builds require
 signing, including Debug builds. An IPA cannot be installed in the iOS Simulator.
 Native compilation, signing, or missing artifacts cause `meteor build` to fail.
+
+See the [`meteor build` reference](../../cli/index.md#meteorbuild) for the shared
+build options, including `--mobile-settings` and `--server-only`.
 
 Capacitor 8.6.2 uses SHA-1 when signing with `jarsigner`. JDK 21 does not accept
 these signatures, so AAB release verification fails. For APK releases, set

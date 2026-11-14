@@ -1281,11 +1281,16 @@ meteor build <output-path> [options]
 
 ### Output Artifacts
 
-The command produces deployment-ready artifacts for all platforms in your project:
+The command writes a server bundle and native artifacts for the selected platforms:
 
 - **Server Bundle**: A tarball containing everything needed to run the application server
-- **Android Package**: AAB/APK bundle and Android project source (if Android platform is added)
-- **iOS Package**: Xcode project source (if iOS platform is added)
+- **Android Package**: AAB or APK in `android/`; Cordova builds also include the Android project source
+- **iOS Package**: IPA in `ios/` for Capacitor apps, or Xcode project source for Cordova apps
+
+Apps with the `capacitor` package use Capacitor's native builder. Configure signing,
+Android flavors, and iOS schemes in your Capacitor configuration and native
+projects. See [Capacitor production builds](../about/native-stack/capacitor-mobile.md#production)
+for setup and current signing limitations.
 
 ::: tip Self-Hosting
 You can use the server bundle to host a Meteor application on your own infrastructure instead of Galaxy. Note that you'll need to handle logging, monitoring, backups, and load-balancing yourself.
@@ -1296,14 +1301,21 @@ You can use the server bundle to host a Meteor application on your own infrastru
 | Option | Description |
 |--------|-------------|
 | `--debug` | Build in debug mode (don't minify, preserve source maps) |
-| `--directory` | Output a directory instead of a tarball (existing output location will be deleted first) |
+| `--directory` | Write the server bundle as a directory instead of a tarball |
 | `--server-only` | Skip building mobile apps but still build the 'web.cordova' client target for hot code push |
 | `--mobile-settings <file>` | Set the initial value of `Meteor.settings` in mobile apps |
-| `--server <url>` | Location where mobile builds connect to the Meteor server (defaults to localhost:3000) |
-| `--architecture <arch>` | Build for a different architecture than your development machine |
+| `--server <url>` | Server URL for mobile builds; Capacitor also accepts `MOBILE_ROOT_URL` or `ROOT_URL` when omitted |
+| `--architecture <arch>` | Build the server for a different architecture than your development machine |
 | `--allow-incompatible-update` | Allow packages to be upgraded/downgraded to potentially incompatible versions |
-| `--platforms <platforms>` | Build only for specified platforms (when available) |
-| `--packageType <type>` | Choose between `apk` or `bundle` for Android builds (defaults to `bundle`) |
+| `--platforms <platforms>` | Build only the listed platforms; separate names with commas, such as `android,ios` |
+| `--packageType <type>` | Select `apk` or `bundle` for Android; defaults to `bundle`, or the configured Capacitor `releaseType` |
+| `--headless` | Use plain build progress output for CI |
+| `--verbose`, `-v` | Print detailed build output |
+
+If you omit `--platforms`, Meteor builds the platforms configured in the project.
+For Capacitor, `--packageType` overrides `android.buildOptions.releaseType`:
+`bundle` produces AAB and `apk` produces APK. `--directory` and `--architecture`
+control server output; native artifacts are written alongside the server bundle.
 
 ::: details Available Architectures
 Valid architectures include:
@@ -1332,7 +1344,7 @@ meteor build ../build --debug
 meteor build ../build --server-only
 
 # Build for specific platforms
-meteor build ../build --platforms=android,ios
+meteor build ../build --platforms=android,ios --server=https://example.com
 
 # Set server location for mobile apps
 meteor build ../build --server=https://example.com:443
@@ -1341,7 +1353,7 @@ meteor build ../build --server=https://example.com:443
 meteor build ../build --architecture=os.linux.x86_64
 
 # Specify Android package type
-meteor build ../build --packageType=apk
+meteor build ../build --platforms=android --packageType=apk --server=https://example.com
 ```
 
 ## meteor lint {#meteorlint}
