@@ -14,6 +14,7 @@ var archinfo = require('../utils/archinfo');
 var catalog = require('../packaging/catalog/catalog.js');
 var stats = require('../meteor-services/stats.js');
 var Console = require('../console/console.js').Console;
+const net = require('net');
 const {
   blue,
   bold,
@@ -78,9 +79,12 @@ const bash =
  */
 const runLiveCommand = (command, args = []) => {
   return new Promise((resolve, reject) => {
+    const env = { ...process.env, FORCE_COLOR: "1", TERM: "xterm-256color" };
+    delete env.NO_COLOR;
+
     const childProcess = spawn(command, args, {
       shell: true,
-      env: { ...process.env, FORCE_COLOR: "1", TERM: "xterm-256color" },
+      env,
       stdio: "inherit",
     });
 
@@ -126,6 +130,9 @@ const bashLive = (text, ...values) =>
 import { ensureDevBundleDependencies } from '../cordova/index.js';
 import { CordovaRunner } from '../cordova/runner.js';
 import { iOSRunTarget, AndroidRunTarget } from '../cordova/run-targets.js';
+import {
+  createRegistryForProject,
+} from '../tool-extensions/index.js';
 
 import { getExamples, findExample, cloneRepo, cloneSubdirectory, isGitSourceLike, parseGitUrl, validateMeteorApp, EXAMPLES_REPO, EXAMPLES_BRANCH } from './examples.js';
 
@@ -191,6 +198,12 @@ export function parseServerOptionsForRunCommand(options, runTargets) {
   return { parsedServerUrl, parsedMobileServerUrl, parsedCordovaServerPort };
 }
 
+export function setCommandMobileServerUrl(parsedMobileServerUrl) {
+  const mobileServerUrl = utils.formatUrl(parsedMobileServerUrl);
+  global.currentCommand.mobileServerUrl = mobileServerUrl;
+  return mobileServerUrl;
+}
+
 function parsePortOption(portOption) {
   let parsedServerUrl = utils.parseUrl(portOption);
 
@@ -221,7 +234,23 @@ function parseCordovaServerPortOption(options = {}) {
   return cordovaServerPortOption ? parseInt(cordovaServerPortOption, 10) : null;
 }
 
+function isExplicitMobileServerHost(hostname) {
+  return net.isIP(hostname) &&
+    hostname !== '127.0.0.1' &&
+    hostname !== '::1' &&
+    hostname !== '0.0.0.0' &&
+    hostname !== '::';
+}
+
 function detectMobileServerUrl(parsedServerUrl, isRunOnDeviceRequested) {
+  if (isExplicitMobileServerHost(parsedServerUrl.hostname)) {
+    return {
+      protocol: parsedServerUrl.protocol || 'http',
+      hostname: parsedServerUrl.hostname,
+      port: parsedServerUrl.port
+    };
+  }
+
   // Always try to use an auto-detected IP first
   try {
     const myIp = utils.ipAddress();
@@ -265,6 +294,22 @@ export function parseRunTargets(targets) {
     }
   });
 };
+
+function isCordovaRunTargetName(target) {
+  return ['ios', 'ios-device', 'android', 'android-device'].includes(target);
+}
+
+function resolveToolPlatformOrExit(registry, platformName) {
+  try {
+    return registry.resolvePlatform(platformName);
+  } catch (e) {
+    if (e?.code?.startsWith('TOOL_EXTENSION_')) {
+      Console.error(e.message);
+      throw new main.ExitWithCode(1);
+    }
+    throw e;
+  }
+}
 
 function filterWebArchs(webArchs, excludeArchsOption, appDir, options) {
   const platforms = (options.platforms || []);
@@ -482,11 +527,17 @@ main.registerCommand(Object.assign(
 async function doRunCommand(options) {
   Console.setVerbose(!!options.verbose);
 
-  // Additional args are interpreted as run targets
-  const runTargets = parseRunTargets(options.args);
+  const requestedRunTargetNames = options.args || [];
+  const initiallyKnownRunTargets = parseRunTargets(
+    requestedRunTargetNames.filter(isCordovaRunTargetName)
+  );
+  let runTargets = initiallyKnownRunTargets;
+  let providerRunPlatformNames = [];
 
   const { parsedServerUrl, parsedMobileServerUrl, parsedCordovaServerPort } =
-    parseServerOptionsForRunCommand(options, runTargets);
+    parseServerOptionsForRunCommand(options, initiallyKnownRunTargets);
+  const mobileServerUrl =
+    setCommandMobileServerUrl(parsedMobileServerUrl);
 
   var includePackages = [];
   if (options['extra-packages']) {
@@ -513,6 +564,42 @@ async function doRunCommand(options) {
                   projectContext.releaseFile.displayReleaseName);
       console.log();
     }
+  }
+
+  let toolExtensionRegistry = null;
+  if (!_.isEmpty(requestedRunTargetNames)) {
+    const registryProjectContext = new projectContextModule.ProjectContext({
+      projectDir: options.appDir,
+      allowIncompatibleUpdate: options['allow-incompatible-update'],
+      lintAppAndLocalPackages: !options['no-lint'],
+      includePackages: includePackages,
+    });
+    await main.captureAndExit("=> Errors while initializing project:", function () {
+      return registryProjectContext.readProjectMetadata();
+    });
+    await main.captureAndExit("=> Errors while resolving package constraints:", function () {
+      return registryProjectContext.resolveConstraints();
+    });
+
+    toolExtensionRegistry = await createRegistryForProject(registryProjectContext);
+    const resolvedRunTargets = requestedRunTargetNames.map(targetName => {
+      const platformName = targetName.replace(/-device$/, '');
+      return {
+        targetName,
+        resolution: resolveToolPlatformOrExit(toolExtensionRegistry, platformName),
+      };
+    });
+
+    runTargets = parseRunTargets(resolvedRunTargets
+      .filter(result => result.resolution.isFallback)
+      .map(result => (
+        isCordovaRunTargetName(result.targetName)
+          ? result.targetName
+          : result.resolution.platform.name
+      )));
+    providerRunPlatformNames = resolvedRunTargets
+      .filter(result => !result.resolution.isFallback)
+      .map(result => result.resolution.platform.name);
   }
 
   let appHost, appPort;
@@ -548,6 +635,15 @@ async function doRunCommand(options) {
       webArchs.push("web.cordova");
     }
   }
+  if (toolExtensionRegistry) {
+    for (const platformName of providerRunPlatformNames) {
+      for (const webArch of toolExtensionRegistry.getBaseWebArchsForPlatform(platformName)) {
+        if (!webArchs.includes(webArch)) {
+          webArchs.push(webArch);
+        }
+      }
+    }
+  }
 
   webArchs = filterWebArchs(webArchs, options['exclude-archs'], options.appDir, options);
   // Set the webArchs to include for compilation later
@@ -556,7 +652,8 @@ async function doRunCommand(options) {
   const buildMode = options.production ? 'production' : 'development';
 
   let cordovaRunner;
-  const shouldDisableCordova =  Boolean(JSON.parse(process.env.METEOR_CORDOVA_DISABLE || 'false'));
+  const shouldDisableCordova =
+    Boolean(JSON.parse(process.env.METEOR_CORDOVA_DISABLE || 'false'));
   if (!shouldDisableCordova && !_.isEmpty(runTargets)) {
 
     async function prepareCordovaProject() {
@@ -566,7 +663,7 @@ async function doRunCommand(options) {
         // TODO -> Have to change CordovaProject constructor here.
         const cordovaProject = new CordovaProject(projectContext, {
           settingsFile: options.settings,
-          mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
+          mobileServerUrl,
           cordovaServerPort: parsedCordovaServerPort,
           buildMode
         });
@@ -599,7 +696,7 @@ async function doRunCommand(options) {
     rootUrl: process.env.ROOT_URL,
     mongoUrl: process.env.MONGO_URL,
     oplogUrl: process.env.MONGO_OPLOG_URL,
-    mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
+    mobileServerUrl,
     cordovaServerPort: parsedCordovaServerPort,
     once: options.once,
     noReleaseCheck: options['no-release-check'] || process.env.METEOR_NO_RELEASE_CHECK,
@@ -1227,7 +1324,6 @@ main.registerCommand({
 
     cmd(runCommand);
 
-    Console.info("");
     Console.info(
       "If you are new to Meteor, try some of the learning resources here:"
     );
@@ -1509,6 +1605,14 @@ var buildCommand = async function (options) {
   }
   var bundleArch = options.architecture || archinfo.host();
 
+  // Build plugins can initialize during project preparation. Publish the
+  // explicit mobile URL before they capture the command context.
+  let parsedMobileServerUrl;
+  if (options.server) {
+    parsedMobileServerUrl = parseMobileServerOption(options.server, 'server');
+    setCommandMobileServerUrl(parsedMobileServerUrl);
+  }
+
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
     serverArchitectures: _.uniq([bundleArch, archinfo.host()]),
@@ -1521,6 +1625,7 @@ var buildCommand = async function (options) {
     return projectContext.prepareProjectForBuild();
   });
   projectContext.packageMapDelta.displayOnConsole();
+  const toolExtensionRegistry = await createRegistryForProject(projectContext);
 
   // _bundleOnly implies serverOnly
   const serverOnly = options._bundleOnly || !!options['server-only'];
@@ -1535,25 +1640,39 @@ var buildCommand = async function (options) {
   const appName = files.pathBasename(options.appDir);
   let parsedCordovaServerPort;
   let selectedPlatforms = null;
+  let selectedResolvedPlatforms = [];
   if (options.platforms) {
     const platformsArray = options.platforms.split(",");
     const excludableWebArchs = ['web.browser', 'web.browser.legacy', 'web.cordova'];
     platformsArray.forEach(plat => {
-      if (![...excludableWebArchs, 'android', 'ios'].includes(plat)) {
-        throw new Error(`Not allowed platform on '--platforms' flag: ${plat}`)
+      if (excludableWebArchs.includes(plat)) {
+        return;
       }
-    })
+      selectedResolvedPlatforms.push(
+        resolveToolPlatformOrExit(toolExtensionRegistry, plat)
+      );
+    });
 
     selectedPlatforms = platformsArray;
   }
 
   let cordovaPlatforms;
-  let parsedMobileServerUrl;
   if (!serverOnly) {
-    cordovaPlatforms = projectContext.platformList.getCordovaPlatforms();
+    const projectCordovaPlatforms = projectContext.platformList.getCordovaPlatforms();
+    const resolvedProjectPlatforms = projectCordovaPlatforms.map(platform =>
+      resolveToolPlatformOrExit(toolExtensionRegistry, platform)
+    );
+    const fallbackCordovaPlatforms = resolvedProjectPlatforms
+      .filter(result => result.isFallback)
+      .map(result => result.platform.name);
 
     if (selectedPlatforms) {
-      cordovaPlatforms = _.intersection(selectedPlatforms, cordovaPlatforms)
+      const selectedFallbackPlatforms = selectedResolvedPlatforms
+        .filter(result => result.isFallback)
+        .map(result => result.platform.name);
+      cordovaPlatforms = _.intersection(selectedFallbackPlatforms, projectCordovaPlatforms);
+    } else {
+      cordovaPlatforms = fallbackCordovaPlatforms;
     }
 
     if (process.platform !== 'darwin' && cordovaPlatforms.includes('ios')) {
@@ -1562,11 +1681,18 @@ var buildCommand = async function (options) {
 on an OS X system.");
     }
 
-    if (!_.isEmpty(cordovaPlatforms)) {
-      const mobileServerOption = options.server;
+    const resolvedBuildPlatforms = selectedPlatforms
+      ? selectedResolvedPlatforms
+      : resolvedProjectPlatforms;
+    if (resolvedBuildPlatforms.some(result =>
+      result.platform.kind === 'mobile' &&
+      (!result.isFallback || cordovaPlatforms.includes(result.platform.name))
+    )) {
+      const mobileServerOption = options.server || (
+        _.isEmpty(cordovaPlatforms) &&
+        (process.env.MOBILE_ROOT_URL || process.env.ROOT_URL)
+      );
       if (!mobileServerOption) {
-        // For Cordova builds, require '--server'.
-        // XXX better error message?
         Console.error(
           "Supply the server hostname and port in the --server option " +
             "for mobile app builds.");
@@ -1574,6 +1700,9 @@ on an OS X system.");
       }
       parsedMobileServerUrl = parseMobileServerOption(mobileServerOption,
         'server');
+      setCommandMobileServerUrl(parsedMobileServerUrl);
+    }
+    if (!_.isEmpty(cordovaPlatforms)) {
       parsedCordovaServerPort = parseCordovaServerPortOption(options);
     }
   } else {
@@ -1588,6 +1717,17 @@ on an OS X system.");
   if (selectedPlatforms) {
     const filteredArchs = baseWebArchs
       .filter(arch => selectedPlatforms.includes(arch));
+    const providerBaseWebArchs = selectedResolvedPlatforms
+      .filter(result => !result.isFallback)
+      .flatMap(result =>
+        toolExtensionRegistry.getBaseWebArchsForPlatform(result.platform.name)
+      );
+
+    for (const webArch of providerBaseWebArchs) {
+      if (!filteredArchs.includes(webArch)) {
+        filteredArchs.push(webArch);
+      }
+    }
 
     if (
       !_.isEmpty(cordovaPlatforms) &&

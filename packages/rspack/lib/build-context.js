@@ -22,6 +22,7 @@ const {
   isMeteorAppBuild,
   isMeteorBlazeProject,
   isMeteorAppNative,
+  isMeteorAppNativeLivereload,
   isMeteorAppTest,
   isMeteorAppTestFullApp,
 } = require('meteor/tools-core/lib/meteor');
@@ -668,7 +669,7 @@ function getHmrCode(config, role) {
     !config?.isTest &&
     isMeteorAppRun() &&
     isMeteorAppDevelopment() &&
-    !isMeteorAppNative()
+    (!isMeteorAppNative() || isMeteorAppNativeLivereload())
   ) {
     return `/* Enables HMR */
 if (module.hot) {

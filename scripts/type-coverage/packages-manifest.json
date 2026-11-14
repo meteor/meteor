@@ -20,6 +20,7 @@
     "binary-heap",
     "browser-policy-common",
     "callback-hook",
+    "capacitor",
     "check",
     "ddp",
     "ddp-rate-limiter",

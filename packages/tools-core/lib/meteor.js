@@ -32,7 +32,7 @@ export function getMeteorAppPackageJson(cwd = getMeteorAppDir()) {
  * @returns {Object|undefined} The Meteor configuration object or undefined if not found.
  */
 export function getMeteorAppConfig() {
-  return typeof Plugin?.getMeteorConfig === 'function'
+  return typeof Plugin !== 'undefined' && typeof Plugin.getMeteorConfig === 'function'
     ? Plugin.getMeteorConfig()
     : getMeteorAppPackageJson()?.meteor;
 }
@@ -350,6 +350,14 @@ export function isMeteorAppUpdate() {
 }
 
 /**
+ * Checks if the current Meteor command is 'add-platform'.
+ * @returns {boolean} True if the current command is 'add-platform', false otherwise.
+ */
+export function isMeteorAppAddPlatform() {
+  return Package?.meteor?.global?.currentCommand?.name === 'add-platform';
+}
+
+/**
  * Checks if the current Meteor command is 'test'.
  * @returns {boolean} True if the current command is 'test', false otherwise.
  */
@@ -399,6 +407,44 @@ export function isMeteorAppNativeIos() {
  */
 export function isMeteorAppNative() {
   return isMeteorAppNativeAndroid() || isMeteorAppNativeIos();
+}
+
+/**
+ * Returns the current native runtime mode when one is declared.
+ * `METEOR_NATIVE_MODE` is the generic opt-in for any native integration, while
+ * `METEOR_CAPACITOR_MODE` remains the existing Capacitor-specific fallback.
+ * @param {NodeJS.ProcessEnv} [env]
+ * @returns {string}
+ */
+export function getMeteorAppNativeMode(env = process.env) {
+  return env.METEOR_NATIVE_MODE || env.METEOR_CAPACITOR_MODE || '';
+}
+
+/**
+ * Checks if the current native run is using direct-server livereload semantics.
+ * @param {NodeJS.ProcessEnv} [env]
+ * @returns {boolean}
+ */
+export function isMeteorAppNativeLivereload(env = process.env) {
+  return isMeteorAppNative() && getMeteorAppNativeMode(env) === 'livereload';
+}
+
+/**
+ * Checks if the Meteor application has the `capacitor` package added.
+ * Package presence is the source of truth.
+ * @returns {boolean}
+ */
+export function isMeteorCapacitorProject() {
+  return getMeteorAppPackages().includes('capacitor');
+}
+
+/**
+ * Checks if the current Meteor run/build targets Capacitor: the `capacitor`
+ * package is added AND a native arg (android|ios|*-device) is present.
+ * @returns {boolean}
+ */
+export function isMeteorAppCapacitor() {
+  return isMeteorCapacitorProject() && isMeteorAppNative();
 }
 
 /**
@@ -466,6 +512,27 @@ export function setMeteorAppCustomScriptUrl(scriptUrl, { archs } = {}) {
  */
 export function getMeteorAppPackages() {
   return Object.keys(Package?.meteor?.global?.packageVersionMap || {});
+}
+
+/**
+ * Returns the platforms listed in `.meteor/platforms`. Prefers
+ * Plugin.getPlatforms() (set by ProjectContext); falls back to the file.
+ * @returns {string[]}
+ */
+export function getMeteorAppPlatforms() {
+  if (typeof Plugin !== 'undefined' && typeof Plugin.getPlatforms === 'function') {
+    const fromPlugin = Plugin.getPlatforms();
+    if (Array.isArray(fromPlugin) && fromPlugin.length > 0) return fromPlugin;
+  }
+  const platformsPath = path.join(getMeteorAppDir(), '.meteor', 'platforms');
+  try {
+    return fs.readFileSync(platformsPath, 'utf8')
+      .split(/\r?\n/)
+      .map(line => line.trim())
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
 }
 
 /**

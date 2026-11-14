@@ -1,4 +1,6 @@
 import {
+  getMeteorAppConfig,
+  getMeteorAppPlatforms,
   captureUserMeteorIgnore,
   getMeteorAppPort,
   getUserMeteorIgnore,
@@ -12,6 +14,15 @@ import {
   removeGlobalState,
   setGlobalState,
 } from "../lib/global-state.js";
+
+Tinytest.add(
+  "tools-core - meteor helpers - tolerate missing Plugin global",
+  function (test) {
+    const config = getMeteorAppConfig();
+    test.isTrue(config === undefined || typeof config === 'object');
+    test.isTrue(Array.isArray(getMeteorAppPlatforms()));
+  }
+);
 
 Tinytest.add(
   "tools-core - inheritMeteorToolNodeFlags - no TOOL_NODE_FLAGS",

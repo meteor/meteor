@@ -380,6 +380,46 @@ Minimal top-level await fixture.
 | Exit-code-zero `0 passing` regression is rejected by explicit `1 passing` assertion | Test once |
 | Absolute project paths containing a `private` segment still discover eager tests ([#14688](https://github.com/meteor/meteor/issues/14688)) | Test once |
 
+### native-react
+
+React app using both Rspack and Capacitor, with web-only native lifecycle coverage.
+
+| What is covered | Phase |
+|----------------|-------|
+| Local `@meteorjs/rspack` and `@meteorjs/capacitor` packages linked into the app | Init |
+| `meteor types` + `tsc` resolve Capacitor exports, `Meteor.isCapacitor`, WebApp hooks and npm configuration types | Init |
+| TypeScript runtime flag helper is compiled and rendered in the browser | Run, Prod |
+| `meteor add-platform android` installs Capacitor 8 core, CLI and platform packages and creates `android/` | Init |
+| `meteor add-platform ios` creates a Swift Package Manager project containing the local Meteor native runtime | Init |
+| Manual dependency mode prints commands and prevents native preparation; `meteor update --npm` repairs missing tools without scaffolding or syncing | Init |
+| `.meteor/platforms` and Capacitor `.gitignore` entries are updated | Init |
+| `meteor run android` includes `web.cordova`, transforms it into `_build/native-dev`, and runs `cap sync` | Run |
+| Native simulator launch is skipped via `METEOR_CAPACITOR_SKIP_NATIVE_RUN` | Run, Prod |
+| Official Capacitor plugin imports and web runtime behavior (`Device.getInfo()` web success, `App.getInfo()` web unavailable) | Run, Prod |
+| Rspack dev artifacts and Capacitor webDir artifacts coexist under `_build` | Run |
+| Client and server rebuilds work during native dev run | Run |
+| `meteor run android --production` prepares `_build/native-prod` and syncs Android assets | Prod |
+| Production client and server rebuilds work with the native run target | Prod |
+| Native directory and tarball builds transform and sync Meteor assets, run the selected Capacitor builder, and collect native artifacts in the output directory | Build |
+| `--packageType` overrides the configured Android format; omitting the flag keeps the configured value | Build |
+| Builds for multiple platforms run sequentially; omitted selection builds configured platforms and leaves other native directories alone | Build |
+| Signing passwords reach the builder and are excluded from generated runtime configuration and captured build output | Build |
+| Directory and tarball native builds preserve the requested server URL and path prefix in runtime, DDP, configuration, and synchronized assets | Build |
+| Native builds require an explicit server URL and accept `MOBILE_ROOT_URL`; web-only builds skip native synchronization | Build |
+| A nonzero `cap sync` exit fails `meteor build` instead of reporting a successful native build | Build |
+| Native builder failure or missing fresh output fails `meteor build`, even when stale artifacts exist | Build |
+| `meteor reset` clears generated Rspack and Capacitor build artifacts but keeps native project sources | Reset |
+| Repeated native run does not reinstall Capacitor deps | Run |
+
+The Capacitor suite also reuses the Blaze fixture to check helpers and click
+handlers during bundled native development, followed by a plain web run with
+generated native HTML present. The browser assertions exercise the built client;
+device and HCP assertions remain in the Maestro suite.
+
+Packaging tests replace the native builder with a test process. Meteor
+compilation, asset transformation, and `cap sync` still run. Use the native
+toolchains and signing configuration to verify release artifacts separately.
+
 ---
 
 ## Skeletons
@@ -459,6 +499,14 @@ These dependencies are installed only in the temporary variant used by `regressi
 |---------|------|--------|
 | `unplugin` | `plugins/demo-unplugin.js` | Unplugin transform hook integration validates rspack cache tracks plugin dependency files (#14031) |
 | `meteor-node-stubs` (`buffer`, `crypto`) and `isomorphic-timers-promises` | `tests/main.js` | Browser implementations and global `Buffer` support for client tests |
+
+### native-react (`apps/native-react/capacitor.config.js`)
+
+| Package | Reason |
+|---------|--------|
+| `@meteorjs/capacitor` | `defineConfig` API, Meteor native/runtime context, and Capacitor defaults |
+| `@capacitor/device` | Official Capacitor plugin import and web implementation (`Device.getInfo()` returns `platform: "web"`) |
+| `@capacitor/app` | Official Capacitor plugin import and handled web unavailability for `App.getInfo()` |
 
 ### babel (`apps/babel/server/apollo.js`)
 
@@ -553,6 +601,11 @@ Where each feature is tested across apps and skeletons.
 | Service worker runtime caching (images) | monorepo | |
 | Service worker precaching (`additionalManifestEntries`) | monorepo | |
 | PWA manifest | monorepo | |
+| Capacitor native web lifecycle | native-react | |
+| Official Capacitor plugin import/runtime behavior | native-react | |
+| `web.cordova` to Capacitor webDir transform | native-react | |
+| Native simulator launch bypass | native-react | |
+| Cordova native build bypass for Capacitor | native-react | |
 | Local package loading (`api.addAssets`) | assets | |
 | Server/App-private assets (`Assets.getTextAsync`) | assets | |
 | Client package assets (`fetch`) | assets | |

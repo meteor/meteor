@@ -133,10 +133,22 @@ function readCurrentVersion(name, cwd) {
   return null;
 }
 
+function findInstalledDependencyRoot(name, cwd) {
+  let directory = path.resolve(cwd);
+  while (true) {
+    if (fs.existsSync(path.join(directory, 'node_modules', name, 'package.json'))) {
+      return directory;
+    }
+    const parent = path.dirname(directory);
+    if (parent === directory) return null;
+    directory = parent;
+  }
+}
+
 /**
  * Detects which dependencies are missing or below the minimum supported version.
  *
- * @param {Array<{name: string, version: string, semverCondition?: string, dev: boolean, existenceOnly?: boolean}>} dependencies
+ * @param {Array<{name: string, version: string, semverCondition?: string, dev: boolean, existenceOnly?: boolean, requireDeclaredSection?: boolean, requireInstalled?: boolean}>} dependencies
  * @param {Object} [options]
  * @param {string} [options.cwd] - Defaults to the Meteor app directory.
  * @returns {Array<{name: string, status: 'ok'|'missing'|'outdated', requiredVersion: string, currentVersion: ?string, dev: boolean, existenceOnly: boolean}>}
@@ -153,7 +165,13 @@ export function detectMissingOrOutdatedDeps(dependencies, options = {}) {
 
     const dev = dep.dev;
     const existenceOnly = !!dep.existenceOnly;
-    const exists = checkNpmDependencyExists(dep.name, { cwd });
+    const declared = dep.requireDeclaredSection
+      ? !!readPackageJson(cwd)[dev ? 'devDependencies' : 'dependencies']?.[dep.name]
+      : checkNpmDependencyExists(dep.name, { cwd });
+    const installedRoot = dep.requireInstalled
+      ? findInstalledDependencyRoot(dep.name, cwd)
+      : null;
+    const exists = declared && (!dep.requireInstalled || installedRoot !== null);
 
     if (!exists) {
       return {
@@ -177,15 +195,23 @@ export function detectMissingOrOutdatedDeps(dependencies, options = {}) {
       };
     }
 
-    const ok = checkNpmDependencyVersion(dep.name, {
-      cwd,
+    const localProtocol = /^(file|link|portal|workspace):/.test(
+      readCurrentVersion(dep.name, cwd) || '',
+    );
+    const versionOptions = {
       versionRequirement: dep.version,
       semverCondition: dep.semverCondition || 'gte',
+    };
+    const ok = checkNpmDependencyVersion(dep.name, {
+      ...versionOptions,
+      cwd: localProtocol && installedRoot ? installedRoot : cwd,
       // Local protocols describe a source location, not a semver range.
-      checkNodeModules: /^(file|link|portal|workspace):/.test(
-        readCurrentVersion(dep.name, cwd) || '',
-      ),
-    });
+      checkNodeModules: localProtocol,
+    }) && (!dep.requireInstalled || checkNpmDependencyVersion(dep.name, {
+      ...versionOptions,
+      cwd: installedRoot,
+      checkNodeModules: true,
+    }));
 
     return {
       name: dep.name,
@@ -224,9 +250,9 @@ export function formatInstallCommands({
   const toSpec = (c) => `${c.name}@${c.requiredVersion}`;
   const out = {};
   const commands = {
-    npm: { dev: 'meteor npm install --save-dev', regular: 'meteor npm install --save' },
+    npm: { dev: 'meteor npm install --save-dev', regular: 'meteor npm install --save-prod' },
     yarn: { dev: 'yarn add --dev', regular: 'yarn add' },
-    pnpm: { dev: 'pnpm add --save-dev', regular: 'pnpm add' },
+    pnpm: { dev: 'pnpm add --save-dev', regular: 'pnpm add --save-prod' },
   }[packageManager];
 
   if (!commands) return out;

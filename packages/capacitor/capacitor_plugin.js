@@ -1,0 +1,393 @@
+/**
+ * @module capacitor_plugin
+ * @description Build-plugin entry point for the Capacitor integration.
+ *
+ * Orchestrates:
+ *   1. Gating on the active Meteor command (run / build / add-platform). See lib/command.js.
+ *   2. Ensuring NPM dependencies, build-native/, and capacitor.config.js exist.
+ *   3. Snapshotting the resolved capacitor.config to the per-env build context.
+ *   4. On `meteor add-platform`, running `npx cap add` for the requested platforms.
+ *   5. On `meteor build` and `meteor run android|ios`, transforming
+ *      web.cordova/ into build-native/ and running `cap sync` (scoped to the
+ *      active platform when run native).
+ *   6. On `meteor build`, packaging selected projects and collecting artifacts.
+ */
+
+const path = require('path');
+const fs = require('fs');
+
+const {
+  isMeteorAppDebug,
+  isMeteorAppConfigModernVerbose,
+  getMeteorAppPlatforms,
+  isMeteorAppUpdate,
+  setMeteorAppIgnore,
+} = require('meteor/tools-core/lib/meteor');
+const {
+  createMeteorToolContext,
+  runToolScenarios,
+  scenario,
+} = require('meteor/tools-core/lib/lifecycle');
+const {
+  logInfo,
+  logError,
+  logProgress,
+  logSuccess,
+} = require('meteor/tools-core/lib/log');
+const { isYarnProject } = require('meteor/tools-core/lib/npm');
+
+const {
+  CAPACITOR_BUILD_CONTEXT,
+  CAPACITOR_CORDOVA_OUTPUT_DIR,
+  getCapacitorIgnoreCandidates,
+} = require('./lib/constants');
+const { ensureCapacitorInstalled } = require('./lib/dependencies');
+const {
+  ensureCapacitorBuildContextExists,
+  ensureCapacitorConfigExists,
+  writeResolvedConfigSnapshot,
+  loadResolvedCapacitorConfig,
+} = require('./lib/build-context');
+const { getNativeBuildPlatforms, getNativeBuildRequest, prepareNativeArtifacts, collectNativeArtifacts } = require('./lib/build');
+const { runCapacitorTransforms } = require('./lib/transforms');
+const {
+  runCapSync,
+  runCapBuild,
+  scheduleCapRunAfterMeteorReady,
+  ensureNativePlatformAdded,
+  addNativePlatformIfMissing,
+  cleanup,
+  getCapacitorEnv,
+  getCapacitorRunMode,
+} = require('./lib/processes');
+const {
+  getContextMobileServerUrl,
+} = require('./lib/mobile-server');
+const {
+  CAPACITOR_PLATFORMS,
+  isCapacitorOptIn,
+  isCapacitorRunOptIn,
+  isCapacitorBuildOptIn,
+  isCapacitorAddPlatformOptIn,
+} = require('./lib/command');
+const { getCapacitorHcpMode } = require('./lib/hcp');
+
+// Native outputs remain generated sources when the next command is web-only.
+// Exclude their app-root directories before any application source scan.
+setMeteorAppIgnore(getCapacitorIgnoreCandidates().join(' '), { root: true });
+
+if (isMeteorAppUpdate() && Package.meteor.global.currentCommand.options.npm) {
+  // Updating npm dependencies must not scaffold projects, sync, or launch a device.
+  await ensureCapacitorInstalled({ platforms: getMeteorAppPlatforms() });
+} else if (isCapacitorOptIn()) {
+  await runCapacitorPlugin();
+}
+
+async function runCapacitorPlugin() {
+  try {
+    const hcpMode = getCapacitorHcpMode();
+
+    const context = createMeteorToolContext({
+      provider: 'capacitor',
+      state: {
+        platforms: [],
+        hcpMode,
+        mode: null,
+      },
+    });
+    context.state.mode = getCapacitorRunMode();
+
+    await runToolScenarios({
+      context,
+      setup: async context => {
+        context.state.platforms = getRequestedCapacitorPlatforms(context.options);
+
+        if (process.env.YARN_ENABLED === undefined) {
+          process.env.YARN_ENABLED = isYarnProject() ? 'true' : 'false';
+        }
+
+        process.env.METEOR_CAPACITOR = 'true';
+        process.env.METEOR_CAPACITOR_MODE = context.state.mode;
+        process.env.METEOR_NATIVE_MODE = context.state.mode;
+        // Bypass Cordova's runner when the project has the `capacitor` package.
+        // The Meteor CLI now skips Cordova through provider resolution; this
+        // assignment covers downstream child processes spawned by the plugin.
+        process.env.METEOR_CORDOVA_DISABLE = 'true';
+
+        const dependencyResult = await ensureCapacitorInstalled({
+          platforms: (
+            isCapacitorAddPlatformOptIn() || isCapacitorRunOptIn()
+          ) ? context.state.platforms : null,
+        });
+        if (dependencyResult.mode === 'manual-warning') {
+          throw new Error('Install the required Capacitor npm dependencies using the commands above.');
+        }
+
+        ensureCapacitorBuildContextExists();
+        ensureCapacitorConfigExists();
+
+        // Snapshot the resolved capacitor.config to the per-env webDir
+        // (`_build/native-{dev,prod}/capacitor.config.json`). Informational:
+        // capacitor's CLI still loads the source .js from project root.
+        await withProcessEnv(getCapacitorEnv({
+          platform: context.state.platforms.length === 1 ? context.state.platforms[0] : null,
+          mode: context.state.mode,
+          mobileServerUrl: getContextMobileServerUrl(context),
+        }), () => writeResolvedConfigSnapshot({ appDir: context.appDir }));
+
+        process.on('exit', cleanup);
+        process.on('SIGINT', () => {
+          cleanup();
+          process.exit();
+        });
+      },
+      scenarios: [
+        scenario('add-platform', {
+          when: isCapacitorAddPlatformOptIn,
+          run: async context => {
+            // Run cap add per requested platform; no-op when already added.
+            // The CLI writes .meteor/platforms after the compile returns.
+            for (const platform of context.state.platforms) {
+              const code = await addNativePlatformIfMissing({
+                appDir: context.appDir,
+                platform,
+              });
+              if (code !== 0) {
+                throw new Error(`cap add ${platform} exited with code ${code}`);
+              }
+            }
+          },
+        }),
+        scenario('build', {
+          when: isCapacitorBuildOptIn,
+          run: context => {
+            const { platforms } = context.state;
+            Plugin.onBuildOutputReady(async buildOutputContext => {
+              for (const platform of platforms) {
+                const env = getCapacitorEnv({
+                  platform, mode: context.state.mode, mobileServerUrl: getContextMobileServerUrl(context),
+                });
+                await withProcessEnv(env, async () => {
+                  const config = await loadResolvedCapacitorConfig({ appDir: context.appDir }) || {};
+                  const request = getNativeBuildRequest({
+                    appDir: context.appDir, platform, config, options: context.options,
+                    outputDir: path.resolve(context.options.args[0]),
+                  });
+                  const addCode = await addNativePlatformIfMissing({
+                    appDir: context.appDir, platform, nativeDir: request.nativeDir,
+                  });
+                  if (addCode !== 0) throw new Error(`cap add ${platform} exited with code ${addCode}`);
+                  await transformAndSync({
+                    appDir: context.appDir, platform,
+                    cordovaOutDir: getBuildCordovaOutDir(buildOutputContext),
+                    fatal: true, hcpMode: context.state.hcpMode, mode: context.state.mode,
+                    mobileServerUrl: getContextMobileServerUrl(context),
+                  });
+                  await prepareNativeArtifacts(request);
+                  const code = await runCapBuild({ appDir: context.appDir, request, mode: context.state.mode });
+                  if (code !== 0) throw new Error(`cap build ${platform} exited with code ${code}`);
+                  for (const artifact of await collectNativeArtifacts(request)) {
+                    logSuccess(`=> Capacitor ${platform} artifact: ${artifact}`);
+                  }
+                });
+              }
+            });
+          },
+        }),
+        scenario('run:native', {
+          when: isCapacitorRunOptIn,
+          run: async context => {
+            // Auto-bootstrap the native project (`android/` or `ios/`) when the user
+            // ran `meteor run android|ios|*-device` without a prior `meteor add-platform`,
+            // so a freshly-cloned project just works.
+            await ensureNativePlatformAdded({ appDir: context.appDir });
+
+            // Sync once at startup, then schedule Capacitor launch after the Meteor
+            // HTTP index route is actually available. The launch scheduler is not
+            // awaited here because the server starts only after this bundle step
+            // returns.
+            if (context.platform) {
+              scheduleCapRunAfterMeteorReady({
+                appDir: context.appDir,
+                platform: context.platform,
+                beforeRun: () => transformAndSync({
+                  appDir: context.appDir,
+                  platform: context.platform,
+                  mode: context.state.mode,
+                  hcpMode: context.state.hcpMode,
+                  mobileServerUrl: getContextMobileServerUrl(context),
+                }),
+                mode: context.state.mode,
+                extraArgs: ['--no-sync'],
+              });
+            }
+          },
+        }),
+      ],
+    });
+  } catch (error) {
+    logError(`Capacitor plugin error: ${error.message}`);
+    throw error;
+  }
+}
+
+function isVerbose() {
+  return isMeteorAppDebug() || isMeteorAppConfigModernVerbose();
+}
+
+function logVerbose(...args) {
+  if (isVerbose()) logInfo(...args);
+}
+
+function getRequestedCapacitorPlatforms(options = {}) {
+  if (isCapacitorBuildOptIn()) {
+    return getNativeBuildPlatforms(options, getMeteorAppPlatforms());
+  }
+  const requested = [
+    ...(options.args || []),
+    ...(options.platforms ? String(options.platforms).split(',') : []),
+  ];
+  return Array.from(new Set(requested.map(arg => {
+    if (arg === 'android' || arg === 'android-device') return 'android';
+    if (arg === 'ios' || arg === 'ios-device') return 'ios';
+    return arg.replace(/^capacitor:/, '');
+  }).filter(platform => CAPACITOR_PLATFORMS.includes(platform))));
+}
+
+function getBuildCordovaOutDir(buildOutputContext = {}) {
+  if (!buildOutputContext.outputPath) {
+    return null;
+  }
+
+  return path.join(buildOutputContext.outputPath, 'programs', 'web.cordova');
+}
+
+async function withProcessEnv(env, fn) {
+  const previous = {};
+  Object.keys(env).forEach(key => {
+    previous[key] = process.env[key];
+    process.env[key] = env[key];
+  });
+  try {
+    return await fn();
+  } finally {
+    Object.keys(env).forEach(key => {
+      if (previous[key] === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = previous[key];
+      }
+    });
+  }
+}
+
+/**
+ * Runs the cordova-to-build-native transform. Returns false if the
+ * transform itself failed (web.cordova/ exists but transforms threw).
+ */
+async function runTransform({ appDir, cordovaOutDir = null, hcpMode = getCapacitorHcpMode() }) {
+  if (isVerbose()) logProgress('=> Capacitor: transforming web.cordova to build-native/');
+  const ok = await runCapacitorTransforms({
+    appDir,
+    cordovaOutDir,
+    verbose: isVerbose(),
+    hcpMode,
+  });
+  if (!ok) {
+    logError('=> Capacitor: transform failed');
+    return false;
+  }
+  logVerbose(`[i] Capacitor build-native/ ready at ${path.join(appDir, CAPACITOR_BUILD_CONTEXT)}`);
+  return true;
+}
+
+/**
+ * Resolves once `web.cordova/program.json` is on disk (the bundle Meteor
+ * actually emits, buildIndex composes index.html from it). Returns false
+ * on timeout.
+ */
+function waitForCordovaBundle(cordovaOutDir, { intervalMs = 100, timeoutMs = 30_000 } = {}) {
+  const sentinelPath = path.join(cordovaOutDir, 'program.json');
+  if (fs.existsSync(sentinelPath)) return Promise.resolve(true);
+
+  return new Promise(resolve => {
+    const start = Date.now();
+    const interval = setInterval(() => {
+      if (fs.existsSync(sentinelPath)) {
+        clearInterval(interval);
+        resolve(true);
+      } else if (Date.now() - start >= timeoutMs) {
+        clearInterval(interval);
+        resolve(false);
+      }
+    }, intervalMs);
+  });
+}
+
+/**
+ * Runs the transform + cap sync pair used by both `meteor build` and
+ * `meteor run android|ios`. Awaits the cordova bundle becoming available
+ * before transforming. Continuous re-sync on subsequent rebuilds (the
+ * watcher) is planned separately.
+ *
+ * @param {Object} opts
+ * @param {string} opts.appDir
+ * @param {string|null} [opts.platform] 'android' / 'ios' for run, null for build.
+ * @param {string|null} [opts.cordovaOutDir] Explicit web.cordova source dir.
+ * @param {boolean} [opts.fatal] Throw on failure instead of returning false.
+ */
+async function transformAndSync({
+  appDir,
+  platform = null,
+  cordovaOutDir = null,
+  fatal = false,
+  hcpMode = getCapacitorHcpMode(),
+  mode = getCapacitorRunMode(),
+  mobileServerUrl = null,
+}) {
+  const resolvedCordovaOutDir = cordovaOutDir ||
+    path.join(appDir, CAPACITOR_CORDOVA_OUTPUT_DIR);
+  const displayCordovaOutDir = path.relative(appDir, resolvedCordovaOutDir);
+
+  logVerbose(`[i] Capacitor: waiting for ${displayCordovaOutDir}/program.json`);
+  const ready = await waitForCordovaBundle(resolvedCordovaOutDir);
+  if (!ready) {
+    return handleTransformFailure(
+      `Capacitor: ${displayCordovaOutDir}/program.json not found in Meteor build output.`,
+      { fatal }
+    );
+  }
+
+  const capacitorEnv = getCapacitorEnv({ platform, mode, mobileServerUrl });
+
+  return withProcessEnv(capacitorEnv, async () => {
+    await writeResolvedConfigSnapshot({ appDir });
+
+    if (!(await runTransform({ appDir, cordovaOutDir: resolvedCordovaOutDir, hcpMode }))) {
+      return handleTransformFailure('Capacitor build sync failed during web.cordova transform.', {
+        fatal,
+        log: false,
+      });
+    }
+
+    try {
+      const exitCode = await runCapSync({ appDir, platform, mode });
+      if (exitCode !== 0) {
+        throw new Error(`cap sync${platform ? ` ${platform}` : ''} exited with code ${exitCode}`);
+      }
+      return true;
+    } catch (err) {
+      return handleTransformFailure(`Capacitor sync failed: ${err.message}`, { fatal });
+    }
+  });
+}
+
+function handleTransformFailure(message, { fatal = false, log = true } = {}) {
+  if (fatal) {
+    throw new Error(message);
+  }
+  if (log) {
+    logError(message);
+  }
+  return false;
+}

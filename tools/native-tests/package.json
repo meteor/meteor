@@ -2,9 +2,17 @@
   "name": "meteor-native-tests",
   "version": "1.0.0",
   "private": true,
-  "description": "Maestro flows verifying Meteor's native mobile shell (Cordova).",
+  "description": "Maestro flows verifying Meteor's native mobile shell.",
   "scripts": {
-    "test": "node scripts/run.js"
+    "test": "node scripts/run.js",
+    "test:capacitor:android:run": "node scripts/run.js --platform=android --app=capacitor-tests",
+    "test:capacitor:ios:run": "node scripts/run.js --platform=ios --app=capacitor-tests",
+    "test:capacitor:android:build": "node scripts/run.js --platform=android --app=capacitor-tests --mode=build",
+    "test:capacitor:ios:build": "node scripts/run.js --platform=ios --app=capacitor-tests --mode=build",
+    "test:capacitor:android:livereload": "node scripts/run.js --platform=android --app=capacitor-tests --mode=livereload",
+    "test:capacitor:ios:livereload": "node scripts/run.js --platform=ios --app=capacitor-tests --mode=livereload",
+    "test:capacitor:android:hcp": "node scripts/run.js --platform=android --app=capacitor-tests --mode=hcp",
+    "test:capacitor:ios:hcp": "node scripts/run.js --platform=ios --app=capacitor-tests --mode=hcp"
   },
   "devDependencies": {
     "execa": "^5.1.1",

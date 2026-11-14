@@ -1,0 +1,32 @@
+{
+  "name": "native-react",
+  "private": true,
+  "scripts": {
+    "start": "meteor run",
+    "test": "meteor test --once --driver-package meteortesting:mocha"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.23.5",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/device": "^8.0.3",
+    "@swc/helpers": "^0.5.23",
+    "meteor-node-stubs": "^1.2.12",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "playwright": "1.59.0",
+    "typescript": "^5.9.3"
+  },
+  "meteor": {
+    "mainModule": {
+      "client": "client/main.jsx",
+      "server": "server/main.js"
+    },
+    "testModule": "tests/main.js",
+    "modern": {
+      "verbose": true
+    }
+  }
+}

@@ -1,0 +1,19 @@
+# Meteor packages used by this project, one per line.
+
+meteor-base
+mobile-experience
+mongo
+reactive-var
+
+standard-minifier-css
+standard-minifier-js
+es5-shim
+ecmascript
+typescript
+shell-server
+hot-module-replacement
+
+static-html
+react-meteor-data
+rspack
+capacitor

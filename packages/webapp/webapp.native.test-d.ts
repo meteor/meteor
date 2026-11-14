@@ -76,6 +76,27 @@ expectTypeOf(WebAppInternals.identifyBrowser).returns.toEqualTypeOf<{
   patch: number;
 }>();
 expectTypeOf(WebAppInternals.registerBoilerplateDataCallback).toBeFunction();
+expectTypeOf<WebAppInternals.ClientArchDetectorResult>().toEqualTypeOf<
+  string | { arch: string; path?: string | undefined } | null | false | undefined
+>();
+expectTypeOf<WebAppInternals.ClientArchDetector>().toBeFunction();
+const previousDetector = WebAppInternals.registerClientArchDetector(
+  "native-client",
+  (request, categorized) => {
+    expectTypeOf(request).toEqualTypeOf<import("http").IncomingMessage>();
+    expectTypeOf(categorized).toEqualTypeOf<CategorizedRequest>();
+    return request.headers["user-agent"]
+      ? { arch: "web.cordova", path: categorized.path }
+      : null;
+  },
+);
+expectTypeOf(WebAppInternals.registerClientArchDetector).returns.toEqualTypeOf<WebAppInternals.ClientArchDetector | null>();
+WebAppInternals.registerClientArchDetector("native-client", previousDetector);
+WebAppInternals.registerClientArchDetector("native-client", null);
+// @ts-expect-error A detector must return an architecture or a falsy result.
+WebAppInternals.registerClientArchDetector("invalid", () => true);
+// @ts-expect-error A replacement path must be a string.
+WebAppInternals.registerClientArchDetector("invalid-path", () => ({ arch: "web.cordova", path: 1 }));
 WebAppInternals.registerBoilerplateDataCallback(
   "async-data",
   async (_request, _data, _arch, response) => {

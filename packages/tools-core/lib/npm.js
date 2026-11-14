@@ -61,7 +61,7 @@ export function getMeteorCommandPath(
         return meteorCommandPath;
       }
     }
-    
+
     // Precheck if meteor.bat exists in PATH
     const pathEnv = process.env.PATH || process.env.Path || '';
     const pathDirs = pathEnv.split(path.delimiter);
@@ -269,6 +269,9 @@ function buildNpmInstallArgs(dependencies, options = {}) {
   // Add flags based on options
   if (options.dev) {
     args.push('--save-dev');
+  } else if (options.dev === false) {
+    // npm otherwise preserves an existing devDependencies entry.
+    args.push('--save-prod');
   }
 
   if (options.exact) {
@@ -334,6 +337,8 @@ function buildPnpmInstallArgs(dependencies, options = {}) {
 
   if (options.dev) {
     args.push('--save-dev');
+  } else if (options.dev === false) {
+    args.push('--save-prod');
   }
 
   if (options.exact) {
@@ -510,6 +515,8 @@ export function installNpmDependency(dependencies, options = {}) {
   return executeCommand('meteor', args, { cwd });
 }
 
+export const _buildNpmInstallArgs = buildNpmInstallArgs;
+
 
 /**
  * Checks if a specific npm dependency version meets a semver condition.
@@ -577,9 +584,11 @@ export function checkNpmDependencyVersion(dependency, options = {}) {
       for (const section of sections) {
         if (packageJson[section] && packageJson[section][dependency]) {
           const versionString = packageJson[section][dependency];
-          // Extract the version number from the version string (removing ^ or ~ if present)
-          const version = versionString.replace(/^[\^~]/, '');
-          return semver[semverCondition](version, versionRequirement);
+          // Minimum-version checks must also accept bounded declaration ranges.
+          const version = semverCondition === 'gte'
+            ? semver.minVersion(versionString)?.version
+            : versionString.replace(/^[\^~]/, '');
+          return !!version && semver[semverCondition](version, versionRequirement);
         }
       }
     }

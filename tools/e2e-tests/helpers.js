@@ -9,6 +9,18 @@ const rimraf = require('rimraf');
 // Get the absolute path to the meteor executable
 const REPO_ROOT = path.resolve(__dirname, '../..');
 const METEOR_EXECUTABLE = path.join(REPO_ROOT, 'meteor');
+const NPM_QUIET_INSTALL_FLAGS = '--no-audit --no-fund';
+
+function buildE2EEnv(baseEnv = process.env, overrides = {}) {
+  const env = {
+    ...baseEnv,
+    ...overrides,
+    DO_NOT_TRACK: '1',
+  };
+  delete env.NO_COLOR;
+  delete env.FORCE_COLOR;
+  return env;
+}
 
 /**
  * Returns true when the current Jest test is a retry attempt.
@@ -146,23 +158,26 @@ export async function setupMeteorApp(appName, options = {}) {
   } else if (isMonorepo) {
     // For monorepo, install dependencies at both root and app level
     console.log('Running npm install at root level...');
-    await execa.command('npm install', {
+    await execa.command(`npm install ${NPM_QUIET_INSTALL_FLAGS}`, {
       cwd: tempDir,
+      env: buildE2EEnv(),
       stdio: 'inherit',
       shell: true,
     });
 
     console.log('Running npm install at app level...');
-    await execa.command('npm install', {
+    await execa.command(`npm install ${NPM_QUIET_INSTALL_FLAGS}`, {
       cwd: path.join(tempDir, 'app'),
+      env: buildE2EEnv(),
       stdio: 'inherit',
       shell: true,
     });
   } else {
     // For regular apps, just install at the root
     console.log('Running npm install...');
-    await execa.command('npm install', {
+    await execa.command(`npm install ${NPM_QUIET_INSTALL_FLAGS}`, {
       cwd: tempDir,
+      env: buildE2EEnv(),
       stdio: 'inherit',
       shell: true,
     });
@@ -560,21 +575,26 @@ async function isPortFree(port) {
  * @param {Object} options - Additional options
  * @param {Object} options.execaOptions - Additional options for execa
  * @param {boolean} options.captureOutput - Whether to capture the command's output
+ * @param {boolean} options.logCapturedOutput - Whether captured output should also be echoed to the console
  * @param {boolean} options.checkExitCode - Whether to automatically check the exit code and throw an error if it's not 0
  * @returns {Object} - The meteor process and output lines if capturing output, and processResult if checkExitCode is true
  */
 export async function runMeteorCommand(command, args = [], cwd, options = {}) {
   console.log(`Running Meteor command: ${command} ${args.join(' ')}...`);
 
-  const { captureOutput = false, checkExitCode = false, execaOptions: extraExecaOptions = {}, env = {} } = options;
+  const {
+    captureOutput = false,
+    logCapturedOutput = true,
+    checkExitCode = false,
+    execaOptions: extraExecaOptions = {},
+    env = {}
+  } = options;
 
+  const extraEnv = extraExecaOptions.env || {};
   const execaOptions = {
     cwd,
-    env: {
-      ...process.env,
-      ...env
-    },
-    ...extraExecaOptions
+    ...extraExecaOptions,
+    env: buildE2EEnv(process.env, { ...env, ...extraEnv })
   };
 
   // If we're capturing output, set up stdio accordingly
@@ -596,15 +616,17 @@ export async function runMeteorCommand(command, args = [], cwd, options = {}) {
     meteorProcess.stdout.on('data', (data) => {
       const lines = data.toString().split('\n').filter(line => line.trim());
       outputLines.push(...lines);
-      // Still log to console for visibility
-      process.stdout.write(data);
+      if (logCapturedOutput) {
+        process.stdout.write(data);
+      }
     });
 
     meteorProcess.stderr.on('data', (data) => {
       const lines = data.toString().split('\n').filter(line => line.trim());
       outputLines.push(...lines);
-      // Still log to console for visibility
-      process.stderr.write(data);
+      if (logCapturedOutput) {
+        process.stderr.write(data);
+      }
     });
   }
 

@@ -215,8 +215,22 @@ export default defineConfig({
             link: "/ai/agent-skills",
           },
           {
-            text: "Cordova",
-            link: "/about/cordova",
+            text: "Native Stack",
+            link: "/about/native-stack.md",
+            items: [
+              {
+                text: "Pre-Installation",
+                link: "/about/native-stack/pre-installation.md",
+              },
+              {
+                text: "Capacitor (mobile)",
+                link: "/about/native-stack/capacitor-mobile.md",
+              },
+              {
+                text: "Cordova (Legacy mobile)",
+                link: "/about/cordova",
+              },
+            ]
           },
         ],
         collapsed: true,

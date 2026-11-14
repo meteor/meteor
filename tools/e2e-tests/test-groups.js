@@ -19,6 +19,10 @@ const EXPLICIT_TEST_GROUPS = Object.freeze({
     label: 'Blaze',
     pattern: '^(?:BasicBlaze App Bundling /|Blaze Router Integration /|Full Blaze App Bundling /|Meteor Skeletons / Blaze Skeleton /)',
   },
+  capacitor: {
+    label: 'Capacitor',
+    pattern: '^Capacitor App Web Lifecycle /',
+  },
   full_pwa_skeleton: {
     label: 'Full & PWA Skeletons',
     pattern: '^Meteor Skeletons / (?:Full|PWA) Skeleton /',

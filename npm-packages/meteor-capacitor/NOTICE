@@ -1,0 +1,7 @@
+@meteorjs/capacitor includes code derived from banjerluke/capacitor-meteor-webapp.
+
+The vendored Capacitor hot code push runtime in this package is based on:
+https://github.com/banjerluke/capacitor-meteor-webapp
+
+Copyright 2025 Luke Abbott. Licensed under the MIT License.
+See LICENSES/banjerluke-capacitor-meteor-webapp.txt.

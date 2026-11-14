@@ -16,6 +16,7 @@ const {
   isMeteorAppRun,
   isMeteorAppBuild,
   isMeteorAppNative,
+  isMeteorAppNativeLivereload,
   isMeteorAppDebug,
   isMeteorAppTest,
   isMeteorAppTestFullApp,
@@ -261,6 +262,12 @@ export function configureMeteorForRspack() {
     '/_build-*',
     `!/${RSPACK_BUILD_CONTEXT}`,
     `!/${RSPACK_BUILD_CONTEXT}/**`,
+    // Capacitor shares this build root, but its copied web app is not source.
+    // Re-exclude it after opening the root for Rspack's generated modules:
+    // the entrypoint-scoped rules take precedence over Capacitor's ignores.
+    `${process.env.CAPACITOR_BUILD_CONTEXT || RSPACK_BUILD_CONTEXT}/native-dev`,
+    `${process.env.CAPACITOR_BUILD_CONTEXT || RSPACK_BUILD_CONTEXT}/native-prod`,
+    process.env.METEOR_CAPACITOR_WEB_DIR,
     ...testIgnorePaths,
     ...mainIgnorePaths,
     '**/node_modules/**',
@@ -426,7 +433,11 @@ export function configureMeteorForRspack() {
   ensureModuleFilesExist();
 
   // Write content to module files
-  if (isMeteorAppRun() && isMeteorAppDevelopment() && !isMeteorAppNative()) {
+  if (
+    isMeteorAppRun() &&
+    isMeteorAppDevelopment() &&
+    (!isMeteorAppNative() || isMeteorAppNativeLivereload())
+  ) {
     const clientOutputPrefix = architectureEntries.length
       ? `${getRspackChunksContext(false, false, 'client')}/` : '';
     const customScriptUrl = `/__rspack__/${clientOutputPrefix}${getBuildFilePath({

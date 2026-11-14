@@ -2,6 +2,32 @@ const os = require("node:os");
 const path = require("node:path");
 const execa = require("execa");
 const waitOn = require("wait-on");
+const { buildNativeTestEnv } = require("./env");
+
+const DEFAULT_PORT = 3000;
+
+function resolveNativeServerConfig({
+  platform,
+  lanIp,
+  port = DEFAULT_PORT,
+  env = process.env,
+} = {}) {
+  const isAndroid = platform === "android";
+  const bindHost = isAndroid
+    ? (env.MAESTRO_ANDROID_BIND_HOST || "127.0.0.1")
+    : lanIp;
+  const mobileServerHost = isAndroid
+    ? (env.MAESTRO_ANDROID_MOBILE_SERVER_HOST || "10.0.2.2")
+    : bindHost;
+
+  return {
+    bindHost,
+    bindUrl: `http://${bindHost}:${port}`,
+    mobileServerUrl: `http://${mobileServerHost}:${port}`,
+    lanIp,
+    port,
+  };
+}
 
 function resolveLanIp({ interfaces = os.networkInterfaces(), prefer } = {}) {
   const flat = [];
@@ -22,20 +48,77 @@ function resolveLanIp({ interfaces = os.networkInterfaces(), prefer } = {}) {
   return flat[0].address;
 }
 
-function buildServerArgs({ lanIp, port }) {
-  return [
-    "run",
-    "--port",
-    `${lanIp}:${port}`,
-    "--mobile-server",
-    `http://${lanIp}:${port}`,
-  ];
+function buildNativeRunOptions({
+  platform,
+  bindHost,
+  lanIp,
+  mobileServerUrl,
+  port = DEFAULT_PORT,
+  deviceId,
+  capacitorMode,
+  baseEnv = process.env,
+  meteorBin,
+} = {}) {
+  const repoRoot = path.resolve(__dirname, "..", "..", "..");
+  const meteor = meteorBin || path.join(repoRoot, "meteor");
+  const host = bindHost || lanIp;
+  const url = `http://${host}:${port}`;
+  const env = buildNativeTestEnv(baseEnv, {
+    DO_NOT_TRACK: "1",
+    PORT: String(port),
+    ROOT_URL: url,
+    METEOR_CAPACITOR_LOCAL_IP: host,
+  });
+
+  if (deviceId) {
+    env.METEOR_CAPACITOR_TARGET = deviceId;
+  }
+
+  if (capacitorMode) {
+    env.METEOR_CAPACITOR_MODE = capacitorMode;
+  }
+
+  return {
+    command: meteor,
+    args: [
+      "run",
+      platform,
+      "--port",
+      `${host}:${port}`,
+      ...(mobileServerUrl ? ["--mobile-server", mobileServerUrl] : []),
+    ],
+    env,
+    url,
+  };
 }
 
-function buildServerEnv(environment = process.env) {
+function buildServerRunOptions({
+  bindHost,
+  lanIp,
+  mobileServerUrl,
+  port = DEFAULT_PORT,
+  baseEnv = process.env,
+  meteorBin,
+} = {}) {
+  const repoRoot = path.resolve(__dirname, "..", "..", "..");
+  const meteor = meteorBin || path.join(repoRoot, "meteor");
+  const host = bindHost || lanIp;
+  const url = `http://${host}:${port}`;
   return {
-    ...environment,
-    METEOR_FORCE_INCLUDE_ARCHS: "web.cordova",
+    command: meteor,
+    args: [
+      "run",
+      "--port",
+      `${host}:${port}`,
+      ...(mobileServerUrl ? ["--mobile-server", mobileServerUrl] : []),
+    ],
+    env: buildNativeTestEnv(baseEnv, {
+      DO_NOT_TRACK: "1",
+      PORT: String(port),
+      ROOT_URL: mobileServerUrl || url,
+      METEOR_FORCE_INCLUDE_ARCHS: "web.cordova",
+    }),
+    url,
   };
 }
 
@@ -49,17 +132,78 @@ function buildServerEnv(environment = process.env) {
  * @param {string} [opts.meteorBin]  Path to the meteor launcher. Defaults to ./meteor at the repo root.
  * @returns {Promise<{stop: () => Promise<void>, url: string}>}
  */
-async function startServer({ appDir, lanIp, port = 3000, meteorBin }) {
-  const repoRoot = path.resolve(__dirname, "..", "..", "..");
-  const meteor = meteorBin || path.join(repoRoot, "meteor");
-  const url = `http://${lanIp}:${port}`;
+async function startServer({
+  appDir,
+  bindHost,
+  lanIp,
+  mobileServerUrl,
+  port = 3000,
+  meteorBin,
+}) {
+  const { command, args, env, url } = buildServerRunOptions({
+    bindHost,
+    lanIp,
+    mobileServerUrl,
+    port,
+    meteorBin,
+  });
 
   const child = execa(
-    meteor,
-    buildServerArgs({ lanIp, port }),
+    command,
+    args,
     {
       cwd: appDir,
-      env: buildServerEnv(),
+      env,
+      stdio: "inherit",
+      reject: false,
+      detached: false,
+    }
+  );
+
+  await waitOn({ resources: [url], timeout: 240_000, interval: 1000 });
+
+  return {
+    url,
+    async stop() {
+      if (child.pid && !child.killed) {
+        child.kill("SIGTERM");
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        if (!child.killed) child.kill("SIGKILL");
+      }
+    },
+  };
+}
+
+async function startNativeRun({
+  appDir,
+  platform,
+  bindHost,
+  lanIp,
+  mobileServerUrl,
+  port = DEFAULT_PORT,
+  deviceId,
+  capacitorMode,
+  baseEnv,
+  meteorBin,
+}) {
+  const { command, args, env, url } = buildNativeRunOptions({
+    platform,
+    bindHost,
+    lanIp,
+    mobileServerUrl,
+    port,
+    deviceId,
+    capacitorMode,
+    baseEnv,
+    meteorBin,
+  });
+
+  const child = execa(
+    command,
+    args,
+    {
+      cwd: appDir,
+      env,
       stdio: "inherit",
       reject: false,
       detached: false,
@@ -81,8 +225,10 @@ async function startServer({ appDir, lanIp, port = 3000, meteorBin }) {
 }
 
 module.exports = {
-  buildServerArgs,
-  buildServerEnv,
+  buildNativeRunOptions,
+  buildServerRunOptions,
   resolveLanIp,
+  resolveNativeServerConfig,
+  startNativeRun,
   startServer,
 };

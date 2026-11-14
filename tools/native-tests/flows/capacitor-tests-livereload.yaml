@@ -1,0 +1,35 @@
+appId: com.meteor.capacitortests
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Welcome to Meteor Capacitor Tests Updated"
+    timeout: 120000
+- extendedWaitUntil:
+    visible: "Native render ready"
+    timeout: 120000
+- assertVisible: "Style preserved"
+- extendedWaitUntil:
+    visible: "DDP verified"
+    timeout: 60000
+- assertVisible: "Native client version updated"
+- assertVisible: "Native server version updated"
+- assertVisible: "window.Capacitor available"
+- assertVisible: "Meteor.isCapacitor true"
+- assertVisible: "Capacitor native platform ready"
+- extendedWaitUntil:
+    visible: "Device plugin ready: native"
+    timeout: 60000
+- extendedWaitUntil:
+    visible: "App plugin ready: com.meteor.capacitortests"
+    timeout: 60000
+- assertVisible: "WebAppLocalServer shim ready"
+- assertVisible: "WebAppLocalServer livereload shim ready"
+- assertVisible: "__cordova paths served"
+- tapOn: "Reload route test"
+- extendedWaitUntil:
+    visible: "Route reload preserved"
+    timeout: 60000
+- extendedWaitUntil:
+    visible: "DDP verified"
+    timeout: 60000

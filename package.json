@@ -57,6 +57,16 @@
     "test:native": "cd tools/native-tests && npm test --",
     "test:native:ios": "cd tools/native-tests && npm test -- --platform=ios",
     "test:native:android": "cd tools/native-tests && npm test -- --platform=android",
+    "test:native:capacitor:ios": "cd tools/native-tests && npm test -- --platform=ios --app=capacitor-tests",
+    "test:native:capacitor:android": "cd tools/native-tests && npm test -- --platform=android --app=capacitor-tests",
+    "test:native:capacitor:ios:run": "cd tools/native-tests && npm run test:capacitor:ios:run",
+    "test:native:capacitor:android:run": "cd tools/native-tests && npm run test:capacitor:android:run",
+    "test:native:capacitor:ios:build": "cd tools/native-tests && npm run test:capacitor:ios:build",
+    "test:native:capacitor:android:build": "cd tools/native-tests && npm run test:capacitor:android:build",
+    "test:native:capacitor:ios:livereload": "cd tools/native-tests && npm run test:capacitor:ios:livereload",
+    "test:native:capacitor:android:livereload": "cd tools/native-tests && npm run test:capacitor:android:livereload",
+    "test:native:capacitor:ios:hcp": "cd tools/native-tests && npm run test:capacitor:ios:hcp",
+    "test:native:capacitor:android:hcp": "cd tools/native-tests && npm run test:capacitor:android:hcp",
     "test:idle-bot": "node --test .github/scripts/__tests__/inactive-issues.test.js",
     "test:self-hosted-runner-cleanup": "node --test scripts/ci/__tests__/self-hosted-runner-cleanup.node-test.js",
     "checkout:pr": "node scripts/checkout-pr.js",
@@ -66,7 +76,9 @@
     "types:breadth": "node scripts/type-coverage/check-type-breadth.js --strict",
     "types:coverage": "npm run types:compile && type-coverage --project tsconfig.types.json --at-least 99",
     "types:coverage:table": "npm run types:compile && typescript-coverage-report --project tsconfig.types.json",
-    "types:dts-test-coverage": "npm exec --yes --package=typescript@5.9.3 --package=check-type-test-coverage@1.3.0 -- check-type-test-coverage ./packages --augmentation --ignore '**/non-core/blaze/**' --ignore '**/{accounts-base/accounts-base,browser-policy-common/browser-policy-common,check/check,ddp-rate-limiter/ddp-rate-limiter,ddp/ddp,ejson/ejson,email/email,hot-module-replacement/hot-module-replacement,logging/logging,meteor/meteor,modern-browsers/modern,mongo/mongo,promise/promise,random/random,reactive-dict/reactive-dict,roles/definitions,server-render/server-render,service-configuration/service-configuration,session/session,tracker/tracker,webapp/webapp}.d.ts' --tsconfig ./tsconfig.types.json --namespace-members --min 100"
+    "types:dts-test-coverage": "npm exec --yes --package=typescript@5.9.3 --package=check-type-test-coverage@1.3.0 -- check-type-test-coverage ./packages --augmentation --ignore '**/non-core/blaze/**' --ignore '**/{accounts-base/accounts-base,browser-policy-common/browser-policy-common,check/check,ddp-rate-limiter/ddp-rate-limiter,ddp/ddp,ejson/ejson,email/email,hot-module-replacement/hot-module-replacement,logging/logging,meteor/meteor,modern-browsers/modern,mongo/mongo,promise/promise,random/random,reactive-dict/reactive-dict,roles/definitions,server-render/server-render,service-configuration/service-configuration,session/session,tracker/tracker,webapp/webapp}.d.ts' --tsconfig ./tsconfig.types.json --namespace-members --min 100",
+    "npm-packages:bump": "node scripts/admin/bump-npm-package.js --package",
+    "npm-packages:publish": "bash scripts/admin/publish-npm-package.sh"
   },
   "jshintConfig": {
     "esversion": 11

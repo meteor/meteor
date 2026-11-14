@@ -1,0 +1,341 @@
+import { App as CapacitorApp } from "@capacitor/app";
+import { Device } from "@capacitor/device";
+import { Meteor } from "meteor/meteor";
+import { Tracker } from "meteor/tracker";
+
+const ddpState = {
+  connected: false,
+  methodReady: false,
+  subscriptionReady: false,
+};
+const CLIENT_VERSION = "Native client version initial";
+const HCP_TRACE_KEY = "meteor-capacitor-native-test-hcp-trace";
+const NATIVE_HCP_CHECK_DELAY_MS = 1000;
+let nativeHcpCheckTimer = null;
+let nativeHcpLifecycleBound = false;
+
+function setStatus(id, text) {
+  const node = document.getElementById(id);
+  if (node) node.textContent = text;
+}
+
+function getErrorMessage(error) {
+  return error?.message || String(error);
+}
+
+function withPluginTimeout(promise, label, timeoutMs = 15000) {
+  let timeoutId;
+  const timeout = new Promise((_, reject) => {
+    timeoutId = window.setTimeout(
+      () => reject(new Error(`${label} timed out`)),
+      timeoutMs
+    );
+  });
+
+  return Promise.race([promise, timeout]).finally(() => {
+    window.clearTimeout(timeoutId);
+  });
+}
+
+function readHcpTrace() {
+  try {
+    return JSON.parse(window.localStorage.getItem(HCP_TRACE_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function writeHcpTrace(trace) {
+  try {
+    window.localStorage.setItem(HCP_TRACE_KEY, JSON.stringify(trace));
+  } catch {
+    // Native tests keep running if storage is unavailable; visible assertions
+    // that depend on persisted HCP state will fail.
+  }
+}
+
+function recordHcpTrace(key) {
+  const trace = readHcpTrace();
+  trace[key] = (trace[key] || 0) + 1;
+  writeHcpTrace(trace);
+}
+
+function isNativeWebAppLocalServerBridge(shim) {
+  const source = [
+    shim?.checkForUpdates,
+    shim?.onNewVersionReady,
+    shim?.switchToPendingVersion,
+  ].map((fn) => {
+    const target = fn?.__nativeTestOriginal || fn;
+    try {
+      return Function.prototype.toString.call(target);
+    } catch {
+      return "";
+    }
+  }).join("\n");
+
+  return source.includes("CapacitorMeteorWebApp") || source.includes("getPlugin");
+}
+
+function wrapWebAppLocalServerMethod(shim, methodName, traceKey, mapArgs) {
+  const original = shim?.[methodName];
+  if (typeof original !== "function" || original.__nativeTestWrapped) return;
+
+  const wrapped = function (...args) {
+    recordHcpTrace(traceKey);
+    return original.apply(this, mapArgs ? mapArgs(args) : args);
+  };
+  wrapped.__nativeTestWrapped = true;
+  wrapped.__nativeTestOriginal = original;
+  shim[methodName] = wrapped;
+}
+
+function instrumentWebAppLocalServer() {
+  const shim = window.WebAppLocalServer;
+  if (!shim || shim.__nativeTestInstrumented) return;
+
+  wrapWebAppLocalServerMethod(shim, "checkForUpdates", "checkForUpdates");
+  wrapWebAppLocalServerMethod(
+    shim,
+    "onNewVersionReady",
+    "onNewVersionReadyRegistered",
+    (args) => {
+      if (typeof args[0] !== "function") return args;
+      const callback = args[0];
+      return [
+        function (...callbackArgs) {
+          recordHcpTrace("updateReady");
+          return callback.apply(this, callbackArgs);
+        },
+      ];
+    }
+  );
+  wrapWebAppLocalServerMethod(shim, "switchToPendingVersion", "switchToPendingVersion");
+  shim.__nativeTestInstrumented = true;
+}
+
+instrumentWebAppLocalServer();
+
+function getNativeHcpShim() {
+  const shim = window.WebAppLocalServer;
+  return isNativeWebAppLocalServerBridge(shim) ? shim : null;
+}
+
+function scheduleNativeHcpCheck(delayMs = NATIVE_HCP_CHECK_DELAY_MS) {
+  const shim = getNativeHcpShim();
+  if (!shim || typeof shim.checkForUpdates !== "function") return;
+
+  if (nativeHcpCheckTimer !== null) {
+    window.clearTimeout(nativeHcpCheckTimer);
+  }
+
+  nativeHcpCheckTimer = window.setTimeout(() => {
+    nativeHcpCheckTimer = null;
+    shim.checkForUpdates(() => {});
+  }, delayMs);
+}
+
+function bindNativeHcpLifecycle() {
+  const shim = getNativeHcpShim();
+  if (!shim || nativeHcpLifecycleBound) return;
+
+  nativeHcpLifecycleBound = true;
+
+  if (typeof shim.onNewVersionReady === "function") {
+    shim.onNewVersionReady(() => {
+      if (typeof shim.switchToPendingVersion === "function") {
+        shim.switchToPendingVersion(() => {});
+      }
+    });
+  }
+
+  if (typeof CapacitorApp?.addListener === "function") {
+    CapacitorApp.addListener("appStateChange", ({ isActive }) => {
+      if (isActive) {
+        scheduleNativeHcpCheck();
+      }
+    });
+  }
+
+  scheduleNativeHcpCheck();
+}
+
+function updateDdpStatus() {
+  if (
+    ddpState.connected &&
+    ddpState.subscriptionReady &&
+    ddpState.methodReady
+  ) {
+    setStatus("ddp-status", "DDP verified");
+  }
+}
+
+function checkStyleProbe() {
+  const probe = document.getElementById("style-probe");
+  if (!probe) return;
+
+  const style = getComputedStyle(probe);
+  if (
+    style.backgroundColor === "rgb(14, 165, 233)" &&
+    style.color === "rgb(255, 255, 255)" &&
+    style.paddingTop === "12px"
+  ) {
+    setStatus("style-status", "Style preserved");
+  }
+}
+
+function checkWindowCapacitor() {
+  const capacitor = window.Capacitor;
+
+  if (capacitor) {
+    setStatus("capacitor-status", "window.Capacitor available");
+  }
+}
+
+function checkMeteorIsCapacitor() {
+  if (Meteor.isCapacitor === true) {
+    setStatus("meteor-capacitor-status", "Meteor.isCapacitor true");
+  }
+}
+
+function checkCapacitorNativePlatform() {
+  if (window.Capacitor?.isNativePlatform?.() === true) {
+    setStatus("native-platform-status", "Capacitor native platform ready");
+  }
+}
+
+async function checkDevicePlugin() {
+  try {
+    const info = await withPluginTimeout(Device.getInfo(), "Device.getInfo");
+    if (info?.platform === "android" || info?.platform === "ios") {
+      setStatus("device-plugin-status", "Device plugin ready: native");
+      setStatus("device-plugin-platform-status", `Device plugin platform: ${info.platform}`);
+    } else {
+      setStatus(
+        "device-plugin-status",
+        `Device plugin unexpected platform: ${info?.platform || "unknown"}`
+      );
+    }
+  } catch (error) {
+    setStatus("device-plugin-status", `Device plugin error: ${getErrorMessage(error)}`);
+  }
+}
+
+async function checkAppPlugin() {
+  try {
+    const info = await withPluginTimeout(CapacitorApp.getInfo(), "App.getInfo");
+    if (info?.id === "com.meteor.capacitortests") {
+      setStatus("app-plugin-status", "App plugin ready: com.meteor.capacitortests");
+    } else {
+      setStatus("app-plugin-status", `App plugin unexpected id: ${info?.id || "unknown"}`);
+    }
+  } catch (error) {
+    setStatus("app-plugin-status", `App plugin error: ${getErrorMessage(error)}`);
+  }
+}
+
+function checkCapacitorPlugins() {
+  checkDevicePlugin();
+  checkAppPlugin();
+}
+
+function checkWebAppLocalServerShim() {
+  const shim = window.WebAppLocalServer;
+  if (
+    shim &&
+    typeof shim.startupDidComplete === "function" &&
+    typeof shim.checkForUpdates === "function" &&
+    typeof shim.switchToPendingVersion === "function"
+  ) {
+    setStatus("shim-status", "WebAppLocalServer shim ready");
+  }
+
+  if (isNativeWebAppLocalServerBridge(shim)) {
+    setStatus("webapp-local-server-mode-status", "WebAppLocalServer native bridge ready");
+  } else if (shim) {
+    setStatus("webapp-local-server-mode-status", "WebAppLocalServer livereload shim ready");
+  }
+}
+
+function checkHcpTrace() {
+  const trace = readHcpTrace();
+  if (trace.checkForUpdates > 0) {
+    setStatus("hcp-check-status", "HCP check requested");
+  }
+  if (trace.updateReady > 0) {
+    setStatus("hcp-ready-status", "HCP update ready");
+  }
+  if (trace.switchToPendingVersion > 0) {
+    setStatus("hcp-reload-status", "HCP reload executed");
+  }
+}
+
+function checkCordovaPaths() {
+  const urls = Array.from(document.querySelectorAll("[src], [href]"))
+    .flatMap((node) => [
+      node.getAttribute("src"),
+      node.getAttribute("href"),
+      node.src,
+      node.href,
+    ])
+    .filter(Boolean);
+
+  if (urls.some((url) => String(url).includes("__cordova/"))) {
+    setStatus("cordova-status", "__cordova paths served");
+  } else {
+    setStatus("cordova-status", "__cordova paths adapted");
+  }
+}
+
+function checkRouteReloadState() {
+  if (window.location.pathname === "/tasks") {
+    setStatus("route-status", "Route reload preserved");
+  }
+}
+
+function bindRouteReloadButton() {
+  const button = document.getElementById("route-reload-button");
+  if (!button || button.__nativeTestBound) return;
+
+  button.addEventListener("click", () => {
+    window.history.pushState({}, "", "/tasks");
+    window.location.reload();
+  });
+  button.__nativeTestBound = true;
+}
+
+Meteor.startup(() => {
+  setStatus("render-status", "Native render ready");
+  setStatus("client-version-status", CLIENT_VERSION);
+  checkStyleProbe();
+  checkWindowCapacitor();
+  checkMeteorIsCapacitor();
+  checkCapacitorNativePlatform();
+  checkCapacitorPlugins();
+  checkWebAppLocalServerShim();
+  bindNativeHcpLifecycle();
+  checkHcpTrace();
+  checkCordovaPaths();
+  checkRouteReloadState();
+  bindRouteReloadButton();
+
+  Meteor.subscribe("nativePing", {
+    onReady() {
+      ddpState.subscriptionReady = true;
+      updateDdpStatus();
+    },
+  });
+
+  Meteor.call("nativeEcho", "ping", (error, result) => {
+    if (!error && result?.ok === true && result?.echo === "ping") {
+      setStatus("server-version-status", result.serverVersion);
+      ddpState.methodReady = true;
+      updateDdpStatus();
+    }
+  });
+
+  Tracker.autorun(() => {
+    ddpState.connected = Meteor.status().connected;
+    updateDdpStatus();
+  });
+});
