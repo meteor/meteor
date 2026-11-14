@@ -57,6 +57,41 @@ describe('parseUrl', () => {
   test('excludes pathname for root path', () => {
     expect(utils.parseUrl('http://ex.com/').pathname).toBeUndefined();
   });
+
+  // The WHATWG URL parser drops ports equal to the protocol default, but an
+  // explicitly written port must still be returned instead of the fallback.
+  test.each([
+    ['localhost:80', {}, { hostname: 'localhost', port: '80' }],
+    ['localhost:443', {}, { hostname: 'localhost', port: '443' }],
+    ['http://localhost:80', { port: '9999' }, { protocol: 'http', hostname: 'localhost', port: '80' }],
+    ['https://localhost:443', { port: '9999' }, { protocol: 'https', hostname: 'localhost', port: '443' }],
+    ['https://ex.com:443/path', {}, { protocol: 'https', hostname: 'ex.com', port: '443', pathname: '/path' }],
+    ['http://user:pass@ex.com:80', {}, { hostname: 'ex.com', port: '80' }],
+    ['[::1]:80', {}, { hostname: '::1', port: '80' }],
+    ['http://[::]:80', { port: '9999' }, { hostname: '::', port: '80' }],
+    ['https://[::1]:443/', {}, { protocol: 'https', hostname: '::1', port: '443' }],
+    // Inputs the WHATWG parser normalizes before reading the authority
+    ['http://localhost:80 ', { port: '9999' }, { hostname: 'localhost', port: '80' }],
+    ['http://local\thost:80', { port: '9999' }, { hostname: 'localhost', port: '80' }],
+    ['http:////localhost:80', { port: '9999' }, { hostname: 'localhost', port: '80' }],
+    ['http://localhost:80\\path', { port: '9999' }, { hostname: 'localhost', port: '80' }],
+    ['HTTPS://localhost:443', { port: '9999' }, { protocol: 'https', hostname: 'localhost', port: '443' }],
+  ])('keeps explicit default port: parseUrl(%s) with defaults %j', (input, defaults, expected) => {
+    expect(utils.parseUrl(input, defaults)).toMatchObject(expected);
+  });
+
+  test.each([
+    ['http://localhost', { port: '9999' }, '9999'],
+    ['https://localhost/', { port: '9999' }, '9999'],
+    ['http://[::1]', { port: '9999' }, '9999'],
+    ['http://[::1]/', {}, undefined],
+    ['localhost', {}, undefined],
+    ['http://user:pass@ex.com/a:80', { port: '9999' }, '9999'],
+    ['[::1]:3000', { port: '9999' }, '3000'],
+    ['https://ex.com:8443', { port: '9999' }, '8443'],
+  ])('port for parseUrl(%s) with defaults %j is %s', (input, defaults, port) => {
+    expect(utils.parseUrl(input, defaults).port).toBe(port);
+  });
 });
 
 describe('formatUrl', () => {
