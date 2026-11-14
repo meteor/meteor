@@ -67,6 +67,10 @@ const {
 } = require('./lib/command');
 const { getCapacitorHcpMode } = require('./lib/hcp');
 
+// Native outputs remain generated sources when the next command is web-only.
+// Exclude their app-root directories before any application source scan.
+setMeteorAppIgnore(getCapacitorIgnoreCandidates().join(' '), { root: true });
+
 if (isMeteorAppUpdate() && Package.meteor.global.currentCommand.options.npm) {
   // Updating npm dependencies must not scaffold projects, sync, or launch a device.
   await ensureCapacitorInstalled({ platforms: getMeteorAppPlatforms() });
@@ -105,10 +109,6 @@ async function runCapacitorPlugin() {
         // assignment covers downstream child processes spawned by the plugin.
         process.env.METEOR_CORDOVA_DISABLE = 'true';
 
-        // Skip generated native webDirs and platform projects at isobuild scan
-        // time. Keep rspack's main-* outputs under the same _build/ root visible.
-        setMeteorAppIgnore(getCapacitorIgnoreCandidates().join(' '));
-
         const dependencyResult = await ensureCapacitorInstalled({
           platforms: (
             isCapacitorAddPlatformOptIn() || isCapacitorRunOptIn()
@@ -124,7 +124,11 @@ async function runCapacitorPlugin() {
         // Snapshot the resolved capacitor.config to the per-env webDir
         // (`_build/native-{dev,prod}/capacitor.config.json`). Informational:
         // capacitor's CLI still loads the source .js from project root.
-        await writeResolvedConfigSnapshot({ appDir: context.appDir });
+        await withProcessEnv(getCapacitorEnv({
+          platform: context.state.platforms.length === 1 ? context.state.platforms[0] : null,
+          mode: context.state.mode,
+          mobileServerUrl: getContextMobileServerUrl(context),
+        }), () => writeResolvedConfigSnapshot({ appDir: context.appDir }));
 
         process.on('exit', cleanup);
         process.on('SIGINT', () => {

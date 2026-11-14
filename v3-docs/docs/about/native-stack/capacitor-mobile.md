@@ -386,6 +386,16 @@ meteor build ../build-output --server=https://your-server-url.com --platforms=io
 
 The Capacitor package transforms the production native web bundle into `_build/native-prod` and runs `cap sync` for the selected platform.
 
+Native builds require an explicit server URL. `--server` takes precedence over
+`MOBILE_ROOT_URL` and `ROOT_URL`; local network discovery is reserved for development
+runs. Meteor passes the same URL to the Capacitor configuration factory, the
+bundle's `ROOT_URL` and DDP endpoint, and native synchronization. URL path prefixes
+are preserved. Directory and tarball builds follow the same flow.
+
+Web-only builds (`--platforms=web.browser`), `--server-only`, and deployment skip
+native preparation. Generated `android/`, `ios/`, and native web directories are
+excluded from application source scanning during subsequent web commands.
+
 ### Open native IDEs
 
 After `meteor run` or `meteor build` has synced the native project, open the project with Capacitor tooling:

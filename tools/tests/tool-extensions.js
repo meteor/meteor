@@ -87,6 +87,12 @@ selftest.define('tool-extension build accepts fake platform', async function () 
   run = s.run('build', '../out', '--directory', '--platforms=fake-native');
   await run.waitSecs(120);
   await run.expectExit(0);
+
+  // A known fallback platform that is not configured does not perform a
+  // mobile build or require a mobile server URL.
+  run = s.run('build', '../out-no-mobile', '--directory', '--platforms=android');
+  await run.waitSecs(120);
+  await run.expectExit(0);
 });
 
 selftest.define('tool-extension run accepts fake platform as target', async function () {

@@ -12,6 +12,7 @@ module.exports = defineConfig(Meteor => ({
       isNativeIos: Meteor.isNativeIos,
       mode: Meteor.mode,
       webDir: Meteor.webDir,
+      rootUrl: Meteor.rootUrl,
       localIp: Meteor.localIp,
       port: Meteor.port
     }

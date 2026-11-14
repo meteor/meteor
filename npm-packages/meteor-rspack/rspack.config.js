@@ -518,7 +518,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     ...(Meteor.isBlazeEnabled && {
       externals: /\.html$/,
       isEagerImport: (module) => module.endsWith(".html"),
-      ...((isProd || arch || (isTest && isClient)) && {
+      ...((isProd || arch || (isTest && isClient) || (isClient && isNative && !isNativeLivereload)) && {
         lastImports: [`./${outputFilename}`],
       }),
     }),

@@ -11,9 +11,11 @@ import {
   isMeteorAppBuild,
   isMeteorAppAddPlatform,
   isMeteorAppNative,
+  getMeteorAppPlatforms,
 } from 'meteor/tools-core/lib/meteor';
 
-export { CAPACITOR_PLATFORMS } from './constants';
+import { CAPACITOR_PLATFORMS } from './constants';
+export { CAPACITOR_PLATFORMS };
 
 /**
  * `meteor run android|ios|*-device`: Cordova runner is bypassed via
@@ -28,7 +30,15 @@ export function isCapacitorRunOptIn() {
  * listed in .meteor/platforms.
  */
 export function isCapacitorBuildOptIn() {
-  return isMeteorAppBuild();
+  const command = Package?.meteor?.global?.currentCommand || {};
+  const options = command.options || {};
+  if (!isMeteorAppBuild() || command.name !== 'build' || options['server-only'] || options._bundleOnly) {
+    return false;
+  }
+  const platforms = options.platforms
+    ? String(options.platforms).split(',')
+    : getMeteorAppPlatforms();
+  return platforms.some(platform => CAPACITOR_PLATFORMS.includes(platform.replace(/^capacitor:/, '')));
 }
 
 /**

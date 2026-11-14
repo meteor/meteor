@@ -198,7 +198,7 @@ export function parseServerOptionsForRunCommand(options, runTargets) {
   return { parsedServerUrl, parsedMobileServerUrl, parsedCordovaServerPort };
 }
 
-export function setRunCommandMobileServerUrl(parsedMobileServerUrl) {
+export function setCommandMobileServerUrl(parsedMobileServerUrl) {
   const mobileServerUrl = utils.formatUrl(parsedMobileServerUrl);
   global.currentCommand.mobileServerUrl = mobileServerUrl;
   return mobileServerUrl;
@@ -537,7 +537,7 @@ async function doRunCommand(options) {
   const { parsedServerUrl, parsedMobileServerUrl, parsedCordovaServerPort } =
     parseServerOptionsForRunCommand(options, initiallyKnownRunTargets);
   const mobileServerUrl =
-    setRunCommandMobileServerUrl(parsedMobileServerUrl);
+    setCommandMobileServerUrl(parsedMobileServerUrl);
 
   var includePackages = [];
   if (options['extra-packages']) {
@@ -1605,6 +1605,14 @@ var buildCommand = async function (options) {
   }
   var bundleArch = options.architecture || archinfo.host();
 
+  // Build plugins can initialize during project preparation. Publish the
+  // explicit mobile URL before they capture the command context.
+  let parsedMobileServerUrl;
+  if (options.server) {
+    parsedMobileServerUrl = parseMobileServerOption(options.server, 'server');
+    setCommandMobileServerUrl(parsedMobileServerUrl);
+  }
+
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
     serverArchitectures: _.uniq([bundleArch, archinfo.host()]),
@@ -1649,12 +1657,14 @@ var buildCommand = async function (options) {
   }
 
   let cordovaPlatforms;
-  let parsedMobileServerUrl;
   if (!serverOnly) {
     const projectCordovaPlatforms = projectContext.platformList.getCordovaPlatforms();
-    const fallbackCordovaPlatforms = projectCordovaPlatforms.filter(platform =>
-      resolveToolPlatformOrExit(toolExtensionRegistry, platform).isFallback
+    const resolvedProjectPlatforms = projectCordovaPlatforms.map(platform =>
+      resolveToolPlatformOrExit(toolExtensionRegistry, platform)
     );
+    const fallbackCordovaPlatforms = resolvedProjectPlatforms
+      .filter(result => result.isFallback)
+      .map(result => result.platform.name);
 
     if (selectedPlatforms) {
       const selectedFallbackPlatforms = selectedResolvedPlatforms
@@ -1671,11 +1681,18 @@ var buildCommand = async function (options) {
 on an OS X system.");
     }
 
-    if (!_.isEmpty(cordovaPlatforms)) {
-      const mobileServerOption = options.server;
+    const resolvedBuildPlatforms = selectedPlatforms
+      ? selectedResolvedPlatforms
+      : resolvedProjectPlatforms;
+    if (resolvedBuildPlatforms.some(result =>
+      result.platform.kind === 'mobile' &&
+      (!result.isFallback || cordovaPlatforms.includes(result.platform.name))
+    )) {
+      const mobileServerOption = options.server || (
+        _.isEmpty(cordovaPlatforms) &&
+        (process.env.MOBILE_ROOT_URL || process.env.ROOT_URL)
+      );
       if (!mobileServerOption) {
-        // For Cordova builds, require '--server'.
-        // XXX better error message?
         Console.error(
           "Supply the server hostname and port in the --server option " +
             "for mobile app builds.");
@@ -1683,6 +1700,9 @@ on an OS X system.");
       }
       parsedMobileServerUrl = parseMobileServerOption(mobileServerOption,
         'server');
+      setCommandMobileServerUrl(parsedMobileServerUrl);
+    }
+    if (!_.isEmpty(cordovaPlatforms)) {
       parsedCordovaServerPort = parseCordovaServerPortOption(options);
     }
   } else {

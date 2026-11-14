@@ -401,9 +401,16 @@ React app using both Rspack and Capacitor, with web-only native lifecycle covera
 | `meteor run android --production` prepares `_build/native-prod` and syncs Android assets | Prod |
 | Production client and server rebuilds work with the native run target | Prod |
 | `meteor build --directory --platforms=android` prepares Capacitor web output without Cordova or Gradle native build | Build |
+| Directory and tarball native builds preserve the requested server URL and path prefix in runtime, DDP, configuration, and synchronized assets | Build |
+| Native builds require an explicit server URL and accept `MOBILE_ROOT_URL`; web-only builds skip native synchronization | Build |
 | A nonzero `cap sync` exit fails `meteor build` instead of reporting a successful native build | Build |
 | `meteor reset` clears generated Rspack and Capacitor build artifacts but keeps native project sources | Reset |
 | Repeated native run does not reinstall Capacitor deps | Run |
+
+The Capacitor suite also reuses the Blaze fixture to check helpers and click
+handlers during bundled native development, followed by a plain web run with
+generated native HTML present. The browser assertions exercise the built client;
+device and HCP assertions remain in the Maestro suite.
 
 ---
 

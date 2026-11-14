@@ -54,6 +54,12 @@ npm run test:native:capacitor:ios:hcp        # production build + HCP update flo
 The generic `npm run test:native -- --platform=<ios|android>` form also works; the
 per-platform scripts above are just shorthands.
 
+Production Capacitor checks compile the native project with the assets produced
+and synchronized by `meteor build`. The runner sets the fixture's requested HCP
+mode before building and checks the resulting runtime URLs, manifest policy,
+and synchronized index. It does not regenerate HTML or re-sync assets, so these
+tests exercise the integration's actual production output.
+
 The Cordova smoke fixture remains available and exercises both initial launch
 and a real hot-code update:
 
