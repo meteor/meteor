@@ -341,10 +341,22 @@ export class Connection {
     return store;
   }
 
+  /**
+   * Routes the documents the server publishes under `name` to `wrappedStore`,
+   * an object whose methods the connection calls while it applies data
+   * messages: `beginUpdate(batchSize, reset)`, `update(message)`,
+   * `endUpdate()`, `saveOriginals()`, `retrieveOriginals()` and `getDoc(id)`.
+   * Every method is optional; the "Custom stores" section of the Meteor API
+   * docs describes the contract. Messages that arrived for `name` before a
+   * store was registered are replayed to the store. Use `registerStoreServer`
+   * on server-side connections, where the store methods may return promises.
+   * @returns {Boolean} `false` when a store is already registered under `name`.
+   */
   registerStoreClient(name, wrappedStore) {
     const self = this;
 
     const store = self.createStoreMethods(name, wrappedStore);
+    if (!store) return false;
 
     const queued = self._updatesForUnknownStores[name];
     if (Array.isArray(queued)) {
@@ -362,6 +374,7 @@ export class Connection {
     const self = this;
 
     const store = self.createStoreMethods(name, wrappedStore);
+    if (!store) return false;
 
     const queued = self._updatesForUnknownStores[name];
     if (Array.isArray(queued)) {

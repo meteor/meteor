@@ -2880,6 +2880,179 @@ Tinytest.addAsync(
   }
 );
 
+// A store that keeps the documents of one collection in a Map and records,
+// in order, the calls the connection makes to it.
+const makeMapStore = function () {
+  const docs = new Map();
+  const calls = [];
+  return {
+    docs,
+    calls,
+    beginUpdate(batchSize, reset) {
+      calls.push(['beginUpdate', batchSize, reset]);
+      if (reset) docs.clear();
+    },
+    update(message) {
+      calls.push(['update', message]);
+      if (message.msg === 'removed') {
+        docs.delete(message.id);
+        return;
+      }
+      const doc = docs.get(message.id) || {};
+      Object.entries(message.fields || {}).forEach(([key, value]) => {
+        if (value === undefined) delete doc[key];
+        else doc[key] = value;
+      });
+      docs.set(message.id, doc);
+    },
+    endUpdate() {
+      calls.push(['endUpdate']);
+    }
+  };
+};
+
+const registerStore = async function (conn, name, store) {
+  if (Meteor.isServer) return conn.registerStoreServer(name, store);
+  return conn.registerStoreClient(name, store);
+};
+
+Tinytest.addAsync(
+  'livedata connection - custom store receives every write between beginUpdate and endUpdate',
+  async function (test) {
+    const stream = new StubStream();
+    const conn = newConnection(stream);
+
+    await startAndConnect(test, stream);
+
+    const store = makeMapStore();
+    test.isTrue(await registerStore(conn, 'scores', store));
+
+    await stream.receive({ msg: 'added', collection: 'scores', id: '1', fields: { a: 1, b: 2 } });
+    await stream.receive({ msg: 'added', collection: 'scores', id: '2', fields: { a: 2 } });
+    await stream.receive({ msg: 'changed', collection: 'scores', id: '1', fields: { a: 10 }, cleared: ['b'] });
+    await stream.receive({ msg: 'removed', collection: 'scores', id: '2' });
+    // The wire omits fields when the document has nothing but an id.
+    await stream.receive({ msg: 'added', collection: 'scores', id: '3' });
+
+    // Whatever the batching, every update sits inside a beginUpdate/endUpdate
+    // pair and the batch sizes announce all five writes.
+    let batchOpen = false;
+    let announced = 0;
+    store.calls.forEach(([method, ...args]) => {
+      if (method === 'beginUpdate') {
+        test.isFalse(batchOpen);
+        batchOpen = true;
+        announced += args[0];
+      } else if (method === 'endUpdate') {
+        test.isTrue(batchOpen);
+        batchOpen = false;
+      } else {
+        test.isTrue(batchOpen);
+      }
+    });
+    test.isFalse(batchOpen);
+    test.equal(announced, 5);
+
+    const messages = store.calls
+      .filter(([method]) => method === 'update')
+      .map(([, message]) => message);
+    test.equal(
+      messages.map(message => message.msg),
+      ['added', 'added', 'changed', 'removed', 'added']
+    );
+    // A field cleared on the wire reaches the store as an undefined field.
+    test.equal(messages[2].fields, { a: 10, b: undefined });
+    test.isTrue(has(messages[2].fields, 'b'));
+    test.isUndefined(messages[4].fields);
+    test.equal(Array.from(store.docs), [['1', { a: 10 }], ['3', {}]]);
+  }
+);
+
+Tinytest.addAsync(
+  'livedata connection - custom store with update alone gets the writes queued before it registered',
+  async function (test) {
+    const stream = new StubStream();
+    const conn = newConnection(stream);
+
+    await startAndConnect(test, stream);
+
+    // Data arrives before any store exists for the collection.
+    await stream.receive({ msg: 'added', collection: 'late', id: '1', fields: { a: 1 } });
+    test.length(conn._updatesForUnknownStores.late, 1);
+
+    // The other store methods default to no-ops.
+    const docs = new Map();
+    test.isTrue(await registerStore(conn, 'late', {
+      update(message) {
+        docs.set(message.id, message.fields);
+      }
+    }));
+    test.equal(Array.from(docs), [['1', { a: 1 }]]);
+    test.isUndefined(conn._updatesForUnknownStores.late);
+
+    // Later writes reach the store directly, and a method stub runs without
+    // saveOriginals and retrieveOriginals on the store.
+    conn.methods({ noop() {} });
+    conn.call('noop', () => {});
+    const message = testGotMessage(test, stream, {
+      msg: 'method', method: 'noop', params: [], id: '*'
+    });
+    await stream.receive({ msg: 'added', collection: 'late', id: '2', fields: { a: 2 } });
+    await stream.receive({ msg: 'result', id: message.id, result: 'ok' });
+    await stream.receive({ msg: 'updated', methods: [message.id] });
+    test.equal(Array.from(docs.keys()), ['1', '2']);
+  }
+);
+
+Tinytest.addAsync(
+  'livedata connection - custom store is reset when the session is not resumed',
+  async function (test) {
+    const stream = new StubStream();
+    const conn = newConnection(stream);
+
+    await startAndConnect(test, stream);
+
+    const store = makeMapStore();
+    await registerStore(conn, 'sessions', store);
+    await stream.receive({ msg: 'added', collection: 'sessions', id: '1', fields: { a: 1 } });
+    test.equal(store.docs.size, 1);
+
+    // Reconnect to a new session: nothing blocks quiescence, so the stores
+    // reset right away and the server sends the documents again.
+    await stream.reset();
+    testGotMessage(test, stream, makeConnectMessage(SESSION_ID, conn._receivedCount));
+    await stream.receive({ msg: 'connected', session: SESSION_ID + 1 });
+
+    const resets = store.calls.filter(
+      ([method, , reset]) => method === 'beginUpdate' && reset === true
+    );
+    test.length(resets, 1);
+    test.equal(store.docs.size, 0);
+
+    await stream.receive({ msg: 'added', collection: 'sessions', id: '2', fields: { a: 2 } });
+    test.equal(Array.from(store.docs.keys()), ['2']);
+  }
+);
+
+Tinytest.addAsync(
+  'livedata connection - a store name registers once',
+  async function (test) {
+    const stream = new StubStream();
+    const conn = newConnection(stream);
+
+    await startAndConnect(test, stream);
+
+    const first = makeMapStore();
+    const second = makeMapStore();
+    test.isTrue(await registerStore(conn, 'taken', first));
+    test.isFalse(await registerStore(conn, 'taken', second));
+
+    await stream.receive({ msg: 'added', collection: 'taken', id: '1', fields: { a: 1 } });
+    test.equal(first.docs.size, 1);
+    test.equal(second.docs.size, 0);
+  }
+);
+
 Tinytest.addAsync(
   'livedata connection - malformed frames are discarded without crashing',
   async function (test) {
