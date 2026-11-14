@@ -10,6 +10,7 @@ import { waitForMeteorOutput } from './helpers';
 import { testMeteorRspackBundler } from './test-helpers';
 
 const CLIENT_BUNDLE_IMPORT = "import './client-rspack.js';";
+const BLAZE_BRIDGE_IMPORT = "import './client-blaze.js';";
 const BLAZE_HTML_IMPORT = /^import ['"].*\.html['"];$/m;
 const CLIENT_BOOT_MARKER = '__CLIENT_BOOTED__';
 
@@ -22,8 +23,17 @@ async function assertTestClientImportOrder(tempDir) {
   });
 
   const wrapper = await fs.readFile(wrapperPath, 'utf8');
-  const htmlImportIndex = wrapper.search(BLAZE_HTML_IMPORT);
+  let htmlImportIndex = wrapper.search(BLAZE_HTML_IMPORT);
   const bundleImportIndex = wrapper.indexOf(CLIENT_BUNDLE_IMPORT);
+
+  if (htmlImportIndex < 0) {
+    // Lazy-template support groups the eager HTML imports in a bridge. It must
+    // still execute before the app bundle (#14561). Older published Rspack
+    // versions used direct HTML imports in this wrapper instead.
+    htmlImportIndex = wrapper.indexOf(BLAZE_BRIDGE_IMPORT);
+    const bridge = await fs.readFile(path.join(tempDir, '_build/app-test/client-blaze.js'), 'utf8');
+    expect(bridge).toMatch(BLAZE_HTML_IMPORT);
+  }
 
   expect(htmlImportIndex).toBeGreaterThanOrEqual(0);
   expect(bundleImportIndex).toBeGreaterThan(htmlImportIndex);
