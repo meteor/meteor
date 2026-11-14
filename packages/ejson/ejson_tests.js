@@ -422,6 +422,13 @@ Tinytest.add("ejson - clone", (test) => {
     test.equal(clonedArgs, [1, 2, "foo", [4]]);
   }
   testCloneArgs(1, 2, "foo", [4]);
+
+  function testCloneStrictArgs(/*arguments*/) {
+    "use strict";
+    const clonedArgs = EJSON.clone(arguments);
+    test.equal(clonedArgs, [1, 2, "foo", [4]]);
+  }
+  testCloneStrictArgs(1, 2, "foo", [4]);
 });
 
 Tinytest.add("ejson - stringify", (test) => {
@@ -583,4 +590,54 @@ Tinytest.add('ejson - handle objects with properties named "length"', (test) => 
 
   const clonedWidget = EJSON.clone(widget);
   test.equal(widget, clonedWidget);
+});
+
+
+// Verify objects with a property named "callee" are treated as plain objects,
+// not as function arguments objects.
+Tinytest.add('ejson - handle objects with properties named "callee"', (test) => {
+  const value = { callee: "incoming", name: "Ada" };
+
+  // Cloning preserves properties and returns an object, not an array
+  const cloned = EJSON.clone(value);
+  test.equal(cloned, value);
+  test.isFalse(Array.isArray(cloned));
+  test.equal(cloned.callee, "incoming");
+  test.equal(cloned.name, "Ada");
+
+  // Nested plain objects with callee
+  const nested = { info: { callee: "incoming", name: "Ada" } };
+  const clonedNested = EJSON.clone(nested);
+  test.equal(clonedNested, nested);
+  clonedNested.info.name = "Grace";
+  test.equal(nested.info.name, "Ada");
+
+  // Serialization in all modes preserves the same data
+  const normal = EJSON.stringify(value);
+  const canonical = EJSON.stringify(value, { canonical: true });
+  const indented = EJSON.stringify(value, { indent: true });
+
+  test.equal(normal, '{"callee":"incoming","name":"Ada"}');
+  test.equal(canonical, '{"callee":"incoming","name":"Ada"}');
+  test.equal(indented, '{\n  "callee": "incoming",\n  "name": "Ada"\n}');
+
+  // Round-trip parse
+  test.equal(EJSON.parse(normal), value);
+  test.equal(EJSON.parse(canonical), value);
+
+  // Genuine arguments objects from strict and non-strict functions retain supported behavior
+  function testArgsNonStrict() {
+    test.equal(EJSON.clone(arguments), [1, "two"]);
+    test.equal(EJSON.stringify(arguments, { canonical: true }), '[1,"two"]');
+    test.equal(EJSON.stringify(arguments, { indent: true }), '[\n  1,\n  "two"\n]');
+  }
+  testArgsNonStrict(1, "two");
+
+  function testArgsStrict() {
+    "use strict";
+    test.equal(EJSON.clone(arguments), [1, "two"]);
+    test.equal(EJSON.stringify(arguments, { canonical: true }), '[1,"two"]');
+    test.equal(EJSON.stringify(arguments, { indent: true }), '[\n  1,\n  "two"\n]');
+  }
+  testArgsStrict(1, "two");
 });
