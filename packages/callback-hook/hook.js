@@ -175,7 +175,18 @@ export class Hook {
    * @see forEach
    */
   async forEachAsync(iterator) {
-    for (const callback of this.callbacks) {
+    // Snapshot first and re-check membership each step, exactly as forEach
+    // does, so both APIs share one iteration boundary: a callback registered
+    // during a pass becomes eligible on the next pass, not the one that
+    // registered it, and a callback removed before its turn is skipped.
+    //
+    // Iterating this.callbacks directly gave the async API a different answer,
+    // because a Set iterator yields entries added while it is running. A
+    // callback that registered another therefore saw it run in the same pass
+    // here, but not under forEach.
+    const snapshot = Array.from(this.callbacks);
+    for (const callback of snapshot) {
+      if (!this.callbacks.has(callback)) continue;
       if (!(await iterator(callback))) break;
     }
   }
