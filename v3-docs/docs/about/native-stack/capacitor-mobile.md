@@ -385,36 +385,36 @@ meteor build ../build-output --server=https://your-server-url.com --platforms=io
 ```
 
 The Capacitor package transforms the native web bundle into `_build/native-prod`,
-runs `cap sync`, then invokes the app-local `cap build` for each selected native
-platform. Artifacts are copied into `../build-output/android/` or
-`../build-output/ios/`, and Meteor prints their paths. When `--platforms` is
-omitted, Meteor uses the configured native platforms. Existing native projects
-are preserved; a missing selected project is created through Capacitor.
+runs `cap sync`, then runs the app's installed `cap build` for each selected
+platform. Native artifacts are written to `../build-output/android/` or
+`../build-output/ios/`, and Meteor prints their paths. If you omit `--platforms`,
+Meteor builds the configured native platforms. It creates missing native projects
+and reuses existing ones.
 
-Use standard `capacitor.config.*` settings for Android flavors, iOS schemes and
-platform `buildOptions`, including signing and export settings. Environment-aware
-configuration continues to work. Explicit `--packageType=bundle` or
-`--packageType=apk` overrides Android output format; otherwise Capacitor's
-configured `releaseType` is preserved, with AAB as its default. Signing settings
-are excluded from Meteor's web configuration snapshot.
+Set Android flavors, iOS schemes, and platform `buildOptions` in
+`capacitor.config.*`, including signing and export settings. Use a JavaScript or
+TypeScript configuration file to read environment variables. Meteor excludes
+signing settings from the generated web configuration.
 
-`--directory` continues to control the server bundle layout and also produces
-native artifacts. `--architecture` continues to select the server architecture.
-`--debug` preserves Meteor debug bundling and creates an Android debug artifact
-using the project's Gradle wrapper. On iOS it selects Debug for Capacitor's
-device archive/export flow, which still requires signing. An IPA is not an iOS
-Simulator application. Native compilation, signing and missing-output errors
-fail the command.
+Android builds use `android.buildOptions.releaseType`, which defaults to AAB.
+Pass `--packageType=bundle` for AAB or `--packageType=apk` for APK to override it.
+`--directory` writes the server bundle as a directory, and `--architecture`
+selects the server architecture. Native artifacts are written alongside the
+server bundle.
 
-Capacitor 8.6.2's `jarsigner` path uses SHA-1, which JDK 21 treats as an unsigned
-JAR. This also affects its AAB output. For APK releases, use
-`android.buildOptions.signingType: 'apksigner'`. AAB release-signature validation
-remains affected by the [upstream signing issue](https://github.com/ionic-team/capacitor/issues/8428).
-Meteor delegates release signing to Capacitor.
+`--debug` builds Meteor's web assets in debug mode and creates an Android debug
+build using the project's Gradle wrapper. On iOS, it selects the Debug
+configuration for the device archive and IPA export. iOS device builds require
+signing, including Debug builds. An IPA cannot be installed in the iOS Simulator.
+Native compilation, signing, or missing artifacts cause `meteor build` to fail.
 
-The installed Capacitor provider activates this build flow. Applications using
-Meteor's Cordova provider retain their existing Cordova build behavior, including
-the iOS project export.
+Capacitor 8.6.2 uses SHA-1 when signing with `jarsigner`. JDK 21 does not accept
+these signatures, so AAB release verification fails. For APK releases, set
+`android.buildOptions.signingType` to `'apksigner'`. See the
+[upstream signing issue](https://github.com/ionic-team/capacitor/issues/8428) for details.
+
+The `capacitor` package enables this build flow. Cordova apps keep their existing
+build flow, including the iOS project export.
 
 Native builds require an explicit server URL. `--server` takes precedence over
 `MOBILE_ROOT_URL` and `ROOT_URL`; local network discovery is reserved for development

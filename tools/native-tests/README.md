@@ -60,14 +60,14 @@ mode before building and checks the resulting runtime URLs, manifest policy,
 and synchronized index. It does not regenerate HTML or re-sync assets, so these
 tests exercise the integration's actual production output.
 
-Android build/HCP checks generate a temporary test keystore for Capacitor's
-release packaging, then compile the synchronized project for the emulator.
-iOS build/HCP checks now also invoke Capacitor's device archive/export step and
-require a valid signing identity and a configured development team. The runner
-then compiles a separate simulator `.app` from the same synchronized project;
-an IPA cannot be installed in the Simulator. Default bundled-run and livereload
-checks continue to use the simulator/emulator launch flow. Maestro runtime
-success does not establish release-signature validity.
+Android `build` and `hcp` checks create a temporary keystore for Capacitor's
+release build, then compile the synced project for the emulator.
+On iOS, these modes create a device archive and export an IPA. Configure a
+development team and a valid signing identity before running them. The runner
+then compiles a separate simulator `.app` from the same project, since an IPA
+cannot be installed in the Simulator. Bundled run and livereload checks use the
+simulator or emulator launch flow. Verify release signatures separately with
+the platform signing tools.
 
 The Cordova smoke fixture remains available and exercises both initial launch
 and a real hot-code update:

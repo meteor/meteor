@@ -400,10 +400,10 @@ React app using both Rspack and Capacitor, with web-only native lifecycle covera
 | Client and server rebuilds work during native dev run | Run |
 | `meteor run android --production` prepares `_build/native-prod` and syncs Android assets | Prod |
 | Production client and server rebuilds work with the native run target | Prod |
-| Native directory and tar builds transform and sync real Meteor assets, invoke the selected Capacitor builder, and collect artifacts in the requested final destination | Build |
-| Explicit Android package type overrides Capacitor configuration; omitted package type preserves it | Build |
-| Multi-platform packaging is sequential; omitted selection builds configured platforms and leaves unselected native directories alone | Build |
-| Signing configuration reaches the builder but is excluded from web/native runtime snapshots and integration logs | Build |
+| Native directory and tarball builds transform and sync Meteor assets, run the selected Capacitor builder, and collect native artifacts in the output directory | Build |
+| `--packageType` overrides the configured Android format; omitting the flag keeps the configured value | Build |
+| Builds for multiple platforms run sequentially; omitted selection builds configured platforms and leaves other native directories alone | Build |
+| Signing passwords reach the builder and are excluded from generated runtime configuration and captured build output | Build |
 | Directory and tarball native builds preserve the requested server URL and path prefix in runtime, DDP, configuration, and synchronized assets | Build |
 | Native builds require an explicit server URL and accept `MOBILE_ROOT_URL`; web-only builds skip native synchronization | Build |
 | A nonzero `cap sync` exit fails `meteor build` instead of reporting a successful native build | Build |
@@ -415,10 +415,10 @@ The Capacitor suite also reuses the Blaze fixture to check helpers and click
 handlers during bundled native development, followed by a plain web run with
 generated native HTML present. The browser assertions exercise the built client;
 device and HCP assertions remain in the Maestro suite.
-Packaging cases control only the native build process and artifact creation;
-Meteor compilation, transformation and Capacitor synchronization remain real.
-These cases establish CLI orchestration, not signed-artifact validity. Real
-Android and iOS packaging require their native toolchains and signing setup.
+
+Packaging tests replace the native builder with a test process. Meteor
+compilation, asset transformation, and `cap sync` still run. Use the native
+toolchains and signing configuration to verify release artifacts separately.
 
 ---
 
