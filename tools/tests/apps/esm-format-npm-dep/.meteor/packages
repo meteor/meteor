@@ -1,0 +1,5 @@
+# App for testing that `meteor build --format=esm` bundles boot and that
+# Npm.require() resolves per package, including namespaced packages.
+meteor-base
+webapp
+test:npm-dep
