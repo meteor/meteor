@@ -560,3 +560,20 @@ Tinytest.add('instrumentation - hostile Array methods cannot escape a live value
   long.slice = () => ({ map: () => live });
   test.equal(previewValue(long)[32], '… +8 more', 'the array length marker is preserved');
 });
+
+Tinytest.addAsync('instrumentation - trace ids are W3C Trace Context compatible', async function (test) {
+  const events = [];
+  const a = collect('method.start', events);
+  try {
+    const ctx = await Meteor.callAsync('instr_test.ctx');
+    const start = events.find((e) => e.name === 'instr_test.ctx');
+    // 16-byte trace id and 8-byte span id as lowercase hex: the format W3C
+    // traceparent, OpenTelemetry and APMs accept, so a consumer can adopt the
+    // seam's ids as-is instead of minting a second, uncorrelated pair.
+    test.isTrue(/^[0-9a-f]{32}$/.test(start.traceId), `traceId is 32 lowercase hex chars, got ${start.traceId}`);
+    test.isTrue(/^[0-9a-f]{16}$/.test(start.spanId), `spanId is 16 lowercase hex chars, got ${start.spanId}`);
+    test.equal(ctx.traceId, start.traceId);
+    test.equal(ctx.spanId, start.spanId);
+    test.notEqual(start.traceId, start.spanId);
+  } finally { a.stop(); }
+});
