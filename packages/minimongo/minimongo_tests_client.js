@@ -4126,3 +4126,19 @@ Tinytest.addAsync('minimongo - operation result fields (async)', async test => {
   const removeResult = await c.removeAsync({name: 'doc1'});
   test.equal(removeResult, 1, 'remove should return removed count');
 });
+// Same as the async test in minimongo_tests.js, through the synchronous update.
+Tinytest.add('minimongo - sync multi update reports changes to a limited observe', test => {
+  const collection = new LocalCollection();
+  collection.insert({ _id: 'a', tag: 'x' });
+  collection.insert({ _id: 'b', tag: 'y' });
+  const changes = [];
+  const handle = collection.find({ tag: 'x' }, { limit: 2 }).observeChanges({
+    addedBefore() {},
+    changed(id, fields) {
+      changes.push([id, fields]);
+    },
+  });
+  collection.update({}, { $set: { n: 1 } }, { multi: true });
+  test.equal(changes, [['a', { n: 1 }]]);
+  handle.stop();
+});
