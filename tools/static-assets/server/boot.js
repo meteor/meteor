@@ -10,7 +10,6 @@ var Profile = require('./profile').Profile;
 // This code is duplicated in tools/main.js.
 var MIN_NODE_VERSION = 'v18.16.0';
 
-var hasOwn = Object.prototype.hasOwnProperty;
 
 if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
   process.stderr.write(
@@ -131,7 +130,7 @@ serverJson.load.forEach(function (fileInfo) {
 });
 
 function retrieveSourceMap(pathForSourceMap) {
-  if (hasOwn.call(parsedSourceMaps, pathForSourceMap)) {
+  if (Object.hasOwn(parsedSourceMaps, pathForSourceMap)) {
     return { map: parsedSourceMaps[pathForSourceMap] };
   }
   return null;
@@ -342,7 +341,7 @@ const loadServerBundles = Profile("Load server bundles", async function () {
       // using this string elsewhere.
       assetPath = files.unicodeNormalizePath(assetPath);
 
-      if (! fileInfo.assets || ! hasOwn.call(fileInfo.assets, assetPath)) {
+      if (! fileInfo.assets || ! Object.hasOwn(fileInfo.assets, assetPath)) {
         _callback(new Error("Unknown asset: " + assetPath));
       } else {
         const filePath = path.join(serverDir, fileInfo.assets[assetPath]);
@@ -372,7 +371,7 @@ const loadServerBundles = Profile("Load server bundles", async function () {
         assetPath = files.unicodeNormalizePath(assetPath);
         assetPath = files.convertToStandardPath(assetPath);
 
-        if (! fileInfo.assets || ! hasOwn.call(fileInfo.assets, assetPath)) {
+        if (! fileInfo.assets || ! Object.hasOwn(fileInfo.assets, assetPath)) {
           throw new Error("Unknown asset: " + assetPath);
         }
 
@@ -387,7 +386,7 @@ const loadServerBundles = Profile("Load server bundles", async function () {
     const wrapParts = ["(function(Npm,Assets"];
 
     const specialArgs =
-        hasOwn.call(specialArgPaths, fileInfo.path) &&
+        Object.hasOwn(specialArgPaths, fileInfo.path) &&
         specialArgPaths[fileInfo.path](fileInfo);
 
     const specialKeys = Object.keys(specialArgs || {});
