@@ -46,6 +46,7 @@ const {
 
 const fs = require('fs');
 const path = require('path');
+const execFile = require('util').promisify(require('child_process').execFile);
 
 const PROC_KEYS = {
   SYNC: 'capacitor.process.sync',
@@ -374,21 +375,17 @@ export function runCapBuild({ appDir = getMeteorAppDir(), request, mode } = {}) 
   });
 }
 
-function shouldAutoPickTarget() {
-  return /^(1|true|yes)$/i.test(process.env.METEOR_CAPACITOR_AUTO_PICK_TARGET || '');
-}
-
 function shouldSkipNativeRun() {
   return /^(1|true|yes)$/i.test(process.env.METEOR_CAPACITOR_SKIP_NATIVE_RUN || '');
 }
 
 /**
  * Lists run targets via `cap run <platform> --list --json` and returns the
- * parsed array. Empty on no targets / parse failure.
+ * parsed array. Discovery errors must not become an empty selection.
  * @returns {Promise<Array<{name:string,api:string,id:string}>>}
  */
 export function listCapTargets({ appDir = getMeteorAppDir(), platform } = {}) {
-  return new Promise(resolve => {
+  return new Promise((resolve, reject) => {
     const { command, args: cmdArgs } = _getCapCommand(['run', platform, '--list', '--json'], {
       cwd: appDir,
     });
@@ -402,27 +399,65 @@ export function listCapTargets({ appDir = getMeteorAppDir(), platform } = {}) {
       }),
       onStdout: data => { stdoutBuf += data; },
       onStderr: () => {},
-      onExit: () => {
+      onError: reject,
+      onExit: code => {
+        if (code !== 0) return reject(new Error(`Capacitor target listing failed with exit code ${code}.`));
         const match = stdoutBuf.match(/\[\s*{[\s\S]*}\s*\]|\[\s*\]/);
-        if (!match) return resolve([]);
+        if (!match) return reject(new Error('Capacitor returned an invalid target list.'));
         try { resolve(JSON.parse(match[0])); }
-        catch { resolve([]); }
+        catch { reject(new Error('Capacitor returned an invalid target list.')); }
       },
     });
   });
 }
 
+async function onlineCapTargets({ appDir, platform, targets }) {
+  const options = { cwd: appDir, env: process.env, timeout: 15000 };
+  if (platform === 'android') {
+    const sdk = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT;
+    const adb = sdk ? path.join(sdk, 'platform-tools', process.platform === 'win32' ? 'adb.exe' : 'adb') : 'adb';
+    const { stdout } = await execFile(adb, ['devices'], options);
+    const serials = stdout.split(/\r?\n/).map(line => line.trim().split(/\s+/))
+      .filter(([, state]) => state === 'device').map(([id]) => id);
+    // Capacitor can list a running emulator under both its serial and AVD name.
+    const online = await Promise.all(serials.map(async serial => {
+      const ids = [serial];
+      if (serial.startsWith('emulator-')) {
+        const { stdout: avd } = await execFile(adb, ['-s', serial, 'emu', 'avd', 'name'], options);
+        ids.push(avd.trim().split(/\r?\n/)[0]);
+      }
+      return ids.map(id => targets.find(target => target.id === id)).find(Boolean);
+    }));
+    return online.filter(Boolean);
+  }
+  const { stdout } = await execFile('xcrun', ['simctl', 'list', 'devices', '--json'], options);
+  const simulators = Object.values(JSON.parse(stdout).devices).flat();
+  return targets.filter(target => {
+    const simulator = simulators.find(device => device.udid === target.id);
+    // Capacitor lists only connected physical iOS devices.
+    return !simulator || simulator.state === 'Booted';
+  });
+}
+
 /**
- * Resolves a target for `cap run`. METEOR_CAPACITOR_TARGET wins; the temporary
- * first-target auto-pick path only runs when METEOR_CAPACITOR_AUTO_PICK_TARGET
- * is truthy. Null leaves target selection to Capacitor.
+ * Preserve an explicit target; select one online device automatically.
+ * Null leaves ambiguous interactive selection to Capacitor's own TTY picker.
  * @returns {Promise<string|null>}
  */
-export async function resolveCapTarget({ appDir = getMeteorAppDir(), platform } = {}) {
+export async function resolveCapTarget({ appDir = getMeteorAppDir(), platform, extraArgs = [] } = {}) {
+  if (extraArgs.some(arg => /^--(?:target|target-name|list)(?:=|$)/.test(arg))) return null;
   if (process.env.METEOR_CAPACITOR_TARGET) return process.env.METEOR_CAPACITOR_TARGET;
-  if (!shouldAutoPickTarget()) return null;
-  const targets = await listCapTargets({ appDir, platform });
-  return targets[0]?.id || null;
+  if (process.env.METEOR_CAPACITOR_TARGET_NAME || /^(1|true|yes)$/i.test(process.env.METEOR_CAPACITOR_LIST || '')) return null;
+  const targets = [...new Map((await listCapTargets({ appDir, platform }))
+    .filter(target => target.id && target.id !== '?').map(target => [target.id, target])).values()];
+  const online = targets.length ? await onlineCapTargets({ appDir, platform, targets }) : [];
+  if (online.length === 1) return online[0].id;
+  if (targets.length && process.stdin.isTTY && process.stdout.isTTY &&
+      !/^(1|true|yes)$/i.test(process.env.CI || '') &&
+      !/^(1|true|yes)$/i.test(process.env.METEOR_HEADLESS || '')) return null;
+  const reason = online.length ? 'Multiple online devices' : 'No online device';
+  const choices = targets.map(target => `${target.name || target.id} (${target.id})`).join(', ');
+  throw new Error(`${reason} for ${platform}. Set METEOR_CAPACITOR_TARGET to a target ID${choices ? `: ${choices}` : '; connect a device or start a simulator first'}.`);
 }
 
 /**
@@ -576,10 +611,10 @@ export function scheduleCapRunAfterMeteorReady({
       return;
     }
 
-    const target = await resolveTarget({ appDir, platform });
+    const target = await resolveTarget({ appDir, platform, extraArgs });
     const runArgs = [...extraArgs];
     if (target) {
-      logInfo(`=> Capacitor launching on ${target}${process.env.METEOR_CAPACITOR_TARGET ? '' : ' (auto-picked)'}`);
+      logInfo(`=> Capacitor launching on ${target}`);
       runArgs.push(`--target=${target}`);
     }
     run({ appDir, platform, mode, extraArgs: runArgs });
