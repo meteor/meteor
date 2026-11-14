@@ -13,6 +13,7 @@ const APPS = {
     flowPath: path.join(ROOT, "flows", "capacitor-tests.yaml"),
     livereloadInitialFlowPath: path.join(ROOT, "flows", "capacitor-tests-livereload-initial.yaml"),
     livereloadFlowPath: path.join(ROOT, "flows", "capacitor-tests-livereload.yaml"),
+    livereloadTemplateFlowPath: path.join(ROOT, "flows", "capacitor-tests-livereload-template.yaml"),
     hcpInitialFlowPath: path.join(ROOT, "flows", "capacitor-tests-hcp-initial.yaml"),
     hcpFlowPath: path.join(ROOT, "flows", "capacitor-tests-hcp.yaml"),
   },

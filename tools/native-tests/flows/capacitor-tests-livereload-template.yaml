@@ -1,0 +1,14 @@
+appId: com.meteor.capacitortests
+---
+# Keep the app running to observe the template-only update.
+- extendedWaitUntil:
+    visible: "Blaze template updated"
+    timeout: 120000
+- assertVisible: "Welcome to Meteor Capacitor Tests"
+- assertVisible: "Native client version initial"
+- assertVisible: "Native server version initial"
+- assertVisible: "Native render ready"
+- extendedWaitUntil:
+    visible: "DDP verified"
+    timeout: 60000
+- assertVisible: "WebAppLocalServer livereload shim ready"

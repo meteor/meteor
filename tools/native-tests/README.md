@@ -47,12 +47,20 @@ npm run test:native:capacitor:android:build  # production meteor build + Android
 npm run test:native:capacitor:ios:build      # production meteor build + iOS Simulator
 npm run test:native:capacitor:android:livereload
 npm run test:native:capacitor:ios:livereload
+npm run test:native:capacitor:android:livereload:blaze
+npm run test:native:capacitor:ios:livereload:blaze
 npm run test:native:capacitor:android:hcp    # production build + HCP update flow
 npm run test:native:capacitor:ios:hcp        # production build + HCP update flow
 ```
 
 The generic `npm run test:native -- --platform=<ios|android>` form also works; the
 per-platform scripts above are just shorthands.
+
+The additional `livereload:blaze` checks use a Blaze/Rspack variant of the existing
+fixture. The original livereload commands and assertions are unchanged.
+After initial launch, the runner edits only a Blaze template and waits for the
+new content in the running WebView, without relaunching or manually refreshing.
+The subsequent client/server update and route reload checks remain separate.
 
 Production Capacitor checks compile the native project with the assets produced
 and synchronized by `meteor build`. The runner sets the fixture's requested HCP
@@ -97,6 +105,7 @@ node scripts/run.js --platform=android --keep-running
 | `apps/capacitor-tests/` | Default Capacitor app under test |
 | `apps/smoke/` | Legacy Cordova smoke fixture |
 | `flows/capacitor-tests.yaml` | Default Capacitor runtime flow |
+| `flows/capacitor-tests-livereload-template.yaml` | Blaze template-only update in the running WebView |
 | `flows/launch.yaml` | Cordova initial render/runtime/style/DDP/route assertions |
 | `flows/hcp-updated.yaml` | Cordova updated render/runtime/DDP/HCP assertions |
 | `scripts/cordova-hcp.js` | Cordova fixture mutation and manifest change helpers |
@@ -131,7 +140,8 @@ node scripts/run.js --platform=android --keep-running
 ## CI
 
 See `.github/workflows/native.yml`. Runs nightly at 06:00 UTC and on PRs labeled
-`mobile`.
+`mobile`. Android and iOS each run the original bundled smoke check and the
+additional Blaze livereload check in separate jobs.
 
 ## Troubleshooting
 

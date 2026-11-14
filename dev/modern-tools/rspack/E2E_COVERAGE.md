@@ -413,7 +413,11 @@ React app using both Rspack and Capacitor, with web-only native lifecycle covera
 
 The Capacitor suite also reuses the Blaze fixture to check helpers and click
 handlers during bundled native development, followed by a plain web run with
-generated native HTML present. The browser assertions exercise the built client;
+generated native HTML present. A livereload case selects the mobile client without
+the optional HMR packages,
+edits a Blaze template, and checks the updated content and working click handler
+without manually reloading. Concurrent client and server edits then update the
+client and the method result over DDP. The browser assertions exercise the built client;
 device and HCP assertions remain in the Maestro suite.
 
 Packaging tests replace the native builder with a test process. Meteor

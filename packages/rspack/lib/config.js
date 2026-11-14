@@ -286,7 +286,8 @@ export function configureMeteorForRspack() {
     ),
   ];
   const rspackOutputFilesToIgnore =
-    isMeteorAppDevelopment() && isMeteorAppRun() && !isMeteorAppNative()
+    isMeteorAppDevelopment() && isMeteorAppRun() &&
+    (!isMeteorAppNative() || isMeteorAppNativeLivereload())
       ? [
           `${RSPACK_BUILD_CONTEXT}/**/*-rspack.js`,
           `${RSPACK_BUILD_CONTEXT}/**/*-rspack.js.map`,

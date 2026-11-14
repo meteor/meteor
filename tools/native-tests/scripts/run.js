@@ -43,6 +43,8 @@ function parseArgs(argv) {
     const token = argv[i];
     if (token === "--keep-running") {
       out.keepRunning = true;
+    } else if (token === "--blaze") {
+      out.blaze = true;
     } else if (token === "--app") {
       out.appName = argv[++i];
     } else if (token.startsWith("--app=")) {
@@ -66,6 +68,9 @@ function parseArgs(argv) {
   if (!MODES.has(out.mode)) {
     throw new Error(`Unsupported mode: ${out.mode}`);
   }
+  if (out.blaze && (out.mode !== "livereload" || out.appName !== "capacitor-tests")) {
+    throw new Error("--blaze requires --app=capacitor-tests --mode=livereload");
+  }
   getAppConfig(out.appName);
   return out;
 }
@@ -80,9 +85,10 @@ function getHardTimeoutMs(env = process.env) {
     : DEFAULT_HARD_TIMEOUT_MS;
 }
 
-function artifactStem({ platform, appName, mode }) {
+function artifactStem({ platform, appName, mode, blaze }) {
   const stem = `${platform}-${appName}`;
-  return mode === "run" ? stem : `${stem}-${mode}`;
+  const modeStem = mode === "run" ? stem : `${stem}-${mode}`;
+  return blaze ? `${modeStem}-blaze` : modeStem;
 }
 
 async function replaceFileText(file, replacements) {
@@ -150,7 +156,10 @@ function getUpdatedAppReadyMarker(mode) {
   return null;
 }
 
-function getUpdatedAppReadyChecks({ mode, wrapper }) {
+function getUpdatedAppReadyChecks({ mode, wrapper, blaze }) {
+  // Blaze renders from compiled JavaScript. Its updated content is observed
+  // in the WebView by Maestro rather than in the server's HTML response.
+  if (blaze) return [{ requestPath: "/__native-tests/server-version", marker: "Native server version updated" }];
   const marker = getUpdatedAppReadyMarker(mode);
   if (!marker) {
     return [];
@@ -335,6 +344,7 @@ async function run(argv) {
     platform: args.platform,
     appName: appConfig.name,
     mode: args.mode,
+    blaze: args.blaze,
   });
   const junitOut = path.join(JUNIT_DIR, `${stem}.xml`);
   const logOut = path.join(JUNIT_DIR, `${stem}-device.log`);
@@ -373,6 +383,7 @@ async function run(argv) {
       lanIp,
       mobileServerUrl: serverConfig.mobileServerUrl,
       mode: args.mode,
+      blaze: args.blaze,
     });
     cleanup.push(() => cleanupApp(build.workDir));
 
@@ -463,6 +474,19 @@ async function run(argv) {
         })
         : null;
 
+      if (args.blaze) {
+        await replaceFileText(path.join(build.appDir, "client", "main.html"), [
+          ["Blaze template initial", "Blaze template updated"],
+        ]);
+        const templateUpdate = await runFlow({
+          flowPath: appConfig.livereloadTemplateFlowPath,
+          deviceId: sim.deviceId,
+          junitOut: junitOut.replace(/\.xml$/, "-template.xml"),
+          platform: args.platform,
+        });
+        if (templateUpdate.exitCode !== 0) return EXIT_FLOW_FAIL;
+      }
+
       await applyLivereloadFixtureChanges(build.appDir);
       await new Promise((resolve) => setTimeout(resolve, LIVERELOAD_SETTLE_MS));
       if (initialCordovaManifest !== null) {
@@ -475,6 +499,7 @@ async function run(argv) {
       for (const check of getUpdatedAppReadyChecks({
         mode: args.mode,
         wrapper: appConfig.wrapper,
+        blaze: args.blaze,
       })) {
         await waitForUpdatedAppReady({
           baseUrl: serverConfig.bindUrl,

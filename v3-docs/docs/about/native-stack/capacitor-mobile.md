@@ -265,6 +265,10 @@ For physical devices, use an address reachable from the same network, such as yo
 
 Set `METEOR_CAPACITOR_MODE=livereload` when you want the native app to load directly from the running Meteor server.
 
+Blaze template changes use Meteor's existing reload flow to update the running
+WebView. You do not need to refresh or relaunch the native app after editing a
+template. Server code changes restart the Meteor server automatically.
+
 ### Connection URL detection
 
 Most apps do not need to set the LAN IP manually. In native runs, `@meteorjs/capacitor` uses the URL Meteor provides for the native run. Passing `--mobile-server` is the supported way to make that URL explicit when a device needs a specific reachable host.
@@ -289,7 +293,34 @@ meteor run android-device
 meteor run ios-device
 ```
 
-You can pass Capacitor run options with `METEOR_CAPACITOR_*` environment variables. For example, `METEOR_CAPACITOR_TARGET` selects a Capacitor target device.
+Meteor selects a target automatically when exactly one device is online. Running
+Android emulators and booted iOS simulators count as online targets. When the
+selection is ambiguous, Capacitor prompts in an interactive terminal. In CI or
+headless runs, set an explicit target if there is no single online device.
+
+List target IDs with Capacitor, then select one with `METEOR_CAPACITOR_TARGET`:
+
+``` bash
+npx cap run android --list
+METEOR_CAPACITOR_TARGET=emulator-5554 meteor run android
+
+npx cap run ios --list
+METEOR_CAPACITOR_TARGET=SIMULATOR_UUID meteor run ios
+```
+
+An explicit target takes precedence over automatic selection and can start an
+available simulator. `METEOR_CAPACITOR_AUTO_PICK_TARGET` is no longer needed;
+existing scripts can keep it, but it does not select the first listed target.
+
+Set `METEOR_CAPACITOR_SKIP_NATIVE_RUN=1` to prepare and sync the native project
+without launching it. Meteor still starts the development server:
+
+``` bash
+METEOR_CAPACITOR_SKIP_NATIVE_RUN=1 meteor run android
+```
+
+You can pass other Capacitor run options with `METEOR_CAPACITOR_*` environment
+variables, such as `METEOR_CAPACITOR_FLAVOR` or `METEOR_CAPACITOR_TARGET_NAME`.
 
 ## Hot Code Push
 

@@ -11,6 +11,8 @@
     "test:capacitor:ios:build": "node scripts/run.js --platform=ios --app=capacitor-tests --mode=build",
     "test:capacitor:android:livereload": "node scripts/run.js --platform=android --app=capacitor-tests --mode=livereload",
     "test:capacitor:ios:livereload": "node scripts/run.js --platform=ios --app=capacitor-tests --mode=livereload",
+    "test:capacitor:android:livereload:blaze": "node scripts/run.js --platform=android --app=capacitor-tests --mode=livereload --blaze",
+    "test:capacitor:ios:livereload:blaze": "node scripts/run.js --platform=ios --app=capacitor-tests --mode=livereload --blaze",
     "test:capacitor:android:hcp": "node scripts/run.js --platform=android --app=capacitor-tests --mode=hcp",
     "test:capacitor:ios:hcp": "node scripts/run.js --platform=ios --app=capacitor-tests --mode=hcp"
   },

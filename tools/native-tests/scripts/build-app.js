@@ -267,6 +267,7 @@ async function prepareCapacitorRunApp({
   lanIp,
   mobileServerUrl = `http://${lanIp}:${port}`,
   port = 3000,
+  blaze = false,
 }) {
   if (platform !== "ios" && platform !== "android") {
     throw new Error(`Unsupported platform: ${platform}`);
@@ -276,7 +277,44 @@ async function prepareCapacitorRunApp({
   const workDir = path.join(os.tmpdir(), `native-${appConfig.name}-${platform}-${runId}`);
   const appDir = path.join(workDir, "app");
   await copyAppSource(appConfig.sourceDir, appDir);
+  if (blaze) {
+    // Exercise Blaze and Rspack in the existing disposable fixture.
+    const packagesPath = path.join(appDir, ".meteor", "packages");
+    const packages = await fs.readFile(packagesPath, "utf8");
+    await fs.writeFile(packagesPath, packages.replace(/^static-html$/m, "blaze-html-templates\njquery\nrspack"));
+    const manifestPath = path.join(appDir, "package.json");
+    const manifest = await fs.readJson(manifestPath);
+    manifest.dependencies.jquery = "^3.7.1";
+    await fs.writeJson(manifestPath, manifest, { spaces: 2 });
+    const templatePath = path.join(appDir, "client", "main.html");
+    const html = await fs.readFile(templatePath, "utf8");
+    await fs.writeFile(templatePath, html.replace(
+      "<h1>Welcome to Meteor Capacitor Tests</h1>",
+      "<h1>Welcome to Meteor Capacitor Tests</h1>\n    {{> livereloadProbe}}"
+    ) + '\n<template name="livereloadProbe"><p>Blaze template initial</p></template>\n');
+    await fs.appendFile(path.join(appDir, "client", "main.js"), '\nimport "./main.html";\n');
+    await fs.appendFile(path.join(appDir, "server", "main.js"), `
+import { WebApp } from "meteor/webapp";
+WebApp.handlers.use("/__native-tests/server-version", (_request, response) => {
+  response.writeHead(200, { "Content-Type": "text/plain", "Cache-Control": "no-store" });
+  response.end(SERVER_VERSION);
+});
+`);
+  }
   await installAppDeps(appDir);
+  if (blaze) {
+    const packDir = path.join(appDir, ".native-rspack");
+    await fs.ensureDir(packDir);
+    const { stdout } = await execa("npm", [
+      "pack", path.join(REPO_ROOT, "npm-packages", "meteor-rspack"),
+      "--json", "--pack-destination", packDir,
+    ], { cwd: appDir, env: buildNativeTestEnv() });
+    const [{ filename }] = JSON.parse(stdout);
+    await execa("npm", ["install", "--save-dev", path.join(packDir, filename), ...NPM_QUIET_INSTALL_FLAGS], {
+      cwd: appDir, env: buildNativeTestEnv(), stdio: "inherit",
+    });
+    await execa(METEOR_BIN, ["update", "--npm"], { cwd: appDir, env: buildNativeTestEnv(), stdio: "inherit" });
+  }
   await linkLocalCapacitor(appDir);
   await addPlatform(appDir, platform);
 
@@ -440,6 +478,7 @@ async function prepareApp({
   mobileServerUrl = `http://${lanIp}:${port}`,
   port = 3000,
   mode = "run",
+  blaze = false,
 }) {
   if (appConfig.wrapper === "capacitor") {
     if (mode === "build" || mode === "hcp") {
@@ -458,6 +497,7 @@ async function prepareApp({
       lanIp,
       mobileServerUrl,
       port,
+      blaze,
     });
   }
   if (appConfig.wrapper === "cordova") {

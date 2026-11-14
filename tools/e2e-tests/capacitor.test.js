@@ -1034,6 +1034,10 @@ if (process.argv[2] === 'sync') {
 describe('Capacitor App Web Lifecycle / Blaze', () => {
   let appDir;
   let meteorProcess;
+  let originalTemplate;
+  let originalServer;
+  let originalPackages;
+  let originalClient;
   const port = 3135;
   const env = () => e2eEnv({ PORT: String(port), RSPACK_DEVSERVER_PORT: '18135' });
 
@@ -1043,6 +1047,10 @@ describe('Capacitor App Web Lifecycle / Blaze', () => {
     await linkLocalRspack(appDir, { env: env() });
     await linkLocalCapacitor(appDir, { env: env() });
     await runMeteorCommand('add-platform', ['android'], appDir, { captureOutput: true, checkExitCode: true, env: env() });
+    originalTemplate = await fs.readFile(path.join(appDir, 'client/main.html'), 'utf8');
+    originalServer = await fs.readFile(path.join(appDir, 'server/main.js'), 'utf8');
+    originalPackages = await fs.readFile(path.join(appDir, '.meteor/packages'), 'utf8');
+    originalClient = await fs.readFile(path.join(appDir, 'client/main.js'), 'utf8');
   });
 
   afterEach(async () => {
@@ -1051,6 +1059,11 @@ describe('Capacitor App Web Lifecycle / Blaze', () => {
       meteorProcess = null;
     }
     await killStrayAppProcesses();
+    await page.setExtraHTTPHeaders({});
+    if (originalTemplate) await fs.writeFile(path.join(appDir, 'client/main.html'), originalTemplate);
+    if (originalServer) await fs.writeFile(path.join(appDir, 'server/main.js'), originalServer);
+    if (originalPackages) await fs.writeFile(path.join(appDir, '.meteor/packages'), originalPackages);
+    if (originalClient) await fs.writeFile(path.join(appDir, 'client/main.js'), originalClient);
   });
 
   afterAll(async () => {
@@ -1084,5 +1097,44 @@ describe('Capacitor App Web Lifecycle / Blaze', () => {
     meteorProcess = result.meteorProcess;
     await assertBlazeInteraction();
     expectOutputNotContains(result.outputLines, /Capacitor: (?:syncing|launching|added)/);
+  });
+
+  test('livereload updates a Blaze template and server in the running mobile client', async () => {
+    // Native apps must also rebuild without the optional HMR packages.
+    await runMeteorCommand('remove', ['blaze-hot', 'hot-module-replacement'], appDir, { captureOutput: true, checkExitCode: true, env: env() });
+    const serverSource = originalServer + `
+const nativeServerVersion = 'initial';
+Meteor.methods({ capacitorBlazeServerVersion() { return nativeServerVersion; } });
+Meteor.startup(() => console.log('capacitor Blaze server ' + nativeServerVersion));
+`;
+    await fs.writeFile(path.join(appDir, 'server/main.js'), serverSource);
+    const result = await runMeteorApp(appDir, port, {
+      commandOptions: ['android'],
+      waitForOutput: /Capacitor native run skipped/,
+      env: { ...env(), METEOR_CAPACITOR_MODE: 'livereload', METEOR_CAPACITOR_SKIP_NATIVE_RUN: '1', METEOR_CAPACITOR_READY_URL: `http://127.0.0.1:${port}/` },
+    });
+    meteorProcess = result.meteorProcess;
+    await page.setExtraHTTPHeaders({ 'User-Agent': 'MeteorCapacitorLivereload' });
+    await assertBlazeInteraction();
+    expect(await page.evaluate(() => Meteor.isCordova)).toBe(true);
+    expect(await page.evaluate(() => Meteor.callAsync('capacitorBlazeServerVersion'))).toBe('initial');
+
+    expect(originalTemplate).toContain('Learn Meteor!');
+    await fs.writeFile(path.join(appDir, 'client/main.html'), originalTemplate.replace('Learn Meteor!', 'Blaze template updated'));
+    await page.waitForFunction(() => document.body?.textContent.includes('Blaze template updated'), null, { timeout: 60000 });
+    await page.click('button');
+    await page.waitForFunction(() => document.body?.textContent.includes("You've pressed the button 1 times."));
+
+    const clientUpdated = waitForPlaywrightConsole('capacitor Blaze client updated', { returnAllLogs: true });
+    await Promise.all([
+      fs.appendFile(path.join(appDir, 'client/main.js'), '\nconsole.log("capacitor Blaze client updated");\n'),
+      fs.writeFile(path.join(appDir, 'server/main.js'), serverSource.replace("nativeServerVersion = 'initial'", "nativeServerVersion = 'updated'")),
+    ]);
+    await Promise.all([
+      waitForMeteorOutput(result.outputLines, 'capacitor Blaze server updated'),
+      clientUpdated,
+    ]);
+    expect(await page.evaluate(() => Meteor.callAsync('capacitorBlazeServerVersion'))).toBe('updated');
+    expect(meteorProcess.exitCode).toBe(null);
   });
 });

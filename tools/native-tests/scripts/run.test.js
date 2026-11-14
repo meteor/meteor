@@ -219,6 +219,17 @@ test("capacitor HCP-backed modes wait for updated __cordova bundle", () => {
   );
 });
 
+test("Blaze livereload adds template coverage without replacing the default fixture", () => {
+  const args = parseArgs(["--platform=android", "--mode=livereload", "--blaze"]);
+  assert.equal(args.blaze, true);
+  assert.equal(parseArgs(["--platform=android", "--mode=livereload"]).blaze, undefined);
+  assert.throws(() => parseArgs(["--platform=android", "--blaze"]), /--blaze requires/);
+  assert.deepEqual(getUpdatedAppReadyChecks({ mode: "livereload", wrapper: "capacitor", blaze: true }), [
+    { requestPath: "/__native-tests/server-version", marker: "Native server version updated" },
+  ]);
+  assert.equal(artifactStem({ platform: "android", appName: "capacitor-tests", mode: "livereload", blaze: true }), "android-capacitor-tests-livereload-blaze");
+});
+
 test("capacitor HCP-backed modes wait for updated manifest", () => {
   assert.equal(
     shouldWaitForUpdatedCordovaManifest({
