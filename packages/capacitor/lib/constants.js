@@ -67,7 +67,8 @@ export function getCapacitorIgnoreCandidates() {
   ]));
 }
 
-export const DEFAULT_CAPACITOR_VERSION = '7.4.3';
+// Minimum accepted and automatically installed Capacitor version within major 8.
+export const DEFAULT_CAPACITOR_VERSION = '8.6.2';
 export const DEFAULT_METEOR_CAPACITOR_VERSION = '0.2.0-alpha.1';
 
 export const GLOBAL_STATE_KEYS = {

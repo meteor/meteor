@@ -1,5 +1,6 @@
 import fs from 'fs-extra';
 import path from 'path';
+import semver from 'semver';
 
 import {
   appendFileContent,
@@ -65,7 +66,7 @@ async function readJson(appDir, relPath) {
 }
 
 async function ensureIosPlatform(appDir) {
-  if (await fs.pathExists(path.join(appDir, 'ios', 'App', 'App.xcworkspace'))) {
+  if (await fs.pathExists(path.join(appDir, 'ios', 'App', 'App.xcodeproj'))) {
     return;
   }
 
@@ -373,6 +374,10 @@ describe('Capacitor App Web Lifecycle /', () => {
     await assertFileExist(tempDir, 'node_modules/@capacitor/cli/package.json');
     await assertFileExist(tempDir, 'node_modules/@meteorjs/capacitor/package.json');
     await assertFileExist(tempDir, 'node_modules/@meteorjs/rspack/package.json');
+    for (const name of ['core', 'cli', 'android']) {
+      const installed = await readJson(tempDir, `node_modules/@capacitor/${name}/package.json`);
+      expect(semver.satisfies(installed.version, '>=8.6.2 <9.0.0')).toBe(true);
+    }
     await assertFileExist(tempDir, '.meteor/platforms', { content: 'android' });
     await assertFileExist(tempDir, 'android');
     await assertFileExist(tempDir, '.gitignore', { content: '_build' });
@@ -441,14 +446,28 @@ describe('Capacitor App Web Lifecycle /', () => {
     await assertFileExist(tempDir, 'node_modules/@capacitor/cli/package.json');
     await assertFileExist(tempDir, 'node_modules/@meteorjs/capacitor/package.json');
     await assertFileExist(tempDir, '.meteor/platforms', { content: 'ios' });
-    await assertFileExist(tempDir, 'ios/App/App.xcworkspace');
+    await assertFileExist(tempDir, 'ios/App/App.xcodeproj');
+    await assertFileExist(tempDir, 'ios/App/CapApp-SPM/Package.swift', { content: 'MeteorjsCapacitor' });
+    expect(semver.satisfies((await readJson(tempDir, 'node_modules/@capacitor/ios/package.json')).version, '>=8.6.2 <9.0.0')).toBe(true);
     await assertFileExist(tempDir, '.gitignore', { content: '_build' });
     await assertFileExist(tempDir, '.gitignore', { content: 'ios/App/App/public' });
     await assertFileExist(tempDir, '.gitignore', { content: 'ios/App/App/capacitor.*.json' });
     await assertFileExist(tempDir, '.gitignore', { content: 'ios/App/App/config.xml' });
   });
 
-  test('"meteor run android" serves web app and prepares Capacitor webDir', async () => {
+  test('"meteor run android" upgrades older Capacitor 8 packages, serves web app and prepares Capacitor webDir', async () => {
+    const olderPackages = [];
+    for (const name of ['core', 'cli', 'android', 'ios']) {
+      if (await fs.pathExists(path.join(tempDir, `node_modules/@capacitor/${name}/package.json`))) {
+        olderPackages.push(`@capacitor/${name}@8.0.0`);
+      }
+    }
+    await runMeteorCommand('npm', ['install', '--save-exact', '--no-audit', '--no-fund', ...olderPackages], tempDir, {
+      captureOutput: true, checkExitCode: true, env: e2eEnv(),
+    });
+    for (const name of ['core', 'cli', 'android']) {
+      expect((await readJson(tempDir, `node_modules/@capacitor/${name}/package.json`)).version).toBe('8.0.0');
+    }
     // A previous native run leaves a complete document in the shared build
     // root. Rspack must not re-include it as an app template during startup.
     await fs.outputFile(path.join(tempDir, '_build/native-dev/index.html'),
@@ -462,6 +481,11 @@ describe('Capacitor App Web Lifecycle /', () => {
       }),
     });
     meteorProcess = result.meteorProcess;
+
+    expectOutputContains(result.outputLines, /Capacitor: updating npm dependencies/);
+    for (const name of ['core', 'cli', 'android']) {
+      expect((await readJson(tempDir, `node_modules/@capacitor/${name}/package.json`)).version).toBe('8.6.2');
+    }
 
     await assertNativeReactApp(PORT);
     await assertRspackDevelopmentArtifacts(tempDir);

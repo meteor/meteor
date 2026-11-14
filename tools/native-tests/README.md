@@ -23,8 +23,17 @@ WebView and connects back to the server.
 
 ## Local usage
 
-Prerequisites: Node 20+, Maestro CLI, Xcode (for iOS), Android SDK + emulator
-(for Android). On a fresh checkout:
+Prerequisites: Node 22+, Maestro CLI, Xcode 26+ with an iOS Simulator (for iOS),
+JDK 21 and Android SDK 36 with an emulator (for Android). New Capacitor 8 iOS
+projects use Swift Package Manager; the runner also accepts existing CocoaPods
+workspaces. Use `MAESTRO_IOS_DEVICE` to select an installed simulator by name
+(CI uses `iPhone 17`).
+
+For a fresh Xcode installation, install its matching iOS platform component
+with `xcodebuild -downloadPlatform iOS`. An older simulator runtime alone does
+not enable the new Xcode build destinations.
+
+On a fresh checkout:
 
 ```sh
 npm run install:native            # installs deps and checks for maestro CLI

@@ -55,7 +55,12 @@ On first use, Meteor prepares the Capacitor project:
 
 ### Prepare Android and iOS tooling
 
-Install the platform tooling before running native builds.
+This integration supports Capacitor 8 only, with a minimum version of 8.6.2.
+New apps install that baseline automatically on their first native command.
+Use Node.js 22+, JDK 21, Android Studio 2025.2.1+ with Android SDK 36, and
+Xcode 26+ for iOS. Native deployment targets are Android API 24+ and iOS 15+.
+New iOS projects use Swift Package Manager; existing CocoaPods projects remain
+supported. See the [Capacitor environment requirements](https://capacitorjs.com/docs/getting-started/environment-setup).
 
 > See [**"Native Pre-Installation"**](./pre-installation.md) for Android SDK, Java, Gradle, Xcode, CocoaPods, emulator, and simulator setup.
 
@@ -75,6 +80,45 @@ dependencies yourself; missing or outdated dependencies produce install commands
 before native preparation starts. `meteor update --npm` explicitly installs or
 updates the required packages even with automatic installation disabled. It
 does not create native projects or run `cap sync`.
+
+As with Rspack, the shared manager uses a minimum-version check: missing
+packages and older Capacitor 8 core, CLI, or selected platform packages are
+installed or upgraded to 8.6.2. Newer compatible 8.x installations are kept.
+Future increases to the integration's minimum use the same mechanism. Upgrading
+an existing Capacitor 7 native project still requires the explicit migration below.
+
+Capacitor packages may be declared in either `dependencies` or
+`devDependencies`. Keep `@capacitor/core`, `@capacitor/cli`, and each selected
+platform package within major 8, with matching compatible versions. Meteor
+checks installed plugin core peers rather than requiring every plugin to share
+Capacitor's major number. Unsupported declarations and installed versions stop
+native preparation before dependency installation or project generation.
+
+### Upgrade early Capacitor 7 apps
+
+Commit or back up your native projects first. Update core, CLI, and the selected
+platform packages together, and choose compatible releases of each plugin:
+
+```bash
+meteor npm install @capacitor/core@^8.6.2 @capacitor/android@^8.6.2 @capacitor/ios@^8.6.2
+meteor npm install --save-dev @capacitor/cli@^8.6.2
+npx cap migrate
+npx cap sync
+```
+
+Omit platform packages you do not use. Review the
+[Capacitor 8 migration guide](https://capacitorjs.com/docs/updating/8-0), including
+native deployment targets and Android Gradle changes. Meteor does not rewrite
+existing native projects or silently upgrade an unsupported major.
+
+Until the integration and its matching Rspack changes are published, link both
+checkout packages after installing application dependencies:
+
+```bash
+npm link --no-save /path/to/meteor/npm-packages/meteor-capacitor /path/to/meteor/npm-packages/meteor-rspack
+```
+
+Use that checkout's `meteor` binary for native commands.
 
 ### TypeScript applications
 
@@ -113,7 +157,7 @@ The root `capacitor.config.js` file is dynamic, similar to `rspack.config.js`. K
 
 Meteor scaffolds a CommonJS `capacitor.config.js` file. If your app already has `capacitor.config.ts`, `capacitor.config.mjs`, `capacitor.config.cjs`, or `capacitor.config.json`, Meteor respects that file instead.
 
-You can return any option supported by the [Capacitor configuration schema](https://capacitorjs.com/docs/v7/config) for the Capacitor version installed in your app, including `appId`, `appName`, `plugins`, `ios`, `android`, `server`, `loggingBehavior`, `appendUserAgent`, and other standard Capacitor options.
+You can return any option supported by the [Capacitor configuration schema](https://capacitorjs.com/docs/config), including `appId`, `appName`, `plugins`, `ios`, `android`, `server`, `loggingBehavior`, `appendUserAgent`, and other standard Capacitor options.
 
 `@meteorjs/capacitor` deep-merges your config on top of Meteor defaults. This means nested blocks layer together, so adding a plugin config does not remove Meteor's default `plugins.SplashScreen` values. In livereload mode, Meteor preserves any `appendUserAgent` value you set and appends its own native marker. Meteor also sets `webDir` for the generated native web assets and controls `bundledWebRuntime`; do not set `bundledWebRuntime` yourself.
 

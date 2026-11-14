@@ -389,7 +389,8 @@ React app using both Rspack and Capacitor, with web-only native lifecycle covera
 | Local `@meteorjs/rspack` and `@meteorjs/capacitor` packages linked into the app | Init |
 | `meteor types` + `tsc` resolve Capacitor exports, `Meteor.isCapacitor`, WebApp hooks and npm configuration types | Init |
 | TypeScript runtime flag helper is compiled and rendered in the browser | Run, Prod |
-| `meteor add-platform android` installs Capacitor npm deps and creates `android/` | Init |
+| `meteor add-platform android` installs Capacitor 8 core, CLI and platform packages and creates `android/` | Init |
+| `meteor add-platform ios` creates a Swift Package Manager project containing the local Meteor native runtime | Init |
 | Manual dependency mode prints commands and prevents native preparation; `meteor update --npm` repairs missing tools without scaffolding or syncing | Init |
 | `.meteor/platforms` and Capacitor `.gitignore` entries are updated | Init |
 | `meteor run android` includes `web.cordova`, transforms it into `_build/native-dev`, and runs `cap sync` | Run |

@@ -50,16 +50,16 @@
     }
   },
   "peerDependencies": {
-    "@capacitor/cli": ">=7.0.0",
-    "@capacitor/core": ">=7.0.0"
+    "@capacitor/cli": ">=8.0.0 <9.0.0",
+    "@capacitor/core": ">=8.0.0 <9.0.0"
   },
   "peerDependenciesMeta": {
     "@capacitor/cli": { "optional": true },
     "@capacitor/core": { "optional": true }
   },
   "devDependencies": {
-    "@capacitor/android": "^7.4.3",
-    "@capacitor/core": "^7.4.3",
-    "@capacitor/ios": "^7.4.3"
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/core": "^8.6.2",
+    "@capacitor/ios": "^8.6.2"
   }
 }

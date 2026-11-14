@@ -2,6 +2,17 @@
 
 CapacitorJS integration helpers and native runtime bindings for Meteor's `capacitor` mobile flow.
 
+This branch supports Capacitor 8 only. Use Node.js 22+, JDK 21 and Android SDK
+36 for Android, and Xcode 26+ for iOS (deployment target iOS 15+). New iOS projects
+use Swift Package Manager. Existing Capacitor 7 apps must follow the
+[migration guide](https://capacitorjs.com/docs/updating/8-0) before native commands.
+
+Meteor's shared dependency manager automatically installs missing packages and
+raises older Capacitor 8 core, CLI and selected platform packages to its minimum
+baseline, currently 8.6.2, while keeping newer compatible versions. Set
+`meteor.autoInstallDeps` to `false` for manual commands, or use
+`meteor update --npm` to explicitly align dependencies.
+
 This package is the npm companion to Meteor's `capacitor` package. Meteor uses it to:
 
 - build and merge `capacitor.config.*` with Meteor-specific defaults

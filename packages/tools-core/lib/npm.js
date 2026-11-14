@@ -584,9 +584,11 @@ export function checkNpmDependencyVersion(dependency, options = {}) {
       for (const section of sections) {
         if (packageJson[section] && packageJson[section][dependency]) {
           const versionString = packageJson[section][dependency];
-          // Extract the version number from the version string (removing ^ or ~ if present)
-          const version = versionString.replace(/^[\^~]/, '');
-          return semver[semverCondition](version, versionRequirement);
+          // Minimum-version checks must also accept bounded declaration ranges.
+          const version = semverCondition === 'gte'
+            ? semver.minVersion(versionString)?.version
+            : versionString.replace(/^[\^~]/, '');
+          return !!version && semver[semverCondition](version, versionRequirement);
         }
       }
     }

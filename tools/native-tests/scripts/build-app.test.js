@@ -15,6 +15,7 @@ const {
   getCapacitorProductionExcludedFiles,
   getCapacitorIosDerivedDataPath,
   getCapacitorIosWorkspacePath,
+  getCapacitorIosBuildTarget,
   normalizeWebProgramAssetUrls,
   readMeteorAppIdentifier,
   renderCapacitorBuildIndexHtml,
@@ -89,6 +90,22 @@ test("ios workspace path matches Capacitor generated project", () => {
     getCapacitorIosWorkspacePath("/tmp/app"),
     path.join("/tmp/app", "ios", "App", "App.xcworkspace")
   );
+});
+
+test("iOS simulator compilation selects SPM projects and preserves CocoaPods workspace builds", async () => {
+  const appDir = await fs.mkdtemp(path.join(os.tmpdir(), "native-ios-target-"));
+  try {
+    const project = path.join(appDir, "ios", "App", "App.xcodeproj");
+    await fs.ensureDir(project);
+    assert.deepEqual(await getCapacitorIosBuildTarget(appDir), ["-project", project]);
+    const workspace = getCapacitorIosWorkspacePath(appDir);
+    await fs.ensureDir(workspace);
+    assert.deepEqual(await getCapacitorIosBuildTarget(appDir), ["-workspace", workspace]);
+    await fs.remove(path.join(appDir, "ios"));
+    await assert.rejects(getCapacitorIosBuildTarget(appDir), /No Capacitor iOS workspace or project/);
+  } finally {
+    await fs.remove(appDir);
+  }
 });
 
 test("ios derived data path stays inside temp app", () => {

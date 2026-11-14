@@ -286,6 +286,14 @@ function getCapacitorIosWorkspacePath(appDir) {
   return path.join(appDir, "ios", "App", "App.xcworkspace");
 }
 
+async function getCapacitorIosBuildTarget(appDir) {
+  const workspace = getCapacitorIosWorkspacePath(appDir);
+  if (await fs.pathExists(workspace)) return ["-workspace", workspace];
+  const project = path.join(appDir, "ios", "App", "App.xcodeproj");
+  if (await fs.pathExists(project)) return ["-project", project];
+  throw new Error(`No Capacitor iOS workspace or project found in ${path.dirname(project)}`);
+}
+
 function getCapacitorIosDerivedDataPath(appDir) {
   return path.join(appDir, "ios", "derived-data");
 }
@@ -582,17 +590,13 @@ async function compileCapacitorAndroidForEmulator({ appDir }) {
 }
 
 async function compileCapacitorIosForSimulator({ appDir }) {
-  const workspace = getCapacitorIosWorkspacePath(appDir);
+  const target = await getCapacitorIosBuildTarget(appDir);
   const derivedData = getCapacitorIosDerivedDataPath(appDir);
-
-  if (!(await fs.pathExists(workspace))) {
-    throw new Error(`No Capacitor iOS workspace found at ${workspace}`);
-  }
 
   await execa(
     "xcodebuild",
     [
-      "-workspace", workspace,
+      ...target,
       "-scheme", "App",
       "-configuration", "Debug",
       "-sdk", "iphonesimulator",
@@ -751,6 +755,7 @@ module.exports = {
   getCapacitorBuildHcpModeForNativeTestMode,
   getCapacitorIosDerivedDataPath,
   getCapacitorIosWorkspacePath,
+  getCapacitorIosBuildTarget,
   normalizeWebProgramAssetUrls,
   readMeteorAppIdentifier,
   renderCapacitorBuildIndexHtml,
