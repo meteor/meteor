@@ -315,19 +315,24 @@ Tinytest.addAsync(
         JSON.stringify({ name: 'enabled-app', meteor: { autoInstallDeps: true } }),
       );
 
-      const meteorCommand = process.platform === 'win32' ? 'meteor.cmd' : 'meteor';
+      // Intercept bundled npm directly; the shared helper can resolve it
+      // without falling back to the Meteor launcher.
+      const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+      const installCwdPath = path.join(binDir, 'install-cwd.txt');
       fs.writeFileSync(
-        path.join(binDir, meteorCommand),
-        process.platform === 'win32' ? '@exit /b 0\r\n' : '#!/bin/sh\nexit 0\n',
+        path.join(binDir, npmCommand),
+        process.platform === 'win32'
+          ? '@cd > "%~dp0install-cwd.txt"\r\n@exit /b 0\r\n'
+          : '#!/bin/sh\npwd > "$(dirname "$0")/install-cwd.txt"\nexit 0\n',
       );
       if (process.platform !== 'win32') {
-        fs.chmodSync(path.join(binDir, meteorCommand), 0o755);
+        fs.chmodSync(path.join(binDir, npmCommand), 0o755);
       }
 
       process.chdir(processCwd);
       process.env.PATH = `${binDir}${path.delimiter}${originalPath || ''}`;
       process.env.YARN_ENABLED = 'false';
-      globalThis.Plugin = {};
+      globalThis.Plugin = { getCurrentNodeBinDir: () => binDir };
       globalThis.getCurrentNodeBinDir = undefined;
 
       const disabled = await ensurePackageDependencies({
@@ -338,6 +343,7 @@ Tinytest.addAsync(
       });
       test.equal(disabled.mode, 'manual-warning');
       test.isFalse(disabled.installed);
+      test.isFalse(fs.existsSync(installCwdPath));
 
       fs.writeFileSync(
         path.join(processCwd, 'package.json'),
@@ -351,6 +357,7 @@ Tinytest.addAsync(
       });
       test.equal(enabled.mode, 'auto-install');
       test.isTrue(enabled.installed);
+      test.equal(fs.readFileSync(installCwdPath, 'utf8').trim(), fs.realpathSync(enabledCwd));
     } finally {
       process.chdir(originalCwd);
       if (originalPath === undefined) {
@@ -374,6 +381,85 @@ Tinytest.addAsync(
         delete globalThis.getCurrentNodeBinDir;
       }
       fs.rmSync(root, { recursive: true, force: true });
+    }
+  },
+);
+
+Tinytest.add(
+  'tools-core - installed dependency checks validate declarations and installed versions',
+  function (test) {
+    withTempApp({ devDependencies: { foo: '^1.2.3' } }, (cwd) => {
+      const dependencies = [{ name: 'foo', version: '1.0.0', dev: true }];
+      test.equal(detectMissingOrOutdatedDeps(dependencies, { cwd })[0].status, 'ok');
+      test.equal(detectMissingOrOutdatedDeps(dependencies, {
+        cwd, checkNodeModules: true,
+      })[0].status, 'missing');
+      const installed = path.join(cwd, 'node_modules', 'foo');
+      fs.mkdirSync(installed, { recursive: true });
+      fs.writeFileSync(path.join(installed, 'package.json'), JSON.stringify({
+        name: 'foo', version: '0.9.0',
+      }));
+      test.equal(detectMissingOrOutdatedDeps(dependencies, {
+        cwd, checkNodeModules: true,
+      })[0].status, 'outdated');
+
+      fs.writeFileSync(path.join(installed, 'package.json'), JSON.stringify({
+        name: 'foo', version: '1.2.3',
+      }));
+      fs.writeFileSync(path.join(cwd, 'package.json'), JSON.stringify({
+        devDependencies: { foo: '^0.9.0' },
+      }));
+      test.equal(detectMissingOrOutdatedDeps(dependencies, {
+        cwd, checkNodeModules: true,
+      })[0].status, 'outdated');
+
+      fs.writeFileSync(path.join(cwd, 'package.json'), JSON.stringify({}));
+      test.equal(detectMissingOrOutdatedDeps(dependencies, {
+        cwd, checkNodeModules: true,
+      })[0].status, 'outdated');
+
+      for (const spec of ['file:../foo', '../foo', path.join(cwd, 'linked-foo')]) {
+        fs.writeFileSync(path.join(cwd, 'package.json'), JSON.stringify({
+          devDependencies: { foo: spec },
+        }));
+        test.equal(detectMissingOrOutdatedDeps(dependencies, {
+          cwd, checkNodeModules: true,
+        })[0].status, 'ok');
+      }
+    });
+  },
+);
+
+Tinytest.addAsync(
+  'tools-core - provider dependency checks retain local specs and installation opt-out',
+  async function (test) {
+    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'tools-core-provider-deps-'));
+    try {
+      fs.writeFileSync(path.join(cwd, 'package.json'), JSON.stringify({
+        devDependencies: { 'local-runner': 'file:../runner' },
+        meteor: { autoInstallDeps: true },
+      }));
+      const result = await ensurePackageDependencies({
+        packageId: `provider-local-specs-${path.basename(cwd)}`,
+        packageLabel: 'Test provider',
+        dependencies: [
+          { name: 'local-runner', version: '1.0.0', dev: true },
+          { name: 'override-runner', version: '1.0.0', spec: 'file:../override', dev: true },
+        ],
+        cwd,
+        checkNodeModules: true,
+        includeDevDependencies: true,
+        autoInstall: false,
+      });
+      test.equal(result.mode, 'manual-warning');
+      test.isFalse(result.installed);
+      test.equal(result.changes.map(change => change.installSpec), [
+        'file:../runner', 'file:../override',
+      ]);
+      test.isTrue(result.installCommands[0].includes('local-runner@file:../runner'));
+      test.isTrue(result.installCommands[0].includes('override-runner@file:../override'));
+    } finally {
+      fs.rmSync(cwd, { recursive: true, force: true });
     }
   },
 );

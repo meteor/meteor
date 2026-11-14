@@ -70,16 +70,43 @@ export async function install(appDir, options) {
   const packageManager = options?.packageManager || "npm";
   const packageJsonPath = pathJoin(appDir, "package.json");
   const needTempPackageJson = ! statOrNull(packageJsonPath);
+  const originalPackageJson = needTempPackageJson
+    ? null
+    : readFile(packageJsonPath, "utf8");
+  const additionalDevDependencies = options?.additionalDevDependencies || {};
+  const persistDefaultDependencies = options?.persistDefaultDependencies === true;
+  const persistMeteorConfig = options?.persistMeteorConfig;
+  const persistPackageJson = persistDefaultDependencies || Boolean(persistMeteorConfig);
+  const needPackageJsonMutation = needTempPackageJson ||
+    Object.keys(additionalDevDependencies).length > 0 ||
+    persistPackageJson;
 
-  if (needTempPackageJson) {
+  if (needPackageJsonMutation) {
     // NOTE we need skel-minimal to pull in jQuery which right now is required for Blaze
     const { dependencies } = require("../static-assets/skel-blaze/package.json");
+    const packageJson = originalPackageJson
+      ? JSON.parse(originalPackageJson)
+      : {};
+    if (needTempPackageJson || persistDefaultDependencies) {
+      packageJson.dependencies = {
+        ...dependencies,
+        ...packageJson.dependencies,
+      };
+    }
+    packageJson.devDependencies = {
+      ...packageJson.devDependencies,
+      ...additionalDevDependencies,
+    };
+    if (persistMeteorConfig) {
+      packageJson.meteor = {
+        ...packageJson.meteor,
+        ...persistMeteorConfig,
+      };
+    }
 
-    // Write a minimal package.json with the same dependencies as the
-    // default new-app package.json file.
     writeFile(
       packageJsonPath,
-      JSON.stringify({ dependencies }, null, 2) + "\n",
+      JSON.stringify(packageJson, null, 2) + "\n",
       "utf8",
     );
   }
@@ -88,36 +115,42 @@ export async function install(appDir, options) {
     ? "installing pnpm workspace dependencies"
     : INSTALL_JOB_MESSAGE;
 
-  const ok = await buildmessage.enterJob(installJobMessage, async function () {
-    const installCommand = packageManager === "pnpm"
-      ? ["install", "--frozen-lockfile=false"]
-      : ["install"];
-    if (options && options.includeDevDependencies) {
-      if (packageManager === "npm") {
-        installCommand.push("--production=false");
+  let ok;
+  try {
+    ok = await buildmessage.enterJob(installJobMessage, async function () {
+      const installCommand = packageManager === "pnpm"
+        ? ["install", "--frozen-lockfile=false"]
+        : ["install"];
+      if (options && options.includeDevDependencies) {
+        if (packageManager === "npm") {
+          installCommand.push("--production=false");
+        }
+      }
+
+      const installResult = packageManager === "pnpm"
+        ? await runPnpmCommand(installCommand, appDir)
+        : await require("../isobuild/meteor-npm.js")
+          .runNpmCommand(installCommand, appDir);
+      if (! installResult.success) {
+        buildmessage.error(
+          (packageManager === "npm"
+            ? "Could not install npm dependencies for test-packages: "
+            : `Could not install ${packageManager} dependencies: `) +
+            installResult.error);
+
+        return false;
+      }
+
+      return true;
+    });
+  } finally {
+    if (needPackageJsonMutation && !persistPackageJson) {
+      if (originalPackageJson == null) {
+        unlink(packageJsonPath);
+      } else if (originalPackageJson != null) {
+        writeFile(packageJsonPath, originalPackageJson, "utf8");
       }
     }
-
-    const installResult = packageManager === "pnpm"
-      ? await runPnpmCommand(installCommand, appDir)
-      : await require("../isobuild/meteor-npm.js")
-        .runNpmCommand(installCommand, appDir);
-    if (! installResult.success) {
-      buildmessage.error(
-        (packageManager === "npm"
-          ? "Could not install npm dependencies for test-packages: "
-          : `Could not install ${packageManager} dependencies: `) +
-          installResult.error);
-
-      return false;
-    }
-
-    return true;
-  });
-
-  if (needTempPackageJson) {
-    // Clean up the temporary package.json file created above.
-    unlink(packageJsonPath);
   }
 
   return ok;

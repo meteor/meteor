@@ -116,6 +116,12 @@ export function getDependencyInstallContext(appDir) {
   };
 }
 
+function isLocalDependencySpec(spec) {
+  return typeof spec === 'string' && (
+    path.isAbsolute(spec) || /^(?:file:|link:|portal:|workspace:|\.{1,2}[\\/])/.test(spec)
+  );
+}
+
 function readCurrentVersion(name, cwd) {
   try {
     const packageJsonPath = path.join(cwd, 'package.json');
@@ -139,6 +145,7 @@ function readCurrentVersion(name, cwd) {
  * @param {Array<{name: string, version: string, semverCondition?: string, dev: boolean, existenceOnly?: boolean}>} dependencies
  * @param {Object} [options]
  * @param {string} [options.cwd] - Defaults to the Meteor app directory.
+ * @param {boolean} [options.checkNodeModules] - Require installed dependencies, not only declarations.
  * @returns {Array<{name: string, status: 'ok'|'missing'|'outdated', requiredVersion: string, currentVersion: ?string, dev: boolean, existenceOnly: boolean}>}
  */
 export function detectMissingOrOutdatedDeps(dependencies, options = {}) {
@@ -153,7 +160,11 @@ export function detectMissingOrOutdatedDeps(dependencies, options = {}) {
 
     const dev = dep.dev;
     const existenceOnly = !!dep.existenceOnly;
-    const exists = checkNpmDependencyExists(dep.name, { cwd });
+    const exists = checkNpmDependencyExists(dep.name, {
+      cwd,
+      checkNodeModules: options.checkNodeModules,
+      nodeModulesOnly: options.checkNodeModules,
+    });
 
     if (!exists) {
       return {
@@ -177,21 +188,28 @@ export function detectMissingOrOutdatedDeps(dependencies, options = {}) {
       };
     }
 
-    const ok = checkNpmDependencyVersion(dep.name, {
+    const currentVersion = readCurrentVersion(dep.name, cwd);
+    const versionOptions = {
       cwd,
       versionRequirement: dep.version,
       semverCondition: dep.semverCondition || 'gte',
-      // Local protocols describe a source location, not a semver range.
-      checkNodeModules: /^(file|link|portal|workspace):/.test(
-        readCurrentVersion(dep.name, cwd) || '',
-      ),
+    };
+    const declaredOk = checkNpmDependencyVersion(dep.name, {
+      ...versionOptions,
+      // Local protocols and paths describe a source location, not a semver range.
+      checkNodeModules: isLocalDependencySpec(currentVersion),
+    });
+    // A valid installed version must not hide an absent or outdated declaration.
+    const installedOk = !options.checkNodeModules || checkNpmDependencyVersion(dep.name, {
+      ...versionOptions,
+      checkNodeModules: true,
     });
 
     return {
       name: dep.name,
-      status: ok ? 'ok' : 'outdated',
+      status: declaredOk && installedOk ? 'ok' : 'outdated',
       requiredVersion: dep.version,
-      currentVersion: readCurrentVersion(dep.name, cwd),
+      currentVersion,
       dev,
       existenceOnly,
     };
@@ -221,7 +239,7 @@ export function formatInstallCommands({
   const dev = needed.filter((c) => c.dev);
   const regular = needed.filter((c) => !c.dev);
 
-  const toSpec = (c) => `${c.name}@${c.requiredVersion}`;
+  const toSpec = (c) => `${c.name}@${c.installSpec || c.requiredVersion}`;
   const out = {};
   const commands = {
     npm: { dev: 'meteor npm install --save-dev', regular: 'meteor npm install --save' },
@@ -374,6 +392,9 @@ export function renderManualInstallInstructions({ packageLabel, changes, yarn = 
  * @param {string} [params.docUrl] - Link shown in the discoverability footer / manual block.
  * @param {string} [params.note] - Optional line shown above the dep list.
  * @param {string} [params.cwd] - Defaults to the Meteor app directory.
+ * @param {boolean} [params.checkNodeModules] - Check installed versions in the npm root.
+ * @param {boolean} [params.includeDevDependencies] - Install dev dependencies even in production environments.
+ * @param {boolean} [params.autoInstall] - A provider can disable installation for its host.
  * @returns {Promise<{mode: string, changes: Array, installed: boolean, installCommands: string[]}>}
  */
 export async function ensurePackageDependencies(params = {}) {
@@ -399,7 +420,20 @@ export async function ensurePackageDependencies(params = {}) {
   }
 
   const cwd = cwdParam || getMeteorAppDir();
-  const changes = detectMissingOrOutdatedDeps(dependencies, { cwd });
+  const changes = detectMissingOrOutdatedDeps(dependencies, {
+    cwd,
+    checkNodeModules: params.checkNodeModules,
+  });
+  for (const change of changes) {
+    const dependency = dependencies.find(dep => dep.name === change.name);
+    const declaredSpec = readCurrentVersion(change.name, cwd);
+    // Preserve checkout links when a test harness needs to reinstall a package.
+    // Its published version may not exist yet.
+    const localSpec = isLocalDependencySpec(declaredSpec);
+    change.installSpec = dependency.spec && dependency.spec !== dependency.version
+      ? dependency.spec
+      : localSpec ? declaredSpec : dependency.version;
+  }
   const needed = changes.filter((c) => c.status !== 'ok');
 
   if (needed.length === 0) {
@@ -418,7 +452,8 @@ export async function ensurePackageDependencies(params = {}) {
     Package?.meteor?.global?.currentCommand?.name === 'update' &&
     Package?.meteor?.global?.currentCommand?.options?.npm === true;
 
-  const autoInstall = isUpdateNpm || hasMeteorAppConfigAutoInstallDeps({ cwd });
+  const autoInstall = params.autoInstall !== false &&
+    (isUpdateNpm || hasMeteorAppConfigAutoInstallDeps({ cwd }));
 
   const canAutoInstall = ['npm', 'yarn', 'pnpm'].includes(packageManager);
   const cmds = formatInstallCommands({
@@ -465,7 +500,7 @@ export async function ensurePackageDependencies(params = {}) {
         devChanges.length === 1 ? 'y' : 'ies'
       }...`
     );
-    const specs = devChanges.map((c) => `${c.name}@${c.requiredVersion}`);
+    const specs = devChanges.map((c) => `${c.name}@${c.installSpec}`);
     installCommands.push(cmds.devCommand);
     devOk = await installNpmDependency(specs, {
       cwd,
@@ -473,6 +508,7 @@ export async function ensurePackageDependencies(params = {}) {
       // Cold builds can load the plugin with NODE_ENV=production. Build tools
       // must still be present on disk, not just saved in devDependencies.
       includeDev: true,
+      includeDevDependencies: params.includeDevDependencies,
       packageManager,
       legacyPeerDeps,
     });
@@ -484,13 +520,14 @@ export async function ensurePackageDependencies(params = {}) {
         regularChanges.length === 1 ? 'y' : 'ies'
       }...`
     );
-    const specs = regularChanges.map((c) => `${c.name}@${c.requiredVersion}`);
+    const specs = regularChanges.map((c) => `${c.name}@${c.installSpec}`);
     installCommands.push(cmds.regularCommand);
     regularOk = await installNpmDependency(specs, {
       cwd,
       dev: false,
       // A subsequent runtime install must not prune those build tools.
       includeDev: true,
+      includeDevDependencies: params.includeDevDependencies,
       packageManager,
       legacyPeerDeps,
     });

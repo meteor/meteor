@@ -319,6 +319,11 @@ var PackageSource = function () {
   // 'sources', and 'npmDependencies'.
   self.pluginInfo = {};
 
+  // Test-runner provider plugins use the same compilation machinery as build
+  // plugins, but remain distinct so testOnly packages cannot gain compiler or
+  // minifier behavior through this narrow tool-host extension point.
+  self.testRunnerPluginInfo = {};
+
   // Analogous to watchSet in SourceArch but for plugins. At this
   // stage will typically contain just 'package.js'.
   self.pluginWatchSet = new watch.WatchSet;
@@ -628,6 +633,7 @@ Object.assign(PackageSource.prototype, {
       // it, though.
       Package._fileAndDepLoader = null;
       self.pluginInfo = {};
+      self.testRunnerPluginInfo = {};
       Npm._dependencies = null;
       Cordova._dependencies = null;
     }
@@ -663,9 +669,15 @@ Object.assign(PackageSource.prototype, {
     // to exclude in production mode from a published package. Eventually, we'll
     // add such a flag to the isopack format, but until then we'll sidestep the
     // issue by disallowing build plugins in debugOnly packages.
-    if ((self.debugOnly || self.prodOnly || self.testOnly) && !_.isEmpty(self.pluginInfo)) {
+    if ((self.debugOnly || self.prodOnly || self.testOnly) &&
+        !_.isEmpty(self.pluginInfo)) {
       buildmessage.error(
         "can't register build plugins in debugOnly, prodOnly or testOnly packages");
+      // recover by ignoring
+    }
+    if (!self.testOnly && !_.isEmpty(self.testRunnerPluginInfo)) {
+      buildmessage.error(
+        "test runner plugins can only be registered in testOnly packages");
       // recover by ignoring
     }
 
@@ -711,6 +723,7 @@ Object.assign(PackageSource.prototype, {
 
         Package._fileAndDepLoader = null;
         self.pluginInfo = {};
+        self.testRunnerPluginInfo = {};
         Npm._dependencies = null;
         Cordova._dependencies = null;
       }
@@ -1749,7 +1762,8 @@ Object.assign(PackageSource.prototype, {
   // True if the package defines any plugins.
   containsPlugins: function () {
     var self = this;
-    return ! _.isEmpty(self.pluginInfo);
+    return !_.isEmpty(self.pluginInfo) ||
+      !_.isEmpty(self.testRunnerPluginInfo);
   },
 
   // Return dependency metadata for all unibuilds, in the format needed
@@ -1825,7 +1839,7 @@ Object.assign(PackageSource.prototype, {
       _.each(arch.implies, processUse);
     });
 
-    _.each(self.pluginInfo, function (info) {
+    _.each({ ...self.pluginInfo, ...self.testRunnerPluginInfo }, function (info) {
       // info.use is currently just an array of strings, and there's
       // no way to specify weak/unordered. Much like an app.
       _.each(info.use, function (spec) {
@@ -1835,6 +1849,32 @@ Object.assign(PackageSource.prototype, {
         }
       });
     });
+    return Object.keys(packages);
+  },
+
+  // Test-runner discovery must compile provider plugins without loading
+  // runtime dependencies. Otherwise a merged testOnly capability can
+  // initialize compiler plugins before its provider publishes build context.
+  getPackagesToLoadBeforeTestRunnerPlugins: function (packageMap) {
+    var self = this;
+    var packages = {};
+    const providerPluginInfo = self.testOnly
+      ? self.testRunnerPluginInfo
+      : self.pluginInfo;
+
+    _.each(providerPluginInfo, function (info) {
+      _.each(info.use, function (spec) {
+        var parsedSpec = splitConstraint(spec);
+        if (compiler.isIsobuildFeaturePackage(parsedSpec.package)) {
+          return;
+        }
+        if (!packageMap.getInfo(parsedSpec.package)) {
+          throw Error("Depending on unknown package " + parsedSpec.package);
+        }
+        packages[parsedSpec.package] = true;
+      });
+    });
+
     return Object.keys(packages);
   },
 
@@ -2004,7 +2044,7 @@ Object.assign(PackageSource.prototype, {
       _.each(arch.implies, _.partial(processUse, true));
     });
 
-    _.each(self.pluginInfo, function (info) {
+    _.each({ ...self.pluginInfo, ...self.testRunnerPluginInfo }, function (info) {
       _.each(info.use, function (spec) {
         var parsedSpec = splitConstraint(spec);
         if (!_.has(dependencies, parsedSpec.package)) {

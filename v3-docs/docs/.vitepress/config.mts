@@ -211,6 +211,15 @@ export default defineConfig({
             ]
           },
           {
+            text: "Test Stack",
+            link: "/about/test-stack.md",
+            items: [
+              { text: "Rstest Integration", link: "/about/test-stack/rstest.md" },
+              { text: "Existing Test Drivers", link: "/about/test-stack/drivers.md" },
+              { text: "Test-Runner Providers", link: "/about/test-stack/providers.md" },
+            ],
+          },
+          {
             text: "Agent Skills",
             link: "/ai/agent-skills",
           },

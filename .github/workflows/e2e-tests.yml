@@ -9,11 +9,15 @@ on:
       - "tools/cli/**"
       - "tools/e2e-tests/**"
       - "packages/rspack/**"
+      - "packages/rstest/**"
       - "packages/tools-core/**"
       - "packages/babel-compiler/**"
       - "packages/meteor-tool/**"
       - "packages/test-in-browser/**"
       - "npm-packages/meteor-rspack/**"
+      - "npm-packages/meteor-rstest/**"
+      - "tools/runners/**"
+      - "tools/tool-env/**"
       - "tools/isobuild/**"
       - "scripts/dev-bundle-tool-package.js"
       - "tools/fs/safe-watcher.ts"
@@ -36,6 +40,9 @@ env:
   # when caches are cold, and this workflow does not consume their automatic
   # audit reports. Avoid making E2E reliability depend on npm's audit endpoint.
   npm_config_audit: "false"
+  # Actions mounts HOME from the host runner. SWC's native addon loader rejects
+  # cache ancestors owned by a different writable user; use the container's home.
+  SWC_NATIVE_BINDING_CACHE: /root/.cache/swc-native
   # Per-test Jest retry count. Consumed by tools/e2e-tests/jest.setup.js.
   METEOR_E2E_TEST_RETRIES: 1
 
@@ -66,7 +73,7 @@ jobs:
     name: ${{ matrix.category }}
     runs-on: oss-vm
     # Budget both longer Regressions attempts and environment preparation.
-    timeout-minutes: ${{ matrix.group == 'regressions' && 110 || 60 }}
+    timeout-minutes: ${{ matrix.group == 'regressions' && 110 || startsWith(matrix.group, 'rstest') && 90 || 60 }}
     env:
       # SWC's native addon cache rejects parents owned by another user.
       # Actions mounts the host-owned /github/home into this root container.
@@ -132,7 +139,9 @@ jobs:
             e2e-${{ runner.os }}-
 
       - name: Install deps
-        run: npm install
+        run: |
+          install -d -m 700 "$SWC_NATIVE_BINDING_CACHE"
+          npm install
 
       - name: Install test deps
         # This installs the browsers and system dependencies using the exact
@@ -152,12 +161,16 @@ jobs:
 
       - name: Prepare Meteor
         if: steps.deps-cache.outputs.cache-hit != 'true'
+        # This one-shot prewarm replaces package npm directories while compiling
+        # all local packages. It does not need live native watcher subscriptions.
+        env:
+          METEOR_WATCH_FORCE_POLLING: "true"
         run: ./meteor --get-ready --allow-superuser
 
       - name: Run tests for ${{ matrix.category }}
         id: test-run
         continue-on-error: true
-        timeout-minutes: ${{ matrix.group == 'regressions' && 40 || 20 }}
+        timeout-minutes: ${{ matrix.group == 'regressions' && 40 || startsWith(matrix.group, 'rstest') && 30 || 20 }}
         run: METEOR_ALLOW_SUPERUSER=1 npm run test:e2e:group -- "${{ matrix.group }}"
 
       - name: Clean up before retry
@@ -177,7 +190,7 @@ jobs:
 
       - name: Retry failed tests for ${{ matrix.category }}
         if: steps.test-run.outcome == 'failure'
-        timeout-minutes: ${{ matrix.group == 'regressions' && 45 || 25 }}
+        timeout-minutes: ${{ matrix.group == 'regressions' && 45 || startsWith(matrix.group, 'rstest') && 30 || 25 }}
         run: |
           echo "::warning::First attempt failed, retrying..."
           METEOR_ALLOW_SUPERUSER=1 npm run test:e2e:group -- "${{ matrix.group }}"

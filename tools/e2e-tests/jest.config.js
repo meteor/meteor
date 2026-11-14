@@ -1,8 +1,10 @@
+const { E2E_TEST_PATH_IGNORE_PATTERNS } = require('./test-groups');
+
 module.exports = {
   preset: 'jest-playwright-preset',
   rootDir: __dirname,
   testMatch: ["**/*.test.js"],
-  testPathIgnorePatterns: ["<rootDir>/apps/"],
+  testPathIgnorePatterns: E2E_TEST_PATH_IGNORE_PATTERNS.map(pattern => `<rootDir>${pattern}`),
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   verbose: true,
   // Increase timeout for CLI operations (longer on CI to absorb host contention)

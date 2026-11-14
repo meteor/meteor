@@ -175,6 +175,7 @@
     "react-fast-refresh": "build-tool",
     "reload-safetybelt": "internal",
     "rspack": "build-tool",
+    "rstest": "test-infra (internal runtime bridge; public test APIs come from @rstest/core)",
     "standard-minifier-css": "build-tool",
     "standard-minifier-js": "build-tool",
     "standard-minifiers": "build-tool",

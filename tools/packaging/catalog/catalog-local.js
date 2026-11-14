@@ -26,6 +26,10 @@ const KNOWN_ISOBUILD_FEATURE_PACKAGES = {
   // must explicitly depend on this feature package to use the API.
   'isobuild:linter-plugin': ['1.0.0'],
 
+  // This package directly calls Plugin.registerTestRunner. Package authors
+  // must explicitly depend on this feature package to use the API.
+  'isobuild:test-runner-plugin': ['1.0.0'],
+
   // This package is only published in the isopack-2 format, not isopack-1 or
   // older. ie, it contains "source" files for compiler plugins, not just
   // JS/CSS/static assets/head/body.

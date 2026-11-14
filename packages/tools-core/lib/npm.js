@@ -76,7 +76,8 @@ export function getMeteorCommandPath(
 }
 
 /**
- * Returns the Meteor dev_bundle bin directory path if available, otherwise null.
+ * Returns the plugin's Node bin directory, or the running Node installation
+ * when it also contains npm. Shared helpers may not have access to Plugin.
  *
  * @returns {string|null} The path to the dev_bundle bin directory, or null if not available
  */
@@ -98,6 +99,14 @@ function resolveNodeBinDir() {
   const meteorInstallationBinDir = getMeteorInstallationBinDir();
   if (meteorInstallationBinDir) {
     return meteorInstallationBinDir;
+  }
+
+  // Shared helper modules do not inherit a consuming plugin's lexical Plugin
+  // API. In the tool process, Node and npm still live together in dev_bundle.
+  const currentNodeBinDir = path.dirname(process.execPath);
+  if (getNodeBinaryCandidates('npm').some(candidate =>
+    fs.existsSync(path.join(currentNodeBinDir, candidate)))) {
+    return currentNodeBinDir;
   }
 
   return null;
@@ -181,6 +190,7 @@ function getNodeBinaryPathFromEnv(binaryName) {
  * @param {Object} [options] - Options for the check
  * @param {string} [options.cwd] - Current working directory (defaults to process.cwd())
  * @param {boolean} [options.checkNodeModules] - Whether to check in node_modules first (defaults to false)
+ * @param {boolean} [options.nodeModulesOnly] - If true, do not fall back to package.json declarations
  * @returns {boolean} True if the dependency exists, false otherwise
  */
 export function checkNpmDependencyExists(dependency, options = {}) {
@@ -200,6 +210,10 @@ export function checkNpmDependencyExists(dependency, options = {}) {
     } catch (error) {
       // If there's an error checking the file system, continue to the fallback method
     }
+  }
+
+  if (options.nodeModulesOnly) {
+    return false;
   }
 
   // Fallback: Check package.json directly instead of using `npm ls`
@@ -255,11 +269,12 @@ export function checkNpmBinaryExists(binary, options = {}) {
  * @param {boolean} [options.dev=false] - If true, install as a dev dependency
  * @param {boolean} [options.includeDev=false] - Include npm development dependencies even in production
  * @param {boolean} [options.exact=false] - If true, install with exact version
+ * @param {boolean} [options.includeDevDependencies=false] - If true, install dev dependencies even when NODE_ENV=production
  * @param {boolean} [options.legacyPeerDeps=false] - If true, ask npm to replace coordinated peer dependency majors
  * @param {boolean} [options.isMeteorCommand=false] - If true, prepends 'npm' to the args for meteor command
  * @returns {string[]} Array of arguments for the npm install command
  */
-function buildNpmInstallArgs(dependencies, options = {}) {
+export function buildNpmInstallArgs(dependencies, options = {}) {
   const args = options.isMeteorCommand ? ['npm', 'install'] : ['install'];
 
   if (options.includeDev) {
@@ -273,6 +288,10 @@ function buildNpmInstallArgs(dependencies, options = {}) {
 
   if (options.exact) {
     args.push('--save-exact');
+  }
+
+  if (options.includeDevDependencies) {
+    args.push('--production=false');
   }
 
   if (options.legacyPeerDeps) {
@@ -298,7 +317,7 @@ function buildNpmInstallArgs(dependencies, options = {}) {
  * @param {boolean} [options.exact=false] - If true, install with exact version
  * @returns {string[]} Array of arguments for the yarn add command
  */
-function buildYarnInstallArgs(dependencies, options = {}) {
+export function buildYarnInstallArgs(dependencies, options = {}) {
   const args = ['add'];
 
   // Add flags based on options
@@ -318,6 +337,12 @@ function buildYarnInstallArgs(dependencies, options = {}) {
   }
 
   return args;
+}
+
+export function getPackageInstallEnvironment(options = {}) {
+  return options.includeDevDependencies
+    ? { NODE_ENV: 'development', YARN_PRODUCTION: 'false' }
+    : undefined;
 }
 
 /**
@@ -356,6 +381,7 @@ function buildPnpmInstallArgs(dependencies, options = {}) {
  * @param {string[]} args - The arguments for the command
  * @param {Object} options - Options for the spawn process
  * @param {string} options.cwd - Current working directory
+ * @param {Object} [options.env] - Environment variables for the child process
  * @param {boolean} [options.logFailure=true] - Whether to log command failure details
  * @returns {Promise<boolean>} A promise that resolves to true if command succeeded, false otherwise
  */
@@ -372,6 +398,7 @@ function executeCommand(command, args, options) {
 
     spawnProcess(command, args, {
       cwd: options.cwd,
+      env: options.env,
       onStdout: (chunk) => {
         stdoutBuf = tail(stdoutBuf + chunk);
         if (options.onStdout) options.onStdout(chunk);
@@ -423,7 +450,11 @@ async function installPnpmDependency(dependencies, options, cwd) {
     const success = await executeCommand(
       command,
       [...baseArgs, ...installArgs],
-      { cwd, logFailure: isLastCandidate }
+      {
+        cwd,
+        env: { ...getNodeBinEnv(), ...getPackageInstallEnvironment(options) },
+        logFailure: isLastCandidate,
+      }
     );
 
     if (success) {
@@ -448,7 +479,11 @@ async function installYarnDependency(dependencies, options, cwd) {
     const success = await executeCommand(
       command,
       [...baseArgs, ...installArgs],
-      { cwd, logFailure: isLastCandidate }
+      {
+        cwd,
+        env: { ...getNodeBinEnv(), ...getPackageInstallEnvironment(options) },
+        logFailure: isLastCandidate,
+      }
     );
 
     if (success) {
@@ -475,11 +510,13 @@ async function installYarnDependency(dependencies, options, cwd) {
  * @param {boolean} [options.legacyPeerDeps=false] - If true, pass --legacy-peer-deps to npm
  * @param {boolean} [options.includeDev=false] - Include npm development dependencies even in production
  * @param {boolean} [options.yarn=false] - If true, use yarn instead of npm
+ * @param {boolean} [options.includeDevDependencies=false] - If true, install dev dependencies even when NODE_ENV=production
  * @param {'npm'|'yarn'|'pnpm'} [options.packageManager] - Explicit package manager
  * @returns {Promise<boolean>} A promise that resolves to true if installation succeeded, false otherwise
  */
 export function installNpmDependency(dependencies, options = {}) {
   const cwd = options.cwd || process.cwd();
+  const installEnv = { ...getNodeBinEnv(), ...getPackageInstallEnvironment(options) };
   const packageManager = options.packageManager ||
     (options.yarn ? 'yarn' : 'npm');
 
@@ -496,18 +533,8 @@ export function installNpmDependency(dependencies, options = {}) {
     return Promise.resolve(false);
   }
 
-  // Try to get the npm binary path
-  const npmBinaryPath = getNodeBinaryPath('npm');
-
-  // If we have a direct path to npm, use it
-  if (npmBinaryPath && fs.existsSync(npmBinaryPath)) {
-    const args = buildNpmInstallArgs(dependencies, options);
-    return executeCommand(npmBinaryPath, args, { cwd });
-  }
-
-  // Fall back to the current method using 'meteor npm install'
-  const args = buildNpmInstallArgs(dependencies, { ...options, isMeteorCommand: true });
-  return executeCommand('meteor', args, { cwd });
+  const { command, args } = getNpmCommand(buildNpmInstallArgs(dependencies, options));
+  return executeCommand(command, args, { cwd, env: installEnv });
 }
 
 
