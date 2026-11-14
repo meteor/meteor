@@ -1,6 +1,6 @@
 /**
  * @module processes
- * @description Spawns the Capacitor CLI for `cap sync` / `cap run` / `cap open`.
+ * @description Spawns the Capacitor CLI for sync, build, run and open.
  */
 
 const {
@@ -158,21 +158,29 @@ export function _ensureCapacitorWebDirIndex({
   return indexPath;
 }
 
-function spawnCap(args, { cwd, label, env, onExit, mode, platform, interactive }) {
+function spawnCap(args, { cwd, label, env, onExit, onError, mode, platform, interactive, secrets = [] }) {
   const { command, args: cmdArgs } = _getCapCommand(args, { cwd });
   const verbose = isVerbose();
   const stderrLines = [];
+  const redact = value => secrets.reduce((text, secret) => text.split(secret).join('[redacted]'), value);
+  const outputBuffers = new Map();
   const logOutput = (data, logger) => {
-    const trimmed = data.replace(/\s+$/, '');
-    if (!trimmed) return;
-    trimmed.split(/\r?\n/).forEach(line => {
-      if (line) logger(`=> ${line}`);
-    });
+    if (!secrets.length) {
+      const trimmed = data.replace(/\s+$/, '');
+      if (trimmed) trimmed.split(/\r?\n/).forEach(line => {
+        if (line) logger(`=> ${line}`);
+      });
+      return;
+    }
+    const lines = ((outputBuffers.get(logger) || '') + data).split(/\r?\n/);
+    outputBuffers.set(logger, lines.pop());
+    for (const line of lines) if (line.trim()) logger(`=> ${redact(line.trimEnd())}`);
   };
   const rememberStderr = data => {
     const trimmed = data.replace(/\s+$/, '');
     if (!trimmed) return;
-    stderrLines.push(...trimmed.split(/\r?\n/).filter(Boolean));
+    if (secrets.length) stderrLines.push(data);
+    else stderrLines.push(...trimmed.split(/\r?\n/).filter(Boolean));
     if (stderrLines.length > 8) {
       stderrLines.splice(0, stderrLines.length - 8);
     }
@@ -189,13 +197,26 @@ function spawnCap(args, { cwd, label, env, onExit, mode, platform, interactive }
         ...(env || {}),
       }),
       stdio: 'inherit',
-      onError: err => logError(`Capacitor ${label} error: ${err.message}`),
+      onError: err => {
+        logError(`Capacitor ${label} error: ${redact(err.message)}`);
+        if (onError) onError(err);
+      },
       onExit: code => {
         if (typeof onExit === 'function') onExit(code);
       },
     });
   }
-  return spawnProcess(command, cmdArgs, {
+  const finish = code => {
+    for (const [logger, buffered] of outputBuffers) {
+      if (buffered.trim()) logger(`=> ${redact(buffered.trimEnd())}`);
+    }
+    if (code !== 0 && !verbose && stderrLines.length) {
+      const stderr = stderrLines.join(secrets.length ? '' : '\n');
+      logError(`=> Capacitor ${label} failed: ${redact(stderr).trimEnd().split(/\r?\n/).pop()}`);
+    }
+    if (typeof onExit === 'function') onExit(code);
+  };
+  const proc = spawnProcess(command, cmdArgs, {
     cwd,
     env: inheritMeteorToolNodeFlags({
       ...process.env,
@@ -210,14 +231,15 @@ function spawnCap(args, { cwd, label, env, onExit, mode, platform, interactive }
       if (verbose) logOutput(data, logError);
       else rememberStderr(data);
     },
-    onError: err => logError(`Capacitor ${label} error: ${err.message}`),
-    onExit: code => {
-      if (code !== 0 && !verbose && stderrLines.length) {
-        logError(`=> Capacitor ${label} failed: ${stderrLines[stderrLines.length - 1]}`);
-      }
-      if (typeof onExit === 'function') onExit(code);
+    onError: err => {
+      logError(`Capacitor ${label} error: ${redact(err.message)}`);
+      if (onError) onError(err);
     },
+    onExit: secrets.length ? undefined : finish,
   });
+  // Drain signing output before redaction, including chunks received after exit.
+  if (secrets.length) proc.once('close', finish);
+  return proc;
 }
 
 /**
@@ -261,11 +283,11 @@ function runCapAdd({ appDir = getMeteorAppDir(), platform } = {}) {
  * populated webDir that add-platform can't produce on its own).
  * @returns {Promise<number>}
  */
-export async function addNativePlatformIfMissing({ appDir = getMeteorAppDir(), platform } = {}) {
+export async function addNativePlatformIfMissing({ appDir = getMeteorAppDir(), platform, nativeDir } = {}) {
   if (!platform) return 0;
   const path = require('path');
   const fs = require('fs');
-  const nativeDir = path.join(appDir, platform);
+  nativeDir = nativeDir || path.join(appDir, platform);
   if (fs.existsSync(nativeDir)) {
     if (isVerbose()) {
       logInfo(`[Capacitor] ${platform}: native project already exists at ./${platform}/, skipping cap add`);
@@ -278,8 +300,7 @@ export async function addNativePlatformIfMissing({ appDir = getMeteorAppDir(), p
 /**
  * Ensures the native project for the currently-targeted platform exists.
  * Resolves the platform from the run-target args (android/ios/*-device).
- * For `meteor build`, no-op (build doesn't care about a specific platform -
- * `cap sync` later will scaffold whatever is referenced).
+ * For `meteor build`, selected project creation belongs to the build scenario.
  *
  * @returns {Promise<number>} Exit code.
  */
@@ -324,6 +345,32 @@ export function runCapSync({ appDir = getMeteorAppDir(), platform, mode } = {}) 
       },
     });
     setGlobalState(PROC_KEYS.SYNC, proc);
+  });
+}
+
+/** Package selected native projects after Meteor has transformed and synced them. */
+export function runCapBuild({ appDir = getMeteorAppDir(), request, mode } = {}) {
+  const { platform } = request;
+  logProgress(`=> Capacitor: building ${platform}`);
+  return new Promise((resolve, reject) => {
+    const callbacks = {
+      onError: reject,
+      onExit: code => {
+        if (code === 0) logSuccess(`=> Capacitor: built ${platform}`);
+        resolve(code);
+      },
+    };
+    if (request.gradleTask) {
+      const wrapper = path.join(request.nativeDir, process.platform === 'win32' ? 'gradlew.bat' : 'gradlew');
+      spawnProcess(wrapper, [request.gradleTask], {
+        cwd: request.nativeDir,
+        env: { ...process.env, ...getCapacitorEnv({ platform, mode }) },
+        stdio: 'inherit',
+        ...callbacks,
+      });
+    } else {
+      spawnCap(request.args, { cwd: appDir, label: 'Build', platform, mode, secrets: request.secrets, ...callbacks });
+    }
   });
 }
 

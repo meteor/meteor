@@ -142,11 +142,13 @@ module.exports = defineConfig(Meteor => ({
 }
 
 const CAPACITOR_CONFIG_LOOKUP = [
+  'capacitor.config.ts',
   'capacitor.config.js',
   'capacitor.config.cjs',
   'capacitor.config.mjs',
   'capacitor.config.json',
 ];
+let configImportVersion = 0;
 
 export function formatCapacitorConfigError({ appDir, configPath, error }) {
   const displayPath = path.relative(appDir, configPath) || path.basename(configPath);
@@ -172,13 +174,11 @@ export function validateResolvedCapacitorConfig(resolved, { appDir, configPath }
 }
 
 /**
- * Loads capacitor.config.{js,cjs,mjs,json}, runs defineConfig, and writes
- * the resolved object as capacitor.config.json into the per-env webDir.
- * Informational only (cap CLI re-evaluates the source on each invocation).
- * Skips .ts and missing configs silently.
- * @returns {Promise<boolean>}
+ * Load the application's config for build requests and the runtime snapshot.
+ * The Capacitor CLI still evaluates the original source for native commands.
+ * @returns {Promise<object|null>}
  */
-export async function writeResolvedConfigSnapshot({ appDir = getMeteorAppDir() } = {}) {
+export async function loadResolvedCapacitorConfig({ appDir = getMeteorAppDir() } = {}) {
   let configPath;
   for (const candidate of CAPACITOR_CONFIG_LOOKUP) {
     const candidatePath = path.join(appDir, candidate);
@@ -188,13 +188,15 @@ export async function writeResolvedConfigSnapshot({ appDir = getMeteorAppDir() }
     }
   }
 
-  if (!configPath) return false;
+  if (!configPath) return null;
 
   let resolved;
   try {
     if (configPath.endsWith('.mjs')) {
       const { pathToFileURL } = require('url');
-      const mod = await import(pathToFileURL(configPath).href);
+      const url = pathToFileURL(configPath);
+      url.searchParams.set('meteor_config', String(++configImportVersion));
+      const mod = await import(url.href);
       resolved = mod && mod.default ? mod.default : mod;
     } else if (configPath.endsWith('.json')) {
       resolved = JSON.parse(fs.readFileSync(configPath, 'utf8'));
@@ -204,8 +206,28 @@ export async function writeResolvedConfigSnapshot({ appDir = getMeteorAppDir() }
       const { createRequire } = require('module');
       const nodeRequire = createRequire(configPath);
       delete nodeRequire.cache[nodeRequire.resolve(configPath)];
-      const mod = nodeRequire(configPath);
-      resolved = mod && mod.default ? mod.default : mod;
+      let mod;
+      if (configPath.endsWith('.ts')) {
+        // Capacitor also requires the app's TypeScript installation for TS config.
+        const ts = nodeRequire('typescript');
+        const previous = nodeRequire.extensions['.ts'];
+        try {
+          nodeRequire.extensions['.ts'] = (configModule, filename) => {
+            const result = ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
+              compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2017, esModuleInterop: true },
+              fileName: filename,
+            });
+            configModule._compile(result.outputText, filename);
+          };
+          mod = nodeRequire(configPath);
+        } finally {
+          if (previous) nodeRequire.extensions['.ts'] = previous;
+          else delete nodeRequire.extensions['.ts'];
+        }
+      } else {
+        mod = nodeRequire(configPath);
+      }
+      resolved = await (mod && mod.default ? mod.default : mod);
     }
   } catch (error) {
     const message = formatCapacitorConfigError({ appDir, configPath, error });
@@ -213,7 +235,21 @@ export async function writeResolvedConfigSnapshot({ appDir = getMeteorAppDir() }
     throw new Error(message);
   }
 
-  validateResolvedCapacitorConfig(resolved, { appDir, configPath });
+  return validateResolvedCapacitorConfig(resolved, { appDir, configPath });
+}
+
+/** Write informational runtime configuration without native signing options. */
+export async function writeResolvedConfigSnapshot({ appDir = getMeteorAppDir() } = {}) {
+  const resolved = await loadResolvedCapacitorConfig({ appDir });
+  if (!resolved) return false;
+  // Match cap copy: build options belong to the native builder, not the WebView.
+  const snapshot = { ...resolved };
+  for (const platform of ['android', 'ios']) {
+    if (resolved[platform]) {
+      const { buildOptions, ...runtimeOptions } = resolved[platform];
+      snapshot[platform] = runtimeOptions;
+    }
+  }
 
   const webDir = getCapacitorWebDir({
     isDevelopment: isMeteorAppDevelopment(),
@@ -223,7 +259,7 @@ export async function writeResolvedConfigSnapshot({ appDir = getMeteorAppDir() }
   fs.mkdirSync(targetDir, { recursive: true });
 
   const snapshotPath = path.join(targetDir, 'capacitor.config.json');
-  fs.writeFileSync(snapshotPath, JSON.stringify(resolved, null, 2) + '\n', 'utf8');
+  fs.writeFileSync(snapshotPath, JSON.stringify(snapshot, null, 2) + '\n', 'utf8');
   if (isVerbose()) {
     logInfo(`[i] Capacitor: snapshot resolved config -> ${path.relative(appDir, snapshotPath)}`);
   }

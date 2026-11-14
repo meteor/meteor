@@ -374,10 +374,23 @@ async function prepareCapacitorBuildApp({
   await addPlatform(appDir, platform);
   await cleanupCapacitorBuildInputs(appDir);
 
+  const buildEnv = buildNativeTestEnv();
+  if (platform === "android") {
+    // Release packaging uses an isolated test key, never a developer's key.
+    buildEnv.NATIVE_TEST_KEYSTORE = path.join(workDir, "native-test.keystore");
+    buildEnv.NATIVE_TEST_KEYSTORE_PASSWORD = "meteor-native-test";
+    await execa("keytool", [
+      "-genkeypair", "-keystore", buildEnv.NATIVE_TEST_KEYSTORE,
+      "-storepass", buildEnv.NATIVE_TEST_KEYSTORE_PASSWORD,
+      "-keypass", buildEnv.NATIVE_TEST_KEYSTORE_PASSWORD,
+      "-alias", "native-test", "-dname", "CN=Meteor Native Tests",
+      "-keyalg", "RSA", "-keysize", "2048", "-validity", "7", "-storetype", "JKS",
+    ], { env: buildEnv });
+  }
   await execa(
     METEOR_BIN,
     buildMeteorBuildArgs({ buildDir, mobileServerUrl, platform }),
-    { cwd: appDir, env: buildNativeTestEnv(), stdio: "inherit" }
+    { cwd: appDir, env: buildEnv, stdio: "inherit" }
   );
 
   await validateCapacitorBuildOutput({ appDir, platform, mobileServerUrl, hcpMode });

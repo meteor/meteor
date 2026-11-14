@@ -65,6 +65,46 @@ async function readJson(appDir, relPath) {
   return fs.readJson(path.join(appDir, relPath));
 }
 
+// Keep the real Meteor transform and cap sync. Control only release compilation
+// and signing at the CLI process boundary; real artifacts have separate checks.
+async function installCapBuildStub(appDir) {
+  const cliPath = path.join(appDir, 'node_modules/@capacitor/cli/bin/capacitor');
+  const original = await fs.readFile(cliPath, 'utf8');
+  if (original.includes('// meteor e2e native build boundary')) return;
+  const stub = `
+// meteor e2e native build boundary
+if (process.argv[2] === 'build') {
+  return (async () => {
+  const fs = require('fs');
+  const path = require('path');
+  const config = (await require('../dist/config').loadConfig()).app.extConfig;
+  const platform = process.argv[3];
+  const formatIndex = process.argv.indexOf('--androidreleasetype');
+  const format = formatIndex >= 0 ? process.argv[formatIndex + 1] : config.android?.buildOptions?.releaseType || 'AAB';
+  const nativeDir = path.resolve(config[platform]?.path || platform);
+  const syncedIndex = platform === 'ios' ? 'App/App/public/index.html' : 'app/src/main/assets/public/index.html';
+  if (!fs.existsSync(path.join(nativeDir, syncedIndex))) throw new Error('Build invoked before native sync');
+  const result = { platform, args: process.argv.slice(2), format, appId: config.appId,
+    rootUrl: config.plugins.MeteorE2E.rootUrl,
+    hasSigningConfig: config.android?.buildOptions?.keystorePassword === 'e2e-signing-secret' };
+  console.log('build settings: ' + config.android?.buildOptions?.keystorePassword);
+  const callsPath = path.join('_build', 'native-build-calls.json');
+  const calls = fs.existsSync(callsPath) ? JSON.parse(fs.readFileSync(callsPath)) : [];
+  fs.writeFileSync(callsPath, JSON.stringify([...calls, result]));
+  if (process.env.CAPACITOR_E2E_BUILD_EXIT) process.exit(Number(process.env.CAPACITOR_E2E_BUILD_EXIT));
+  if (process.env.CAPACITOR_E2E_BUILD_SKIP_ARTIFACT) process.exit(0);
+  const artifact = platform === 'ios'
+    ? path.join(nativeDir, 'App/output/fixture.ipa')
+    : path.join(nativeDir, 'app/build/outputs', format === 'APK' ? 'apk' : 'bundle', 'release', 'app-release-signed.' + format.toLowerCase());
+  fs.mkdirSync(path.dirname(artifact), { recursive: true });
+  fs.writeFileSync(artifact, JSON.stringify(result));
+  process.exit(0);
+  })().catch(error => { console.error(error); process.exit(1); });
+}
+`;
+  await fs.writeFile(cliPath, original.replace(/^(#![^\n]*\n)/, '$1' + stub));
+}
+
 async function assertNativeServerUrl(appDir, platform, rootUrl) {
   const nativeDir = platform === 'ios' ? 'ios/App/App/public' : 'android/app/src/main/assets/public';
   for (const webDir of ['_build/native-prod', nativeDir]) {
@@ -169,11 +209,11 @@ async function assertNoNativeLaunch(outputLines) {
   expectOutputNotContains(outputLines, /emulator/i);
   expectOutputNotContains(outputLines, /simulator/i);
   expectOutputNotContains(outputLines, /Android Studio/i);
-  // cap sync on Linux skips an optional Xcode clean. This warning says no
-  // tool was invoked; all other Xcode output must still fail this assertion.
+  // Neither an optional clean warning nor project scaffolding launches an IDE.
+  // Other Xcode output would escape this suite's native compilation boundary.
   const launchOutput = outputLines.filter(line => !line.includes(
     'Unable to find "xcodebuild". Skipping xcodebuild clean step...'
-  ));
+  ) && !line.includes('Adding native Xcode project in'));
   expectOutputNotContains(launchOutput, /Xcode/i);
 }
 
@@ -339,6 +379,8 @@ describe('Capacitor App Web Lifecycle /', () => {
     }
     await killProcessByPort([PORT, RSPACK_DEVSERVER_PORT]);
     fileSnapshot = tempDir ? await snapshotFiles(tempDir, MUTATED_FILES) : null;
+    await installCapBuildStub(tempDir);
+    await fs.remove(path.join(tempDir, '_build/native-build-calls.json'));
   });
 
   afterEach(async () => {
@@ -602,17 +644,23 @@ describe('Capacitor App Web Lifecycle /', () => {
     expect(meteorProcess.signalCode).toBe(null);
   });
 
-  test('"meteor build --directory --platforms=android" builds Capacitor web output without running native tools', async () => {
+  test('"meteor build --directory --platforms=android" packages synchronized assets through the Capacitor CLI', async () => {
     let buildOutputDir;
 
     try {
       const result = await buildMeteorApp(tempDir, {
-        commandOptions: ['--directory', '--platforms=android', '--server=https://mobile.example.com/app/'],
+        commandOptions: ['--directory', '--platforms=android', '--packageType=bundle', '--server=https://mobile.example.com/app/'],
         captureOutput: true,
-        env: e2eEnv({ ROOT_URL: 'http://wrong-host:3000/', MOBILE_ROOT_URL: 'http://wrong-mobile:3000/' }),
+        env: e2eEnv({ ROOT_URL: 'http://wrong-host:3000/', MOBILE_ROOT_URL: 'http://wrong-mobile:3000/', CAPACITOR_E2E_ANDROID_FORMAT: 'APK' }),
       });
       buildOutputDir = result.buildOutputDir;
       await assertNativeServerUrl(tempDir, 'android', 'https://mobile.example.com/app/');
+      const artifact = await readJson(buildOutputDir, 'android/app-release-signed.aab');
+      expect(artifact).toMatchObject({ platform: 'android', format: 'AAB', hasSigningConfig: true, rootUrl: 'https://mobile.example.com/app/' });
+      expect(artifact.args).toEqual(['build', 'android', '--androidreleasetype', 'AAB']);
+      expect(JSON.stringify(await readJson(tempDir, '_build/native-prod/capacitor.config.json'))).not.toContain('e2e-signing-secret');
+      expect(JSON.stringify(await readJson(tempDir, 'android/app/src/main/assets/capacitor.config.json'))).not.toContain('e2e-signing-secret');
+      expectOutputNotContains(result.processResult.outputLines, /e2e-signing-secret/);
 
       await assertFileExist(buildOutputDir, 'bundle/main.js');
       await assertFileExist(buildOutputDir, 'bundle/programs/web.cordova/program.json');
@@ -671,16 +719,19 @@ describe('Capacitor App Web Lifecycle /', () => {
       const result = await buildMeteorApp(tempDir, {
         commandOptions: ['--directory', '--platforms=android'],
         captureOutput: true,
-        env: e2eEnv({ MOBILE_ROOT_URL: 'https://environment.example.com/app/', ROOT_URL: 'http://wrong-host:3000/' }),
+        env: e2eEnv({ MOBILE_ROOT_URL: 'https://environment.example.com/app/', ROOT_URL: 'http://wrong-host:3000/', CAPACITOR_E2E_ANDROID_FORMAT: 'APK' }),
       });
       output = result.buildOutputDir;
       await assertNativeServerUrl(tempDir, 'android', 'https://environment.example.com/app/');
+      const artifact = await readJson(output, 'android/app-release-signed.apk');
+      expect(artifact.args).toEqual(['build', 'android']);
+      expect(artifact.format).toBe('APK');
     } finally {
       await cleanupTempDir(output);
     }
   });
 
-  test('"meteor build --directory --platforms=ios" builds Capacitor web output without running native tools', async () => {
+  test('"meteor build --directory --platforms=ios" collects the selected Capacitor IPA export', async () => {
     let buildOutputDir;
 
     try {
@@ -691,6 +742,7 @@ describe('Capacitor App Web Lifecycle /', () => {
       });
       buildOutputDir = result.buildOutputDir;
       await assertNativeServerUrl(tempDir, 'ios', 'http://127.0.0.1:3000/');
+      expect(await readJson(buildOutputDir, 'ios/fixture.ipa')).toMatchObject({ platform: 'ios', args: ['build', 'ios'] });
 
       await assertFileExist(buildOutputDir, 'bundle/main.js');
       await assertFileExist(buildOutputDir, 'bundle/programs/web.cordova/program.json');
@@ -728,6 +780,7 @@ describe('Capacitor App Web Lifecycle /', () => {
       });
       buildOutputDir = result.buildOutputDir;
       await assertNativeServerUrl(tempDir, 'android', 'http://mobile.example.com/app/');
+      expect(await readJson(buildOutputDir, 'android/app-release-signed.aab')).toMatchObject({ platform: 'android' });
 
       await assertFileExist(buildOutputDir, `${path.basename(tempDir)}.tar.gz`);
       await assertPathNotExist(buildOutputDir, 'bundle/programs/web.cordova/program.json');
@@ -745,12 +798,17 @@ describe('Capacitor App Web Lifecycle /', () => {
     }
   });
 
-  test('"meteor build --directory --platforms=android,ios" syncs all Capacitor native projects', async () => {
+  test('"meteor build --directory --platforms=android,ios" packages selected native projects sequentially', async () => {
     let buildOutputDir;
+    const configTs = path.join(tempDir, 'capacitor.config.ts');
 
     await ensureIosPlatform(tempDir);
 
     try {
+      const source = await fs.readFile(path.join(tempDir, 'capacitor.config.js'), 'utf8');
+      await fs.writeFile(configTs, source
+        .replace('module.exports =', "const config: import('@capacitor/cli').CapacitorConfig =")
+        .replace('platform: Meteor.platform,', "platform: Meteor.platform, configType: 'typescript',") + '\nexport default config;\n');
       const result = await buildMeteorApp(tempDir, {
         commandOptions: ['--directory', '--platforms=android,ios', '--server=http://127.0.0.1:3000'],
         captureOutput: true,
@@ -760,6 +818,15 @@ describe('Capacitor App Web Lifecycle /', () => {
 
       await assertFileExist(buildOutputDir, 'bundle/programs/web.cordova/program.json');
       await assertCapacitorSyncedNativeAssetsForPlatforms(tempDir, ['android', 'ios']);
+      expect((await readJson(tempDir, '_build/native-build-calls.json')).map(call => call.platform)).toEqual(['android', 'ios']);
+      await assertFileExist(buildOutputDir, 'android/app-release-signed.aab');
+      await assertFileExist(buildOutputDir, 'ios/fixture.ipa');
+      for (const [platform, configPath] of [
+        ['android', 'android/app/src/main/assets/capacitor.config.json'],
+        ['ios', 'ios/App/App/capacitor.config.json'],
+      ]) {
+        expect((await readJson(tempDir, configPath)).plugins.MeteorE2E).toMatchObject({ platform, configType: 'typescript' });
+      }
 
       const config = await readJson(tempDir, '_build/native-prod/capacitor.config.json');
       expect(config.webDir).toBe('_build/native-prod');
@@ -772,7 +839,52 @@ describe('Capacitor App Web Lifecycle /', () => {
       await assertNoNativeLaunch(result.processResult.outputLines);
       await assertNoCordovaNativeBuild(result.processResult.outputLines);
     } finally {
+      await fs.remove(configTs);
       await cleanupTempDir(buildOutputDir);
+    }
+  });
+
+  test('native builds use configured platforms when --platforms is omitted, leaving other native projects alone', async () => {
+    const platformsPath = path.join(tempDir, '.meteor/platforms');
+    const original = await fs.readFile(platformsPath, 'utf8');
+    let output;
+    try {
+      await ensureIosPlatform(tempDir);
+      await fs.writeFile(platformsPath, original.split('\n').filter(platform => platform !== 'ios').join('\n'));
+      const result = await buildMeteorApp(tempDir, {
+        commandOptions: ['--directory', '--server=https://mobile.example.com/'],
+        captureOutput: true, env: e2eEnv(),
+      });
+      output = result.buildOutputDir;
+      expect((await readJson(tempDir, '_build/native-build-calls.json')).map(call => call.platform)).toEqual(['android']);
+      await assertFileExist(output, 'android/app-release-signed.aab');
+      await assertPathNotExist(output, 'ios');
+      await assertFileExist(tempDir, 'ios');
+    } finally {
+      await fs.writeFile(platformsPath, original);
+      await cleanupTempDir(output);
+    }
+  });
+
+  test.each([
+    ['fails', { CAPACITOR_E2E_BUILD_EXIT: '29' }, /cap build android exited with code 29/],
+    ['does not produce a fresh artifact', { CAPACITOR_E2E_BUILD_SKIP_ARTIFACT: '1' }, /did not produce/],
+  ])('"meteor build" fails when the native builder %s', async (label, env, message) => {
+    const output = path.join(tempDir, '_build-failed-native-package');
+    const artifact = path.join(tempDir, 'android/app/build/outputs/bundle/release/app-release-signed.aab');
+    try {
+      await fs.outputFile(artifact, 'stale native artifact');
+      const result = await runMeteorCommand('build', [
+        output, '--directory', '--platforms=android', '--server=https://mobile.example.com/',
+      ], tempDir, { captureOutput: true, logCapturedOutput: false, env: e2eEnv(env) });
+      await expect(result.meteorProcess).rejects.toMatchObject({ exitCode: 1 });
+      expectOutputContains(result.outputLines, /Capacitor: synced android/);
+      expectOutputContains(result.outputLines, message);
+      expectOutputNotContains(result.outputLines, /Capacitor android artifact:/);
+      await assertPathNotExist(output, 'android/app-release-signed.aab');
+      await assertPathNotExist(tempDir, 'android/app/build/outputs/bundle/release/app-release-signed.aab');
+    } finally {
+      await cleanupTempDir(output);
     }
   });
 
@@ -796,6 +908,7 @@ describe('Capacitor App Web Lifecycle /', () => {
       });
       expect(config.plugins.MeteorE2E.isBuild).toBe(true);
       expect(config.plugins.MeteorE2E.platform).toBe('android');
+      expect((await readJson(tempDir, '_build/native-build-calls.json')).map(call => call.platform)).toEqual(['android']);
       await assertNoNativeLaunch(result.processResult.outputLines);
       await assertNoCordovaNativeBuild(result.processResult.outputLines);
     } finally {

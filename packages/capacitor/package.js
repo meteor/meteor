@@ -59,6 +59,7 @@ Package.registerBuildPlugin({
     'lib/hcp.js',
     'lib/dependencies.js',
     'lib/build-context.js',
+    'lib/build.js',
     'lib/transforms.js',
     'lib/readiness.js',
     'lib/processes.js',

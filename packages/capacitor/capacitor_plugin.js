@@ -10,6 +10,7 @@
  *   5. On `meteor build` and `meteor run android|ios`, transforming
  *      web.cordova/ into build-native/ and running `cap sync` (scoped to the
  *      active platform when run native).
+ *   6. On `meteor build`, packaging selected projects and collecting artifacts.
  */
 
 const path = require('path');
@@ -31,6 +32,7 @@ const {
   logInfo,
   logError,
   logProgress,
+  logSuccess,
 } = require('meteor/tools-core/lib/log');
 const { isYarnProject } = require('meteor/tools-core/lib/npm');
 
@@ -44,10 +46,13 @@ const {
   ensureCapacitorBuildContextExists,
   ensureCapacitorConfigExists,
   writeResolvedConfigSnapshot,
+  loadResolvedCapacitorConfig,
 } = require('./lib/build-context');
+const { getNativeBuildPlatforms, getNativeBuildRequest, prepareNativeArtifacts, collectNativeArtifacts } = require('./lib/build');
 const { runCapacitorTransforms } = require('./lib/transforms');
 const {
   runCapSync,
+  runCapBuild,
   scheduleCapRunAfterMeteorReady,
   ensureNativePlatformAdded,
   addNativePlatformIfMissing,
@@ -156,20 +161,36 @@ async function runCapacitorPlugin() {
         scenario('build', {
           when: isCapacitorBuildOptIn,
           run: context => {
-            // `meteor build --platforms=android|ios` syncs the selected native
-            // project. Without a single selected platform, Capacitor syncs all
-            // native projects present in the app.
             const { platforms } = context.state;
             Plugin.onBuildOutputReady(async buildOutputContext => {
-              await transformAndSync({
-                appDir: context.appDir,
-                platform: platforms.length === 1 ? platforms[0] : null,
-                cordovaOutDir: getBuildCordovaOutDir(buildOutputContext),
-                fatal: true,
-                hcpMode: context.state.hcpMode,
-                mode: context.state.mode,
-                mobileServerUrl: getContextMobileServerUrl(context),
-              });
+              for (const platform of platforms) {
+                const env = getCapacitorEnv({
+                  platform, mode: context.state.mode, mobileServerUrl: getContextMobileServerUrl(context),
+                });
+                await withProcessEnv(env, async () => {
+                  const config = await loadResolvedCapacitorConfig({ appDir: context.appDir }) || {};
+                  const request = getNativeBuildRequest({
+                    appDir: context.appDir, platform, config, options: context.options,
+                    outputDir: path.resolve(context.options.args[0]),
+                  });
+                  const addCode = await addNativePlatformIfMissing({
+                    appDir: context.appDir, platform, nativeDir: request.nativeDir,
+                  });
+                  if (addCode !== 0) throw new Error(`cap add ${platform} exited with code ${addCode}`);
+                  await transformAndSync({
+                    appDir: context.appDir, platform,
+                    cordovaOutDir: getBuildCordovaOutDir(buildOutputContext),
+                    fatal: true, hcpMode: context.state.hcpMode, mode: context.state.mode,
+                    mobileServerUrl: getContextMobileServerUrl(context),
+                  });
+                  await prepareNativeArtifacts(request);
+                  const code = await runCapBuild({ appDir: context.appDir, request, mode: context.state.mode });
+                  if (code !== 0) throw new Error(`cap build ${platform} exited with code ${code}`);
+                  for (const artifact of await collectNativeArtifacts(request)) {
+                    logSuccess(`=> Capacitor ${platform} artifact: ${artifact}`);
+                  }
+                });
+              }
             });
           },
         }),
@@ -219,6 +240,9 @@ function logVerbose(...args) {
 }
 
 function getRequestedCapacitorPlatforms(options = {}) {
+  if (isCapacitorBuildOptIn()) {
+    return getNativeBuildPlatforms(options, getMeteorAppPlatforms());
+  }
   const requested = [
     ...(options.args || []),
     ...(options.platforms ? String(options.platforms).split(',') : []),
@@ -226,7 +250,7 @@ function getRequestedCapacitorPlatforms(options = {}) {
   return Array.from(new Set(requested.map(arg => {
     if (arg === 'android' || arg === 'android-device') return 'android';
     if (arg === 'ios' || arg === 'ios-device') return 'ios';
-    return arg;
+    return arg.replace(/^capacitor:/, '');
   }).filter(platform => CAPACITOR_PLATFORMS.includes(platform))));
 }
 
