@@ -111,12 +111,36 @@ var x = asdf\`A\${foo}C\`
   test.isTrue(/helpers\/(builtin\/)?taggedTemplateLiteralLoose/.test(output));
 });
 
-Tinytest.add("ecmascript - transpilation - helpers - createClass", (test) => {
+Tinytest.add("ecmascript - transpilation - class accessors", (test) => {
   const output = transform(`
 class Foo {
-  get blah() { return 123; }
+  constructor(value) { this._value = value; }
+  get value() { return this._value; }
+  set value(value) { this._value = value; }
+  static get value() { return this._value; }
+  static set value(value) { this._value = value; }
 }
 `);
 
-  test.isTrue(/helpers\/(builtin\/)?createClass/.test(output));
+  // Exercise the downlevel output, which can use different accessor helpers.
+  // Modern runtime tests may leave the original class syntax intact.
+  const CompiledFoo = new Function("require", output + "\nreturn Foo;")(require);
+  const first = new CompiledFoo(123);
+  const second = new CompiledFoo(456);
+  test.equal(first.value, 123);
+  first.value = 789;
+  test.equal(first.value, 789);
+  test.equal(second.value, 456);
+
+  CompiledFoo.value = 321;
+  test.equal(CompiledFoo.value, 321);
+  test.equal(first.value, 789);
+
+  for (const owner of [CompiledFoo.prototype, CompiledFoo]) {
+    const descriptor = Object.getOwnPropertyDescriptor(owner, "value");
+    test.equal(typeof descriptor.get, "function");
+    test.equal(typeof descriptor.set, "function");
+    test.isTrue(descriptor.configurable);
+    test.isFalse(Object.prototype.hasOwnProperty.call(descriptor, "value"));
+  }
 });

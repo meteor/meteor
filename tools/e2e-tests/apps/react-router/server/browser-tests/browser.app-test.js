@@ -4,7 +4,9 @@ const width = 200;
 const height = 150;
 
 describe("Run browser tests", () => {
-  it("Runs browser based integration tests", async () => {
+  it("Runs browser based integration tests", async function () {
+    // Cover launch (15s), navigation (30s), selector readiness (30s) and cleanup.
+    this.timeout(90_000);
     console.log("STARTING BROWSER TEST");
 
     const props = {
@@ -37,15 +39,18 @@ describe("Run browser tests", () => {
     }
 
     const browser = await puppeteer.launch(props);
-    console.log("LAUNCHED BROWSER");
+    try {
+      console.log("LAUNCHED BROWSER");
 
-    const page = await browser.newPage();
-    console.log("NEW PAGE");
+      const page = await browser.newPage();
+      console.log("NEW PAGE");
 
-    await page.goto(process.env.ROOT_URL);
-    console.log("OPEN PAGE", process.env.ROOT_URL);
+      await page.goto(process.env.ROOT_URL);
+      console.log("OPEN PAGE", process.env.ROOT_URL);
 
-    await page.waitForSelector("#react-target");
-    await browser.close();
+      await page.waitForSelector("#react-target");
+    } finally {
+      await browser.close();
+    }
   });
 });

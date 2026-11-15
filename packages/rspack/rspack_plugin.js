@@ -31,7 +31,9 @@ const {
   ensureRspackBuildContextExists,
   ensureRspackConfigExists,
   cleanBuildContextFiles,
+  bumpClientRuntimeBuildId,
 } = require('./lib/build-context');
+const { getClientArchitectureEntries, isClientArchitectureIncluded } = require('./lib/architectures');
 
 const {
   startRspackClientServe,
@@ -47,7 +49,8 @@ const {
 } = require('./lib/processes');
 
 const {
-  configureMeteorForRspack
+  configureMeteorForRspack,
+  applyDelegatedExtensions,
 } = require('./lib/config');
 
 const {
@@ -231,6 +234,26 @@ if (isMeteorAppRun() || isMeteorAppBuild() || isMeteorAppTest()) {
       });
     });
 
+    // Additional client architectures reuse the normal Rspack build and watch
+    // pipeline. Wait for every first compilation before Meteor scans sources.
+    const architectureBuilds = getClientArchitectureEntries()
+      .filter(entry => isClientArchitectureIncluded(entry.arch))
+      .map(entry => runRspackBuild({
+        isClient: true,
+        isServer: false,
+        arch: entry.arch,
+        isTest: isMeteorAppTest(),
+        watch: isMeteorAppRun() || isMeteorAppTestWatch(),
+        waitForFirstCompile: isMeteorAppRun() || isMeteorAppTestWatch(),
+        onCompile: (_data, config) => {
+          if (config.hasErrors) return;
+          if (config.delegatedExtensions?.length) {
+            applyDelegatedExtensions(config.delegatedExtensions, { arch: entry.arch });
+          }
+          if (config.isRebuild) bumpClientRuntimeBuildId(entry.arch);
+        },
+      }));
+
     // When running `meteor run` command
     if (isMeteorAppRun()) {
       // Setup compilation tracking and callbacks
@@ -406,6 +429,7 @@ if (isMeteorAppRun() || isMeteorAppBuild() || isMeteorAppTest()) {
       ].filter(Boolean);
       await Promise.all(targetsToBuild);
     }
+    await Promise.all(architectureBuilds);
   } catch (error) {
     logError(`Rspack plugin error: ${error.message}`);
     throw error;

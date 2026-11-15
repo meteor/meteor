@@ -4,6 +4,17 @@ import chalk from 'chalk';
 // Clear NODE_ENV so meteor commands don't inherit any value from the test runner environment
 process.env.NODE_ENV = '';
 
+// npm scripts expose their working-directory prefixes to descendants. App
+// setup runs npm from temporary projects, where these inherited values can
+// make installs and links target tools/e2e-tests instead. Clear them for every
+// entry point: full runs, groups, and direct Jest invocations.
+[
+  'npm_config_prefix',
+  'npm_config_local_prefix',
+  'NPM_CONFIG_PREFIX',
+  'NPM_CONFIG_LOCAL_PREFIX',
+].forEach(name => delete process.env[name]);
+
 // Set fixed ports for all tests. RSPACK_DEVSERVER_PORT defaults to 18080 to avoid
 // colliding with dev servers that some skeletons (e.g. Angular CLI) bundle on :8080.
 // Individual tests may override via the `devServerPort` option in testMeteorSkeleton /

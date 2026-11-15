@@ -42,7 +42,10 @@ if (Meteor.isServer) {
   const setCookieForToken = async (token) => {
     const res = await Meteor.fetch(Meteor.absoluteUrl("_accounts/cookie/set"), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Origin: new URL(Meteor.absoluteUrl()).origin,
+      },
       body: JSON.stringify({ token }),
       auth: false,
     });
@@ -898,7 +901,7 @@ if (Meteor.isServer) {
         // Clear the cookie via the clear endpoint
         const clearRes = await Meteor.fetch(Meteor.absoluteUrl("_accounts/cookie/clear"), {
           method: "POST",
-          headers: { Cookie: cookieValue },
+          headers: { Cookie: cookieValue, Origin: new URL(Meteor.absoluteUrl()).origin },
           auth: false,
         });
         test.equal(clearRes.status, 200);

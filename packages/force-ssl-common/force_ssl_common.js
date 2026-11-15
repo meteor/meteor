@@ -1,4 +1,4 @@
-import forwarded from 'forwarded-http';
+import forwarded from './forwarded';
 
 // Determine if the connection is only over localhost. Both we
 // received it on localhost, and all proxies involved received on
