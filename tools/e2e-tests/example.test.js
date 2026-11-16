@@ -56,12 +56,18 @@ describe('Examples /', () => {
       'check@=999.0.0',
       'random',
       'react-meteor-data@=0.2.6-beta.16',
+      'local:example-test@=1.0.0',
       '',
     ].join('\n');
     try {
       fs.mkdirSync(path.join(sourceDir, '.meteor'));
       fs.writeFileSync(path.join(sourceDir, '.meteor', 'packages'), sourcePackages);
       fs.writeFileSync(path.join(sourceDir, 'package.json'), '{"private":true}\n');
+      fs.mkdirSync(path.join(sourceDir, 'packages', 'example-test'), { recursive: true });
+      fs.writeFileSync(
+        path.join(sourceDir, 'packages', 'example-test', 'package.js'),
+        "Package.describe({ name: 'local:example-test', version: '1.0.0' });\n"
+      );
       execFileSync('git', ['init', '-q'], { cwd: sourceDir });
       execFileSync('git', ['add', '.'], { cwd: sourceDir });
       execFileSync('git', [

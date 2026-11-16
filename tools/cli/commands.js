@@ -1268,16 +1268,20 @@ main.registerCommand({
             return;
           }
 
-          // The local catalog already pins checkout packages. Cloned apps can
-          // require published versions that conflict with those local versions.
-          // Clear only local constraints, preserving external package versions.
-          const localPackages = [];
+          // Adapt core constraints to this checkout, just as an installed
+          // release adapts them to its manifest. The catalog already pins the
+          // checkout versions; keep requirements for other package sources.
+          const checkoutPackagesDir =
+            files.pathJoin(files.getCurrentToolsDir(), "packages") + files.pathSep;
+          const checkoutPackages = [];
           projectContext.projectConstraintsFile.eachConstraint(constraint => {
-            if (projectContext.localCatalog.getLatestVersion(constraint.package)) {
-              localPackages.push(constraint.package);
+            const packageSource =
+              projectContext.localCatalog.getPackageSource(constraint.package);
+            if (packageSource?.sourceRoot.startsWith(checkoutPackagesDir)) {
+              checkoutPackages.push(constraint.package);
             }
           });
-          projectContext.projectConstraintsFile.addPackages(localPackages);
+          projectContext.projectConstraintsFile.addPackages(checkoutPackages);
         } else {
           // Write package version constraints from the current release.
           projectContext.projectConstraintsFile.updateReleaseConstraints(
