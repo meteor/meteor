@@ -222,7 +222,7 @@ Object.assign(OplogObserveDriver.prototype, {
   _addPublished: function (id, doc) {
     var self = this;
     Meteor._noYieldsAllowed(function () {
-      var fields = Object.assign({}, doc);
+      var fields = {...doc};
       delete fields._id;
       self._published.set(id, self._sharedProjectionFn(doc));
       self._multiplexer.added(id, self._projectionFn(fields));
@@ -667,7 +667,7 @@ Object.assign(OplogObserveDriver.prototype, {
         var bufferedBefore = self._limit && self._unpublishedBuffer.has(id);
 
         if (isReplace) {
-          self._handleDoc(id, Object.assign({_id: id}, op.o));
+          self._handleDoc(id, {_id: id, ...op.o});
         } else if ((publishedBefore || bufferedBefore) &&
                    canDirectlyModifyDoc) {
           // Oh great, we actually know what the document is, so we can apply

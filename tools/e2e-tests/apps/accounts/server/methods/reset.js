@@ -21,6 +21,8 @@ Meteor.methods({
     Accounts._options.restrictCreationByEmailDomain = undefined;
     Accounts._options.ambiguousErrorMessages = false;
     Accounts._options.sendVerificationEmail = false;
+    Accounts._options.httpOnlyCookieAllowedOrigins = undefined;
+    Accounts._httpOnlyCookieInternals?.resetRateLimit();
 
     resetHooks();
 

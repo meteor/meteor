@@ -1,3 +1,8 @@
+v1.2.32 - 2026-10-21
+
+* Update bundled `qs` to v6.16.1 to address CVE-2026-110816.
+* Preserve the bundled dependency versions shipped in v1.2.31.
+
 v1.2.13 - 2025-02-27
 
 * Update `elliptic` to v6.6.1 to address a security vulnerability.

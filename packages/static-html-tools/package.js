@@ -28,7 +28,8 @@ Package.onTest(function(api) {
   ]);
 
   api.use([
-    'templating-tools'
+    'templating-tools',
+    'spacebars-compiler'
   ]);
 
   api.addFiles([

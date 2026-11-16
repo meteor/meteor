@@ -37,7 +37,7 @@ By default, Meteor uses Local Storage to store, among other things, login tokens
 
 ### Accounts with HttpOnly Cookies {#accounts-httponly-cookies}
 
-Meteor 3.5 introduces a native flow to keep the persistent resume token in an HttpOnly cookie instead of in Web Storage. This protects the token from malicious scripts and pairs nicely with in-memory client storage. Enable the feature with two small changes:
+Meteor 3.5 introduces a native flow to keep the persistent resume token in an HttpOnly cookie instead of in Web Storage. This keeps the durable copy out of script-readable storage and pairs with in-memory client storage. The client still requests the resume token into memory when it authenticates DDP, so this does not protect the token from a malicious script that is actively running in the application origin. Enable the feature with two small changes:
 
 1. On the server, call `Accounts.config` during startup and set both options:
 
@@ -69,6 +69,30 @@ Meteor 3.5 introduces a native flow to keep the persistent resume token in an Ht
    ```
 
 After restarting the app and logging in, `Meteor.loginToken*` keys should no longer appear in `localStorage`. Instead, the browser receives an HttpOnly `meteor_login_token` cookie and the client keeps credentials in memory only for the active tab. If you later disable the feature, remember to revert both the server configuration and the public settings so that Accounts resumes using Web Storage.
+
+The server-side `useHttpOnlyCookies` option is what enables the `/_accounts/cookie/set`, `/_accounts/cookie/refresh` and `/_accounts/cookie/clear` endpoints. When it is not set, the endpoints are not served and requests to them return `404`. Applications that never opted in expose nothing.
+
+#### Cookie endpoint protections {#accounts-httponly-cookies-protections}
+
+Because the cookie is an ambient credential, the endpoints that write it only accept requests from your own application:
+
+- `POST /_accounts/cookie/set` and `POST /_accounts/cookie/clear` require a trusted origin. The server accepts the request when the browser sends `Sec-Fetch-Site: same-origin`, or when the `Origin` header matches the origin of `ROOT_URL`, the origin of the request `Host`, or one of the origins listed in `httpOnlyCookieAllowedOrigins`. Configured origins receive credentialed CORS responses (including preflight support); anything else is rejected with `403`.
+- `POST /_accounts/cookie/set` requires `Content-Type: application/json`, a body of at most 4 KB, and a `token` that belongs to a user and has not expired. Unknown or expired tokens are rejected with `401` and no cookie is written.
+- The cookie is issued with `HttpOnly`, `SameSite=Strict`, `Path=/` and, over HTTPS, `Secure`.
+- All three endpoints are rate limited per client address (30 requests per 10 seconds by default). Behind a reverse proxy, set the `HTTP_FORWARDED_COUNT` environment variable so the real client address is used, exactly as for DDP connections.
+
+If custom browser code calls the cookie set or clear endpoint from another trusted origin, list that origin explicitly. The built-in Accounts client uses relative, same-origin endpoint URLs; this allowlist does not make it target a remote server automatically.
+
+```ts
+Accounts.config({
+  useHttpOnlyCookies: true,
+  httpOnlyCookieAllowedOrigins: ["https://app.example.com", "https://www.example.com"],
+  // Optional: tune or disable the per-address rate limit
+  httpOnlyCookieRateLimit: { max: 60, windowMs: 10_000 },
+});
+```
+
+The allowlist does not bypass browser cookie policy. Because the login cookie remains `SameSite=Strict`, an allowed page must also be same-site with the cookie endpoint for the browser to persist and send the cookie; different ports or trusted sibling subdomains are supported, while an unrelated cross-site domain is not.
 
 <ApiBox name="Meteor.user" hasCustomExample/>
 
@@ -922,10 +946,10 @@ The login handler should return `undefined` if it's not going to handle the logi
 <h2 id="accounts_rate_limit">Rate Limiting</h2>
 
 By default, there are rules added to the [`DDPRateLimiter`](./DDPRateLimiter.md)
-that rate limit logins, new user registration and password reset calls to a
-limit of 5 requests per 10 seconds per session. These are a basic solution
-to dictionary attacks where a malicious user attempts to guess the passwords
-of legitimate users by attempting all possible passwords.
+that rate limit logins, new user registration, passwordless login token requests
+and password reset calls to a limit of 5 requests per 10 seconds per DDP connection.
+These provide basic abuse protection by slowing repeated credential-guessing
+attempts and repeated passwordless login token requests.
 
 These rate limiting rules can be removed by calling
 `Accounts.removeDefaultRateLimit()`. Please see the

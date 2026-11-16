@@ -1,17 +1,64 @@
+import {
+  createProxyAddressTracker,
+  decodeUwsAddress,
+} from './uws.js';
+
 const uws = Npm.require('uWebSockets.js');
 
-// Pick a random high port to avoid clashing with anything else on the
-// test box. The port doesn't matter; what we verify is the binding
-// behaviour, not anything end-to-end over TCP.
-function pickTestPort() {
-  // Range 49152-65535 is the IANA-suggested ephemeral range.
-  return 49152 + Math.floor(Math.random() * (65535 - 49152));
-}
+Tinytest.add('ddp-server/uws - proxy address correlation is exact and single-use', test => {
+  const addresses = createProxyAddressTracker();
+  const forget = addresses.record(
+    { localAddress: '127.0.0.1', localPort: 54321 },
+    '::1'
+  );
+
+  test.equal(
+    addresses.consume('127.0.0.2', 54321),
+    '127.0.0.2',
+    'the same port from a different peer must not consume the mapping'
+  );
+  test.equal(addresses.consume('127.0.0.1', 54321), '::1');
+  test.equal(
+    addresses.consume('127.0.0.1', 54321),
+    '127.0.0.1',
+    'a consumed mapping must not be replayable'
+  );
+
+  forget();
+});
+
+Tinytest.add('ddp-server/uws - proxy address cleanup cannot delete a reused key', test => {
+  const addresses = createProxyAddressTracker();
+  const socket = { localAddress: '127.0.0.1', localPort: 54322 };
+  const forgetOld = addresses.record(socket, '192.0.2.1');
+  addresses.record(socket, '192.0.2.2');
+
+  forgetOld();
+  test.equal(addresses.consume('127.0.0.1', 54322), '192.0.2.2');
+});
+
+Tinytest.add('ddp-server/uws - proxy address correlation normalizes IPv6', test => {
+  const addresses = createProxyAddressTracker();
+  addresses.record(
+    { localAddress: '::1', localPort: 54323 },
+    '2001:db8::42'
+  );
+
+  test.equal(
+    addresses.consume('0000:0000:0000:0000:0000:0000:0000:0001', 54323),
+    '2001:db8::42'
+  );
+});
+
+Tinytest.add('ddp-server/uws - native addresses decode for direct fallback', test => {
+  test.equal(decodeUwsAddress(Buffer.from('127.0.0.1')), '127.0.0.1');
+  test.equal(decodeUwsAddress(Buffer.from('2001:db8::1')), '2001:db8::1');
+});
+
 
 Tinytest.addAsync(
   'ddp-server/uws - LIBUS_LISTEN_EXCLUSIVE_PORT prevents SO_REUSEPORT collision',
   function (test, onComplete) {
-    const port = pickTestPort();
     const host = '127.0.0.1';
 
     const app1 = uws.App();
@@ -46,8 +93,14 @@ Tinytest.addAsync(
       onComplete();
     }
 
-    app1.listen(host, port, uws.LIBUS_LISTEN_EXCLUSIVE_PORT, function (token) {
+    app1.listen(host, 0, uws.LIBUS_LISTEN_EXCLUSIVE_PORT, function (token) {
       token1 = token;
+      if (!token1) {
+        test.isTrue(false, 'could not listen for the first exclusive-port instance');
+        onComplete();
+        return;
+      }
+      const port = uws.us_socket_local_port(token1);
       // Only attempt the colliding listen after the first one settled,
       // so the result of app2 reflects the conflict and not a startup
       // race inside uws.
@@ -143,5 +196,94 @@ Tinytest.add(
     } finally {
       Meteor.settings = savedSettings;
     }
+  }
+);
+
+// Why uws.js maps socket.close() onto socket.end().
+//
+// The socket contract in ./index.js requires close() to flush what send()
+// queued, because livedata_server ends DDP version negotiation by sending
+// 'failed' and closing in the same tick. uWS names its shutdowns the other
+// way round: close() is the forceful one and drops the queued frame, end()
+// is the graceful one and delivers it. This test pins that asymmetry down,
+// so that a change in uWebSockets.js is caught here rather than through a
+// silent negotiation failure.
+function sendThenShutdown(shutdown, onResult) {
+  const host = '127.0.0.1';
+  const payload = JSON.stringify({ msg: 'failed', version: '1' });
+  const app = uws.App();
+
+  app.ws('/*', {
+    open(socket) {
+      socket.send(payload);
+      socket[shutdown]();
+    },
+  });
+
+  // Let the kernel reserve an available port rather than guessing one that
+  // another suite or outgoing connection may already be using.
+  app.listen(host, 0, uws.LIBUS_LISTEN_EXCLUSIVE_PORT, function (token) {
+    if (!token) {
+      onResult(null);
+      return;
+    }
+
+    const received = [];
+    let finished = false;
+    const port = uws.us_socket_local_port(token);
+    const socket = new WebSocket('ws://' + host + ':' + port);
+
+    function finish() {
+      if (finished) return;
+      finished = true;
+      Meteor.clearTimeout(timer);
+      try { socket.close(); } catch (e) { /* ignore */ }
+      try { uws.us_listen_socket_close(token); } catch (e) { /* ignore */ }
+      onResult(received);
+    }
+
+    const timer = Meteor.setTimeout(finish, 3000);
+    socket.addEventListener('message', function (event) {
+      received.push(String(event.data));
+    });
+    // Assert a tick after the close, so a frame still in flight is counted.
+    socket.addEventListener('close', function () {
+      Meteor.setTimeout(finish, 50);
+    });
+    socket.addEventListener('error', function () { /* asserted through the frames */ });
+  });
+}
+
+Tinytest.addAsync(
+  'ddp-server/uws - end() delivers a frame sent in the same tick, close() drops it',
+  function (test, onComplete) {
+    sendThenShutdown('end', function (afterEnd) {
+      test.isNotNull(afterEnd, 'could not listen for the end() case');
+      if (afterEnd === null) {
+        onComplete();
+        return;
+      }
+      test.equal(
+        afterEnd,
+        [JSON.stringify({ msg: 'failed', version: '1' })],
+        'end() must deliver the frame queued just before it'
+      );
+
+      sendThenShutdown('close', function (afterClose) {
+        test.isNotNull(afterClose, 'could not listen for the close() case');
+        if (afterClose === null) {
+          onComplete();
+          return;
+        }
+        test.equal(
+          afterClose.length,
+          0,
+          'close() is expected to drop the queued frame; if this now passes, ' +
+          'uWebSockets.js changed and the close()/end() adapter in uws.js ' +
+          'should be revisited'
+        );
+        onComplete();
+      });
+    });
   }
 );
