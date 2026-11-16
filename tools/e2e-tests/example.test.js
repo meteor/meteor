@@ -1,6 +1,8 @@
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
+import { execFileSync } from 'child_process';
+import { pathToFileURL } from 'url';
 
 import { runMeteorCommand, cleanupTempDir } from './helpers';
 
@@ -42,6 +44,46 @@ describe('Examples /', () => {
       expect(fs.existsSync(path.join(tempDir, '.meteor'))).toBe(true);
     } finally {
       await cleanupTempDir(tempDir);
+    }
+  });
+
+  it('meteor create --from uses checkout packages while preserving external constraints', async () => {
+    const { appName, tempDir } = tempApp('checkout');
+    const sourceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-create-source-'));
+    const sourcePackages = [
+      '# Constraints copied from a published app',
+      'meteor@999.0.0 # Keep this comment',
+      'check@=999.0.0',
+      'random',
+      'react-meteor-data@=0.2.6-beta.16',
+      '',
+    ].join('\n');
+    try {
+      fs.mkdirSync(path.join(sourceDir, '.meteor'));
+      fs.writeFileSync(path.join(sourceDir, '.meteor', 'packages'), sourcePackages);
+      fs.writeFileSync(path.join(sourceDir, 'package.json'), '{"private":true}\n');
+      execFileSync('git', ['init', '-q'], { cwd: sourceDir });
+      execFileSync('git', ['add', '.'], { cwd: sourceDir });
+      execFileSync('git', [
+        '-c', 'user.name=test', '-c', 'user.email=test@example.com',
+        'commit', '-q', '-m', 'create app fixture',
+      ], { cwd: sourceDir });
+
+      await runMeteorCommand(
+        'create', ['--from', pathToFileURL(sourceDir).href, appName], os.tmpdir(),
+        { captureOutput: true, checkExitCode: true }
+      );
+
+      expect(fs.readFileSync(path.join(tempDir, '.meteor', 'packages'), 'utf8'))
+        .toBe(sourcePackages.replace('meteor@999.0.0', 'meteor').replace('check@=999.0.0', 'check'));
+      expect(fs.readFileSync(path.join(tempDir, '.meteor', 'release'), 'utf8').trim())
+        .toBe('none');
+      expect(fs.readFileSync(path.join(tempDir, '.meteor', 'versions'), 'utf8'))
+        .toContain('react-meteor-data@0.2.6-beta.16\n');
+      expect(fs.existsSync(path.join(tempDir, '.git'))).toBe(false);
+    } finally {
+      await cleanupTempDir(tempDir);
+      await cleanupTempDir(sourceDir);
     }
   });
 

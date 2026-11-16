@@ -1262,11 +1262,24 @@ main.registerCommand({
           return;
         }
 
-        // Also, write package version constraints from the current release
-        // If we are on a checkout, we don't need to do this as running from
-        // checkout still pins all package versions and if the user updates
-        // to a real release, the packages file will subsequently get updated
-        if (!release.current.isCheckout()) {
+        if (release.current.isCheckout()) {
+          await projectContext.initializeCatalog();
+          if (buildmessage.jobHasMessages()) {
+            return;
+          }
+
+          // The local catalog already pins checkout packages. Cloned apps can
+          // require published versions that conflict with those local versions.
+          // Clear only local constraints, preserving external package versions.
+          const localPackages = [];
+          projectContext.projectConstraintsFile.eachConstraint(constraint => {
+            if (projectContext.localCatalog.getLatestVersion(constraint.package)) {
+              localPackages.push(constraint.package);
+            }
+          });
+          projectContext.projectConstraintsFile.addPackages(localPackages);
+        } else {
+          // Write package version constraints from the current release.
           projectContext.projectConstraintsFile.updateReleaseConstraints(
             release.current._manifest
           );
