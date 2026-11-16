@@ -42,7 +42,7 @@ env:
 jobs:
   groups:
     name: E2E group audit
-    runs-on: ubuntu-latest
+    runs-on: oss-vm
     timeout-minutes: 10
     outputs:
       matrix: ${{ steps.groups.outputs.matrix }}
