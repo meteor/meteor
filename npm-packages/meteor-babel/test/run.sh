@@ -9,6 +9,9 @@ TEST_DIR=$(pwd)
 BABEL_CACHE_DIR=${TEST_DIR}/.cache
 export BABEL_CACHE_DIR
 
+# Exercise the vendored browser runner independently of compiler options.
+mocha --reporter spec mocha-utils-tests.js
+
 runTests() {
     mocha \
         --reporter spec \
