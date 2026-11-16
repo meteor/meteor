@@ -150,3 +150,40 @@ Tinytest.addAsync("oauth - _endOfLoginResponse with redirect loginStyle supports
     await OAuth._endOfLoginResponse(res, details);
   }
 );
+
+Tinytest.addAsync('oauth - mounted router accepts callback suffixes and parses bodies', async test => {
+  const http = Npm.require('node:http');
+  const serviceName = 'router-test-' + Random.id();
+  const version = 'router-test-' + Random.id();
+  await ServiceConfiguration.configurations.insertAsync({ service: serviceName });
+  OAuth.registerService(serviceName, version, {}, () => {});
+  OAuth._requestHandlers[version] = async (service, data, response) => {
+    response.setHeader('Content-Type', 'application/json');
+    response.end(JSON.stringify({ service: service.serviceName, data }));
+  };
+  const app = WebApp.express();
+  app.use('/prefix/_oauth', OAuthTest.router);
+  const server = http.createServer(app);
+  try {
+    await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+    const url = `http://127.0.0.1:${server.address().port}/prefix/_oauth/${serviceName}`;
+    for (const suffix of ['', '/return', '/return/deeper']) {
+      const response = await fetch(url + suffix + '?value=query');
+      test.equal(await response.json(), { service: serviceName, data: { value: 'query' } });
+    }
+    for (const [type, body] of [
+      ['application/json', JSON.stringify({ value: 'body' })],
+      ['application/x-www-form-urlencoded', 'value=body'],
+    ]) {
+      const response = await fetch(url + '/return', {
+        method: 'POST', headers: { 'Content-Type': type }, body,
+      });
+      test.equal(await response.json(), { service: serviceName, data: { value: 'body' } });
+    }
+  } finally {
+    await new Promise(resolve => server.close(resolve));
+    OAuthTest.unregisterService(serviceName);
+    delete OAuth._requestHandlers[version];
+    await ServiceConfiguration.configurations.removeAsync({ service: serviceName });
+  }
+});
