@@ -47,6 +47,8 @@ By default, `meteor run android` and `meteor run ios` use bundled mode with Mete
 
 > See the [**"Capacitor (mobile)"** section](./native-stack/capacitor-mobile.md) for requirements, configuration, run modes, HCP behavior, and production build notes.
 
+For an existing Cordova app, follow [Migrate from Cordova](./native-stack/capacitor-mobile.md#migrate-from-cordova) to review plugins, translate mobile configuration and validate the native transition.
+
 ### Cordova (Legacy mobile)
 
 Use the legacy Cordova section when you maintain an existing Cordova app or need historical Cordova mobile setup details.

@@ -13,6 +13,8 @@ Meteor's Capacitor integration is experimental and under active development. Its
 
 In this setup, Meteor produces a native web bundle, transforms it into the Capacitor web directory, and syncs it into the Android or iOS project. This keeps compatibility with Meteor's mobile runtime while moving the native project lifecycle to Capacitor.
 
+For an existing Cordova application, follow [Migrate from Cordova](#migrate-from-cordova) before creating native projects.
+
 ## Quick start
 
 Create Meteor app, then add Capacitor package:
@@ -94,6 +96,18 @@ checks installed plugin core peers rather than requiring every plugin to share
 Capacitor's major number. Unsupported declarations and installed versions stop
 native preparation before dependency installation or project generation.
 
+### Run from a Meteor checkout
+
+Until the integration and its matching Rspack changes are published, link both
+checkout packages after installing application dependencies:
+
+``` bash
+npm link --no-save /path/to/meteor/npm-packages/meteor-capacitor /path/to/meteor/npm-packages/meteor-rspack
+```
+
+Use that checkout's `meteor` binary for native commands. The selected checkout
+and both npm packages must include the features being tested.
+
 ### Upgrade early Capacitor 7 apps
 
 Commit or back up your native projects first. Update core, CLI, and the selected
@@ -110,15 +124,6 @@ Omit platform packages you do not use. Review the
 [Capacitor 8 migration guide](https://capacitorjs.com/docs/updating/8-0), including
 native deployment targets and Android Gradle changes. Meteor does not rewrite
 existing native projects or silently upgrade an unsupported major.
-
-Until the integration and its matching Rspack changes are published, link both
-checkout packages after installing application dependencies:
-
-```bash
-npm link --no-save /path/to/meteor/npm-packages/meteor-capacitor /path/to/meteor/npm-packages/meteor-rspack
-```
-
-Use that checkout's `meteor` binary for native commands.
 
 ### TypeScript applications
 
@@ -216,6 +221,246 @@ The integration adds or uses these files and folders:
 - `ios/`: Capacitor iOS native project.
 
 The `_build` output and the synced native asset folders are generated and ignored by Git. The `android/` and `ios/` native projects are normal Capacitor projects and should be managed like application source.
+
+## Migrate from Cordova
+
+Migrate an existing app in a separate branch or copy so you can compare its
+behavior with the Cordova version. Adding `capacitor` selects the native
+integration; it does not translate `mobile-config.js`, install every application
+plugin, or migrate existing native settings.
+
+:::info
+Use a Meteor release or checkout containing this integration and its matching
+`@meteorjs/capacitor` runtime. During the experimental period, follow the
+[checkout setup](#run-from-a-meteor-checkout) when linking local npm packages.
+Installing Capacitor npm packages alone does not add the Meteor native provider.
+:::
+
+### Prepare the existing app
+
+Run the app's existing browser and native checks before changing its native
+integration. Record the Meteor release, npm lockfile, plugin versions and tested
+platforms. Keep the same behavior assertions after migration.
+
+Inventory the app's native requirements:
+
+- Plugins in `.meteor/cordova-plugins`, npm dependencies and Atmosphere packages
+  that declare `Cordova.depends`.
+- Calls to Cordova globals, plugin APIs and `LaunchScreen`, including their
+  browser fallbacks and startup behavior.
+- `mobile-config.js`, plugin variables, native overrides, permissions, icons,
+  splash resources, signing settings and environment-dependent configuration.
+- Authentication, local storage, files, deep links and other state or platform
+  registrations that an installed successor must preserve.
+
+For example, `mobile-experience` implies `mobile-status-bar` and `launch-screen`,
+which declare Cordova plugins. Include those implicit dependencies when deciding
+which native behavior needs a compatible plugin or replacement.
+
+Upgrade Meteor or the bundler separately when needed, then establish a working
+baseline on the selected tool. Dependency peer conflicts belong to that setup
+step. Keep the app's UI framework, server code and data model unchanged unless
+the migration demonstrates a specific requirement.
+
+### Preserve identity before generating projects
+
+Recover the effective Android application ID and iOS bundle ID from the original
+native projects or built artifacts, and compare them with any store records.
+An app without `App.info({ id })` may use an identifier derived from Meteor's app
+ID. Keep `.meteor/.id` and verify the effective native identity rather than
+guessing it from the npm package name.
+
+Add the integration:
+
+``` bash
+meteor add capacitor
+```
+
+Before running a native command, create or review `capacitor.config.js` with the
+verified identity:
+
+``` js
+const { defineConfig } = require('@meteorjs/capacitor');
+
+module.exports = defineConfig(() => ({
+  appId: 'com.company.existingapp',
+  appName: 'Existing App',
+  ios: { contentInset: 'always' },
+}));
+```
+
+Replace these example values with the original app's values. Preserve Android
+`versionName` and `versionCode`, and iOS marketing and build versions, in the
+native projects. Changing `appId` in JavaScript after project generation does
+not rename an existing Android or Xcode project.
+
+For an installed-app update, also preserve signing continuity, the iOS team,
+entitlements and platform registrations. Matching the native ID alone does not
+establish that an existing installation can upgrade successfully.
+
+### Review Cordova plugins
+
+Classify each plugin as compatible and retained, replaced with equivalent
+behavior, no longer needed, or requiring additional migration work. Check
+Capacitor 8 compatibility, platform minimums and any required native settings.
+See [Capacitor's Cordova plugin support](https://capacitorjs.com/docs/plugins/cordova).
+
+Install a retained Cordova plugin through npm. Capacitor does not install it from
+Meteor's `.meteor/cordova-plugins` list. For example, an app retaining
+InAppBrowser 6 can use:
+
+``` bash
+meteor npm install --save-exact cordova-plugin-inappbrowser@6.0.0
+```
+
+Keep the existing call while validating compatibility on both platforms. For
+`cordova.InAppBrowser.open(url, '_system')`, check that the device's external
+browser opens and that returning leaves the app usable. An API that opens an
+in-app browser changes that behavior.
+
+Cordova installation variables, hooks and automatic native configuration are
+not applied by Capacitor. Port the required settings from the plugin's
+`plugin.xml` and instructions into the maintained native projects. New iOS
+projects use Swift Package Manager; verify the chosen plugin under that setup,
+or use a supported CocoaPods project when its requirements call for it. See
+[Capacitor's SPM guidance](https://capacitorjs.com/docs/ios/spm).
+
+### Translate mobile configuration
+
+Review each setting by the behavior it controls. Similarly named Cordova and
+Capacitor settings do not necessarily have the same consumer or effect.
+
+| Cordova input | Capacitor migration |
+|---|---|
+| `App.info({ id, name })` | Set the initial `appId` and `appName`; preserve the effective identity in native source. |
+| `App.info({ version, buildNumber })` | Carry Android version/code and iOS marketing/build settings into the maintained projects. |
+| `App.setPreference(...)` | Use a supported Capacitor option, plugin configuration or native setting; document settings without an equivalent. |
+| `App.configurePlugin(...)` | Install the compatible npm plugin and apply its required native configuration explicitly. |
+| `App.icons(...)`, `App.launchScreens(...)` | Keep the original source assets and generate or configure the native icon and splash resources. |
+| `App.accessRule(..., { type: 'navigation' })` | Review WebView navigation and narrowly scoped `server.allowNavigation` settings. |
+| `App.accessRule(..., { type: 'network' })` | Review backend reachability, CORS/CSP, Android network security and iOS transport settings. |
+| `App.accessRule(..., { type: 'intent' })` | Review external URL handling and required Android intents or iOS URL-scheme settings. |
+| `App.appendToConfig(...)` | Translate the XML's purpose into native manifests, plists, entitlements or plugin configuration. |
+| `App.addResourceFile(...)`, `cordova-build-override/` | Port each required resource or customization into native source. |
+| `App.settings` or environment-dependent configuration | Pass the intended build inputs through explicit environment/configuration handling. The `defineConfig` context does not expose `App.settings`. |
+
+See the [Capacitor configuration schema](https://capacitorjs.com/docs/config)
+for supported options. A navigation allowlist does not grant network access or
+replace transport-security settings.
+
+For a Cordova `WebAppStartupTimeout` preference, set the native Meteor plugin's
+startup/HCP recovery deadline explicitly, in milliseconds:
+
+``` js
+plugins: {
+  CapacitorMeteorWebApp: {
+    startupTimeout: 60000,
+  },
+},
+```
+
+Android and iOS default to 30000 milliseconds. Positive integers override that
+default; zero or negative values retain it. The timer pauses while the app is in
+the background. Sync and rebuild both native apps after changing the setting.
+
+:::warning
+The `startupTimeout` option requires the matching native-plugin implementation.
+Earlier experimental runtimes hardcode a 30-second deadline and do not consume
+this setting. The reference example's 60-second validation used a local native
+follow-up that is not yet published; check the selected runtime before relying
+on this mapping.
+:::
+
+Cordova's `LoadUrlTimeoutValue` is a separate WebView setting and does not map to
+this deadline. Review whether its original purpose still applies when the app
+starts from bundled web assets.
+
+Review splash-screen and status-bar behavior separately from the configuration
+mapping. A `plugins.SplashScreen` block does not install the corresponding npm
+plugin. If the app controls splash hiding or system bars, use the selected
+plugin or supported native API and check both themes, safe areas, notches and
+gesture navigation. Preserve the intent of any existing `LaunchScreen.hold()`
+calls before removing their Cordova implementation.
+
+### Generate and maintain native projects
+
+Keep existing Android and iOS entries in `.meteor/platforms`; removing and
+re-adding them is unnecessary. Add a platform only if the app does not already
+list it, after configuring the native identity.
+
+Run the normal Meteor native commands. Meteor creates missing projects,
+prepares its web assets and syncs the selected platform:
+
+``` bash
+# Android emulator
+meteor run android --mobile-server http://10.0.2.2:3000
+```
+
+Stop that Meteor command before switching platforms in the same app copy:
+
+``` bash
+# iOS Simulator
+meteor run ios --mobile-server http://localhost:3000
+```
+
+Use a reachable LAN address for physical devices or a backend shared between
+platforms. Android's `10.0.2.2` alias does not identify the host for iOS. Run
+Meteor build/test modes sequentially in one source copy so they do not overwrite
+each other's generated entries; use a separate copy for concurrent workflows.
+
+Review and commit the maintained `android/` and `ios/` projects. Keep copied web
+assets, generated plugin wrappers, build caches and signing secrets out of
+version control. Preserve native customizations when syncing or upgrading.
+Only retire obsolete Cordova metadata and packages after their required behavior
+has a validated replacement.
+
+### Validate native behavior and installed-app updates
+
+Run the existing application tests and exercise the native actions they do not
+cover. Keep Android and iOS results separate:
+
+| Boundary | What to check |
+|---|---|
+| Browser | Existing UI interactions, server data and ordinary web fallbacks still work. |
+| Native runtime | Cold launch, actual plugin calls, permissions, external-app return and continued application use. |
+| System UI | Splash behavior, light/dark mode, status bars, safe areas and gesture spacing. |
+| Development | Client changes update the running native app and server changes preserve its connection and data behavior. |
+| Bundled HCP | A real downloaded update activates, survives a cold relaunch and leaves the app usable. A livereload result is a separate check. |
+| Existing installation | Install the correctly signed successor over the Cordova app without uninstalling; verify identity, stored data, authentication, permissions and platform registrations. |
+| Release | Verify the actual APK/AAB/IPA format, identity and signatures independently of debug or Simulator builds. |
+
+The Cordova and Capacitor WebView origins and storage locations can differ.
+Inventory local storage, files, preferences and keychain use, then test a
+deliberate transfer or reauthentication path. Keep the original native build
+available for comparison. Replacing the installed native shell requires a native
+release; an HCP-only update cannot perform that migration.
+
+Record missing signing infrastructure or unavailable original builds as pending
+validation. A successful fresh installation or a stateless example cannot prove
+that an existing production app retains its state.
+
+### Worked migration example
+
+The [welcome-meteor-cordova transition](https://github.com/CloudByGalaxy/welcome-meteor-cordova/pull/4)
+uses the same React UI, collection, publication, counter and original Maestro
+flows as its Cordova baseline. It retains InAppBrowser 6 through npm, preserves
+the native identity and versions, and adds external-browser/return and real HCP
+checks on Android and iOS.
+
+The example's [migration record](https://github.com/CloudByGalaxy/welcome-meteor-cordova/blob/capacitor-transition/MIGRATION.md)
+contains its application-specific changes, selected versions, commands and
+validation limits. Use this guide for the general process and the example for a
+concrete comparison. It does not establish state preservation for apps with
+authentication, offline data or other native integrations.
+
+### Report migration issues
+
+When testing the experimental integration, include the Meteor release or
+checkout revision, Capacitor and plugin versions, native tooling and OS versions,
+the command that failed, and the expected and observed behavior in a
+[Meteor issue](https://github.com/meteor/meteor/issues/new). State whether the
+problem occurs on a fresh install, an installed-app upgrade or HCP, and attach a
+minimal reproduction or the relevant configuration and logs without credentials.
 
 ## Development
 
@@ -483,6 +728,11 @@ Android Studio handles Android signing and Play Store artifacts. Xcode handles i
 
 The `capacitor` package sets `Meteor.isCapacitor` on the client when the app is running inside a Capacitor native platform. This lets app code distinguish Capacitor from web browsers.
 
+`Meteor.isCordova` also remains true because the integration uses Meteor's
+`web.cordova` architecture. It does not guarantee that a particular Cordova
+plugin global or lifecycle API is available. Use `Meteor.isCapacitor` for
+Capacitor-specific behavior and check the APIs the app actually uses.
+
 ### Native plugins
 
 Use Capacitor plugins for new native functionality. Install the plugin with npm, import it from your app code, then run the normal Meteor native command. Meteor runs `cap sync` as part of `meteor run`, `meteor build`, and `meteor add-platform` setup, so plugin native project changes are applied through the Meteor flow.
@@ -513,4 +763,5 @@ The first Capacitor integration focuses on:
 - Built-in Hot Code Push through `@meteorjs/capacitor`.
 - Reusable Meteor tooling hooks instead of Capacitor-specific logic in unrelated packages.
 
-Further migration topics will be added as the integration matures.
+The [Cordova migration workflow](#migrate-from-cordova) will be refined as beta
+feedback identifies additional application and plugin requirements.
