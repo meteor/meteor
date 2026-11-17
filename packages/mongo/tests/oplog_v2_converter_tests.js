@@ -153,3 +153,29 @@ Tinytest.add('oplog - v2/v1 conversion', function (test) {
     test.equal(oplogV2V1Converter(input), output);
   });
 });
+
+// BSON decodes `__proto__` as an own key, as JSON.parse does; an object literal would not create that key.
+const ownProtoCases = [
+  ['{"$v":2,"diff":{"u":{"__proto__":"B"}}}', '{"$v":2,"$set":{"__proto__":"B"}}'],
+  ['{"$v":2,"diff":{"u":{"__proto__":{"owner":"B"}}}}', '{"$v":2,"$set":{"__proto__":{"owner":"B"}}}'],
+  ['{"$v":2,"diff":{"i":{"__proto__":"B"}}}', '{"$v":2,"$set":{"__proto__":"B"}}'],
+  ['{"$v":2,"diff":{"i":{"__proto__":{}}}}', '{"$v":2,"$set":{"__proto__":{}}}'],
+  ['{"$v":2,"diff":{"d":{"__proto__":false}}}', '{"$v":2,"$unset":{"__proto__":true}}'],
+  ['{"$v":2,"diff":{"slist":{"a":true,"u0":1},"u":{"__proto__":"B"}}}', '{"$v":2,"$set":{"list.0":1,"__proto__":"B"}}'],
+  ['{"$v":2,"diff":{"slist":{"a":true,"u0":null},"d":{"__proto__":false}}}', '{"$v":2,"$unset":{"list.0":true,"__proto__":true}}'],
+];
+
+Tinytest.add('oplog - v2/v1 conversion keeps top-level __proto__ fields', function (test) {
+  ownProtoCases.forEach(([input, output]) => {
+    const converted = oplogV2V1Converter(JSON.parse(input));
+    test.equal(converted, JSON.parse(output), input);
+    ['$set', '$unset'].forEach(operator => {
+      if (converted[operator]) {
+        test.isTrue(
+          [null, Object.prototype].includes(Object.getPrototypeOf(converted[operator])),
+          `${input} replaced the ${operator} prototype`
+        );
+      }
+    });
+  });
+});
