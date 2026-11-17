@@ -224,7 +224,7 @@ For development, enable HCP by starting the application server with the `--mobil
 - On a real device, both the device and server must be on the same network
   - Run: `meteor run android --mobile-server XXX.XXX.XXX.XXX`, replacing the IP with your local development address (e.g. 192.168.1.4).
 
-For production, HCP is enabled automatically when you provide the `--server` option to the [`meteor build` command](../cli/index.md#meteor-build-meteorbuild). For more details on how HCP works with apps already published to production, see [Hot Code Push on mobile](/troubleshooting/hot-code-push).
+For production, HCP is enabled automatically when you provide the `--server` option to the [`meteor build` command](../cli/index.md#meteorbuild). For more details on how HCP works with apps already published to production, see [Hot Code Push on mobile](/troubleshooting/hot-code-push).
 
 ### Open IDE
 
