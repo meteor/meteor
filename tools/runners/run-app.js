@@ -781,10 +781,10 @@ Object.assign(AppRunner.prototype, {
         pluginVersionsFromStarManifest(bundleResult.starManifest);
 
       if (!cordovaRunner.started) {
-        const { settingsFile, mobileServerUrl } = self;
+        const { settingsFile, mobileServerUrl, hmrSecret } = self;
         const messages = await buildmessage.capture(async () => {
           await cordovaRunner.prepareProject(bundlePath, pluginVersions,
-            { settingsFile, mobileServerUrl });
+            { settingsFile, mobileServerUrl, hmrSecret });
         });
 
         if (messages.hasMessages()) {

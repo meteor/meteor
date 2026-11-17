@@ -578,6 +578,10 @@ export class CordovaBuilder {
       runtimeConfig.PUBLIC_SETTINGS = publicSettings;
     }
 
+    if (this.options.hmrSecret) {
+      runtimeConfig._hmrSecret = this.options.hmrSecret;
+    }
+
     const { Boilerplate } = await loadIsopackage('boilerplate-generator');
 
     const boilerplate = new Boilerplate(CORDOVA_ARCH, manifest, {

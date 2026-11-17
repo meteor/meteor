@@ -77,7 +77,13 @@ await fetch("/public", { auth: false });
 ### Client-side specifics
 
 - `token` is server-only and is stripped on the client.
-- When `Accounts._useHttpOnlyCookies` is enabled, `auth: true` also sets `credentials: 'include'` so the browser sends the `meteor_login_token` cookie automatically.
+- Automatic login-token forwarding is limited to HTTP(S) destinations at the page origin or `Meteor.absoluteUrl()` origin. Relative URLs follow the document base URL; a third-party base does not become trusted. Caller-supplied Authorization headers remain unchanged.
+- To send the token to a separate API host, list its exact origin (`scheme://host[:port]`) in `Meteor.settings.public.packages["accounts-express"].authFetchAllowedOrigins`:
+
+  ```json
+  { "public": { "packages": { "accounts-express": { "authFetchAllowedOrigins": ["https://api.example.com"] } } } }
+  ```
+- When `Accounts._useHttpOnlyCookies` is enabled, `auth: true` for these trusted origins also sets `credentials: 'include'` so the browser sends the `meteor_login_token` cookie automatically. Explicit `options.credentials` and a Request with `credentials: 'omit'` are respected.
 
 ## TypeScript
 
