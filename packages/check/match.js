@@ -192,6 +192,11 @@ const stringForErrorMessage = (value, options = {}) => {
     return typeof value;
   }
 
+  // BigInt and Symbol cannot be serialized by EJSON/JSON.
+  if ( typeof value === 'bigint' || typeof value === 'symbol' ) {
+    return String(value);
+  }
+
   // Your average non-object things.  Saves from doing the try/catch below for.
   if ( typeof value !== 'object' ) {
     return EJSON.stringify(value)
@@ -222,6 +227,13 @@ const typeofChecks = [
   [Function, 'function'],
   [undefined, 'undefined'],
 ];
+
+if (typeof BigInt === 'function') {
+  typeofChecks.push([BigInt, 'bigint']);
+}
+if (typeof Symbol === 'function') {
+  typeofChecks.push([Symbol, 'symbol']);
+}
 
 // Return `false` if it matches. Otherwise, returns an object with a `message` and a `path` field or an array of objects each with a `message` and a `path` field when collecting errors.
 const testSubtree = (value, pattern, collectErrors = false, errors = [], path = '') => {

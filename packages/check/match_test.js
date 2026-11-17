@@ -36,11 +36,14 @@ Tinytest.add('check - check', test => {
     [false, Boolean],
     [function(){}, Function],
     [undefined, undefined],
-    [null, null]
+    [null, null],
+    [100n, BigInt],
+    [0n, BigInt],
+    [Symbol('foo'), Symbol]
   ];
   pairs.forEach(pair => {
     matches(pair[0], Match.Any);
-    [String, Number, Boolean, undefined, null].forEach(type => {
+    [String, Number, Boolean, BigInt, Symbol, undefined, null].forEach(type => {
       if (type === pair[1]) {
         matches(pair[0], type);
         matches(pair[0], Match.Optional(type));
@@ -318,11 +321,14 @@ Tinytest.add('check - check throw all errors', test => {
     [false, Boolean],
     [function(){}, Function],
     [undefined, undefined],
-    [null, null]
+    [null, null],
+    [100n, BigInt],
+    [0n, BigInt],
+    [Symbol('foo'), Symbol]
   ];
   pairs.forEach(pair => {
     matches(pair[0], Match.Any);
-    [String, Number, Boolean, undefined, null].forEach(type => {
+    [String, Number, Boolean, BigInt, Symbol, undefined, null].forEach(type => {
       if (type === pair[1]) {
         matches(pair[0], type);
         matches(pair[0], Match.Optional(type));
