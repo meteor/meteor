@@ -16,7 +16,6 @@ import {
   removeExistingSocketFile,
   registerSocketFileCleanup,
 } from './socket_file.js';
-import cluster from 'cluster';
 import { execSync } from 'child_process';
 import { onMessage } from 'meteor/inter-process-messaging';
 
@@ -674,6 +673,7 @@ WebAppInternals.generateBoilerplateInstance = function(
 // - type: the type of file to be served
 // - cacheable: optionally, whether the file should be cached or not
 // - sourceMapUrl: optionally, the url of the source map
+// - onNotFound: optionally, a response handler for a missing file or directory
 //
 // Info also contains one of the following:
 // - content: the stringified content that should be served at this path
@@ -685,7 +685,8 @@ WebAppInternals.staticFilesMiddleware = async function(
   staticFilesByArch,
   req,
   res,
-  next
+  next,
+  resolveStaticFile = getStaticFileInfo
 ) {
   var pathname = parseRequest(req).pathname;
   try {
@@ -749,9 +750,11 @@ WebAppInternals.staticFilesMiddleware = async function(
     return;
   }
 
-  const info = getStaticFileInfo(staticFilesByArch, pathname, path, arch);
+  // Resolve only after the client resumes: rebuilding replaces its manifest.
+  // Integrations can supply request-local metadata without changing that map.
+  const info = resolveStaticFile(staticFilesByArch, pathname, path, arch);
   if (!info) {
-    next();
+    if (!res.writableEnded) next();
     return;
   }
   // "send" will handle HEAD & GET requests
@@ -828,11 +831,19 @@ WebAppInternals.staticFilesMiddleware = async function(
       lastModified: false, // don't set last-modified based on the file date
     })
       .on('error', function(err) {
+        if (err.status === 404 && info.onNotFound && !res.headersSent) {
+          info.onNotFound(res);
+          return;
+        }
         Log.error('Error serving static file ' + err);
         res.writeHead(500);
         res.end();
       })
       .on('directory', function() {
+        if (info.onNotFound && !res.headersSent) {
+          info.onNotFound(res);
+          return;
+        }
         Log.error('Unexpected directory ' + info.absolutePath);
         res.writeHead(500);
         res.end();
@@ -883,6 +894,8 @@ function getStaticFileInfo(staticFilesByArch, originalPath, path, arch) {
 
   return info;
 }
+
+WebAppInternals.getStaticFileInfo = getStaticFileInfo;
 
 // Parse the passed in port value. Return the port as-is if it's a String
 // (e.g. a Windows Server style named pipe), otherwise return the port as an
@@ -1525,7 +1538,15 @@ async function runWebAppServer() {
     let unixSocketPath = process.env.UNIX_SOCKET_PATH;
 
     if (unixSocketPath) {
-      if (cluster.isWorker) {
+      // Lazy-load cluster only when needed (UNIX_SOCKET_PATH with workers).
+      // Avoids loading the module in the common case where it is unused.
+      let cluster;
+      try {
+        cluster = require('cluster');
+      } catch (e) {
+        // cluster module unavailable in this runtime; continue without worker suffix.
+      }
+      if (cluster?.isWorker && cluster.worker) {
         const workerName = cluster.worker.process.env.name || cluster.worker.id;
         unixSocketPath += '.' + workerName + '.sock';
       }

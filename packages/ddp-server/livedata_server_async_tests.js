@@ -58,7 +58,7 @@ Tinytest.addAsync(
       onSubscription[serverConn.id] = function(subscription) {
         delete onSubscription[serverConn.id];
         test.equal(subscription.connection.id, serverConn.id);
-        clientConn.disconnect();
+        clientConn.close();
         onComplete();
       };
       clientConn.subscribe('livedata_server_test_sub_async', serverConn.id);
@@ -82,7 +82,7 @@ Tinytest.addAsync(
         test.isNotUndefined(publicationInvocation, 'Should have been defined');
         if (this.userId === userId && fromOnStop) {
           delete onSubscription[serverConn.id];
-          clientConn.disconnect();
+          clientConn.close();
           onComplete();
         }
       };
@@ -134,7 +134,8 @@ Tinytest.addAsync('livedata server - async publish object', function(
       // console.log('subscription is ok:', subscription) 
       testsLength++;
       if (testsLength === 3) {
-        clientConn.disconnect();
+        onSubscriptions = null;
+        clientConn.close();
         onComplete();
       }
     };

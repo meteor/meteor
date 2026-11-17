@@ -6,6 +6,8 @@ $tests = @(
   '^autoupdate'
   '^dynamic import.*development'
   'client refresh for application code'
+  '^self-test catalog scan tolerates cold official catalog$'
+  '^npm - prefetch runs speculative work on Windows$'
 ) -Join '|'
 
 Write-Host "Running: $tests" -ForegroundColor Yellow

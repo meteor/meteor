@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Make HTTP calls to remote servers",
-  version: '3.0.0',
+  version: '3.0.1',
   deprecated: 'Please use the fetch package'
 });
 
@@ -14,6 +14,8 @@ Package.onUse(function (api) {
 
   api.mainModule('httpcall_client.js', 'client');
   api.mainModule('httpcall_server.js', 'server');
+
+  api.types('http.d.ts');
 
   api.export('HTTP');
   api.export('HTTPInternals', 'server');

@@ -127,6 +127,8 @@ After login, Facebook profile data is stored under `services.facebook`. The fiel
 
 ## Server behavior
 
+Starting with Meteor 3.6, native `facebookSignIn` requests are accepted only when Facebook confirms that the access token is valid for the `appId` in your Facebook service configuration and the identity lookup resolves to a Facebook user. Tokens issued for another app, failed verification, or a missing user identity are rejected. Configure your native SDK for the same Facebook app as the server. The normal web OAuth flow is unchanged.
+
 On the server, `accounts-facebook` registers the `facebook` OAuth service and, when the `autopublish` package is enabled, publishes the following fields of the Facebook service data:
 
 - For the logged-in user: the entire `services.facebook` object (including the access token, which can legitimately be used from the client over HTTPS or on localhost).

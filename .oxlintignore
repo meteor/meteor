@@ -5,6 +5,7 @@
 *.md
 *.json
 android_bundle/
+artifacts/
 dev_bundle/
 docs/
 examples/

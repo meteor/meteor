@@ -100,7 +100,17 @@ Command.prototype.evaluateOption = function (optionName, options) {
 //
 // Options that function as commands (eg, "meteor --arch") are treated
 // as subcommands of "--".
-var commands = {};
+var commands = main.commands = {};
+
+main.getTopLevelCommandNames = function () {
+  const names = [];
+  Object.entries(commands).forEach(([name, cmd]) => {
+    if (name !== "--" && cmd && !cmd.hidden) {
+      names.push(name);
+    }
+  });
+  return names;
+};
 
 // Exception to throw from a command to bail out and show command
 // usage information.
@@ -296,6 +306,7 @@ require('./commands-packages.js');
 require('./commands-packages-query.js');
 require('./commands-cordova.js');
 require('./commands-aliases.js');
+require('./commands-completion.js');
 
 ///////////////////////////////////////////////////////////////////////////////
 // Record all the top-level commands as JSON
