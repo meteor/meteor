@@ -1,3 +1,7 @@
+import crypto from 'node:crypto';
+import net from 'node:net';
+import zlib from 'node:zlib';
+import { WebApp } from 'meteor/webapp';
 import {
   createProxyAddressTracker,
   decodeUwsAddress,
@@ -287,3 +291,192 @@ Tinytest.addAsync(
     });
   }
 );
+
+// The global WebSocket inflates frames transparently, so it cannot tell a
+// compressed frame from a plain one. This client offers permessage-deflate,
+// records the RSV1 bit of every text frame and can send compressed frames.
+const DEFLATE_TAIL = Buffer.from([0x00, 0x00, 0xff, 0xff]);
+
+function deflateMessage(text) {
+  return zlib.deflateRawSync(Buffer.from(text), {
+    finishFlush: zlib.constants.Z_SYNC_FLUSH,
+  }).subarray(0, -DEFLATE_TAIL.length);
+}
+
+function inflateMessage(payload) {
+  return zlib.inflateRawSync(Buffer.concat([payload, DEFLATE_TAIL]), {
+    finishFlush: zlib.constants.Z_SYNC_FLUSH,
+  }).toString();
+}
+
+function clientFrame(text, compress) {
+  const payload = compress ? deflateMessage(text) : Buffer.from(text);
+  const first = 0x81 | (compress ? 0x40 : 0);
+  const header = payload.length < 126
+    ? Buffer.from([first, 0x80 | payload.length])
+    : Buffer.from([first, 0x80 | 126, payload.length >> 8, payload.length & 0xff]);
+  const mask = crypto.randomBytes(4);
+  const masked = Buffer.from(payload.map((byte, i) => byte ^ mask[i % 4]));
+  return Buffer.concat([header, mask, masked]);
+}
+
+function connectRawWebSocket(port, path) {
+  return new Promise((resolve, reject) => {
+    const socket = net.connect(port, '127.0.0.1');
+    const frames = [];
+    let buffer = Buffer.alloc(0);
+    let client = null;
+    let pending = null;
+
+    socket.once('error', reject);
+    socket.on('connect', () => {
+      socket.write([
+        `GET ${path} HTTP/1.1`,
+        `Host: 127.0.0.1:${port}`,
+        'Upgrade: websocket',
+        'Connection: Upgrade',
+        'Sec-WebSocket-Version: 13',
+        `Sec-WebSocket-Key: ${crypto.randomBytes(16).toString('base64')}`,
+        'Sec-WebSocket-Extensions: permessage-deflate; client_max_window_bits',
+        '',
+        '',
+      ].join('\r\n'));
+    });
+
+    socket.on('data', chunk => {
+      buffer = Buffer.concat([buffer, chunk]);
+      if (!client) {
+        const end = buffer.indexOf('\r\n\r\n');
+        if (end === -1) return;
+        const head = buffer.subarray(0, end).toString();
+        buffer = buffer.subarray(end + 4);
+        const extensions = /^sec-websocket-extensions:\s*(.*)$/im.exec(head);
+        client = {
+          status: head.split('\r\n')[0],
+          extensions: extensions ? extensions[1] : '',
+          send(text, compress) {
+            socket.write(clientFrame(text, compress));
+          },
+          waitFor(condition, description) {
+            return new Promise((resolveFrames, rejectFrames) => {
+              const timer = Meteor.setTimeout(() => {
+                pending = null;
+                rejectFrames(new Error(
+                  `timed out waiting for ${description}, got ${frames.length} frames`
+                ));
+              }, 5000);
+              pending = () => {
+                if (!condition(frames)) return;
+                pending = null;
+                Meteor.clearTimeout(timer);
+                resolveFrames(frames);
+              };
+              pending();
+            });
+          },
+          close() {
+            socket.destroy();
+          },
+        };
+        resolve(client);
+      }
+
+      while (buffer.length >= 2) {
+        let length = buffer[1] & 0x7f;
+        let offset = 2;
+        if (length === 126) {
+          if (buffer.length < 4) return;
+          length = buffer.readUInt16BE(2);
+          offset = 4;
+        } else if (length === 127) {
+          if (buffer.length < 10) return;
+          length = Number(buffer.readBigUInt64BE(2));
+          offset = 10;
+        }
+        if (buffer.length < offset + length) return;
+        const opcode = buffer[0] & 0x0f;
+        const compressed = (buffer[0] & 0x40) !== 0;
+        const payload = buffer.subarray(offset, offset + length);
+        buffer = buffer.subarray(offset + length);
+        if (opcode !== 0x1) continue;
+        frames.push({
+          compressed,
+          text: compressed ? inflateMessage(payload) : payload.toString(),
+        });
+        if (pending) pending();
+      }
+    });
+  });
+}
+
+// Why uws.js wraps socket.send(): uWS compresses a message only when the third
+// argument of send() is true, even after permessage-deflate was negotiated.
+Tinytest.addAsync(
+  'ddp-server/uws - send() compresses only when its third argument is true',
+  async function (test) {
+    const payload = JSON.stringify({ msg: 'added', fields: { text: 'x'.repeat(2048) } });
+    const app = uws.App();
+    app.ws('/*', {
+      compression: uws.SHARED_COMPRESSOR,
+      open(socket) {
+        socket.send(payload);
+        socket.send(payload, false, true);
+      },
+    });
+
+    const token = await new Promise(resolve => {
+      app.listen('127.0.0.1', 0, uws.LIBUS_LISTEN_EXCLUSIVE_PORT, resolve);
+    });
+    test.isTrue(!!token, 'could not listen');
+    if (!token) return;
+
+    let client = null;
+    try {
+      client = await connectRawWebSocket(uws.us_socket_local_port(token), '/');
+      test.matches(client.extensions, /^permessage-deflate/);
+      const frames = await client.waitFor(received => received.length >= 2, 'two frames');
+      test.equal(
+        frames.map(frame => frame.compressed),
+        [false, true],
+        'if the first frame is now compressed, uWebSockets.js changed and ' +
+        'the send() adapter in uws.js should be revisited'
+      );
+      test.equal(frames.map(frame => frame.text), [payload, payload]);
+    } finally {
+      if (client) client.close();
+      uws.us_listen_socket_close(token);
+    }
+  }
+);
+
+if (__meteor_runtime_config__.DDP_TRANSPORT === 'uws') {
+  Tinytest.addAsync(
+    'ddp-server/uws - DDP messages are compressed in both directions',
+    async function (test) {
+      const client = await connectRawWebSocket(
+        WebApp.httpServer.address().port,
+        '/websocket'
+      );
+      try {
+        test.equal(client.status, 'HTTP/1.1 101 Switching Protocols');
+        test.matches(client.extensions, /^permessage-deflate/);
+
+        client.send(
+          JSON.stringify({ msg: 'connect', version: '1', support: ['1'] }),
+          true
+        );
+        const isConnected = frame => JSON.parse(frame.text).msg === 'connected';
+        const frames = await client.waitFor(
+          received => received.some(isConnected),
+          'the answer to a compressed connect message'
+        );
+        test.isTrue(
+          frames.find(isConnected).compressed,
+          'the server must compress what it sends'
+        );
+      } finally {
+        client.close();
+      }
+    }
+  );
+}

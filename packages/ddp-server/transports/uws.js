@@ -89,8 +89,23 @@ export function createUwsTransport() {
         maxBackpressure: 16 * 1024 * 1024,
         maxPayloadLength: uwsPayloadLength * 1024,
         idleTimeout: uwsSocketTimeout,
+        // SERVER_WEBSOCKET_COMPRESSION switches compression on and off here as
+        // it does for SockJS; its permessage-deflate options are SockJS-only.
+        // Every DEDICATED_COMPRESSOR_* becomes DEDICATED_COMPRESSOR_3KB in
+        // uWebSockets.js releases without uNetworking/uWebSockets#1955, which
+        // compresses DDP worse than the shared compressor.
+        compression: options.websocketExtensions().length
+          ? uws.SHARED_COMPRESSOR
+          : uws.DISABLED,
 
         open(socket) {
+          // uWS compresses a message only when the third argument of send()
+          // is true, even on a connection that negotiated permessage-deflate.
+          const send = socket.send;
+          socket.send = function (data) {
+            return send.call(socket, data, false, true);
+          };
+
           // Adapt uWS socket to the interface expected by _onConnection.
           // uWS sockets don't have EventEmitter methods, so we provide them.
           socket.on = function (event, callback) {
