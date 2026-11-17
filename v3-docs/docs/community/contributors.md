@@ -29,9 +29,6 @@ const coreMaintainers = [
   { login: 'vlasky', avatar_url: 'https://github.com/vlasky.png', html_url: 'https://github.com/vlasky', contributions: 0 },
   { login: '9Morello', avatar_url: 'https://github.com/9Morello.png', html_url: 'https://github.com/9Morello', contributions: 0 },
   { login: 'minhna', avatar_url: 'https://github.com/minhna.png', html_url: 'https://github.com/minhna', contributions: 0 },
-]
-
-const communityPackageMaintainers = [
   { login: 'perbergland', avatar_url: 'https://github.com/perbergland.png', html_url: 'https://github.com/perbergland', contributions: 0 },
 ]
 </script>
@@ -56,7 +53,7 @@ Core Maintainers are experienced contributors who actively maintain key areas of
 
 Community Package Maintainers look after community packages that matter to the Meteor ecosystem. See [GOVERNANCE.md](https://github.com/meteor/meteor/blob/devel/GOVERNANCE.md#community-package-maintainer) for the role description.
 
-<Contributors :contributors="communityPackageMaintainers" :show-contributions="false" />
+No members are listed yet — additions are made by pull request against this page.
 
 ## Alumni
 
