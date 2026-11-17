@@ -92,7 +92,12 @@ automatically adds its CI job. The matrix includes `uncategorized`, which
 selects tests that match no named group; its job fails if those tests fail.
 The audit warns about these tests so they can be assigned to a named group.
 
-The `server_runtime` group runs separately from the other `regressions`.
+The `bundling_regressions` group covers source maps, architecture entrypoints,
+legacy dependencies and EJSON, Cordova compilation defaults, and static assets.
+The remaining `regressions` and `server_runtime` run as separate groups.
+This splits the build-heavy suites from the remaining workload; each group uses
+the standard CI test-attempt limit.
+
 `monorepo` includes npm, Yarn, pnpm, symlink fixtures, and the generated pnpm
 skeleton. Accounts tests are selected by file in the `accounts` group and run
 in the [E2E Accounts workflow](../../.github/workflows/e2e-accounts.yml).
