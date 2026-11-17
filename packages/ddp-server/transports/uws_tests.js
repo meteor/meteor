@@ -451,28 +451,33 @@ Tinytest.addAsync(
 
 if (__meteor_runtime_config__.DDP_TRANSPORT === 'uws') {
   Tinytest.addAsync(
-    'ddp-server/uws - DDP messages are compressed in both directions',
+    'ddp-server/uws - SERVER_WEBSOCKET_COMPRESSION controls DDP compression',
     async function (test) {
+      // stream_server.js disables compression only for a falsy JSON value.
+      const setting = process.env.SERVER_WEBSOCKET_COMPRESSION;
+      const enabled = !setting || !!JSON.parse(setting);
+      const pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '';
       const client = await connectRawWebSocket(
         WebApp.httpServer.address().port,
-        '/websocket'
+        `${pathPrefix}/websocket`
       );
       try {
         test.equal(client.status, 'HTTP/1.1 101 Switching Protocols');
-        test.matches(client.extensions, /^permessage-deflate/);
+        test.equal(client.extensions.startsWith('permessage-deflate'), enabled);
 
         client.send(
           JSON.stringify({ msg: 'connect', version: '1', support: ['1'] }),
-          true
+          enabled
         );
         const isConnected = frame => JSON.parse(frame.text).msg === 'connected';
         const frames = await client.waitFor(
           received => received.some(isConnected),
-          'the answer to a compressed connect message'
+          'the answer to the connect message'
         );
-        test.isTrue(
+        test.equal(
           frames.find(isConnected).compressed,
-          'the server must compress what it sends'
+          enabled,
+          'the server must compress what it sends exactly when compression is enabled'
         );
       } finally {
         client.close();
