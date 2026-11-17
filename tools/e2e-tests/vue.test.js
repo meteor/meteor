@@ -34,6 +34,12 @@ describe('Vue App Bundling /', () => {
         // Check for HMR to not be enabled in production-like mode
         await waitForMeteorOutput(allConsoleLogs, /.*HMR.*Updated modules:*/, { negate: true });
       },
+      afterRunBuiltApp: async () => {
+        // Tailwind utility styles must survive the production build
+        await assertStyles('.p-8', {
+          ['padding']: '32px',
+        });
+      },
     }
   }));
 });

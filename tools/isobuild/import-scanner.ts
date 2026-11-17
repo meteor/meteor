@@ -1007,8 +1007,10 @@ export default class ImportScanner {
   ): Promise<Record<string, ImportInfo>> {
     const fileHash = file.hash instanceof Promise ? await file.hash : file.hash;
 
-    // Ignore rspack output files
-    if (rspackHelpers.isRspackOutputFile(file.sourcePath)) {
+    // Legacy Rspack output is recompiled by Meteor and can gain helper imports
+    // that were not present when Rspack generated its external imports.
+    if (rspackHelpers.isRspackOutputFile(file.sourcePath) &&
+        this.bundleArch !== "web.browser.legacy") {
       return {};
     }
 

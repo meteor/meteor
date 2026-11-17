@@ -1,6 +1,36 @@
 import isObject from 'lodash.isobject';
 import times from 'lodash.times';
 import { ObserveMultiplexer } from '../observe_multiplex';
+import { ReplicationMethods } from '../collection/methods_replication';
+
+Tinytest.addAsync('collection - replication keeps prototype fields as data', async test => {
+  const collection = new Mongo.Collection(null);
+  let store;
+  const register = (name, value) => { store = value; return true; };
+  collection._connection = {registerStoreClient: register, registerStoreServer: register};
+  await ReplicationMethods._maybeSetUpReplication.call(collection, 'local-security-test');
+  const marker = 'meteorReplicationPrototypeMarker';
+  try {
+    await store.update({msg: 'added', id: 'safe', fields: {ordinary: 1}});
+    await store.update({msg: 'changed', id: 'safe', fields: JSON.parse('{"__proto__":{}}')});
+    test.isTrue(Object.prototype.hasOwnProperty.call(await collection.findOneAsync('safe'), '__proto__'));
+    await store.update({msg: 'changed', id: 'safe', fields: {[`__proto__.${marker}`]: 2}});
+    test.isFalse(Object.prototype.hasOwnProperty.call(Object.prototype, marker));
+    let doc = await collection.findOneAsync('safe');
+    test.equal(doc.__proto__[marker], 2);
+    await store.update({msg: 'changed', id: 'safe', fields: JSON.parse('{"__proto__":{"kept":true}}')});
+    doc = await collection.findOneAsync('safe');
+    test.equal(Object.getPrototypeOf(doc), Object.prototype);
+    test.isTrue(Object.prototype.hasOwnProperty.call(doc, '__proto__'));
+    test.equal(doc.__proto__, {kept: true});
+    await store.update({msg: 'changed', id: 'safe', fields: {['__proto__']: undefined, ordinary: 3}});
+    doc = await collection.findOneAsync('safe');
+    test.isFalse(Object.prototype.hasOwnProperty.call(doc, '__proto__'));
+    test.equal(doc.ordinary, 3);
+  } finally {
+    delete Object.prototype[marker];
+  }
+});
 
 // This is a magic collection that fails its writes on the server when
 // the selector (or inserted document) contains fail: true.
@@ -1223,40 +1253,34 @@ const setsEqual = function (a, b) {
           await rem({ bar: { $lt: 10 } });
           // State: [ 17:8 18:7 19:6 | ]!
 
-          // XXX the oplog code analyzes the events one by one: one remove after
-          // another. Poll-n-diff code, on the other side, analyzes the batch action
-          // of multiple remove. Because of that difference, expected outputs differ.
-          if (usesOplog) {
-            expectedRemoves = [
-              { removed: docId3 },
-              { removed: docId1 },
-              { removed: docId2 },
-              { removed: docId4 },
-            ];
-            expectedAdds = [
-              { added: docId4 },
-              { added: docId8 },
-              { added: docId7 },
-              { added: docId6 },
-            ];
-
-            test.length(o.output, 8);
-          } else {
-            expectedRemoves = [
-              { removed: docId3 },
-              { removed: docId1 },
-              { removed: docId2 },
-            ];
-            expectedAdds = [
-              { added: docId8 },
-              { added: docId7 },
-              { added: docId6 },
-            ];
-
-            test.length(o.output, 6);
-          }
-
-          test.isTrue(setsEqual(o.output, expectedAdds.concat(expectedRemoves)));
+          // Multi-delete order is not guaranteed. If doc 4 is deleted after it
+          // enters the published set, oplog observers emit a transient add/remove
+          // pair. MongoDB 8 can delete it from the unpublished buffer first.
+          expectedRemoves = [
+            { removed: docId3 },
+            { removed: docId1 },
+            { removed: docId2 },
+          ];
+          expectedAdds = [
+            { added: docId8 },
+            { added: docId7 },
+            { added: docId6 },
+          ];
+          const requiredEvents = expectedAdds.concat(expectedRemoves);
+          const eventsWithTransientDoc = requiredEvents.concat([
+            { added: docId4 },
+            { removed: docId4 },
+          ]);
+          test.isTrue(
+            (o.output.length === 6 && setsEqual(o.output, requiredEvents)) ||
+              (usesOplog && o.output.length === 8 &&
+                setsEqual(o.output, eventsWithTransientDoc)),
+            'unexpected multi-delete callbacks: ' + EJSON.stringify(o.output)
+          );
+          test.length(Object.keys(o.state), 3);
+          test.equal(o.state[docId8], { _id: docId8, foo: 22, bar: 17 });
+          test.equal(o.state[docId7], { _id: docId7, foo: 22, bar: 18 });
+          test.equal(o.state[docId6], { _id: docId6, foo: 22, bar: 19 });
           clearOutput(o);
           testOplogBufferIds([]);
           testSafeAppendToBufferFlag(true);
@@ -4334,38 +4358,61 @@ if (Meteor.isServer) {
   });
 }
 
-Tinytest.addAsync(
+testAsyncMulti(
   'mongo-livedata - maintained isomorphism on collection operations for both client and server',
-  async function (test) {
-    const Collection = new Mongo.Collection(
-      `maintained_col_op_iso${test.runId()}`,
-      { resolverType: 'stub' }
-    );
+  [
+    function (test, expect) {
+      this.collectionName = Random.id();
 
-    await Collection.insertAsync({ _id: 'a' });
-    await Collection.insertAsync({ _id: 'b' });
+      if (Meteor.isClient) {
+        Meteor.call('createInsecureCollection', this.collectionName);
+        Meteor.subscribe('c-' + this.collectionName, expect());
+      }
+    },
+    async function (test) {
+      const Collection = new Mongo.Collection(this.collectionName, {
+        resolverType: 'stub',
+      });
 
-    let items = await Collection.find().fetchAsync();
-    let itemIds = items.map(_item => _item._id);
+      await Collection.insertAsync({ _id: 'a' });
+      await Collection.insertAsync({ _id: 'b' });
 
-    test.equal(itemIds, ['a', 'b']);
+      let items = await Collection.find().fetchAsync();
+      let itemIds = items.map(_item => _item._id);
 
-    await Collection.updateAsync({ _id: 'a' }, { $set: { num: 1 } });
-    await Collection.updateAsync({ _id: 'b' }, { $set: { num: 2 } });
+      test.equal(itemIds, ['a', 'b']);
 
-    if(Meteor.isClient) Meteor._sleepForMs(100); // wait for async operations to complete 
-    items = await Collection.find().fetchAsync();
-    itemIds = items.map(_item => _item.num);
-    
-    test.equal(itemIds, [1, 2]);
+      await Collection.updateAsync({ _id: 'a' }, { $set: { num: 1 } });
+      await Collection.updateAsync({ _id: 'b' }, { $set: { num: 2 } });
 
-    await Collection.removeAsync({ _id: 'a' });
-    await Collection.removeAsync({ _id: 'b' });
+      if (Meteor.isClient) {
+        await waitUntil(async () => {
+          items = await Collection.find().fetchAsync();
+          itemIds = items.map(_item => _item.num);
+          return itemIds.length === 2 && itemIds[0] === 1 && itemIds[1] === 2;
+        }, { description: 'client sees both async updates' });
+      } else {
+        items = await Collection.find().fetchAsync();
+        itemIds = items.map(_item => _item.num);
+      }
 
-    items = await Collection.find().fetchAsync();
+      test.equal(itemIds, [1, 2]);
 
-    test.equal(items, []);
-  },
+      await Collection.removeAsync({ _id: 'a' });
+      await Collection.removeAsync({ _id: 'b' });
+
+      if (Meteor.isClient) {
+        await waitUntil(async () => {
+          items = await Collection.find().fetchAsync();
+          return items.length === 0;
+        }, { description: 'client sees async removals' });
+      } else {
+        items = await Collection.find().fetchAsync();
+      }
+
+      test.equal(items, []);
+    },
+  ],
 );
 
 testAsyncMulti(

@@ -93,6 +93,29 @@ On Cordova, `Meteor.loginWithGoogle` uses the native `Google.signIn` flow (web O
 
 Consult the current Google Sign-In Cordova plugin documentation for the exact per-platform values.
 
+Starting with Meteor 3.6, native Google sign-in verifies that the tokens belong to your application. The access token must be issued to the `clientId` in your Google service configuration or to a client in its optional `additionalClientIds` array. Alternatively, the access token can be accompanied by a Google-issued `idToken` whose audience is one of those accepted clients and whose user matches the access token's Google account.
+
+Configure your native SDK to return an ID token for your web client ID. If your app sends native access tokens without an ID token, list your Android/iOS client IDs in the Google service configuration. For example, in `settings.json`:
+
+```json
+{
+  "packages": {
+    "service-configuration": {
+      "google": {
+        "clientId": "WEB_CLIENT_ID.apps.googleusercontent.com",
+        "secret": "YOUR_CLIENT_SECRET",
+        "additionalClientIds": [
+          "IOS_CLIENT_ID.apps.googleusercontent.com",
+          "ANDROID_CLIENT_ID.apps.googleusercontent.com"
+        ]
+      }
+    }
+  }
+}
+```
+
+Only list client IDs from your own Google Cloud project. These checks apply to the native `googleSignIn` login path; the normal web OAuth configuration is unchanged.
+
 ## A complete example
 
 **1. Configure the OAuth credentials** on the server (for example in `server/main.js`). Google uses `clientId`/`secret`:
