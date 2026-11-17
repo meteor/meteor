@@ -268,14 +268,20 @@ const testSubtree = (value, pattern, collectErrors = false, errors = [], path = 
     };
   }
 
-  // Strings, numbers, and booleans match literally. Goes well with Match.OneOf.
-  if (typeof pattern === 'string' || typeof pattern === 'number' || typeof pattern === 'boolean') {
+  // Strings, numbers, booleans, bigints, and symbols match literally. Goes well with Match.OneOf.
+  if (
+    typeof pattern === 'string' ||
+    typeof pattern === 'number' ||
+    typeof pattern === 'boolean' ||
+    typeof pattern === 'bigint' ||
+    typeof pattern === 'symbol'
+  ) {
     if (value === pattern) {
       return false;
     }
 
     return {
-      message: `Expected ${pattern}, got ${stringForErrorMessage(value)}`,
+      message: `Expected ${String(pattern)}, got ${stringForErrorMessage(value)}`,
       path: '',
     };
   }

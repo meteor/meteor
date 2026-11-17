@@ -178,6 +178,14 @@ Tinytest.add('check - check', test => {
   fails(true, false);
   fails(true, 'true');
   fails('false', false);
+  matches(123n, 123n);
+  fails(123n, 456n);
+  fails(123n, 123);
+  fails(123, 123n);
+  const testSym = Symbol('test');
+  matches(testSym, testSym);
+  fails(testSym, Symbol('test'));
+  fails(testSym, 'test');
   matches('xx', Match.NonEmptyString);
   fails('', Match.NonEmptyString);
   matches(/foo/, RegExp);
@@ -463,6 +471,14 @@ Tinytest.add('check - check throw all errors', test => {
   fails(true, false);
   fails(true, 'true');
   fails('false', false);
+  matches(123n, 123n);
+  fails(123n, 456n);
+  fails(123n, 123);
+  fails(123, 123n);
+  const testSym = Symbol('test');
+  matches(testSym, testSym);
+  fails(testSym, Symbol('test'));
+  fails(testSym, 'test');
 
   matches(/foo/, RegExp);
   fails(/foo/, String);
