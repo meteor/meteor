@@ -1,6 +1,10 @@
 const fs = require('fs');
 const path = require('path');
-const { createIgnoreRegex, createIgnoreGlobConfig } = require("./ignore.js");
+const {
+  createIgnoreGlobConfig,
+  createIgnoreMatcherSource,
+  createIgnoreRegex,
+} = require("./ignore.js");
 
 // Normalize a path to always use forward slashes (POSIX style).
 // Module identifiers in bundled JS must use '/' regardless of OS.
@@ -47,10 +51,11 @@ const generateEagerTestFile = ({
     createIgnoreGlobConfig(ignoreEntries),
     projectDir,
   );
-  // Create regex from meteor ignore entries
-  const excludeMeteorIgnoreRegex = inMeteorIgnoreEntries.length > 0
-    ? createIgnoreRegex(createIgnoreGlobConfig(inMeteorIgnoreEntries))
-    : null;
+  // Build the .meteorignore filter. It is `ignore`-backed rather than a regex
+  // because gitignore's last-match-wins rule cannot be expressed as one, and
+  // collapsing it into one used to drop every `!` pattern — silently loading
+  // zero test files for a sharded run.
+  const meteorIgnoreMatcher = createIgnoreMatcherSource(inMeteorIgnoreEntries);
 
   const prefix = (inPrefix && `${inPrefix}-`) || "";
   const filename = isAppTest
@@ -64,8 +69,9 @@ const generateEagerTestFile = ({
   const content = `${
     globalImportPath ? `import '${toPosix(globalImportPath)}';\n\n` : ""
   }${
-    excludeMeteorIgnoreRegex
-      ? `const MeteorIgnoreRegex = ${excludeMeteorIgnoreRegex.toString()};`
+    meteorIgnoreMatcher
+      ? `import MeteorIgnore from '${toPosix(meteorIgnoreMatcher.modulePath)}';\n\n` +
+        `const MeteorIgnoreMatcher = ${meteorIgnoreMatcher.source}(MeteorIgnore);`
       : ""
   }
 {
@@ -77,9 +83,9 @@ const generateEagerTestFile = ({
   });
   await Promise.all(ctx.keys().filter((k) => {
     ${
-      excludeMeteorIgnoreRegex
+      meteorIgnoreMatcher
         ? `// Only exclude based on *relative* path segments.
-    return !MeteorIgnoreRegex.test(k);`
+    return !MeteorIgnoreMatcher(k);`
         : "return true;"
     }
   }).map(ctx));

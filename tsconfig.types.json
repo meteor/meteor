@@ -6,6 +6,8 @@
       "meteor/meteor": ["./packages/meteor/meteor.native.d.ts"],
       "meteor/mongo": ["./packages/mongo/mongo.native.d.ts"],
       "meteor/ddp": ["./packages/ddp/ddp.native.d.ts"],
+      "meteor/ddp-client": ["./packages/ddp-client/ddp-client.d.ts"],
+      "meteor/ddp-common": ["./packages/ddp-common/ddp-common.d.ts"],
       "meteor/ddp-server": ["./packages/ddp-server/ddp-server.d.ts"],
       "meteor/ejson": ["./packages/ejson/ejson.native.d.ts"],
       "meteor/check": ["./packages/check/check.native.d.ts"],

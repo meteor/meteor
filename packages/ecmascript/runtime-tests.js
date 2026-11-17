@@ -1,7 +1,5 @@
 import { testExport as oyez } from './runtime-tests.js';
 
-const isNode8OrLater = Meteor.isServer && parseInt(process.versions.node) >= 8;
-
 Tinytest.add('ecmascript - runtime - template literals', test => {
   function dump(strings, ...expressions) {
     const copy = Object.create(null);
@@ -148,7 +146,6 @@ if (Meteor.isServer) {
   // the server.  (Technically they just need a working
   // Object.defineProperty, found in IE9+ and all modern environments.)
   Tinytest.add('ecmascript - runtime - classes - getters/setters', test => {
-    // uses `babelHelpers.createClass`
     class Foo {
       get two() {
         return 1 + 1;

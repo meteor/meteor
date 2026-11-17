@@ -1,6 +1,69 @@
 const selftest = require("../tool-testing/selftest.js");
 const Sandbox = selftest.Sandbox;
 
+selftest.define(".meteorignore - root and legacy environment patterns", async function () {
+  const s = new Sandbox();
+  await s.init();
+  await s.createApp("myapp", "meteor-ignore");
+  s.cd("myapp");
+  s.set("METEOR_IGNORE_ROOT", "test/** /*.hidden.js **/node_modules/**");
+  s.set("METEOR_IGNORE", "legacy/** /*.legacy.js");
+
+  s.mkdir("test");
+  s.mkdir("_build");
+  s.mkdir("_build/test");
+  s.mkdir("legacy");
+  s.mkdir("_build/test/legacy");
+  s.mkdir("_build/test/node_modules");
+  s.mkdir("_build/test/node_modules/ignore-scope-dependency");
+  s.write("_build/test/.meteorignore", "ignored.js\n");
+
+  const filesToLoad = [
+    // Root-scoped test/** only excludes the app's top-level test/ contents.
+    "_build/test/included.js",
+    // Root-scoped /*.hidden.js only excludes files at the app root.
+    "_build/test/nested.hidden.js",
+  ];
+  const filesToIgnore = [
+    // METEOR_IGNORE_ROOT matches these paths from the app root.
+    "test/excluded.js",
+    "root.hidden.js",
+    // The nested .meteorignore matches relative to _build/test/.
+    "_build/test/ignored.js",
+    // Legacy METEOR_IGNORE rules match at both root and nested directories.
+    "legacy/excluded.js",
+    "_build/test/legacy/excluded.js",
+    "root.legacy.js",
+    "_build/test/nested.legacy.js",
+  ];
+  for (const file of filesToLoad) {
+    s.write(file, 'require("/imports/registry.js").add(module.id);');
+  }
+  for (const file of filesToIgnore) {
+    s.write(file, `throw new Error("Unexpectedly loaded: ${file}");`);
+  }
+
+  // Keep node_modules discoverable so imports resolve, while excluding its
+  // contents from the eager source scan (the invalid JSX must never be compiled).
+  s.write("_build/test/node_modules/ignore-scope-dependency/package.json",
+    JSON.stringify({ name: "ignore-scope-dependency", version: "1.0.0", main: "index.js" }));
+  s.write("_build/test/node_modules/ignore-scope-dependency/index.js", 'exports.value = "nested dependency";');
+  s.write("_build/test/node_modules/ignore-scope-dependency/excluded.jsx", "this is not valid JavaScript {{");
+  s.write("_build/test/uses-dependency.js", [
+    'if (require("ignore-scope-dependency").value !== "nested dependency") throw new Error("nested dependency was not resolved");',
+    'require("/imports/registry.js").add(module.id);',
+  ].join("\n"));
+
+  const run = s.run();
+  run.waitSecs(30);
+  for (const file of filesToLoad) {
+    await run.match(`/${file}`);
+  }
+  await run.match("/_build/test/uses-dependency.js");
+  await run.match("App running at");
+  await run.stop();
+});
+
 selftest.define(".meteorignore", async function () {
   const s = new Sandbox();
   await s.init();

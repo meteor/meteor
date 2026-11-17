@@ -470,6 +470,9 @@ export async function ensurePackageDependencies(params = {}) {
     devOk = await installNpmDependency(specs, {
       cwd,
       dev: true,
+      // Cold builds can load the plugin with NODE_ENV=production. Build tools
+      // must still be present on disk, not just saved in devDependencies.
+      includeDev: true,
       packageManager,
       legacyPeerDeps,
     });
@@ -486,6 +489,8 @@ export async function ensurePackageDependencies(params = {}) {
     regularOk = await installNpmDependency(specs, {
       cwd,
       dev: false,
+      // A subsequent runtime install must not prune those build tools.
+      includeDev: true,
       packageManager,
       legacyPeerDeps,
     });

@@ -121,17 +121,18 @@ export const ReplicationMethods = {
             var modifier = {};
             keys.forEach(key => {
               const value = msg.fields[key];
-              if (EJSON.equals(doc[key], value)) {
+              const current = Object.prototype.hasOwnProperty.call(doc, key) ? doc[key] : undefined;
+              if (EJSON.equals(current, value)) {
                 return;
               }
               if (typeof value === 'undefined') {
                 if (!modifier.$unset) {
-                  modifier.$unset = {};
+                  modifier.$unset = Object.create(null);
                 }
                 modifier.$unset[key] = 1;
               } else {
                 if (!modifier.$set) {
-                  modifier.$set = {};
+                  modifier.$set = Object.create(null);
                 }
                 modifier.$set[key] = value;
               }
@@ -202,17 +203,18 @@ export const ReplicationMethods = {
             var modifier = {};
             keys.forEach(key => {
               const value = msg.fields[key];
-              if (EJSON.equals(doc[key], value)) {
+              const current = Object.prototype.hasOwnProperty.call(doc, key) ? doc[key] : undefined;
+              if (EJSON.equals(current, value)) {
                 return;
               }
               if (typeof value === 'undefined') {
                 if (!modifier.$unset) {
-                  modifier.$unset = {};
+                  modifier.$unset = Object.create(null);
                 }
                 modifier.$unset[key] = 1;
               } else {
                 if (!modifier.$set) {
-                  modifier.$set = {};
+                  modifier.$set = Object.create(null);
                 }
                 modifier.$set[key] = value;
               }

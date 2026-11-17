@@ -16,3 +16,4 @@ Weibo.requestCredential(() => {}, () => {});
 
 expectTypeOf(Weibo.retrieveCredential).parameters.toEqualTypeOf<[string, (string | null)?]>();
 expectTypeOf(Weibo.retrieveCredential).returns.toMatchTypeOf<Promise<unknown>>();
+expectTypeOf(Weibo.retrieveCredential).returns.resolves.extract<Error>().toEqualTypeOf<Error>();

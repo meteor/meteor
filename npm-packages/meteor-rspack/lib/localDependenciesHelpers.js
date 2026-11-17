@@ -77,7 +77,7 @@ function extractLocalDependencies(configFilePath) {
     // Remove duplicates
     return [...new Set(dependencies)];
   } catch (error) {
-    console.warn('[Rspack Cache] Failed to parse config dependencies:', error.message);
+    console.warn('[Rspack Cache] Failed to parse config dependencies:', error);
     return [];
   }
 }

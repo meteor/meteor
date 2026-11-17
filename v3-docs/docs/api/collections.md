@@ -561,7 +561,7 @@ While `allow` and `deny` make it easy to get started building an app, it's
 harder than it seems to write secure `allow` and `deny` rules. We recommend
 that developers avoid `allow` and `deny`, and switch directly to custom methods
 once they are ready to remove `insecure` mode from their app. See
-[the Meteor Guide on security](/tutorials/security/security#allow-deny)
+[the Meteor Guide on security](/tutorials/security/security#avoid-allow-deny)
 for more details.
 :::
 
@@ -698,7 +698,7 @@ While `allow` and `deny` make it easy to get started building an app, it's
 harder than it seems to write secure `allow` and `deny` rules. We recommend
 that developers avoid `allow` and `deny`, and switch directly to custom methods
 once they are ready to remove `insecure` mode from their app. See
-[the Meteor Guide on security](/tutorials/security/security#allow-deny)
+[the Meteor Guide on security](/tutorials/security/security#avoid-allow-deny)
 for more details.
 :::
 
