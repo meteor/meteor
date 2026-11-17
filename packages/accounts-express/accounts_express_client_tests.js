@@ -1,6 +1,144 @@
 import { Meteor } from "meteor/meteor";
 import { Accounts } from "meteor/accounts-base";
 import { Tinytest } from "meteor/tinytest";
+import { createAuthFetch } from "meteor/accounts-express";
+
+Tinytest.addAsync("accounts-express - client credentials stay on app origins", async (test) => {
+  const savedToken = Accounts._storedLoginToken;
+  const savedCookies = Accounts._useHttpOnlyCookies;
+  const savedAbsoluteUrl = Meteor.absoluteUrl;
+  const base = document.createElement("base");
+  let reads = 0;
+  let sent;
+  const wrapped = createAuthFetch(async (input, init) => {
+    sent = new Request(input, init);
+    return sent;
+  });
+  try {
+    Accounts._storedLoginToken = () => {
+      reads++;
+      return "synthetic-token";
+    };
+    Accounts._useHttpOnlyCookies = true;
+    const app = window.location.origin;
+    const otherPort = new URL(app);
+    otherPort.port = String(Number(otherPort.port || 80) + 1);
+    const otherScheme = new URL(app);
+    otherScheme.protocol = otherScheme.protocol === "https:" ? "http:" : "https:";
+    Meteor.absoluteUrl = () => "https://meteor-root.invalid/";
+    for (const url of [
+      "https://outside.invalid/api",
+      "//outside.invalid/api",
+      "http://127.0.0.1.outside.invalid/api",
+      `${otherPort.origin}/api`,
+      `${otherScheme.origin}/api`,
+      "https://meteor-root.invalid:8443/api",
+      "http://meteor-root.invalid/api",
+      new URL("https://outside.invalid/api"),
+      new Request("https://outside.invalid/api"),
+    ]) {
+      reads = 0;
+      await wrapped(url, { auth: true });
+      test.isFalse(sent.headers.has("Authorization"));
+      test.notEqual(sent.credentials, "include");
+      test.equal(reads, 0);
+    }
+    for (const url of [
+      "/api",
+      `${app}/api`,
+      "https://meteor-root.invalid/api",
+      new Request("https://meteor-root.invalid/api"),
+    ]) {
+      await wrapped(url, { auth: true });
+      test.equal(sent.headers.get("Authorization"), "Bearer synthetic-token");
+      test.equal(sent.credentials, "include");
+    }
+    // A cross-origin <base> changes where a relative fetch goes, not trust.
+    base.href = "https://outside.invalid/";
+    document.head.prepend(base);
+    await wrapped("/api", { auth: true });
+    test.equal(sent.url, "https://outside.invalid/api");
+    test.isFalse(sent.headers.has("Authorization"));
+    base.remove();
+
+    const request = new Request(`${app}/api`, {
+      method: "POST",
+      body: "request-body",
+      credentials: "omit",
+      headers: { Authorization: "Bearer explicit", "X-Control": "kept" },
+    });
+    await wrapped(request, { auth: true });
+    test.equal(sent.headers.get("Authorization"), "Bearer explicit");
+    test.equal(sent.headers.get("X-Control"), "kept");
+    test.equal(sent.credentials, "omit");
+    test.equal(await sent.text(), "request-body");
+    const form = new FormData();
+    form.set("control", "kept");
+    await wrapped(`${app}/upload`, { auth: true, method: "POST", body: form });
+    const boundary = sent.headers.get("Content-Type").split("boundary=")[1];
+    test.equal((await sent.text()).split("\r\n")[0], `--${boundary}`);
+    await wrapped("https://outside.invalid/api", {
+      auth: true,
+      credentials: "include",
+      headers: { Authorization: "Bearer explicit" },
+    });
+    test.equal(sent.headers.get("Authorization"), "Bearer explicit");
+    test.equal(sent.credentials, "include");
+    await wrapped(`${app}/api`, { auth: false, token: "ignored" });
+    test.isFalse(sent.headers.has("Authorization"));
+  } finally {
+    base.remove();
+    Accounts._storedLoginToken = savedToken;
+    Accounts._useHttpOnlyCookies = savedCookies;
+    Meteor.absoluteUrl = savedAbsoluteUrl;
+  }
+});
+
+Tinytest.addAsync(
+  "accounts-express - client credentials reach configured API origins",
+  async (test) => {
+    const savedToken = Accounts._storedLoginToken;
+    const savedAbsoluteUrl = Meteor.absoluteUrl;
+    const savedPackages = Meteor.settings.public.packages;
+    let sent;
+    const wrapped = createAuthFetch(async (input, init) => {
+      sent = new Request(input, init);
+      return sent;
+    });
+    try {
+      Accounts._storedLoginToken = () => "synthetic-token";
+      Meteor.settings.public.packages = {
+        ...savedPackages,
+        "accounts-express": {
+          authFetchAllowedOrigins: ["https://api.example.invalid", "not an origin"],
+        },
+      };
+      await wrapped("https://api.example.invalid/v1/me", { auth: true });
+      test.equal(sent.headers.get("Authorization"), "Bearer synthetic-token");
+      for (const url of [
+        "https://api.example.invalid:8443/v1/me",
+        "http://api.example.invalid/v1/me",
+        "https://example.invalid/v1/me",
+        "https://api.example.invalid.outside.invalid/v1/me",
+      ]) {
+        await wrapped(url, { auth: true });
+        test.isFalse(sent.headers.has("Authorization"), url);
+      }
+
+      Meteor.absoluteUrl = () => {
+        throw new Error("Must pass options.rootUrl or set ROOT_URL");
+      };
+      await wrapped("/api", { auth: true });
+      test.equal(sent.headers.get("Authorization"), "Bearer synthetic-token");
+      await wrapped("https://outside.invalid/api", { auth: true });
+      test.isFalse(sent.headers.has("Authorization"));
+    } finally {
+      Accounts._storedLoginToken = savedToken;
+      Meteor.absoluteUrl = savedAbsoluteUrl;
+      Meteor.settings.public.packages = savedPackages;
+    }
+  },
+);
 
 // Only run these tests on the client
 if (Meteor.isClient) {
@@ -494,4 +632,39 @@ if (Meteor.isClient) {
       Meteor.logout();
     }
   });
+
+  Tinytest.addAsync(
+    "accounts-express - fetch entry points keep the token off other origins",
+    async (test) => {
+      const originalFetch = window.fetch;
+      const savedToken = Accounts._storedLoginToken;
+      const sent = [];
+
+      try {
+        Accounts._storedLoginToken = () => "synthetic-token";
+        window.fetch = async (input, init) => {
+          const request = new Request(input, init);
+          sent.push(`${request.url} ${request.headers.get("Authorization")}`);
+          return mockResponse();
+        };
+
+        const outside = "https://outside.invalid/capture";
+        await Meteor.fetch(outside, { auth: true });
+        await packageFetch(outside, { auth: true });
+        await aeFetch(outside);
+        await aeFetch(outside, { auth: false });
+        await aeFetch(testUrl);
+        test.equal(sent, [
+          `${outside} null`,
+          `${outside} null`,
+          `${outside} null`,
+          `${outside} null`,
+          `${testUrl} Bearer synthetic-token`,
+        ]);
+      } finally {
+        window.fetch = originalFetch;
+        Accounts._storedLoginToken = savedToken;
+      }
+    },
+  );
 }

@@ -9,7 +9,66 @@ This is a complete history of changes for Meteor releases.
 [//]: # (If you want to change something in this file)
 
 [//]: # (go to meteor/v3-docs/docs/generators/changelog/versions)
-## v3.6.0, 2026-10-28
+## v3.6.1, 2026-11-12
+
+### Highlights
+
+- Update Node.js to 26.13.1, preserving this release line’s Node major, with the [November 11 security fixes](https://nodejs.org/en/blog/vulnerability/november-2026-security-releases).
+- Harden archive extraction, including symlink containment, and update the dev bundle to tar-fs 2.1.5.
+- Expire email verification tokens, restrict client-side OAuth configuration in production, and reject malformed DDP messages without stalling connections.
+- Fall back to MongoDB polling for selectors that cannot be safely re-evaluated locally, and preserve top-level `__proto__` data in oplog conversion.
+- Prevent credential leakage through the HMR server and remove deployment settings from the legacy deployment information URL.
+- Update the Cordova webapp plugin to reject unsafe asset paths and update the HTTP query parser.
+- Update the npm installer dependencies and protect its JavaScript extraction fallback against paths and links escaping the installation directory.
+- Restrict automatic accounts-express credential forwarding to trusted origins.
+
+#### Breaking Changes
+
+No general API removals. Security restrictions on previously unsafe behavior are described in Migration Steps.
+
+#### Internal API changes
+
+N/A
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+meteor update --release 3.6.1
+```
+
+- Email verification tokens now expire after three days. Configure `emailVerificationTokenExpirationInDays` or `emailVerificationTokenExpiration` through `Accounts.config` on the server when a different lifetime is required.
+- Configure OAuth services on the server or through settings in production. Client calls to `configureLoginService` require explicit server opt-in with `allowClientServiceConfiguration`.
+- Queries using selectors that cannot be safely matched locally may use polling; monitor query load after updating.
+- Unsafe archive or Cordova asset paths are rejected. Keep assets and extraction links within their intended directories.
+- For automatic authentication to a separate trusted API origin, configure `Meteor.settings.public.packages["accounts-express"].authFetchAllowedOrigins`. Explicit Authorization headers remain supported.
+
+#### Bumped Meteor Packages
+
+- accounts-base@3.4.1
+- accounts-express@1.0.1
+- accounts-password@3.3.3
+- ddp-server@3.6.1
+- minimongo@2.2.2
+- mongo@2.6.1
+- webapp@2.4.1
+- meteor-tool@3.6.1
+
+#### Bumped NPM Packages
+
+- cordova-plugin-meteor-webapp@2.0.5
+- qs@6.16.1
+- tar-fs@2.1.5 (dev bundle)
+- tar@7.5.23 (npm installer)
+- tmp@0.2.7 (npm installer)
+- rimraf@6.1.4 (npm installer)
+
+#### Special thanks to
+
+- [@Grubba27](https://github.com/Grubba27)
+- [@italojs](https://github.com/italojs)
+## v3.6.0, 2026-11-10
 
 ### Highlights
 
@@ -17,14 +76,14 @@ This is a complete history of changes for Meteor releases.
 
 - **Build apps with Rspack 2**, [PR#14360](https://github.com/meteor/meteor/pull/14360).
   - ⚡ Apps using the `rspack` package now require Rspack 2.2.7 or newer. When automatic dependency installation is enabled, Meteor installs the required build dependencies for you.
-  - 📦 Update Meteor’s Rspack integration (`@meteorjs/rspack`) to `3.0.0-rc.2` for compatibility with Rspack 2, including a fix for build errors in TypeScript projects that re-export types.
+  - 📦 Update Meteor’s Rspack integration (`@meteorjs/rspack`) to `3.0.0` for compatibility with Rspack 2, including a fix for build errors in TypeScript projects that re-export types.
   - ⚛️ New React apps start with React 19.2. The Rspack integration supports React Compiler and keeps React Refresh working with Rspack 2 so component edits can appear without a full page reload.
   - 🔁 Existing Rspack 1 apps can upgrade through Meteor’s automatic dependency installation, including apps whose older npm lockfiles would otherwise block the upgrade.
   - 🧪 Hot module replacement (HMR) updates code during development without a full page reload. Its runtime is now included only when needed for `meteor run`, keeping it out of production builds and native app bundles.
 
   These changes address the Rspack 2 compatibility and upgrade behavior reported in [#14368](https://github.com/meteor/meteor/issues/14368), [#14652](https://github.com/meteor/meteor/issues/14652), [#14310](https://github.com/meteor/meteor/issues/14310).
 
-- **Node.js 26:** Meteor apps and build tools now run on Node.js 26.12.1 with npm 11.20.0, [PR#14412](https://github.com/meteor/meteor/pull/14412), [PR#14786](https://github.com/meteor/meteor/pull/14786), [PR#14862](https://github.com/meteor/meteor/pull/14862).
+- **Node.js 26:** Meteor apps and build tools now run on Node.js 26.13.0 with npm 11.20.0, [PR#14412](https://github.com/meteor/meteor/pull/14412), [PR#14786](https://github.com/meteor/meteor/pull/14786), [PR#14862](https://github.com/meteor/meteor/pull/14862), [PR#14884](https://github.com/meteor/meteor/pull/14884).
 - **MongoDB 8:** local development now uses MongoDB 8.0.29 with official MongoDB binaries. Review the platform requirements and data migration steps below before updating, [PR#14663](https://github.com/meteor/meteor/pull/14663).
 
 #### Features
@@ -109,6 +168,19 @@ This is a complete history of changes for Meteor releases.
 
 See [all merged PRs for Meteor 3.6](https://github.com/meteor/meteor/pulls?q=is%3Apr+is%3Amerged+base%3Arelease-3.6)
 
+#### Meteor Agent Skills
+
+This Meteor release was tested with [Agent Skills v1.1.0](https://github.com/meteor/agent-skills/releases/tag/v1.1.0).
+
+Install or update Meteor Agent Skills with Node.js 22.20.0 or later in the installation shell:
+
+```bash
+npx skills add 'meteor/agent-skills#v1.1.0'
+```
+
+See the [Meteor Agent Skills guide](https://docs.meteor.com/ai/agent-skills) for more
+installation options, including the older-Node installer fallback.
+
 #### Breaking Changes
 
 - **Native Google and Facebook sign-in tokens must belong to your application.** For Google Sign-In SDKs, send an ID token for an accepted client or list your own native OAuth client IDs in the Google service configuration's `additionalClientIds`. Facebook native tokens must be valid for the configured Facebook app. Web OAuth configuration is unchanged.
@@ -117,9 +189,9 @@ See [all merged PRs for Meteor 3.6](https://github.com/meteor/meteor/pulls?q=is%
 - **Existing local databases need preparation.** Before opening MongoDB 7 data with the bundled MongoDB 8, set its feature compatibility version (FCV) to `7.0` while still running MongoDB 7. External databases configured through `MONGO_URL` are upgraded separately.
 - **Linux requirements have changed for the local database.** The bundled MongoDB needs glibc 2.34+ on x86_64 or 2.35+ on ARM64, plus `libcurl.so.4`, `libssl.so.3`, and `libcrypto.so.3`, [PR#14663](https://github.com/meteor/meteor/pull/14663).
 - **The local database requires Windows 11 or Windows Server 2022 (x64).** Windows 10, Windows Server 2019, and earlier versions are no longer supported by the bundled MongoDB. See [MongoDB’s platform requirements](https://www.mongodb.com/docs/v8.0/tutorial/install-mongodb-on-windows/#platform-support), [PR#14663](https://github.com/meteor/meteor/pull/14663).
-- **Meteor now uses Node.js 26.12.1 and npm 11.20.0.** Check your app and native npm dependencies against the new runtime before deploying.
-- **Apps using `rspack` now need Rspack 2.** Required versions are `@rspack/core` and `@rspack/cli` 2.2.7+, `@rspack/dev-server` 2.2.1+, and `@meteorjs/rspack` 3.0.0-rc.2. Meteor installs them automatically when that setting is enabled. Review custom configurations against the [Rspack 1.x migration guide](https://rspack.rs/guide/migration/rspack_1.x).
-- **The npm Rspack integration has new dependencies.** `@meteorjs/rspack@3.0.0-rc.2` uses `rspack-merge` instead of `webpack-merge` and declares Rspack 2.2.0 peer dependencies. Meteor’s required versions are listed above.
+- **Meteor now uses Node.js 26.13.0 and npm 11.20.0.** Check your app and native npm dependencies against the new runtime before deploying.
+- **Apps using `rspack` now need Rspack 2.** Required versions are `@rspack/core` and `@rspack/cli` 2.2.7+, `@rspack/dev-server` 2.2.1+, and `@meteorjs/rspack` 3.0.0. Meteor installs them automatically when that setting is enabled. Review custom configurations against the [Rspack 1.x migration guide](https://rspack.rs/guide/migration/rspack_1.x).
+- **The npm Rspack integration has new dependencies.** `@meteorjs/rspack@3.0.0` uses `rspack-merge` instead of `webpack-merge` and declares Rspack 2.2.0 peer dependencies. Meteor’s required versions are listed above.
 - **HttpOnly login cookies have stricter requirements.** Enable `useHttpOnlyCookies` on the server. Cookie requests must come from the app’s origin, and `/set` requires JSON with a valid, unexpired login token. `SameSite=Strict` means the cookie is not sent on an initial navigation from another site.
 - **Custom passwordless login calls are validated more strictly.** Calls to `requestLoginTokenForUser` may contain only `selector`, `userData`, and `options` at the top level. The selector must contain exactly one non-empty `id`, `username`, or `email`. Handle validation errors and `too-many-requests` responses.
 - **Custom passwordless user-token flows now enforce 2FA and single use.** Tokens supplied through `Accounts.onCreateLoginToken` require a valid 2FA code when enabled and cannot be reused after consumption.
@@ -140,7 +212,7 @@ See [all merged PRs for Meteor 3.6](https://github.com/meteor/meteor/pulls?q=is%
 **Before updating, prepare your local database:** back up existing data and set MongoDB 7's FCV to `7.0` while still running MongoDB 7. Follow the [MongoDB upgrade prerequisites](https://www.mongodb.com/docs/v8.0/release-notes/8.0-upgrade-replica-set/#prerequisites). External databases configured through `MONGO_URL` are not upgraded by Meteor. Check the [installation requirements](/about/install#prereqs-os) as well. Then update:
 
 ```bash
-meteor update --release 3.6-rc.1
+meteor update --release 3.6
 ```
 
 Update the Meteor release to receive the complete security fixes. A package-only update on an older release does not include the new EJSON minor version and its companion Mongo and Minimongo fixes.
@@ -160,97 +232,97 @@ Update the Meteor release to receive the complete security fixes. A package-only
 
 #### Bumped Meteor Packages
 
-- accounts-2fa@3.1.1-rc360.1
-- accounts-base@3.4.0-rc360.1
-- accounts-facebook@1.3.5-rc360.1
-- accounts-github@1.5.2-rc360.1
-- accounts-google@1.4.2-rc360.1
-- accounts-meetup@1.5.2-rc360.1
-- accounts-meteor-developer@1.5.2-rc360.1
-- accounts-oauth@1.4.8-rc360.1
-- accounts-password@3.3.2-rc360.1
-- accounts-passwordless@3.1.2-rc360.1
-- accounts-twitter@1.5.3-rc360.1
-- accounts-weibo@1.4.2-rc360.1
-- allow-deny@2.1.2-rc360.1
-- autoupdate@2.0.2-rc360.1
-- babel-compiler@7.15.2-rc360.1
-- base64@1.0.15-rc360.1
-- binary-heap@1.0.14-rc360.1
-- boilerplate-generator@2.2.0-rc360.1
-- browser-policy-common@1.0.14-rc360.1
-- callback-hook@1.8.1-rc360.1
-- check@1.5.1-rc360.1
-- ddp@1.4.3-rc360.1
-- ddp-client@3.4.2-rc360.1
-- ddp-common@1.4.6-rc360.1
-- ddp-rate-limiter@1.3.1-rc360.1
-- ddp-server@3.6.0-rc360.1
-- diff-sequence@1.2.1-rc360.1
-- dynamic-import@0.8.1-rc360.1
-- ecmascript@0.19.2-rc360.1
-- ejson@1.4.1-rc360.1
-- email@3.2.1-rc360.1
-- facebook-oauth@1.12.1-rc360.1
-- facts-base@1.0.3-rc360.1
-- facts-ui@1.0.3-rc360.1
-- fetch@0.2.1-rc360.1
-- force-ssl-common@1.1.2-rc360.1
-- geojson-utils@1.0.13-rc360.1
-- github-oauth@1.4.3-rc360.1
-- google-oauth@1.5.1-rc360.1
-- hot-module-replacement@0.6.1-rc360.1
-- id-map@1.2.1-rc360.1
-- instrumentation@0.0.1-rc360.1
-- inter-process-messaging@0.1.4-rc360.1
-- logging@1.3.7-rc360.1
-- meetup-oauth@1.1.4-rc360.1
-- meteor@2.3.2-rc360.1
-- meteor-developer-oauth@1.3.4-rc360.1
-- meteor-tool@3.6.0-rc.1
-- minifier-js@3.3.2-rc360.1
-- minimongo@2.2.1-rc360.1
-- modern-browsers@0.2.4-rc360.1
-- mongo@2.6.0-rc360.1
-- mongo-id@1.0.10-rc360.1
-- npm-mongo@6.18.1-rc360.1
-- oauth@3.0.5-rc360.1
-- oauth-encryption@1.3.4-rc360.1
-- oauth1@1.5.4-rc360.1
-- ordered-dict@1.2.1-rc360.1
-- promise@1.0.1-rc360.1
-- random@1.2.3-rc360.1
-- rate-limit@1.2.1-rc360.1
-- reactive-dict@1.3.3-rc360.1
-- reload@1.3.3-rc360.1
-- retry@1.1.2-rc360.1
-- roles@1.1.1-rc360.1
-- routepolicy@1.1.3-rc360.1
-- rspack@1.4.0-rc360.1
-- server-render@0.4.5-rc360.1
-- service-configuration@1.3.6-rc360.1
-- session@1.2.4-rc360.1
-- sha@1.0.11-rc360.1
-- shell-server@0.7.2-rc360.1
-- socket-stream-client@0.7.2-rc360.1
-- standard-minifier-js@3.3.0-rc360.1
-- test-in-browser@1.6.2-rc360.1
-- test-in-console@2.2.0-rc360.1
-- tools-core@1.4.0-rc360.1
-- tracker@1.3.5-rc360.1
-- twitter-oauth@1.3.5-rc360.1
-- typescript@5.11.2-rc360.1
-- url@1.3.7-rc360.1
-- webapp@2.4.0-rc360.1
-- webapp-hashing@1.1.3-rc360.1
-- weibo-oauth@1.3.4-rc360.1
+- accounts-2fa@3.1.1
+- accounts-base@3.4.0
+- accounts-facebook@1.3.5
+- accounts-github@1.5.2
+- accounts-google@1.4.2
+- accounts-meetup@1.5.2
+- accounts-meteor-developer@1.5.2
+- accounts-oauth@1.4.8
+- accounts-password@3.3.2
+- accounts-passwordless@3.1.2
+- accounts-twitter@1.5.3
+- accounts-weibo@1.4.2
+- allow-deny@2.1.2
+- autoupdate@2.0.2
+- babel-compiler@7.15.2
+- base64@1.0.15
+- binary-heap@1.0.14
+- boilerplate-generator@2.2.0
+- browser-policy-common@1.0.14
+- callback-hook@1.8.1
+- check@1.5.1
+- ddp@1.4.3
+- ddp-client@3.4.2
+- ddp-common@1.4.6
+- ddp-rate-limiter@1.3.1
+- ddp-server@3.6.0
+- diff-sequence@1.2.1
+- dynamic-import@0.8.1
+- ecmascript@0.19.2
+- ejson@1.4.1
+- email@3.2.1
+- facebook-oauth@1.12.1
+- facts-base@1.0.3
+- facts-ui@1.0.3
+- fetch@0.2.1
+- force-ssl-common@1.1.2
+- geojson-utils@1.0.13
+- github-oauth@1.4.3
+- google-oauth@1.5.1
+- hot-module-replacement@0.6.1
+- id-map@1.2.1
+- instrumentation@0.0.1
+- inter-process-messaging@0.1.4
+- logging@1.3.7
+- meetup-oauth@1.1.4
+- meteor@2.3.2
+- meteor-developer-oauth@1.3.4
+- meteor-tool@3.6.0
+- minifier-js@3.3.2
+- minimongo@2.2.1
+- modern-browsers@0.2.4
+- mongo@2.6.0
+- mongo-id@1.0.10
+- npm-mongo@6.18.1
+- oauth@3.0.5
+- oauth-encryption@1.3.4
+- oauth1@1.5.4
+- ordered-dict@1.2.1
+- promise@1.0.1
+- random@1.2.3
+- rate-limit@1.2.1
+- reactive-dict@1.3.3
+- reload@1.3.3
+- retry@1.1.2
+- roles@1.1.1
+- routepolicy@1.1.3
+- rspack@1.4.0
+- server-render@0.4.5
+- service-configuration@1.3.6
+- session@1.2.4
+- sha@1.0.11
+- shell-server@0.7.2
+- socket-stream-client@0.7.2
+- standard-minifier-js@3.3.0
+- test-in-browser@1.6.2
+- test-in-console@2.2.0
+- tools-core@1.4.0
+- tracker@1.3.5
+- twitter-oauth@1.3.5
+- typescript@5.11.2
+- url@1.3.7
+- webapp@2.4.0
+- webapp-hashing@1.1.3
+- weibo-oauth@1.3.4
 
 #### Bumped NPM Packages
 
 - compression@1.8.2
 - body-parser@1.20.9
-- @meteorjs/babel@7.20.2-rc.1
-- @meteorjs/rspack@3.0.0-rc.2
+- @meteorjs/babel@7.20.2
+- @meteorjs/rspack@3.0.0
 - @meteorjs/swc-core@1.16.2
 
 #### Special thanks to

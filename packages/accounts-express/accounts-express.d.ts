@@ -1,5 +1,5 @@
 export interface MeteorFetchOptions extends RequestInit {
-  /** Set to true to attach the user's login token. Default: false for Meteor.fetch and meteor/fetch; true for fetch from meteor/accounts-express. */
+  /** Set to true to attach the user's login token. Default: false for Meteor.fetch and meteor/fetch; true for fetch from meteor/accounts-express. On the client the token is only sent to the page origin, the ROOT_URL origin, and origins listed in Meteor.settings.public.packages["accounts-express"].authFetchAllowedOrigins. */
   auth?: boolean;
   /** Explicit token to use. Server only, ignored on the client. Implies auth: true unless auth: false is set explicitly. */
   token?: string;
