@@ -1,5 +1,6 @@
 var fs = require("fs");
 var path = require("path");
+const { pathToFileURL } = require("url");
 var sourcemap_support = require('source-map-support');
 
 var bootUtils = require('./boot-utils.js');
@@ -395,10 +396,6 @@ const loadServerBundles = Profile("Load server bundles", async function () {
       wrapParts.push("," + key);
     });
 
-    // \n is necessary in case final line is a //-comment
-    wrapParts.push("){", code, "\n})");
-    const wrapped = wrapParts.join("");
-
     // It is safer to use the absolute path when source map is present as
     // different tooling, such as node-inspector, can get confused on relative
     // urls.
@@ -410,6 +407,17 @@ const loadServerBundles = Profile("Load server bundles", async function () {
 
     const scriptPath =
         parsedSourceMaps[absoluteFilePath] ? absoluteFilePath : fileInfoOSPath;
+
+    // \n is necessary in case final line is a //-comment
+    // The sourceURL pragma improves source attribution in V8 profilers
+    // and debugging contexts for dynamically evaluated code. An absolute
+    // path is written as a file URL, because a relative sourceMappingURL in
+    // the file resolves against the sourceURL, and a bare path is not a URL.
+    const sourceURL = path.isAbsolute(scriptPath)
+      ? pathToFileURL(scriptPath).href
+      : scriptPath;
+    wrapParts.push("){", code, "\n//# sourceURL=" + sourceURL + "\n})");
+    const wrapped = wrapParts.join("");
 
     const func = require('vm').runInThisContext(wrapped, {
       filename: scriptPath,
