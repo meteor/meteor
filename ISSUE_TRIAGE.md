@@ -6,7 +6,7 @@ Issues waiting for triage carry `status: needs-triage`, preset by the bug report
 
 We would love to have more contributors who are willing to help out with triaging issues. You can begin by helping issue requesters create good reproductions and by confirming those reproductions on your own machine. It won't be long before the core maintainers notice your work and ask whether you'd like to be promoted to an issue maintainer.
 
-- [Issue lifecycle](#issue-lifecycle)
+- [Issue lifecycle](#lifecycle)
   - [Bugs](#bugs)
   - [Help questions](#help-questions)
   - [Feature requests](#feature-requests)

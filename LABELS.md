@@ -1,6 +1,6 @@
 ## Labels
 
-Labels are defined in [`.github/labels.yml`](.github/labels.yml) and applied to the repository by the [Labels workflow](.github/workflows/labels.yml). To add, rename or remove a label, open a pull request on that file: a label created in the repository settings and missing from the manifest is deleted by the next run.
+Labels are defined in [`.github/labels.yml`](.github/labels.yml) and applied to the repository by the [Labels workflow](.github/workflows/labels.yml). To add, rename or remove a label, open a pull request on that file: a label created in the repository settings and missing from the manifest is deleted by the next run. A rename takes a `from_name` line with the current name, to remove in a later pull request: while it is there, the workflow leaves that label's color and description alone.
 
 Every label belongs to one facet, written as a prefix, apart from the few standalone labels listed at the end, so the label picker groups them and searches read well: `is:open label:"area: ddp" label:"status: needs-triage"`.
 
@@ -11,7 +11,7 @@ One per item.
 - `type: bug`: something does not work as documented or as it used to. Preset by the bug report template.
 - `type: feature`: new behavior or capability.
 - `type: docs`: documentation is missing, wrong or unclear.
-- `type: maintenance`: repository chores (CI, tooling, dependencies, refactors without behavior change). These items get no area.
+- `type: maintenance`: repository chores (CI, tooling, dependencies, refactors without behavior change). An area applies only when the change sits in one, a dependency bump in a package for instance; CI and repository tooling have none.
 - `type: security`: security hardening. Report vulnerabilities privately, see [SECURITY.md](SECURITY.md).
 
 ### `area:` which part of Meteor
@@ -56,7 +56,7 @@ One per open issue, plus `status: stale` next to it when the issue goes quiet. P
 - `status: ready`: clear and accepted, nobody on it yet. Pick it up.
 - `status: in-progress`: someone is working on it.
 - `status: blocked`: waiting on something else (a release, another pull request, a decision).
-- `status: stale`: no human comment for 90 days. The weekly [inactive issues script](.github/scripts/inactive-issues.js) adds it next to the status the issue already has, and removes it on its next run after a human comments, so the issue is back where it stood. It never closes anything.
+- `status: stale`: no human comment for 90 days. The weekly [inactive issues script](.github/scripts/inactive-issues.js) adds it next to the status the issue already has, and removes it on its next run after a human comments or once the issue is `status: in-progress`, so the issue is back where it stood. It never closes anything.
 
 The usual path: `needs-triage` → `needs-reproduction`, `needs-info` or `confirmed` (or closed with GitHub's "duplicate" or "not planned" reason) → `in-discussion` when the fix is not obvious, `ready` when it is → `in-progress`.
 
@@ -82,7 +82,7 @@ Set by the Meteor Software team, since it reflects their planning.
 
 ### `ci:` switches for the E2E workflow
 
-Reserved for the E2E smart triggering of [#14479](https://github.com/meteor/meteor/pull/14479): once it lands, they choose which E2E slices a pull request runs, `ci:e2e` for all of them, `ci:e2e:apps`, `ci:e2e:skeletons`, `ci:e2e:examples` and `ci:e2e:native` for one group each.
+Reserved for the E2E smart triggering of [#14479](https://github.com/meteor/meteor/pull/14479): once it lands, they choose which E2E slices a pull request runs, `ci:e2e` for all of them, `ci:e2e:apps`, `ci:e2e:skeletons` and `ci:e2e:examples` for one group each. `ci:e2e:native` is set aside for the native smoke tests.
 
 ### Standalone labels
 

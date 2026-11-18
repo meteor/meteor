@@ -1,6 +1,9 @@
 # Labels of meteor/meteor, applied by .github/workflows/labels.yml.
 # Change labels here, not in the repository settings: a label missing from this
-# file is deleted. `from_name` renames an existing label and keeps its history.
+# file is deleted. `from_name` renames an existing label and keeps its history;
+# remove the line once the rename is done, or later changes to that label are skipped.
+# Keep one quoted key per line, without a trailing comment: the migration scripts
+# read the names and the renames line by line.
 # What each facet means and who applies it: LABELS.md.
 
 # type: exactly one per item
