@@ -55,6 +55,7 @@ Package.onTest((api) => {
   api.use([
     "accounts-base",
     "ecmascript",
+    "callback-hook",
     "tinytest",
     "random",
     "test-helpers",
