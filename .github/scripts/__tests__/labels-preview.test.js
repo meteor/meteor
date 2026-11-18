@@ -3,10 +3,13 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
-const { readManifest, migrate, preview, report } = require('../labels-preview.js');
+const writePreview = require('../labels-preview.js');
+const { readManifest, migrate, preview, report } = writePreview;
+const { MANIFEST } = require('../relabel.js');
 
-const manifest = readManifest(fs.readFileSync(path.join(__dirname, '../../labels.yml'), 'utf8'));
+const manifest = readManifest(fs.readFileSync(MANIFEST, 'utf8'));
 
 const item = (number, labels, extra = {}) => ({
   number,
@@ -17,11 +20,19 @@ const item = (number, labels, extra = {}) => ({
   ...extra,
 });
 
-test('reads every label of the manifest and its renames', () => {
-  assert.strictEqual(manifest.names.size, 52);
-  assert.strictEqual(manifest.renames.get('Type:Bug'), 'type: bug');
-  assert.strictEqual(manifest.renames.get('idle'), 'status: stale');
-  assert.ok(manifest.names.has('ci:e2e'));
+test('reads the names and the renames of a manifest', () => {
+  const text = [
+    '# type: exactly one per item',
+    '- name: "type: bug"',
+    '  color: "d73a4a"',
+    '  description: "Something does not work"',
+    '  from_name: "Type:Bug"',
+    '- name: "experimental"',
+    '  color: "d4c5f9"',
+  ].join('\n');
+  const { names, renames } = readManifest(text);
+  assert.deepStrictEqual([...names], ['type: bug', 'experimental']);
+  assert.deepStrictEqual([...renames], [['Type:Bug', 'type: bug']]);
 });
 
 test('renames, merges and deletes, and keeps the labels already in the manifest', () => {
@@ -139,4 +150,55 @@ test('shows the deletion of a label no item carries, and skips the issues alread
     'spam → (deleted)': { all: 1, open: 0 },
     'tip → (deleted)': { all: 0, open: 0 },
   });
+});
+
+test('exports the current labels and writes the preview', async () => {
+  const items = [
+    item(1, ['Type:Bug', 'confirmed'], { state: 'open', created_at: '2023-05-02T10:00:00Z' }),
+    item(2, ['Type:Bug'], { state: 'open', created_at: '2023-05-02T10:00:00Z', pull_request: {} }),
+    item(3, ['help wanted']),
+  ];
+  const github = {
+    rest: { issues: { listForRepo: 'items', listEvents: 'events', listLabelsForRepo: 'labels' } },
+    paginate: async (method, params) => {
+      if (method === 'items') return params.state === 'all' ? items : [];
+      // Issue 1 already had the legacy label once.
+      if (method === 'events') return [{ event: 'labeled', label: { name: 'legacy: needs-review' } }];
+      return [{ name: 'Type:Bug' }, { name: 'confirmed' }, { name: 'help wanted' }, { name: 'tip' }];
+    },
+  };
+  let summary;
+  const core = {
+    summary: {
+      addRaw(text) {
+        summary = text;
+        return this;
+      },
+      write: async () => {},
+    },
+  };
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'labels-preview-'));
+  const cwd = process.cwd();
+  process.chdir(directory);
+  try {
+    await writePreview({ github, context: { repo: { owner: 'meteor', repo: 'meteor' } }, core });
+    assert.deepStrictEqual(JSON.parse(fs.readFileSync('labels-before.json', 'utf8'))[0], {
+      number: 1,
+      pull_request: false,
+      state: 'open',
+      created_at: '2023-05-02T10:00:00Z',
+      title: 'Item 1',
+      labels: ['Type:Bug', 'confirmed'],
+    });
+    assert.deepStrictEqual(fs.readFileSync('labels-preview.csv', 'utf8').split('\n'), [
+      'number,kind,state,before,after',
+      '"1","issue","open","Type:Bug; confirmed","status: confirmed; type: bug"',
+      '"2","pr","open","Type:Bug","type: bug"',
+    ]);
+    assert.match(summary, /^## Label migration preview\n\n2 items change\./);
+    assert.match(summary, /\| tip → \(deleted\) \| 0 \| 0 \|/);
+  } finally {
+    process.chdir(cwd);
+    fs.rmSync(directory, { recursive: true });
+  }
 });

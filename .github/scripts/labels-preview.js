@@ -8,6 +8,7 @@
  */
 const fs = require('fs');
 const {
+  MANIFEST,
   MERGES,
   NEEDS_TRIAGE,
   LEGACY_REVIEW,
@@ -115,7 +116,7 @@ module.exports = async ({ github, context, core }) => {
     }
   }
   const repoLabels = await github.paginate(github.rest.issues.listLabelsForRepo, { owner, repo, per_page: 100 });
-  const result = preview(items, readManifest(fs.readFileSync('.github/labels.yml', 'utf8')), {
+  const result = preview(items, readManifest(fs.readFileSync(MANIFEST, 'utf8')), {
     reviewed,
     repoLabels: repoLabels.map((label) => label.name),
   });

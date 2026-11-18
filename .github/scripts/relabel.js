@@ -4,7 +4,8 @@
  * The sync renames the main old label of each new label (`from_name`). This script
  * covers what a rename cannot:
  * 1. Merges: every issue or PR carrying one of the old labels below gets the new one,
- *    open items first, closed ones last.
+ *    open items first, closed ones last. An old label the sync could not rename,
+ *    because its new name already existed, is moved the same way.
  * 2. Open issues without any `status:` label get `status: needs-triage`.
  * 3. Open issues opened before Meteor 3.0 shipped, feature requests aside, get
  *    `legacy: needs-review`, once: an issue that ever had a `legacy:` label is
@@ -14,9 +15,10 @@
  * one is reached it waits for it to clear and goes on, so one run migrates the whole
  * repository. Close to the job's time limit it stops, and the next run picks up
  * where it left off.
- * It returns the number of items still to label, so the workflow deletes the old
- * labels only once nothing is left: after a complete run it lists the merged labels
- * again and counts every item still missing its new label.
+ * It returns 0 when nothing is left to label, so the workflow deletes the old labels
+ * only then: after a complete run it lists the old labels again and counts every item
+ * still missing its new label. A run that stopped returns a number above 0, which is
+ * not the count of what remains.
  */
 const fs = require('fs');
 const path = require('path');
@@ -81,18 +83,24 @@ const HOUR = 60 * 60 * 1000;
 // Stop well before the 6 hour limit of a job.
 const RUN_TIME = 5 * HOUR;
 
+const MANIFEST = path.join(__dirname, '../labels.yml');
+
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Names and renames of .github/labels.yml, whose entries keep one key per line.
+// Names and renames of .github/labels.yml, whose entries keep one quoted key per line.
 function readManifest(text) {
   const names = new Set();
   const renames = new Map();
   let current;
   for (const line of text.split('\n')) {
-    const match = line.match(/^(- name|  from_name):\s*["']?(.*?)["']?\s*$/);
+    const match = line.match(/^(- name|  from_name): "(.*)"$/);
     if (!match) continue;
-    if (match[1] === '- name') names.add((current = match[2]));
-    else renames.set(match[2], current);
+    if (match[1] === '- name') {
+      current = match[2];
+      names.add(current);
+    } else {
+      renames.set(match[2], current);
+    }
   }
   return { names, renames };
 }
@@ -123,9 +131,13 @@ async function hadLegacyLabel(github, { owner, repo }, item) {
 
 module.exports = async ({ github, context, dryRun, runTime = RUN_TIME }) => {
   const { owner, repo } = context.repo;
-  // The dry run comes before the sync: read the labels as renamed.
-  const { renames } = readManifest(fs.readFileSync(path.join(__dirname, '../labels.yml'), 'utf8'));
-  const carries = (item, name) => item.labels.some((label) => (renames.get(label.name) ?? label.name) === name);
+  const { renames } = readManifest(fs.readFileSync(MANIFEST, 'utf8'));
+  // Old label → new label. A dry run comes before the sync, so it reads the labels as
+  // renamed. A real run comes after it: an old name still there is one the sync could
+  // not rename, and its items get the new label like those of a merge.
+  const moves = dryRun ? Object.entries(MERGES) : [...Object.entries(MERGES), ...renames];
+  const nameOf = (label) => (dryRun ? renames.get(label.name) ?? label.name : label.name);
+  const carries = (item, name) => item.labels.some((label) => nameOf(label) === name);
   const planned = new Set();
   const stopAt = Date.now() + runTime;
   // Times of the writes in the last hour.
@@ -137,7 +149,7 @@ module.exports = async ({ github, context, dryRun, runTime = RUN_TIME }) => {
 
   // Waits until a write fits under both limits. False when the wait would outlast the run.
   async function waitForBudget() {
-    for (;;) {
+    while (true) {
       const now = Date.now();
       while (writes.length && writes[0] <= now - HOUR) writes.shift();
       let until = now;
@@ -145,20 +157,31 @@ module.exports = async ({ github, context, dryRun, runTime = RUN_TIME }) => {
       if (writes.length >= MAX_WRITES) until = Math.max(until, writes[0] + HOUR);
       if (until <= now) return true;
       if (until >= stopAt) return false;
-      console.log(`Waiting ${Math.ceil((until - now) / 60000)} min for the rate limit`);
+      // Once the hour is full, each write waits a moment for the oldest one to leave it.
+      if (until - now >= 60 * 1000) {
+        console.log(`Waiting ${Math.round((until - now) / 60000)} min for the rate limit`);
+      }
       await sleep(until - now);
     }
   }
 
-  // Writes the label. A secondary rate limit answers 403 or 429: wait as GitHub asks,
-  // at least a minute, and try again. Null when the wait would outlast the run.
+  // Writes the label. A rate limit answers 403 or 429: wait as GitHub asks, until the
+  // hourly budget is back when it is spent, a minute at least, and try again, three
+  // times at most. Null when the wait would outlast the run.
   async function write(item, label) {
-    for (let attempt = 1; ; attempt++) {
+    for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         return await github.rest.issues.addLabels({ owner, repo, issue_number: item.number, labels: [label] });
       } catch (error) {
-        if (![403, 429].includes(error.status) || !/rate limit/i.test(error.message) || attempt === 3) throw error;
-        const wait = Math.max(Number(error.response?.headers?.['retry-after'] ?? 0) * 1000, 60 * 1000);
+        const rateLimited = [403, 429].includes(error.status) && /rate limit/i.test(error.message);
+        if (!rateLimited || attempt === 3) throw error;
+        const headers = error.response?.headers ?? {};
+        const spent = headers['x-ratelimit-remaining'] === '0';
+        const wait = Math.max(
+          Number(headers['retry-after'] ?? 0) * 1000,
+          spent ? headers['x-ratelimit-reset'] * 1000 - Date.now() : 0,
+          60 * 1000
+        );
         if (Date.now() + wait >= stopAt) return null;
         console.log(`Rate limited, waiting ${Math.ceil(wait / 60000)} min`);
         await sleep(wait);
@@ -174,8 +197,14 @@ module.exports = async ({ github, context, dryRun, runTime = RUN_TIME }) => {
     const key = `${item.number} ${label}`;
     if (planned.has(key)) return;
     planned.add(key);
-    const response = dryRun || left > 0 || !(await waitForBudget()) ? null : await write(item, label);
+    let response = null;
+    if (!dryRun && left === 0 && (await waitForBudget())) {
+      response = await write(item, label);
+    }
     if (!response) {
+      if (!dryRun && left === 0) {
+        console.log('Stopping here: the next run adds the rest');
+      }
       left++;
       console.log(`#${item.number}: + ${label}`);
       return;
@@ -191,8 +220,8 @@ module.exports = async ({ github, context, dryRun, runTime = RUN_TIME }) => {
   // Once a run stops, the next one takes over: no need to spend more requests.
   const stopped = () => !dryRun && left > 0;
 
-  async function moveMerged(state) {
-    for (const [oldLabel, newLabel] of Object.entries(MERGES)) {
+  async function moveItems(state) {
+    for (const [oldLabel, newLabel] of moves) {
       if (stopped()) return;
       for (const item of await list({ labels: oldLabel, state })) {
         if (!carries(item, newLabel)) {
@@ -203,7 +232,7 @@ module.exports = async ({ github, context, dryRun, runTime = RUN_TIME }) => {
   }
 
   // Open items first (about 300 writes, minutes), then the history of closed ones.
-  await moveMerged('open');
+  await moveItems('open');
 
   for (const item of await list({ state: 'open' })) {
     if (item.pull_request) continue;
@@ -216,12 +245,12 @@ module.exports = async ({ github, context, dryRun, runTime = RUN_TIME }) => {
     }
   }
 
-  await moveMerged('closed');
+  await moveItems('closed');
 
   // Before the old labels are deleted, read them again: every item still carrying
   // one must already carry its new label.
   if (!dryRun && left === 0) {
-    for (const [oldLabel, newLabel] of Object.entries(MERGES)) {
+    for (const [oldLabel, newLabel] of moves) {
       for (const item of await list({ labels: oldLabel, state: 'all' })) {
         if (!carries(item, newLabel)) {
           left++;
@@ -236,6 +265,7 @@ module.exports = async ({ github, context, dryRun, runTime = RUN_TIME }) => {
 };
 
 Object.assign(module.exports, {
+  MANIFEST,
   MERGES,
   NEEDS_TRIAGE,
   LEGACY_REVIEW,
