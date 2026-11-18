@@ -131,7 +131,9 @@ async function runOnMockedClock(github, runTime) {
         outcome = { error };
       }
     );
-    while (!outcome) {
+    // The longest run takes about 400 turns; one that never settles must fail, not spin.
+    for (let turns = 0; !outcome; turns++) {
+      assert.ok(turns < 10_000, 'the run never settled');
       await new Promise((resolve) => setImmediate(resolve));
       mock.timers.runAll();
     }
