@@ -1,4 +1,5 @@
 import { EJSON } from "./ejson";
+import { checkError } from "./utils";
 import EJSONTest from "./custom_models_for_tests";
 
 Tinytest.add("ejson - preserves prototype-named data properties", (test) => {
@@ -487,6 +488,18 @@ Tinytest.add("ejson - stringify", (test) => {
     const col = new Mongo.Collection("test");
     EJSON.stringify(col);
   }, /Converting circular structure to JSON/);
+});
+
+Tinytest.add("ejson - checkError maxStack recognizes browser recursion errors", (test) => {
+  test.isTrue(checkError.maxStack("Maximum call stack size exceeded"));
+  test.isTrue(checkError.maxStack("Maximum call stack size exceeded."));
+  test.isTrue(checkError.maxStack("too much recursion"));
+  test.isTrue(checkError.maxStack("Too much recursion"));
+  test.isTrue(checkError.maxStack("out of stack space"));
+  test.isFalse(checkError.maxStack("some other error"));
+  test.isFalse(checkError.maxStack(undefined));
+  test.isFalse(checkError.maxStack(null));
+  test.isFalse(checkError.maxStack(123));
 });
 
 Tinytest.add("ejson - parse", (test) => {

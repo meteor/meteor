@@ -42,7 +42,9 @@ export const isArguments = (obj) => obj != null && hasOwn(obj, "callee");
 export const isInfOrNaN = (obj) => Number.isNaN(obj) || obj === Infinity || obj === -Infinity;
 
 export const checkError = {
-  maxStack: (msgError) => new RegExp("Maximum call stack size exceeded", "g").test(msgError),
+  maxStack: (msgError) =>
+    typeof msgError === "string" &&
+    /Maximum call stack size exceeded|too much recursion|out of stack space/i.test(msgError),
 };
 
 export const handleError = (fn) =>
@@ -50,7 +52,7 @@ export const handleError = (fn) =>
     try {
       return fn.apply(this, arguments);
     } catch (error) {
-      const isMaxStack = checkError.maxStack(error.message);
+      const isMaxStack = checkError.maxStack(error && error.message);
       if (isMaxStack) {
         throw new Error("Converting circular structure to JSON");
       }
