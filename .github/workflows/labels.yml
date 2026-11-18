@@ -51,7 +51,7 @@ jobs:
       APPLY: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/devel' }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Test the label scripts
         run: node --test .github/scripts/__tests__/relabel.test.js .github/scripts/__tests__/labels-preview.test.js .github/scripts/__tests__/inactive-issues.test.js
@@ -73,7 +73,7 @@ jobs:
             labels-preview.csv
 
       - name: Create and rename labels
-        uses: crazy-max/ghaction-github-labeler@v5
+        uses: crazy-max/ghaction-github-labeler@v6
         with:
           skip-delete: ${{ env.APPLY == 'true' }}
           dry-run: ${{ env.APPLY != 'true' }}
@@ -92,4 +92,4 @@ jobs:
 
       - name: Delete labels missing from the manifest
         if: env.APPLY == 'true' && steps.relabel.outputs.left == '0'
-        uses: crazy-max/ghaction-github-labeler@v5
+        uses: crazy-max/ghaction-github-labeler@v6
