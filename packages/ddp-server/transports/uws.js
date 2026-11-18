@@ -79,6 +79,8 @@ export function createUwsTransport() {
       const messageListeners = new WeakMap();
       const proxyAddresses = createProxyAddressTracker();
 
+      const compression = options.websocketCompression();
+
       const uwsApp = uws.App();
 
       uwsApp.get('/*', function (res) {
@@ -90,21 +92,30 @@ export function createUwsTransport() {
         maxPayloadLength: uwsPayloadLength * 1024,
         idleTimeout: uwsSocketTimeout,
         // SERVER_WEBSOCKET_COMPRESSION switches compression on and off here as
-        // it does for SockJS; its permessage-deflate options are SockJS-only.
+        // it does for SockJS, and its threshold applies here too; its other
+        // permessage-deflate options are SockJS-only.
         // Every DEDICATED_COMPRESSOR_* becomes DEDICATED_COMPRESSOR_3KB in
         // uWebSockets.js releases without uNetworking/uWebSockets#1955, which
         // compresses DDP worse than the shared compressor.
-        compression: options.websocketExtensions().length
-          ? uws.SHARED_COMPRESSOR
-          : uws.DISABLED,
+        compression: compression ? uws.SHARED_COMPRESSOR : uws.DISABLED,
 
         open(socket) {
-          // uWS compresses a message only when the third argument of send()
-          // is true, even on a connection that negotiated permessage-deflate.
-          const send = socket.send;
-          socket.send = function (data) {
-            return send.call(socket, data, false, true);
-          };
+          if (compression) {
+            // uWS compresses a message only when the third argument of send()
+            // is true, even on a connection that negotiated permessage-deflate.
+            // It deflates inside send(), on the event loop, so a message under
+            // the threshold, which barely shrinks, goes out plain as it does
+            // under SockJS, which also counts the threshold in UTF-8 bytes.
+            const send = socket.send;
+            socket.send = function (data) {
+              return send.call(
+                socket,
+                data,
+                false,
+                Buffer.byteLength(data) >= compression.threshold
+              );
+            };
+          }
 
           // Adapt uWS socket to the interface expected by _onConnection.
           // uWS sockets don't have EventEmitter methods, so we provide them.

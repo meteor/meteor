@@ -37,7 +37,7 @@ Available configuration options:
 - `maxWindowBits`: Window size for compression (9-15, lower uses less memory)
 
 ::: tip
-With the [`uws` transport](/performance/ddp-transport), `SERVER_WEBSOCKET_COMPRESSION=false` disables compression as well, but the options above apply to SockJS only. `uws` compresses every message with the uWebSockets.js shared compressor.
+With the [`uws` transport](/performance/ddp-transport), `SERVER_WEBSOCKET_COMPRESSION=false` disables compression as well, and `threshold` applies there too. The other options configure SockJS only: `uws` compresses with the uWebSockets.js shared compressor at zlib's default level, keeps no context between messages, and compresses on the event loop rather than on Node's thread pool. Raise `threshold` if compression shows up in your CPU profiles.
 :::
 
 ## Configuration Examples

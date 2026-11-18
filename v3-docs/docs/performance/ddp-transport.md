@@ -71,7 +71,7 @@ See the full [`DDP_TRANSPORT`](/cli/environment-variables#ddp-transport) and [`D
 
 ### Combining with WebSocket compression
 
-`SERVER_WEBSOCKET_COMPRESSION` turns permessage-deflate compression on (the default) or off for both transports. Its JSON options, such as `threshold` and `level`, configure the SockJS extension only: `uws` compresses every message with the uWebSockets.js shared compressor, which keeps no context between messages. See [WebSocket Compression](/performance/websocket-compression).
+`SERVER_WEBSOCKET_COMPRESSION` turns permessage-deflate compression on (the default) or off for both transports, and its `threshold` (1024 bytes by default) applies to both. Its other JSON options, such as `level`, configure the SockJS extension only. `uws` compresses on the event loop with the uWebSockets.js shared compressor, so if you picked `uws` to save CPU, measure with compression on, and raise `threshold` or set `SERVER_WEBSOCKET_COMPRESSION=false` if it costs too much. See [WebSocket Compression](/performance/websocket-compression).
 
 ### Combining with session resumption
 

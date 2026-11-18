@@ -13,24 +13,28 @@ import { getTransport } from './transports/index.js';
 // crash the tool during isopacket load if your JSON doesn't parse. This is only
 // a problem because the tool has to load the DDP server code just in order to
 // be a DDP client; see https://github.com/meteor/meteor/issues/3452 .)
-var websocketExtensions = once(function () {
-  var extensions = [];
-
+var websocketCompression = once(function () {
   var websocketCompressionConfig = process.env.SERVER_WEBSOCKET_COMPRESSION ?
     JSON.parse(process.env.SERVER_WEBSOCKET_COMPRESSION) : {};
 
-  if (websocketCompressionConfig) {
-    extensions.push(Npm.require('permessage-deflate2').configure({
-      threshold: 1024,
-      level: zlib.constants.Z_BEST_SPEED,
-      memLevel: zlib.constants.Z_MIN_MEMLEVEL,
-      noContextTakeover: true,
-      maxWindowBits: zlib.constants.Z_MIN_WINDOWBITS,
-      ...(websocketCompressionConfig || {})
-    }));
+  if (!websocketCompressionConfig) {
+    return null;
   }
 
-  return extensions;
+  return {
+    threshold: 1024,
+    level: zlib.constants.Z_BEST_SPEED,
+    memLevel: zlib.constants.Z_MIN_MEMLEVEL,
+    noContextTakeover: true,
+    maxWindowBits: zlib.constants.Z_MIN_WINDOWBITS,
+    ...websocketCompressionConfig
+  };
+});
+
+var websocketExtensions = once(function () {
+  var compression = websocketCompression();
+  return compression ?
+    [Npm.require('permessage-deflate2').configure(compression)] : [];
 });
 
 var pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX ||  "";
@@ -44,6 +48,7 @@ StreamServer = function () {
   var transport = getTransport();
   var emitter = transport.setup(WebApp.httpServer, pathPrefix, {
     websocketExtensions: websocketExtensions,
+    websocketCompression: websocketCompression,
   });
 
   emitter.on('connection', function (socket) {

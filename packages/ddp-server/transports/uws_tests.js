@@ -327,8 +327,15 @@ function connectRawWebSocket(port, path) {
     let buffer = Buffer.alloc(0);
     let client = null;
     let pending = null;
+    const handshakeTimer = Meteor.setTimeout(() => {
+      socket.destroy();
+      reject(new Error('timed out waiting for the WebSocket handshake'));
+    }, 5000);
 
-    socket.once('error', reject);
+    socket.once('error', error => {
+      Meteor.clearTimeout(handshakeTimer);
+      reject(error);
+    });
     socket.on('connect', () => {
       socket.write([
         `GET ${path} HTTP/1.1`,
@@ -378,6 +385,7 @@ function connectRawWebSocket(port, path) {
             socket.destroy();
           },
         };
+        Meteor.clearTimeout(handshakeTimer);
         resolve(client);
       }
 
@@ -450,12 +458,21 @@ Tinytest.addAsync(
 );
 
 if (__meteor_runtime_config__.DDP_TRANSPORT === 'uws') {
+  Meteor.methods({
+    uws_test_repeat(length) {
+      return 'x'.repeat(length);
+    },
+  });
+
   Tinytest.addAsync(
     'ddp-server/uws - SERVER_WEBSOCKET_COMPRESSION controls DDP compression',
     async function (test) {
-      // stream_server.js disables compression only for a falsy JSON value.
+      // stream_server.js disables compression only for a falsy JSON value and
+      // compresses from 1024 bytes up unless the JSON sets another threshold.
       const setting = process.env.SERVER_WEBSOCKET_COMPRESSION;
-      const enabled = !setting || !!JSON.parse(setting);
+      const config = setting ? JSON.parse(setting) : {};
+      const enabled = !!config;
+      const threshold = config?.threshold ?? 1024;
       const pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '';
       const client = await connectRawWebSocket(
         WebApp.httpServer.address().port,
@@ -469,15 +486,29 @@ if (__meteor_runtime_config__.DDP_TRANSPORT === 'uws') {
           JSON.stringify({ msg: 'connect', version: '1', support: ['1'] }),
           enabled
         );
-        const isConnected = frame => JSON.parse(frame.text).msg === 'connected';
-        const frames = await client.waitFor(
-          received => received.some(isConnected),
+        await client.waitFor(
+          received => received.some(frame => JSON.parse(frame.text).msg === 'connected'),
           'the answer to the connect message'
         );
+
+        // Its result is just over the threshold, while `connected` and
+        // `updated` are far below the default one.
+        client.send(
+          JSON.stringify({ msg: 'method', id: '1', method: 'uws_test_repeat', params: [threshold] }),
+          enabled
+        );
+        const isResult = frame => JSON.parse(frame.text).msg === 'result';
+        const isUpdated = frame => JSON.parse(frame.text).msg === 'updated';
+        const frames = await client.waitFor(
+          received => received.some(isResult) && received.some(isUpdated),
+          'the method result and updated'
+        );
+        test.equal(JSON.parse(frames.find(isResult).text).result, 'x'.repeat(threshold));
         test.equal(
-          frames.find(isConnected).compressed,
-          enabled,
-          'the server must compress what it sends exactly when compression is enabled'
+          frames.map(frame => frame.compressed),
+          frames.map(frame => enabled && Buffer.byteLength(frame.text) >= threshold),
+          'the server must compress a message exactly when compression is ' +
+          'enabled and the message reaches the threshold'
         );
       } finally {
         client.close();
