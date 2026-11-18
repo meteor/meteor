@@ -13,10 +13,12 @@ export namespace Match {
           typeof String |
           typeof Number |
           typeof Boolean |
+          typeof BigInt |
+          typeof Symbol |
           typeof Object |
           typeof Function |
           (new (...args: never[]) => unknown) |
-          undefined | null | string | number | boolean |
+          undefined | null | string | number | boolean | bigint | symbol |
           [Pattern] |
           {[key: string]: Pattern} |
           Matcher<unknown>;
@@ -26,9 +28,11 @@ export namespace Match {
           T extends typeof String ? string :
           T extends typeof Number ? number :
           T extends typeof Boolean ? boolean :
+          T extends typeof BigInt ? bigint :
+          T extends typeof Symbol ? symbol :
           T extends typeof Object ? object :
           T extends typeof Function ? Function :
-          T extends undefined | null | string | number | boolean ? T :
+          T extends undefined | null | string | number | boolean | bigint | symbol ? T :
           T extends new (...args: never[]) => infer U ? U :
           T extends [Pattern] ? PatternMatch<T[0]>[] :
           T extends {[key: string]: Pattern} ? {[K in keyof T]: PatternMatch<T[K]>} :
