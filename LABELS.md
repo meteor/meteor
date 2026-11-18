@@ -46,7 +46,7 @@ One or more per item. Pull requests get them automatically from the paths they c
 
 ### `status:` where the item stands
 
-One per open issue. Pull requests use GitHub's own states (draft, review, merged) instead.
+One per open issue, plus `status: stale` next to it when the issue goes quiet. Pull requests use GitHub's own states (draft, review, merged) instead.
 
 - `status: needs-triage`: new, nobody looked at it yet. Preset by the bug report template.
 - `status: needs-reproduction`: a minimal reproduction is needed before anyone can work on it.
@@ -56,11 +56,20 @@ One per open issue. Pull requests use GitHub's own states (draft, review, merged
 - `status: ready`: clear and accepted, nobody on it yet. Pick it up.
 - `status: in-progress`: someone is working on it.
 - `status: blocked`: waiting on something else (a release, another pull request, a decision).
-- `status: stale`: no human comment for 90 days. The weekly [inactive issues script](.github/scripts/inactive-issues.js) adds it, and removes it on its next run after a human comments. It never closes anything.
+- `status: stale`: no human comment for 90 days. The weekly [inactive issues script](.github/scripts/inactive-issues.js) adds it next to the status the issue already has, and removes it on its next run after a human comments, so the issue is back where it stood. It never closes anything.
 
 The usual path: `needs-triage` → `needs-reproduction`, `needs-info` or `confirmed` (or closed with GitHub's "duplicate" or "not planned" reason) → `in-discussion` when the fix is not obvious, `ready` when it is → `in-progress`.
 
 Issues waiting for triage: [`is:issue is:open label:"status: needs-triage"`](https://github.com/meteor/meteor/issues?q=is%3Aissue+is%3Aopen+label%3A%22status%3A+needs-triage%22).
+
+### `legacy:` issues from before 3.0
+
+For issues reported before 3.0 shipped (on 0.x, 1.x, 2.x or a 3.0 beta or release candidate) that may not apply to 3.x. They combine with any status.
+
+- `legacy: needs-review`: may only affect releases before 3.0, someone needs to check it on 3.x. The [Labels workflow](.github/workflows/labels.yml) adds it to the open issues opened before July 15, 2024, feature requests aside, and never adds it back once removed; triagers add it to later issues reported on an older release. If it still reproduces on 3.x, remove the label and keep going with the usual flow.
+- `legacy: pre-3 only`: confirmed to affect only releases before 3.0. Replace `legacy: needs-review` with it and close the issue as "not planned", with a short comment on what was checked and the fix or alternative on 3.x.
+
+Issues to check: [`is:issue is:open label:"legacy: needs-review"`](https://github.com/meteor/meteor/issues?q=is%3Aissue+is%3Aopen+label%3A%22legacy%3A+needs-review%22).
 
 ### `priority:` the roadmap
 
@@ -70,6 +79,10 @@ Set by the Meteor Software team, since it reflects their planning.
 - `priority: next`: planned for the next releases.
 - `priority: candidate`: considered for the roadmap, not committed yet.
 - `priority: low`: valid, but not soon.
+
+### `ci:` switches for the E2E workflow
+
+Reserved for the E2E smart triggering of [#14479](https://github.com/meteor/meteor/pull/14479): once it lands, they choose which E2E slices a pull request runs, `ci:e2e` for all of them, `ci:e2e:apps`, `ci:e2e:skeletons`, `ci:e2e:examples` and `ci:e2e:native` for one group each.
 
 ### Standalone labels
 

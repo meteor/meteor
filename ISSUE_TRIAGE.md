@@ -28,6 +28,13 @@ The first step is in determining whether the issue is a bug, help question or fe
 4. A reproduction should be confirmed by at least one person other than the original reporter. Run the reproduction and validate that the bug exists; then make a note of your findings on the issue. If a reproduction is supplied but doesn't work, make a comment describing what happened.
 5. Finally, replace `status: needs-triage` with the status that applies, read more about labels [here](./LABELS.md).
 
+#### Bugs reported before 3.0
+
+Issues reported before 3.0 shipped (on 0.x, 1.x, 2.x or a 3.0 beta or release candidate) carry `legacy: needs-review` until someone checks them on 3.x: [`is:issue is:open label:"legacy: needs-review"`](https://github.com/meteor/meteor/issues?q=is%3Aissue+is%3Aopen+label%3A%22legacy%3A+needs-review%22).
+
+- If it still reproduces on 3.x, remove the label and continue with the steps above.
+- If it only affects releases before 3.0, replace the label with `legacy: pre-3 only` and close the issue as "not planned", with a short comment on what you checked and the fix or alternative on 3.x.
+
 ### Help questions
 
 Our [forums](https://forums.meteor.com/c/help) or Community Slack are the place to ask for help on using the framework. Close issues that are help requests and politely refer the author to the above locations.

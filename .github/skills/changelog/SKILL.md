@@ -385,7 +385,7 @@ When the changelog file already exists with content:
 
 ### Categorization Signals
 
-* **Labels** (`Project:*`, `Type:*`) are primary
+* **Labels** (`area: *`, `type: *`) are primary
 * **Titles** supplement labels
 * For **major/minor**, classify each PR into one of:
     * **Features** — new APIs, new packages, new capabilities
