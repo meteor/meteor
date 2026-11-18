@@ -1,7 +1,6 @@
 name: Test Deprecated Packages
 
 # Disabled until we figure out how to fix the error from puppeteer
-# Runs on Travis CI for now
 #
 #on:
 #  push:
