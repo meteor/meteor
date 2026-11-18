@@ -2706,6 +2706,179 @@ if (Meteor.isClient) {
 
 }
 
+if (Meteor.isClient) {
+  Tinytest.addAsync(
+    'livedata connection - maxRetries stops re-sending after the limit',
+    async function (test) {
+      const stream = new StubStream();
+      const conn = newConnection(stream);
+
+      await startAndConnect(test, stream);
+
+      let callbackError = null;
+      let callbackFired = false;
+      conn.apply('limitedMethod', [], { maxRetries: 2 }, function (error) {
+        callbackFired = true;
+        callbackError = error;
+      });
+      const message = testGotMessage(test, stream, {
+        msg: 'method', method: 'limitedMethod', params: [], id: '*'
+      });
+
+      // Reconnects 1 and 2: the method is re-sent each time.
+      let session = SESSION_ID;
+      for (let retry = 1; retry <= 2; retry++) {
+        await stream.reset();
+        testGotMessage(test, stream, makeConnectMessage(session, conn._receivedCount));
+        testGotMessage(test, stream, {
+          msg: 'method', method: 'limitedMethod', params: [], id: message.id
+        });
+        test.length(stream.sent, 0);
+        test.isFalse(callbackFired);
+
+        // Answer with a new session id so stores reset (no resumption).
+        session = 'session-' + retry;
+        await stream.receive({ msg: 'connected', session: session });
+      }
+
+      // Reconnect 3: retry budget exhausted — fails instead of re-sending.
+      await stream.reset();
+      testGotMessage(test, stream, makeConnectMessage(session, conn._receivedCount));
+      test.length(stream.sent, 0);
+      await stream.receive({ msg: 'connected', session: 'session-final' });
+
+      test.isTrue(callbackFired);
+      test.instanceOf(callbackError, Meteor.Error);
+      test.equal(callbackError.error, 'invocation-failed');
+      test.equal(Object.keys(conn._methodInvokers).length, 0);
+      test.equal(conn._outstandingMethodBlocks.length, 0);
+    }
+  );
+
+  Tinytest.addAsync(
+    'livedata connection - maxRetries 0 never re-sends, like noRetry',
+    async function (test) {
+      const stream = new StubStream();
+      const conn = newConnection(stream);
+
+      await startAndConnect(test, stream);
+
+      let callbackError = null;
+      let callbackFired = false;
+      conn.apply('oneShotMethod', [], { maxRetries: 0 }, function (error) {
+        callbackFired = true;
+        callbackError = error;
+      });
+      testGotMessage(test, stream, {
+        msg: 'method', method: 'oneShotMethod', params: [], id: '*'
+      });
+
+      // First reconnect: the method may not be re-sent.
+      await stream.reset();
+      testGotMessage(test, stream, makeConnectMessage(SESSION_ID, conn._receivedCount));
+      test.length(stream.sent, 0);
+      await stream.receive({ msg: 'connected', session: 'session-1' });
+
+      test.isTrue(callbackFired);
+      test.instanceOf(callbackError, Meteor.Error);
+      test.equal(callbackError.error, 'invocation-failed');
+      test.equal(Object.keys(conn._methodInvokers).length, 0);
+    }
+  );
+
+  Tinytest.addAsync(
+    'livedata connection - methods without maxRetries re-send on every reconnect',
+    async function (test) {
+      const stream = new StubStream();
+      const conn = newConnection(stream);
+
+      await startAndConnect(test, stream);
+
+      let callbackFired = false;
+      conn.call('unlimitedMethod', function () {
+        callbackFired = true;
+      });
+      const message = testGotMessage(test, stream, {
+        msg: 'method', method: 'unlimitedMethod', params: [], id: '*'
+      });
+
+      let session = SESSION_ID;
+      for (let i = 1; i <= 5; i++) {
+        await stream.reset();
+        testGotMessage(test, stream, makeConnectMessage(session, conn._receivedCount));
+        testGotMessage(test, stream, {
+          msg: 'method', method: 'unlimitedMethod', params: [], id: message.id
+        });
+        test.isFalse(callbackFired);
+
+        session = 'session-' + i;
+        await stream.receive({ msg: 'connected', session: session });
+      }
+
+      test.isFalse(callbackFired);
+      test.equal(Object.keys(conn._methodInvokers).length, 1);
+    }
+  );
+
+  Tinytest.addAsync(
+    'livedata connection - a method that fails on reset settles on a resumed session',
+    async function (test) {
+      const stream = new StubStream();
+      const conn = newConnection(stream);
+
+      await startAndConnect(test, stream);
+
+      let callbackError = null;
+      let callbackFired = false;
+      conn.apply('oneShotMethod', [], { maxRetries: 0 }, function (error) {
+        callbackFired = true;
+        callbackError = error;
+      });
+      const message = testGotMessage(test, stream, {
+        msg: 'method', method: 'oneShotMethod', params: [], id: '*'
+      });
+
+      // The server resumes the previous session, so stores are not reset.
+      await stream.reset();
+      testGotMessage(test, stream, makeConnectMessage(SESSION_ID, conn._receivedCount));
+      test.length(stream.sent, 0);
+      await stream.receive({ msg: 'connected', session: SESSION_ID });
+
+      test.isTrue(callbackFired);
+      test.instanceOf(callbackError, Meteor.Error);
+      test.equal(callbackError.error, 'invocation-failed');
+      test.equal(Object.keys(conn._methodInvokers).length, 0);
+      test.equal(conn._outstandingMethodBlocks.length, 0);
+
+      // The resumed session can still report the method as done.
+      await stream.receive({ msg: 'updated', methods: [message.id] });
+    }
+  );
+
+  Tinytest.addAsync(
+    'livedata connection - maxRetries must be a non-negative integer',
+    async function (test) {
+      const stream = new StubStream();
+      const conn = newConnection(stream);
+
+      await startAndConnect(test, stream);
+
+      for (const maxRetries of [-1, 1.5, NaN, '2']) {
+        test.throws(
+          () => conn.apply('invalidMethod', [], { maxRetries }),
+          /maxRetries must be a non-negative integer/
+        );
+        await test.throwsAsync(
+          () => conn.applyAsync('invalidMethod', [], { maxRetries }),
+          /maxRetries must be a non-negative integer/
+        );
+      }
+      test.length(stream.sent, 0);
+      test.equal(Object.keys(conn._methodInvokers).length, 0);
+    }
+  );
+}
+
 // ============================================================================
 // DDP Session Resumption Tests (Client-side)
 // ============================================================================
