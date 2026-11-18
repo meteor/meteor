@@ -122,17 +122,21 @@ const T0 = 1_700_000_000_000;
 async function runOnMockedClock(github, runTime) {
   mock.timers.enable({ apis: ['setTimeout', 'Date'], now: T0 });
   try {
-    let result;
-    let done = false;
-    run(github, false, runTime).then((left) => {
-      result = left;
-      done = true;
-    });
-    while (!done) {
+    let outcome;
+    run(github, false, runTime).then(
+      (left) => {
+        outcome = { left };
+      },
+      (error) => {
+        outcome = { error };
+      }
+    );
+    while (!outcome) {
       await new Promise((resolve) => setImmediate(resolve));
       mock.timers.runAll();
     }
-    return result;
+    if (outcome.error) throw outcome.error;
+    return outcome.left;
   } finally {
     mock.timers.reset();
   }
@@ -177,23 +181,51 @@ test('a budget of exactly the reserve does not wait', { timeout: 10000 }, async 
   assert.strictEqual(await run(github, false, 60 * 1000), 0);
 });
 
-test('waits out a secondary rate limit and writes again', async () => {
-  const github = buildGithubMock([issue(1, NEW, ['status: confirmed', 'bug'])]);
+// Answers the first `failures` writes with a secondary rate limit; returns the time of every attempt.
+function limitWrites(github, failures, headers = {}) {
   const times = [];
   const addLabels = github.rest.issues.addLabels;
   github.rest.issues.addLabels = async (params) => {
     times.push(Date.now());
-    if (times.length === 1) {
-      throw Object.assign(new Error('You have exceeded a secondary rate limit'), {
-        status: 403,
-        response: { headers: { 'retry-after': '120' } },
-      });
+    if (times.length <= failures) {
+      throw Object.assign(new Error('You have exceeded a secondary rate limit'), { status: 403, response: { headers } });
     }
     return addLabels(params);
   };
+  return times;
+}
+
+test('waits out a secondary rate limit and writes again', async () => {
+  const github = buildGithubMock([issue(1, NEW, ['status: confirmed', 'bug'])]);
+  const times = limitWrites(github, 1, { 'retry-after': '120' });
   assert.strictEqual(await runOnMockedClock(github), 0);
   assert.deepStrictEqual(times, [T0, T0 + 120_000]);
   assert.deepStrictEqual(github.added, ['#1 type: bug']);
+});
+
+test('waits a minute when the rate limit comes without a delay', async () => {
+  const github = buildGithubMock([issue(1, NEW, ['status: confirmed', 'bug'])]);
+  const times = limitWrites(github, 1);
+  assert.strictEqual(await runOnMockedClock(github), 0);
+  assert.deepStrictEqual(times, [T0, T0 + 60_000]);
+});
+
+test('fails after three rate limited answers in a row', async () => {
+  const github = buildGithubMock([issue(1, NEW, ['status: confirmed', 'bug'])]);
+  const times = limitWrites(github, 3, { 'retry-after': '120' });
+  await assert.rejects(runOnMockedClock(github), /secondary rate limit/);
+  assert.strictEqual(times.length, 3);
+});
+
+test('stops when the rate limit asks for a wait longer than the run', async () => {
+  const github = buildGithubMock([
+    issue(1, NEW, ['status: confirmed', 'bug']),
+    issue(2, NEW, ['status: confirmed', 'enhancement']),
+  ]);
+  const times = limitWrites(github, 1, { 'retry-after': String(6 * 60 * 60) });
+  assert.strictEqual(await runOnMockedClock(github), 1);
+  assert.strictEqual(times.length, 1);
+  assert.deepStrictEqual(github.added, []);
 });
 
 test('fails on an error other than a rate limit', async () => {
