@@ -2,7 +2,7 @@
 
 Labels are defined in [`.github/labels.yml`](.github/labels.yml) and applied to the repository by the [Labels workflow](.github/workflows/labels.yml). To add, rename or remove a label, open a pull request on that file: a label created in the repository settings and missing from the manifest is deleted by the next run.
 
-Every label belongs to one facet, written as a prefix, so the label picker groups them and searches read well: `is:open label:"area: ddp" label:"status: needs-triage"`.
+Every label belongs to one facet, written as a prefix, apart from the few standalone labels listed at the end, so the label picker groups them and searches read well: `is:open label:"area: ddp" label:"status: needs-triage"`.
 
 ### `type:` what the item is
 
