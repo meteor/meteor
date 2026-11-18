@@ -13,7 +13,7 @@ function withoutInvocation(f) {
     }
 
     return function () {
-      CurrentInvocation.withValue(null, f);
+      return CurrentInvocation.withValue(null, f);
     };
   }
   return f;
