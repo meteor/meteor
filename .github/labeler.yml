@@ -62,7 +62,7 @@
   - changed-files:
       - any-glob-to-any-file:
           - tools/static-assets/{skel,scaffolds}-*/**
-          - tools/cli/example-repositories.js
+          - tools/cli/examples.js
 
 "area: ddp":
   - changed-files:
@@ -159,7 +159,7 @@
   - changed-files:
       - any-glob-to-any-file:
           - '**/*.d.ts'
-          - '**/{types,typings}/**'
+          - '**/*.test-d.ts'
 
 "area: webapp":
   - changed-files:
