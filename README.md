@@ -124,10 +124,16 @@ Meteor is made possible by our amazing sponsors. Support the project and get you
 * Discuss on [Forums](https://forums.meteor.com/)
 * Join the [Meteor Discord](https://discord.gg/hZkTCaVjmT)
 
+<hr>
 
-Interested in helping or contributing to Meteor?  These resources will help:
+# 🤝 Help maintain Meteor
+
+Try a reported issue in your app, review a change in a package you know, or improve a guide you found hard to follow. [Find an area to help with](MAINTAINERS.md).
+
+Core Maintainers choose the areas they look after and help prioritize issues and reviews. The Technical Steering Committee makes the final call on major changes and publishes official releases. [How Meteor is governed](GOVERNANCE.md)
 
 * [Core development guide](DEVELOPMENT.md)
 * [Contribution guidelines](CONTRIBUTING.md)
 * [Feature requests](https://github.com/meteor/meteor/discussions/)
 * [Issue tracker](https://github.com/meteor/meteor/issues)
+* [Release milestones](https://github.com/meteor/meteor/milestones)
