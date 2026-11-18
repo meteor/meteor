@@ -1150,6 +1150,9 @@ sets, call `DDP.connect` with the URL of the application.
   See [Meteor.reconnect](#Meteor-reconnect).
 - `disconnect` -
   See [Meteor.disconnect](#Meteor-disconnect).
+- `registerStoreClient` / `registerStoreServer` -
+  Route the documents of a collection name to a store of your own. See
+  [Custom stores](#ddp-stores).
 
 By default, clients open a connection to the server from which they're loaded.
 When you call `Meteor.subscribe`, `Meteor.status`, `Meteor.call`, and
@@ -1177,6 +1180,75 @@ Registers a callback hook that is invoked on the client whenever the DDP connect
 Callbacks may be async functions. When any reconnect callback returns a promise,
 Meteor waits for those promises to settle before re-sending outstanding method
 messages.
+
+## Custom stores {#ddp-stores}
+
+The documents a server publishes travel as `added`, `changed` and `removed`
+messages, each tagged with a collection name. The connection hands every
+message to the _store_ registered under that name. `Mongo.Collection`
+registers a store that writes into its client-side copy of the collection; a
+connection can also route a collection name to a store of your own, with no
+`Mongo.Collection` behind it. The `autoupdate` package keeps its client
+versions in a `Map` this way.
+
+```js
+import { Meteor } from "meteor/meteor";
+
+const scores = new Map();
+
+Meteor.connection.registerStoreClient("scores", {
+  update({ msg, id, fields }) {
+    if (msg === "removed") {
+      scores.delete(id);
+      return;
+    }
+    const score = scores.get(id) ?? {};
+    for (const [key, value] of Object.entries(fields ?? {})) {
+      if (value === undefined) delete score[key];
+      else score[key] = value;
+    }
+    scores.set(id, score);
+  },
+});
+
+Meteor.subscribe("scores");
+```
+
+Call `registerStoreClient` on a client connection and `registerStoreServer`
+on a connection opened with `DDP.connect` from the server, where every store
+method may return a promise that the connection awaits. Both return `true`,
+or `false` when a store is already registered under that name. Messages that
+arrive for a name with no store yet are kept and replayed to the store once
+it registers.
+
+A store is an object with the following methods. Every one is optional: a
+method the store does not implement is skipped.
+
+- `beginUpdate(batchSize, reset)` -
+  Called on every registered store at the start of a batch of messages, with
+  the number of messages this store is about to receive. `reset` is `true`
+  when the connection reconnected without resuming its session: the store
+  must then drop all of its documents, which the server sends again.
+- `update(message)` -
+  Called once per message. `message.msg` is `added`, `changed` or `removed`
+  and `message.id` is the document id as a string. `message.fields` holds the
+  fields set by `added` and `changed`, and is absent when an added document
+  has nothing but an id; a field the server cleared has the value
+  `undefined`. A fourth kind, `replace`, arrives when a method whose
+  stub wrote a document completes: `message.replace` is the server's version
+  of the document, or `undefined` when the document no longer exists.
+- `endUpdate()` -
+  Called on every registered store once the batch is applied. A store that
+  pauses its observers in `beginUpdate` resumes them here.
+- `saveOriginals()` and `retrieveOriginals()` -
+  Called before and after a method stub runs, so that the connection can put
+  the server's version of a document back once the method completes.
+  `retrieveOriginals` returns a `Map` from document id to the document as it
+  was before the stub ran, or `undefined` for a document the stub inserted.
+  Only stores that method stubs write to need them.
+- `getDoc(id)` -
+  Returns the store's current version of a document. The connection calls it
+  while stores reset, to keep the version a pending method stub wrote.
 
 ## Timers { #timers }
 
