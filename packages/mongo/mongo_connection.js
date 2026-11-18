@@ -1168,6 +1168,21 @@ MongoConnection.prototype._observeChanges = async function (
             };
           }
 
+          // Other selectors whose local re-match can diverge from MongoDB
+          // ($type, negated $elemMatch, PCRE-only regex, collation) must also
+          // fall back, so a document MongoDB excluded cannot arrive via a live
+          // change event. Mirrors the oplog driver.
+          const divergence = LocalCollection._liveReMatchDivergence(
+            cursorDescription.selector,
+            cursorDescription.options
+          );
+          if (divergence) {
+            return {
+              available: false,
+              reason: `Selector not supported by Change Streams (${divergence})`,
+            };
+          }
+
           return {
             available: true,
             matcher: localMatcher,

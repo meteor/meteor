@@ -206,12 +206,15 @@ async function authedRpc(options) {
   var preflight = rpcOptions.preflight;
   delete rpcOptions.preflight;
 
-  // Fetch auth info
+  // Fetch auth info. Parameters travel in the query string, so leave out the
+  // settings: only the deploy operation itself needs them.
+  var infoQs = Object.assign({}, options.qs);
+  delete infoQs.settings;
   var infoResult = await deployRpc({
     operation: 'info',
     site: rpcOptions.site,
     expectPayload: [],
-    qs: options.qs,
+    qs: infoQs,
     printDeployURL: options.printDeployURL,
     waitForDeploy: options.waitForDeploy,
   });

@@ -118,6 +118,13 @@ final class AssetBundleManager: AssetBundleDownloaderDelegate {
 
       let version = manifest.version
 
+      // The version is used as the name of the directory the downloaded asset
+      // bundle is stored in, so it must not point outside the versions directory
+      guard AssetManifest.isValidVersion(version) else {
+        self.didFailWithError(WebAppError.invalidAssetManifest(reason: "Asset manifest has an invalid version: \(version)", underlyingError: nil))
+        return
+      }
+
       NSLog("Downloaded asset manifest for version: \(version)")
 
       self.queue.async {
@@ -276,6 +283,11 @@ final class AssetBundleManager: AssetBundleDownloaderDelegate {
 
   /// Move the downloaded asset bundle to a new directory named after the version
   private func moveDownloadedAssetBundleIntoPlace(_ assetBundle: AssetBundle) throws {
+    // Never remove or replace anything outside of the versions directory
+    guard AssetManifest.isValidVersion(assetBundle.version) else {
+      throw WebAppError.invalidAssetManifest(reason: "Asset manifest has an invalid version: \(assetBundle.version)", underlyingError: nil)
+    }
+
     let versionDirectoryURL = self.versionsDirectoryURL.appendingPathComponent(assetBundle.version)
 
     do {
