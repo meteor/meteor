@@ -150,6 +150,14 @@
   description: "No human comment for 90 days (weekly script, removed after a human comment)"
   from_name: "idle"
 
+# legacy: issues reported on releases before 3.0, until someone checks them on 3.x
+- name: "legacy: needs-review"
+  color: "c5def5"
+  description: "May only affect releases before 3.0: someone needs to check it on 3.x"
+- name: "legacy: pre-3 only"
+  color: "c5def5"
+  description: "Confirmed to affect only releases before 3.0; closed as not planned"
+
 # priority: set by the Meteor Software team, it is their roadmap
 - name: "priority: critical"
   color: "d93f0b"
@@ -167,6 +175,23 @@
   color: "d93f0b"
   description: "Valid, but not soon"
   from_name: "Impact:few"
+
+# ci: switches for the E2E workflow (meteor/meteor#14479), applied on pull requests
+- name: "ci:e2e"
+  color: "b7d97b"
+  description: "Run all E2E slices"
+- name: "ci:e2e:apps"
+  color: "b7d97b"
+  description: "Run app lifecycle and bundling slices"
+- name: "ci:e2e:skeletons"
+  color: "b7d97b"
+  description: "Run meteor create skeleton slices"
+- name: "ci:e2e:examples"
+  color: "b7d97b"
+  description: "Run example creation slices"
+- name: "ci:e2e:native"
+  color: "b7d97b"
+  description: "Run native mobile smoke tests"
 
 # Standalone labels, outside the facets
 - name: "experimental"
