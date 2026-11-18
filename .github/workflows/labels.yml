@@ -56,7 +56,8 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Test the label scripts
-        run: node --test .github/scripts/__tests__/relabel.test.js .github/scripts/__tests__/labels-preview.test.js .github/scripts/__tests__/inactive-issues.test.js
+        timeout-minutes: 5
+        run: node --test --test-timeout=60000 .github/scripts/__tests__/relabel.test.js .github/scripts/__tests__/labels-preview.test.js .github/scripts/__tests__/inactive-issues.test.js
 
       # Every run exports before it writes. Re-running a run drops its artifacts, so keep the export
       # of the pull request's last check, and resume a migration with a new run, not a re-run.
@@ -81,8 +82,10 @@ jobs:
           skip-delete: ${{ env.APPLY == 'true' }}
           dry-run: ${{ env.APPLY != 'true' }}
 
+      # The preview above already lists these additions: a dry run does not read them twice.
       - name: Move items of merged labels
         id: relabel
+        if: env.APPLY == 'true'
         uses: actions/github-script@v9
         with:
           retries: 3
@@ -90,7 +93,7 @@ jobs:
           retry-exempt-status-codes: 400,401,403,404,422,429
           script: |
             const relabel = require('./.github/scripts/relabel.js')
-            const left = await relabel({ github, context, dryRun: process.env.APPLY !== 'true' })
+            const left = await relabel({ github, context })
             core.setOutput('left', left)
 
       - name: Delete labels missing from the manifest
