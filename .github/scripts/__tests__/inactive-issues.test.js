@@ -240,3 +240,14 @@ test('Stale issue with no human comment since -> label kept, no comment', async 
   assert.ok(issue.labels.some(l => l.name === 'status: stale'), 'Should keep the stale label');
   assert.equal(commentsByIssue[issue.number].length, 0, 'Should not comment');
 });
+
+test('Stale issue marked `status: in-progress` -> label removed without a comment', async () => {
+  const issue = makeIssue({ daysSinceHumanActivity: 200, labels: ['status: stale', 'status: in-progress'] });
+  const commentsByIssue = { [issue.number]: [] };
+
+  await runScript({ issues: [issue], commentsByIssue });
+
+  assert.ok(!issue.labels.some(l => l.name === 'status: stale'), 'Should remove the stale label');
+  assert.ok(issue.labels.some(l => l.name === 'status: in-progress'), 'Should keep the in-progress label');
+  assert.equal(commentsByIssue[issue.number].length, 0, 'Should not comment');
+});

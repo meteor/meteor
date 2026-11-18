@@ -110,10 +110,11 @@ module.exports = async ({ github, context }) => {
       continue;
     }
 
-    if (issue.labels.some((l) => l.name === IN_PROGRESS_LABEL)) {
+    const isStale = issue.labels.some((l) => l.name === STALE_LABEL);
+    const inProgress = issue.labels.some((l) => l.name === IN_PROGRESS_LABEL);
+    if (inProgress && !isStale) {
       continue;
     }
-    const isStale = issue.labels.some((l) => l.name === STALE_LABEL);
 
     let analysis;
     try {
@@ -125,9 +126,9 @@ module.exports = async ({ github, context }) => {
     const { lastHumanActivity, hasReminderAfterLastHuman } = analysis;
     const inactivityMs = now.getTime() - lastHumanActivity.getTime();
 
-    // Stale issues: drop the label once a human commented, nothing else
+    // Stale issues: drop the label once a human commented or someone works on it, nothing else
     if (isStale) {
-      if (inactivityMs < idleTimeLabel) {
+      if (inProgress || inactivityMs < idleTimeLabel) {
         try {
           await github.rest.issues.removeLabel({
             owner: context.repo.owner,
