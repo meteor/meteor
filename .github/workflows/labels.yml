@@ -39,6 +39,8 @@ concurrency:
 
 jobs:
   labels:
+    # Forks keep their own labels: this only runs in the main repository.
+    if: github.repository == 'meteor/meteor'
     runs-on: ubuntu-latest
     # relabel.js stops after 5 hours, under the 6 hour limit of a job.
     timeout-minutes: 330
@@ -56,7 +58,8 @@ jobs:
       - name: Test the label scripts
         run: node --test .github/scripts/__tests__/relabel.test.js .github/scripts/__tests__/labels-preview.test.js .github/scripts/__tests__/inactive-issues.test.js
 
-      # Every run exports before it writes: the artifact of the first run on devel holds the labels from before the migration.
+      # Every run exports before it writes. Re-running a run drops its artifacts, so keep the export
+      # of the pull request's last check, and resume a migration with a new run, not a re-run.
       - name: Preview the changes and export the current labels
         uses: actions/github-script@v9
         with:
