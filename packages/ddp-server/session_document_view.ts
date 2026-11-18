@@ -18,7 +18,7 @@ export class SessionDocumentView {
   }
 
   getFields(): Record<string, any> {
-    const ret: Record<string, any> = {};
+    const ret: Record<string, any> = Object.create(null);
     this.dataByKey.forEach((precedenceList, key) => {
       ret[key] = precedenceList[0].value;
     });

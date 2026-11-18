@@ -88,7 +88,7 @@ When debugging an integration issue, it is usually one of: a missing externals b
 
 ## E2E testing
 
-The Rspack integration is exercised by the Jest + Playwright suite in `tools/e2e-tests/`. Each app fixture under `tools/e2e-tests/apps/<name>/` has a matching `<name>.test.js` that runs init/dev/prod/test/build/reset phases against a real Meteor + Rspack project. The full matrix lives in [`E2E_COVERAGE.md`](E2E_COVERAGE.md); maintain that file via the [`e2e-coverage`](../../../.github/skills/e2e-coverage/SKILL.md) skill when adding or modifying apps.
+The Rspack integration is exercised by the Jest + Playwright suite in `tools/e2e-tests/`. Suites use temporary copies of fixtures under `tools/e2e-tests/apps/` for shared lifecycle coverage or focused regressions against a real Meteor + Rspack project. The full matrix lives in [`E2E_COVERAGE.md`](E2E_COVERAGE.md); maintain it using the [coverage-report reference](../../../.github/skills/e2e-testing/references/coverage-report.md) in the [E2E testing skill](../../../.github/skills/e2e-testing/SKILL.md).
 
 Run `npm run test:e2e:groups` from the repository root to list the available
 groups, then `npm run test:e2e:group -- monorepo` (or another group) to reproduce
@@ -111,7 +111,7 @@ for all commands and the dedicated Accounts group.
 5. Run the new file alone: `npm run test:e2e -- --testPathPattern <name>`. That is also the fastest way to debug a single regression.
 6. Assign the suite in `tools/e2e-tests/test-groups.js` and run `npm run test:e2e:groups:audit`. Unassigned tests run in CI's fallback group; overlaps and empty named groups fail the audit.
 7. Run its group with `npm run test:e2e:group -- <group>`.
-8. Update [`E2E_COVERAGE.md`](E2E_COVERAGE.md) per the e2e-coverage skill so the matrix stays accurate.
+8. Update [`E2E_COVERAGE.md`](E2E_COVERAGE.md) using the [coverage-report reference](../../../.github/skills/e2e-testing/references/coverage-report.md) so the matrix stays accurate.
 
 ### What to verify when touching Rspack
 

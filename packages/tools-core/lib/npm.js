@@ -253,6 +253,7 @@ export function checkNpmBinaryExists(binary, options = {}) {
  * @param {string|string[]} dependencies - The npm dependency or dependencies to install
  * @param {Object} [options] - Options for the installation
  * @param {boolean} [options.dev=false] - If true, install as a dev dependency
+ * @param {boolean} [options.includeDev=false] - Include npm development dependencies even in production
  * @param {boolean} [options.exact=false] - If true, install with exact version
  * @param {boolean} [options.legacyPeerDeps=false] - If true, ask npm to replace coordinated peer dependency majors
  * @param {boolean} [options.isMeteorCommand=false] - If true, prepends 'npm' to the args for meteor command
@@ -260,6 +261,10 @@ export function checkNpmBinaryExists(binary, options = {}) {
  */
 function buildNpmInstallArgs(dependencies, options = {}) {
   const args = options.isMeteorCommand ? ['npm', 'install'] : ['install'];
+
+  if (options.includeDev) {
+    args.push('--include=dev');
+  }
 
   // Add flags based on options
   if (options.dev) {
@@ -468,6 +473,7 @@ async function installYarnDependency(dependencies, options, cwd) {
  * @param {boolean} [options.dev=false] - If true, install as a dev dependency
  * @param {boolean} [options.exact=false] - If true, install with exact version
  * @param {boolean} [options.legacyPeerDeps=false] - If true, pass --legacy-peer-deps to npm
+ * @param {boolean} [options.includeDev=false] - Include npm development dependencies even in production
  * @param {boolean} [options.yarn=false] - If true, use yarn instead of npm
  * @param {'npm'|'yarn'|'pnpm'} [options.packageManager] - Explicit package manager
  * @returns {Promise<boolean>} A promise that resolves to true if installation succeeded, false otherwise

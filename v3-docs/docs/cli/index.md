@@ -32,9 +32,11 @@ Install shell completion for Meteor commands in bash or zsh.
 meteor shell-completion --install
 ```
 
-This command writes the completion script to `~/.meteor/meteor-completion.sh`
-and adds a source line to your shell startup file so completion is loaded
-automatically in future terminal sessions.
+This command writes the completion scripts to
+`~/.meteor/meteor-completion.bash` and `~/.meteor/meteor-completion.zsh`, plus a
+small `~/.meteor/meteor-completion.sh` loader that picks the right one for the
+running shell. It then adds a source line for the loader to your shell startup
+file so completion is loaded automatically in future terminal sessions.
 
 The generated script embeds the current top-level Meteor command list at install
 time for faster and more reliable first-argument completion. Re-run
@@ -51,6 +53,9 @@ want to install completion for a different shell explicitly.
 meteor shell-completion --install --shell zsh
 meteor shell-completion --install --shell bash
 ```
+
+Each shell has its own script, so you can install completion for both and
+switch between them freely.
 
 ### What Gets Completed
 
@@ -104,8 +109,9 @@ those aliases are registered for completion.
 meteor shell-completion --uninstall
 ```
 
-This removes `~/.meteor/meteor-completion.sh` and deletes the
-`# Meteor autocompletion` block that Meteor added to your startup files.
+This removes `~/.meteor/meteor-completion.sh` and the per-shell scripts next to
+it, and deletes the `# Meteor autocompletion` block that Meteor added to your
+startup files.
 
 ### Troubleshooting
 
@@ -382,6 +388,10 @@ If you run `meteor create` without arguments, Meteor will launch an interactive 
  | `--babel`        | React with Babel support | - |
 | `--angular`      | Angular + Typescript    | - |
 
+The TypeScript, TypeScript + Tailwind, Svelte, and Angular templates use
+[native Meteor package declarations](/cli/using-core-types) by default.
+`meteor create` generates `.meteor/types/` so editor types are ready immediately.
+
 ### Project Structure Options
 
 | Option | Description |
@@ -405,7 +415,7 @@ against the nested `apps/app` project. The root `start` and `test` scripts route
 to that application; `meteor npm` is only used above to invoke the root script.
 
 ::: warning Prototype Mode
-The `--prototype` option adds packages that make development faster but shouldn't be used in production. See the [security checklist](/tutorials/security/security#checklist).
+The `--prototype` option adds packages that make development faster but shouldn't be used in production. See the [security checklist](/tutorials/security/security#security-checklist).
 :::
 
 ### Included Packages
@@ -456,6 +466,26 @@ Blaze app plus a web app manifest, icons, a dependency-free service worker and a
 
 **Meteor packages:**
 - `meteor-base`, `mobile-experience`, `mongo`, `blaze-html-templates`, `jquery`, `reactive-var`, `tracker`, `standard-minifier-css`, `standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`, `hot-module-replacement`, `blaze-hot`, `rspack`
+
+**Service worker behavior:**
+
+- In development, the service worker precaches only its static offline files.
+  Application bundles, navigation requests, and other traffic stay on the
+  network so hot code push does not reuse a stale bundle.
+- In production, navigation is network-first with `offline.html` as a fallback,
+  hashed bundles use stale-while-revalidate, and images and fonts use a
+  cache-first strategy.
+- DDP traffic under `/sockjs/` and `/websocket` is never intercepted.
+
+`localhost` is a secure context, so the generated app is installable during
+local development. A browser on a phone or another device requires the app to
+be served over HTTPS before offering installation.
+
+The skeleton provides an installable app shell and offline fallback page. It
+does not synchronize Meteor data, queue methods, or replay writes while the
+application is offline; add those capabilities separately if your application
+needs them.
+
 </details>
 
 <details>
@@ -897,6 +927,20 @@ meteor deploy your-app.meteorapp.com
 | `--deploy-polling-timeout <ms>` | Time to wait for build/deploy (defaults to 15 minutes) |
 | `--no-wait` | Exit after code upload instead of waiting for deploy to complete |
 
+### Deploy Region
+
+`meteor deploy` finds the app's region by requesting `https://<site>/.well-known/meteor/deploy-url`, or the same address over HTTP when the site has no certificate yet. It only accepts an HTTPS deploy server on Galaxy's deploy domain, `galaxy-deploy.meteor.com` (for example `eu-west-1.galaxy-deploy.meteor.com`). If the lookup gets no answer, the `us-east-1` region is used. If discovery instead returns an untrusted deployment URL, Meteor stops rather than sending your credentials there.
+
+To choose a region yourself, or to use any other deploy server, set `DEPLOY_HOSTNAME`:
+
+```bash
+DEPLOY_HOSTNAME=eu-west-1.galaxy-deploy.meteor.com meteor deploy your-app.com
+```
+
+::: warning
+The deploy server receives your Meteor account credentials, so only set `DEPLOY_HOSTNAME` to a server you trust.
+:::
+
 ### Free Deployment
 
 Deploy a free app with MongoDB using:
@@ -968,6 +1012,8 @@ This is necessary because the database provider doesn't have certificates instal
 ## meteor update
 
 Updates your Meteor application while maintaining compatibility.
+
+Before updating to Meteor 3.6 with an existing local database, follow the [MongoDB 7 to 8 preparation steps](/about/install#updating-local-database). Prepare the database while it is still running under the previous release.
 
 **Usage:**
 ```bash

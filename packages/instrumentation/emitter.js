@@ -33,7 +33,12 @@ function reportListenerError(error, event) {
   if (!listenerErrorHandler) return;
   // The error reporter itself must never throw into the framework.
   try {
-    listenerErrorHandler(error, event);
+    const result = listenerErrorHandler(error, event);
+    // Reporters are intentionally fire-and-forget. Attach a terminal rejection
+    // handler without routing the reporter's own failure back through itself.
+    if (result && typeof result.then === 'function') {
+      Promise.resolve(result).catch(() => {});
+    }
   } catch (_ignored) {
     // swallow — instrumentation observes, it never breaks the caller.
   }

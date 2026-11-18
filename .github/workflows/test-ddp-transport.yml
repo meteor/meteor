@@ -53,11 +53,14 @@ jobs:
       - name: Install npm dependencies
         run: npm install
 
+      - name: Check package test runner
+        run: node --test scripts/ci/__tests__/test-in-console.node-test.js
+
       - name: Run DDP server tests (${{ matrix.transport }})
-        run: ./packages/test-in-console/run.sh "ddp-server"
+        run: bash scripts/ci/run-ddp-transport-tests.sh "ddp-server"
 
       # ddp-client holds the DDP version negotiation tests, which exercise the
       # server's send-then-close path. Running them per transport is what keeps
       # a transport from silently breaking negotiation.
       - name: Run DDP client tests (${{ matrix.transport }})
-        run: ./packages/test-in-console/run.sh "ddp-client"
+        run: bash scripts/ci/run-ddp-transport-tests.sh "ddp-client"

@@ -97,6 +97,29 @@ Tinytest.add(
 );
 
 Tinytest.add(
+  "rspack - build-context - development server waits for its Node-loaded bundle",
+  function (test) {
+    var content = getBuildFileContent({
+      isTest: false,
+      isServer: true,
+      isDevelopment: true,
+      role: FILE_ROLE.run,
+      entryFile: "server/main.js",
+      outputFile: "server-rspack.cjs",
+    });
+
+    test.isTrue(
+      content.includes("__rspackServerModule.load(__rspackServerBundlePath)"),
+      "development server must load its Rspack bundle with Node",
+    );
+    test.isTrue(
+      content.includes("await Promise.resolve(__rspackServerModule.exports)"),
+      "development server must wait for the async Rspack bundle",
+    );
+  },
+);
+
+Tinytest.add(
   "rspack - build-context - production server preserves require+await for TLA",
   function (test) {
     var content = getBuildFileContent({

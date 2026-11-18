@@ -5,6 +5,7 @@
  */
 
 import {
+  assertConsoleEval,
   assertRspackWorkspaceInstall,
   assertServiceWorkerFile,
   assertStyles,
@@ -17,11 +18,76 @@ import {
   killProcessByPort,
   resetPlaywrightPage,
   runMeteorApp,
+  wait,
   waitForMeteorOutput,
 } from './helpers';
 import { linkLocalRspack, testMeteorSkeleton } from './test-helpers';
 import fs from 'fs-extra';
 import path from 'path';
+import waitOn from 'wait-on';
+
+async function assertTsgoClientHmr({ tempDir, meteorProcess, result }) {
+  const componentPath = path.join(tempDir, 'imports/ui/Hello.tsx');
+  const serverPath = path.join(tempDir, 'server/main.ts');
+  const componentSource = await fs.readFile(componentPath, 'utf8');
+  const serverSource = await fs.readFile(serverPath, 'utf8');
+  const serverPid = () => page.evaluate(() => Meteor.callAsync('e2e.serverPid'));
+  const countText = "You've pressed the button 2 times.";
+
+  try {
+    await page.getByRole('button', { name: 'Click Me', exact: true }).click();
+    await page.getByRole('button', { name: 'Click Me', exact: true }).click();
+    await page.getByText(countText, { exact: true }).waitFor();
+    const documentBefore = await page.evaluate(() => performance.timeOrigin);
+    const pidBefore = await serverPid();
+    const clientEditStart = result.outputLines.length;
+
+    // The native checker also watches this client component in the server
+    // compilation. Rechecking it must preserve the running app and React state.
+    await fs.writeFile(
+      componentPath,
+      componentSource.replace('Click Me', 'Click Me (updated)'),
+    );
+    await page.getByRole('button', { name: 'Click Me (updated)', exact: true }).waitFor();
+    await waitForMeteorOutput(
+      result.outputLines,
+      /Compiled Rspack server app no errors found/,
+      { meteorProcess, startIndex: clientEditStart },
+    );
+    // Allow a delayed Meteor restart/reload to arrive after Rspack finishes.
+    await wait(2_000);
+    expect(await page.evaluate(() => performance.timeOrigin)).toBe(documentBefore);
+    expect(await page.getByText(countText, { exact: true }).count()).toBe(1);
+    expect(await serverPid()).toBe(pidBefore);
+    expect(result.outputLines.slice(clientEditStart).join('\n')).not.toContain(
+      'Server modified -- restarting',
+    );
+
+    // A real server output change must still be applied by restarting.
+    const serverEditStart = result.outputLines.length;
+    await fs.appendFile(serverPath, '\nconsole.log("e2e: native checker server edit applied");\n');
+    await waitForMeteorOutput(
+      result.outputLines,
+      'e2e: native checker server edit applied',
+      { meteorProcess, startIndex: serverEditStart },
+    );
+    // Server startup output can arrive while the browser is reloading. Wait
+    // for its DDP connection to reach the new process before checking the PID.
+    await assertConsoleEval(`
+      (async () => {
+        if (!globalThis.Meteor?.status().connected) return false;
+        const pid = await Meteor.callAsync('e2e.serverPid');
+        return Number.isInteger(pid) && pid !== ${pidBefore};
+      })()
+    `, true, { timeout: 30_000 });
+    expect(result.outputLines.slice(serverEditStart).filter(line =>
+      line.includes('Server modified -- restarting')
+    )).toHaveLength(1);
+  } finally {
+    await fs.writeFile(componentPath, componentSource);
+    await fs.writeFile(serverPath, serverSource);
+  }
+}
 
 async function assertTsgoTypeChecker({ tempDir, meteorProcess, result }) {
   const probePath = path.join(tempDir, 'imports/ts-checker-e2e-probe.ts');
@@ -38,6 +104,27 @@ async function assertTsgoTypeChecker({ tempDir, meteorProcess, result }) {
     });
   } finally {
     await fs.remove(probePath);
+  }
+}
+
+// ostrio:flow-router-extra deprecates `FlowRouter.notFound`; the skeleton registers a
+// wildcard route instead. An unknown path must still render the 404 page, and booting
+// must not print a deprecation notice in the browser console. The notice is matched on
+// its text whatever the console channel: 3.15 emits it through `Meteor.deprecate`
+// (console.warn), older releases through `Meteor._debug` (console.log).
+async function assertWildcardNotFoundRoute(port) {
+  const messages = [];
+  const onConsole = (msg) => messages.push(msg.text());
+  page.on('console', onConsole);
+  try {
+    await page.goto(`http://localhost:${port}/e2e-missing-route`);
+    await page.waitForSelector('#not-found h1');
+    expect(messages.filter((text) => /deprecated/i.test(text))).toEqual([]);
+    console.log('✅ Wildcard 404 route rendered without deprecation notices');
+  } finally {
+    page.removeListener('console', onConsole);
+    // Leave the page on the home route for the client HMR step that follows.
+    await page.goto(`http://localhost:${port}`);
   }
 }
 
@@ -278,6 +365,77 @@ describe('Meteor Skeletons /', () => {
     }),
   );
 
+  // A path-prefixed ROOT_URL (https://example.com/app) serves everything under
+  // the prefix, so the boilerplate has to inject every script with it, the
+  // Rspack dev client script included (#14716). The counter helper lives in
+  // client/main.js: "0 times" only renders if the app's client code ran.
+  describe('Blaze Skeleton / path prefix /', () => {
+    const port = 3216;
+    const prefix = '/app';
+    const url = `http://localhost:${port}${prefix}/`;
+    let tempDir;
+    let meteorProcess;
+
+    async function runUnderPrefix(commandOptions = []) {
+      ({ meteorProcess } = await runMeteorApp(tempDir, port, {
+        waitForOutput: '=> App running at',
+        commandOptions,
+        env: { ROOT_URL: `http://localhost:${port}${prefix}` },
+        // The helper's readiness probe hits `/`, a 404 under a prefix.
+        skipWaitOn: true,
+      }));
+      await waitOn({
+        resources: [`http-get://localhost:${port}${prefix}/`],
+        timeout: process.env.CI ? 300_000 : 90_000,
+      });
+    }
+
+    async function assertClientCodeRuns() {
+      await page.waitForSelector('h1');
+      await page.waitForFunction(
+        () => document.querySelector('p')?.textContent.includes('pressed the button 0 times'),
+        null,
+        { timeout: 15_000 },
+      );
+      console.log(`✅ Client code running under the prefix (${url})`);
+    }
+
+    beforeAll(async () => {
+      const result = await createMeteorApp('blaze', 'blaze');
+      tempDir = result.tempDir;
+      await result.meteorProcess;
+      await linkLocalRspack(tempDir);
+    }, 360_000);
+
+    afterAll(async () => {
+      await cleanupTempDir(tempDir);
+    });
+
+    beforeEach(async () => {
+      await killProcessByPort(port);
+    });
+
+    afterEach(async () => {
+      await resetPlaywrightPage();
+      await killMeteorProcess(meteorProcess);
+      meteorProcess = null;
+    });
+
+    test('"meteor run" / injects the Rspack dev script under the prefix', async () => {
+      await runUnderPrefix();
+      await page.goto(url);
+      const src = await page.$eval('script[src*="__rspack__"]', (s) => s.getAttribute('src'));
+      expect(src.startsWith(`${prefix}/__rspack__/`)).toBe(true);
+      await assertClientCodeRuns();
+    });
+
+    test('"meteor run --production" / serves the app under the prefix', async () => {
+      await runUnderPrefix(['--production']);
+      await page.goto(url);
+      await assertClientCodeRuns();
+    });
+  });
+
   describe(
     'ChakraUI Skeleton /',
     testMeteorSkeleton({
@@ -320,6 +478,9 @@ describe('Meteor Skeletons /', () => {
         client: 'client/main.js',
         server: 'server/main.js',
         test: 'imports/api/links/methods.tests.js',
+      },
+      customAssertions: {
+        afterRun: ({ port }) => assertWildcardNotFoundRoute(port),
       },
     })
   );
@@ -550,6 +711,9 @@ describe('Meteor Skeletons /', () => {
     testMeteorSkeleton({
       skeletonName: 'typescript',
       port: 3209,
+      // The tsgo HMR regression exercises the candidate's output tracker.
+      // typescript.test.js retains the published-package release lane.
+      forceLocalRspack: true,
       filePaths: {
         client: 'client/main.tsx',
         server: 'server/main.ts',
@@ -558,8 +722,15 @@ describe('Meteor Skeletons /', () => {
       customAssertions: {
         async afterCreate({ tempDir }) {
           await assertReact19Dependencies({ tempDir }, true);
+          await fs.appendFile(
+            path.join(tempDir, 'server/main.ts'),
+            "\nMeteor.methods({ 'e2e.serverPid'() { return process.pid; } });\n",
+          );
         },
-        afterRun: assertTsgoTypeChecker,
+        async afterRun(context) {
+          await assertTsgoClientHmr(context);
+          await assertTsgoTypeChecker(context);
+        },
       },
     }),
   );
