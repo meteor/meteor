@@ -37,3 +37,15 @@ Tinytest.add("TypeScript - namespaces", test => {
 
   test.equal(foo(), "oyez");
 });
+
+Tinytest.add("TypeScript - satisfies and const type parameters", test => {
+  function identity<const T>(value: T): T {
+    return value;
+  }
+  const config = { mode: "production", count: 6 } satisfies {
+    mode: "production" | "development";
+    count: number;
+  };
+  test.equal(identity(config).mode, "production");
+  test.equal(identity(config).count, 6);
+});

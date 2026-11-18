@@ -7,6 +7,11 @@ This plugin package enables the use of
 file extensions in Meteor applications and packages, alongside `.js`
 modules (or whatever other types of modules you might be using).
 
+The package and Meteor development bundle use TypeScript 6.0.3. Meteor's
+Babel wrapper uses the same compiler, including when compiling the CLI.
+This does not change the TypeScript version installed in your application
+for editor support or type checking.
+
 ## Usage
 
 The `typescript` package registers a compiler plugin that transpiles

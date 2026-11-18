@@ -7,6 +7,11 @@
 var packageJson = {
   name: "meteor-dev-bundle-tool",
   private: true,
+  // Published Babel wrappers may pin an older nested compiler. Both the CLI
+  // and the TypeScript build plugin must resolve the bundled compiler.
+  overrides: {
+    "@meteorjs/babel": { typescript: "$typescript" },
+  },
   dependencies: {
     // Explicit dependency because we are replacing it with a bundled version
     // and we want to make sure there are no dependencies on a higher version
@@ -17,7 +22,7 @@ var packageJson = {
     "cross-env": "10.0.0",
     "node-gyp-build": "4.8.4",
     "@mapbox/node-pre-gyp": "2.0.3",
-    typescript: "5.9.3",
+    typescript: "6.0.3",
     "@meteorjs/babel": "7.20.2",
     // Keep the versions of these packages consistent with the versions
     // found in dev-bundle-server-package.js.
