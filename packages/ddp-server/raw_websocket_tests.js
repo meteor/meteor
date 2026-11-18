@@ -2,6 +2,7 @@
 // These tests verify that DDP connections work correctly regardless of
 // the transport mode (SockJS or raw WebSocket).
 
+const crypto = Npm.require('crypto');
 const http = Npm.require('http');
 const net = Npm.require('net');
 const { ClientStream } = require('meteor/socket-stream-client');
@@ -91,11 +92,12 @@ if (process.env.DDP_TRANSPORT === 'uws') {
     }
   });
 
-  // Twice the old 16 MiB limit, so that what the kernel absorbs cannot hide a drop.
+  // Twice the old 16 MiB limit, so that what the kernel absorbs cannot hide a
+  // drop. Random bodies keep it there when the transport compresses frames.
   const largeResultCount = 32 * 1024;
   Meteor.publish('raw_websocket_test_large_result', function () {
-    const body = 'x'.repeat(1000);
     for (let i = 0; i < largeResultCount; i++) {
+      const body = crypto.randomBytes(1000).toString('base64');
       this.added('raw_websocket_test_large_result', String(i), { body });
     }
     this.ready();
