@@ -120,6 +120,7 @@ Minimal app with a local package testing asset resolution and bundling. `regress
 | Server-side package assets (`Assets.getTextAsync`) | Run, Prod |
 | App-private folder assets (`Assets.getTextAsync`) | Run, Prod |
 | Client-side package assets (`fetch('/packages/...`) | Run, Prod |
+| Web Worker bundled from `new Worker(new URL(...))` replies without raising an error (#15003) | Run, Prod |
 | `skipTestClient: true` (ignores client mocha tests) | Test once |
 | Assets skipped by compiler source discovery (#14566) | All |
 | Boot built bundle (`node main.js`) to test assets | Build |
@@ -500,6 +501,7 @@ Where each feature is tested across apps and skeletons.
 | Tailwind CSS | vue (PostCSS) | tailwind |
 | PWA (manifest, service worker, offline app shell) | | pwa |
 | Image asset loading | react | |
+| Bundled Web Worker (`new Worker(new URL(...))`) | assets | |
 | 404 routing | react-router, blaze-router | |
 | Meta tags | react-router, monorepo | |
 | Babel compiler plugin | react-router | |
