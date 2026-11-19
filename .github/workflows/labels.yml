@@ -15,8 +15,10 @@ on:
       - '.github/labels.yml'
       - '.github/scripts/relabel.js'
       - '.github/scripts/labels-preview.js'
+      - '.github/scripts/inactive-issues.js'
       - '.github/scripts/__tests__/relabel.test.js'
       - '.github/scripts/__tests__/labels-preview.test.js'
+      - '.github/scripts/__tests__/inactive-issues.test.js'
       - '.github/workflows/labels.yml'
   push:
     branches:
@@ -25,8 +27,10 @@ on:
       - '.github/labels.yml'
       - '.github/scripts/relabel.js'
       - '.github/scripts/labels-preview.js'
+      - '.github/scripts/inactive-issues.js'
       - '.github/scripts/__tests__/relabel.test.js'
       - '.github/scripts/__tests__/labels-preview.test.js'
+      - '.github/scripts/__tests__/inactive-issues.test.js'
       - '.github/workflows/labels.yml'
   schedule:
     - cron: '30 2 * * *'

@@ -251,3 +251,15 @@ test('Stale issue marked `status: in-progress` -> label removed without a commen
   assert.ok(issue.labels.some(l => l.name === 'status: in-progress'), 'Should keep the in-progress label');
   assert.equal(commentsByIssue[issue.number].length, 0, 'Should not comment');
 });
+
+test('Labels not renamed yet (`idle`, `in-development`) -> no new label, no comment', async () => {
+  const idle = makeIssue({ daysSinceHumanActivity: 120, labels: ['idle'] });
+  const inDevelopment = makeIssue({ daysSinceHumanActivity: 120, labels: ['in-development'] });
+  const commentsByIssue = { [idle.number]: [], [inDevelopment.number]: [] };
+
+  await runScript({ issues: [idle, inDevelopment], commentsByIssue });
+
+  assert.deepStrictEqual(idle.labels.map(l => l.name), ['idle'], 'Should leave the idle issue as it is');
+  assert.deepStrictEqual(inDevelopment.labels.map(l => l.name), ['in-development'], 'Should skip the issue in development');
+  assert.equal(commentsByIssue[idle.number].length + commentsByIssue[inDevelopment.number].length, 0, 'Should not comment');
+});
