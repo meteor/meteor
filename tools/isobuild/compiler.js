@@ -59,8 +59,16 @@ compiler.compile = Profile(function (packageSource, options) {
 
   var pluginProviderPackageNames = {};
 
-  for (const info of Object.values(packageSource.pluginInfo)) {
-    // build plugins
+  const pluginInfo = options.testRunnerProviderOnly
+    ? packageSource.testOnly
+      ? packageSource.testRunnerPluginInfo
+      : packageSource.pluginInfo
+    : {
+      ...packageSource.pluginInfo,
+      ...packageSource.testRunnerPluginInfo,
+    };
+  for (const info of Object.values(pluginInfo)) {
+    // build and test-runner provider plugins
     await buildmessage.enterJob({
       title: "building plugin `" + info.name +
           "` in package `" + packageSource.name + "`",
@@ -194,7 +202,9 @@ compiler.compile = Profile(function (packageSource, options) {
     isobuildFeatures
   });
 
-  for (const architecture of packageSource.architectures) {
+  for (const architecture of options.testRunnerProviderOnly
+    ? []
+    : packageSource.architectures) {
     if (architecture.arch === 'web.cordova' && ! includeCordovaUnibuild) {
       continue;
     }

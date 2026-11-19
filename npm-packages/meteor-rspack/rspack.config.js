@@ -1,16 +1,18 @@
-const { DefinePlugin, BannerPlugin, NormalModuleReplacementPlugin } = require('@rspack/core');
+const rspack = require('@rspack/core');
+const { DefinePlugin, BannerPlugin, NormalModuleReplacementPlugin } = rspack;
 const fs = require('fs');
 const { inspect } = require('node:util');
 const path = require('path');
 const { merge } = require('rspack-merge');
 
-const { cleanOmittedPaths, mergeSplitOverlap } = require("./lib/mergeRulesSplitOverlap.js");
-const { getMeteorAppSwcConfig } = require('./lib/swc.js');
+const { mergeSplitOverlap } = require("./lib/mergeRulesSplitOverlap.js");
+const { createMeteorSwcRule } = require('./config.js');
 const HtmlRspackPlugin = require('./plugins/HtmlRspackPlugin.js');
 const { RequireExternalsPlugin } = require('./plugins/RequireExtenalsPlugin.js');
 const { AssetExternalsPlugin } = require('./plugins/AssetExternalsPlugin.js');
 const { MeteorRspackOutputPlugin, extractDelegatedExtensions } = require('./plugins/MeteorRspackOutputPlugin.js');
-const { generateEagerTestFile } = require("./lib/test.js");
+const { generateEagerTestFile } = require('./lib/test.js');
+const { loadTestRunnerAdapter } = require('./lib/test-runner.js');
 const { getMeteorIgnoreEntries, createIgnoreGlobConfig } = require("./lib/ignore");
 const {
   compileWithMeteor,
@@ -52,7 +54,7 @@ function safeRequire(moduleName) {
 function createCacheStrategy(
   mode,
   side,
-  { projectConfigPath, configPath, buildContext } = {},
+  { projectConfigPath, configPath, buildContext, version } = {},
 ) {
   // Check for configuration files
   const tsconfigPath = path.join(process.cwd(), 'tsconfig.json');
@@ -97,7 +99,9 @@ function createCacheStrategy(
 
   return {
     cache: {
-      version: `cache-${mode}${(side && `-${side}`) || ""}`,
+      version: `cache-${mode}${(side && `-${side}`) || ""}${
+        version ? `-${version}` : ''
+      }`,
       type: "persistent",
       storage: {
         type: "filesystem",
@@ -113,60 +117,6 @@ function createCacheStrategy(
         buildDependencies: buildDependencies,
       })
     },
-  };
-}
-
-// SWC loader rule (JSX/JS)
-function createSwcConfig({
-  isTypescriptEnabled,
-  isReactEnabled,
-  isJsxEnabled,
-  isTsxEnabled,
-  externalHelpers,
-  isDevEnvironment,
-  isClient,
-  isLegacy,
-  isAngularEnabled,
-}) {
-  const defaultConfig = {
-    jsc: {
-      parser: {
-        syntax: isTypescriptEnabled ? 'typescript' : 'ecmascript',
-        ...(isTsxEnabled && { tsx: true }),
-        ...(isJsxEnabled && { jsx: true }),
-        ...(isAngularEnabled && { decorators: true }),
-      },
-      target: isLegacy ? 'es5' : isClient ? 'es2015' : 'es2024',
-      ...(isReactEnabled && {
-        transform: {
-          react: {
-            development: isDevEnvironment,
-            ...(isClient && { refresh: isDevEnvironment }),
-          },
-        },
-      }),
-      externalHelpers,
-    },
-  };
-
-  // Swcrc config not customizable
-  const omitPaths = [
-    'jsc.target',
-  ];
-  // Define warning function
-  const warningFn = path => {
-    console.warn(
-      `[.swcrc] Ignored custom "${path}" — reserved for Meteor-Rspack integration.`,
-    );
-  };
-  const customConfig = getMeteorAppSwcConfig() || {};
-  const cleanedCustomConfig = cleanOmittedPaths(customConfig, { omitPaths, warningFn });
-  const swcConfig = merge(defaultConfig, cleanedCustomConfig);
-  return {
-    test: /\.(?:[mc]?js|jsx|[mc]?ts|tsx)$/i,
-    exclude: /node_modules|\.meteor\/local/,
-    loader: "builtin:swc-loader",
-    options: swcConfig,
   };
 }
 
@@ -273,12 +223,35 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   const isTestModule = !!Meteor.isTestModule;
   const isTestEager = !!Meteor.isTestEager;
   const isTestFullApp = !!Meteor.isTestFullApp;
+  let testRunnerContext = {};
+  try {
+    testRunnerContext = JSON.parse(Meteor.testRunnerContext || '{}');
+  } catch {
+    throw new Error('[Meteor Rspack] Invalid test runner build context.');
+  }
+  const testRunnerAdapter = loadTestRunnerAdapter(testRunnerContext, {
+    projectDir,
+    isClient,
+    isTest,
+    isTestLike,
+    isTestFullApp,
+    rspack,
+  });
+  const isTestRunnerRuntime = testRunnerAdapter.runtime === true;
+  const meteorTestFlags = testRunnerAdapter.meteorTestFlags || {
+    isTest: Boolean(isTestLike && !isTestFullApp),
+    isAppTest: Boolean(isTestLike && isTestFullApp),
+  };
+  const testIgnoreEntries = testRunnerAdapter.ignoreEntries || [];
+  const testEntryOptions = testRunnerAdapter.entryOptions || {};
+  const testFiles = JSON.parse(Meteor.testFiles || '[]');
   const isProfile = !!Meteor.isProfile;
   const isVerbose = !!Meteor.isVerbose;
   const configPath = Meteor.configPath;
   const testEntry = Meteor.testEntry;
 
-  const isTypescriptEnabled = Meteor.isTypescriptEnabled || false;
+  const isTypescriptEnabled = Meteor.isTypescriptEnabled ||
+    testRunnerAdapter.typescript === true;
   const isJsxEnabled =
     Meteor.isJsxEnabled || (!isTypescriptEnabled && isReactEnabled) || false;
   const isTsxEnabled =
@@ -313,9 +286,10 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   let cacheStrategy = createCacheStrategy(
     initialMode,
     arch || (Meteor.isClient && "client") || "server",
-    { projectConfigPath, configPath, buildContext }
+    { projectConfigPath, configPath, buildContext, version: testRunnerAdapter.cacheVersion }
   );
-  let swcConfigRule = createSwcConfig({
+  let swcConfigRule = createMeteorSwcRule({
+    root: projectDir,
     isTypescriptEnabled,
     isReactEnabled,
     isJsxEnabled,
@@ -390,6 +364,10 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     ? currentMode === "development"
     : !!Meteor.isDevelopment || !isProd;
   const mode = isProd ? "production" : "development";
+  // Runtime workers share public/private source roots, while the Atmosphere
+  // plugin cleans each worker's exact, isolated build contexts before Rspack.
+  const shouldCleanOutput = (isProd || isTestRunnerRuntime) &&
+    !process.env.METEOR_TEST_WORKER_ID;
   const isPortableBuild = !!(
     nextUserConfig?.["meteor.enablePortableBuild"] ||
     nextOverrideConfig?.["meteor.enablePortableBuild"]
@@ -408,7 +386,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     // effective cache strategy, and omitting it made the cache directory
     // collide across build contexts (e.g. custom METEOR_LOCAL_DIR setups).
     // See meteor/meteor#14568.
-    { projectConfigPath, configPath, buildContext }
+    { projectConfigPath, configPath, buildContext, version: testRunnerAdapter.cacheVersion }
   );
 
   // Determine run point
@@ -448,7 +426,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   }
 
   const isDevEnvironment = isRun && isDev && !isTest && !isNative && !arch;
-  swcConfigRule = createSwcConfig({
+  swcConfigRule = createMeteorSwcRule({
+    root: projectDir,
     isTypescriptEnabled,
     isReactEnabled,
     isJsxEnabled,
@@ -459,6 +438,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     isLegacy,
     isAngularEnabled,
   });
+  testRunnerAdapter.configureSwcRule?.(swcConfigRule);
   Meteor.swcConfigOptions = swcConfigRule.options;
 
   const externals = [
@@ -539,25 +519,31 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     : { stats: "errors-warnings", infrastructureLogging: { level: "warn" } };
 
   const clientEntry =
-    arch && !(isTest && isTestEager) ? path.resolve(projectDir, buildContext, entryPath) :
-    isClient && isTest && isTestEager && isTestFullApp
+    arch && !(isTest && isTestEager || isTestRunnerRuntime) ? path.resolve(projectDir, buildContext, entryPath) :
+    isClient && (isTest && isTestEager || isTestRunnerRuntime) && isTestFullApp
       ? generateEagerTestFile({
-          isAppTest: true,
+          // Provider runtime roots own ordinary *.test.* files even during a
+          // full-app run. Full-app controls the extra app entry independently.
+          isAppTest: !isTestRunnerRuntime,
           projectDir,
+          ...testEntryOptions,
+          testFiles,
           buildContext,
-          ignoreEntries: ["**/server/**"],
+          ignoreEntries: ["**/server/**", ...testIgnoreEntries],
           meteorIgnoreEntries,
           prefix: arch || "client",
           extraEntry: path.resolve(process.cwd(), Meteor.mainClientEntry),
           globalImportPath: path.resolve(projectDir, buildContext, entryPath),
         })
-      : isClient && isTest && isTestEager
+      : isClient && (isTest && isTestEager || isTestRunnerRuntime)
       ? generateEagerTestFile({
           isAppTest: false,
           isClient: true,
           projectDir,
+          ...testEntryOptions,
+          testFiles,
           buildContext,
-          ignoreEntries: ["**/server/**"],
+          ignoreEntries: ["**/server/**", ...testIgnoreEntries],
           meteorIgnoreEntries,
           prefix: arch || "client",
           globalImportPath: path.resolve(projectDir, buildContext, entryPath),
@@ -635,7 +621,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       cssChunkFilename: `${clientChunkPrefix}[id]${
         isProd ? ".[contenthash]" : ""
       }.css`,
-      ...(isProd && { clean: clientOutputContext ? true : {
+      ...(shouldCleanOutput && { clean: clientOutputContext ? true : {
         keep: keepOutsideContexts(clientOutputDir, [assetsContext, chunksContext]),
       } }),
     },
@@ -682,8 +668,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       new DefinePlugin({
         "Meteor.isClient": JSON.stringify(true),
         "Meteor.isServer": JSON.stringify(false),
-        "Meteor.isTest": JSON.stringify(isTestLike && !isTestFullApp),
-        "Meteor.isAppTest": JSON.stringify(isTestLike && isTestFullApp),
+        "Meteor.isTest": JSON.stringify(meteorTestFlags.isTest),
+        "Meteor.isAppTest": JSON.stringify(meteorTestFlags.isAppTest),
         ...(!isPortableBuild && {
           "Meteor.isDevelopment": JSON.stringify(isDev),
           "Meteor.isProduction": JSON.stringify(isProd),
@@ -724,22 +710,26 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   };
 
   const serverEntry =
-    isServer && isTest && isTestEager && isTestFullApp
+    isServer && (isTest && isTestEager || isTestRunnerRuntime) && isTestFullApp
       ? generateEagerTestFile({
-          isAppTest: true,
+          isAppTest: !isTestRunnerRuntime,
           projectDir,
+          ...testEntryOptions,
+          testFiles,
           buildContext,
-          ignoreEntries: ["**/client/**"],
+          ignoreEntries: ["**/client/**", ...testIgnoreEntries],
           meteorIgnoreEntries,
           prefix: "server",
           globalImportPath: path.resolve(projectDir, buildContext, entryPath),
         })
-      : isServer && isTest && isTestEager
+      : isServer && (isTest && isTestEager || isTestRunnerRuntime)
       ? generateEagerTestFile({
           isAppTest: false,
           projectDir,
+          ...testEntryOptions,
+          testFiles,
           buildContext,
-          ignoreEntries: ["**/client/**"],
+          ignoreEntries: ["**/client/**", ...testIgnoreEntries],
           meteorIgnoreEntries,
           prefix: "server",
           globalImportPath: path.resolve(projectDir, buildContext, entryPath),
@@ -760,7 +750,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       library: { type: "commonjs2" },
       chunkFilename: `${chunksContext}/[id]${isProd ? ".[chunkhash]" : ""}.js`,
       assetModuleFilename,
-      ...(isProd && { clean: {
+      ...(shouldCleanOutput && { clean: {
         keep: keepOutsideContexts(serverOutputDir, [assetsContext, chunksContext]),
       } }),
     },
@@ -808,8 +798,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       new DefinePlugin(
         isTest && (isTestModule || isTestEager)
           ? {
-              "Meteor.isTest": JSON.stringify(isTest && !isTestFullApp),
-              "Meteor.isAppTest": JSON.stringify(isTest && isTestFullApp),
+              "Meteor.isTest": JSON.stringify(meteorTestFlags.isTest),
+              "Meteor.isAppTest": JSON.stringify(meteorTestFlags.isAppTest),
               ...(!isPortableBuild && {
                 "Meteor.isDevelopment": JSON.stringify(isDev),
               }),
@@ -817,8 +807,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
           : {
               "Meteor.isClient": JSON.stringify(false),
               "Meteor.isServer": JSON.stringify(true),
-              "Meteor.isTest": JSON.stringify(isTestLike && !isTestFullApp),
-              "Meteor.isAppTest": JSON.stringify(isTestLike && isTestFullApp),
+              "Meteor.isTest": JSON.stringify(meteorTestFlags.isTest),
+              "Meteor.isAppTest": JSON.stringify(meteorTestFlags.isAppTest),
               ...(!isPortableBuild && {
                 "Meteor.isDevelopment": JSON.stringify(isDev),
                 "Meteor.isProduction": JSON.stringify(isProd),
@@ -937,6 +927,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     config = disablePlugins(config, config.disablePlugins);
     delete config.disablePlugins;
   }
+
+  testRunnerAdapter.finalizeConfig?.(config);
 
   delete config["meteor.enablePortableBuild"];
 

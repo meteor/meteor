@@ -10,6 +10,11 @@ module.exports = {
     "<rootDir>/npm-packages/meteor-rspack/**/*.test.js",
   ],
   testPathIgnorePatterns: [
+    // These suites use node:test lifecycle hooks and run via test:rstest.
+    "<rootDir>/tools/cli/test-runners/tests/",
+    "<rootDir>/tools/tool-env/test-runner-context.test.js",
+    "<rootDir>/tools/isobuild/module-replacements.test.js",
+    "<rootDir>/npm-packages/meteor-rspack/tests/",
     "/node_modules/",
     // These tests run explicitly with Node's test runner in the Test Tools workflow.
     "<rootDir>/scripts/ci/build-test-matrix.test.js",

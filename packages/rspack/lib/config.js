@@ -113,10 +113,12 @@ function getFileExtensionsToIgnore() {
  * Creates necessary module files and writes content to them
  * @returns {void}
  */
-export function configureMeteorForRspack() {
+export function configureMeteorForRspack({ isTestRunnerHost = false } = {}) {
   const meteorAppConfig = getMeteorAppConfig();
   const initialEntrypoints = getInitialEntrypoints();
-  const isTest = isMeteorAppTest();
+  const isTestRunnerPackageHost = isTestRunnerHost && !isMeteorAppTest();
+  // Provider workers and test-packages hosts also use the test build context.
+  const isTest = isMeteorAppTest() || isTestRunnerPackageHost;
   const isTestFullApp = isMeteorAppTestFullApp();
 
   // Ignore node_modules to prevent Meteor from processing them
@@ -247,7 +249,9 @@ export function configureMeteorForRspack() {
     }
     // Tests generate their own HTML, but normal tests still validate the main
     // module paths. Keep those modules while excluding stale main-build HTML.
-    return isTest ? [`${context}/**/*.html`] : [];
+    return isTest
+      ? [isTestRunnerPackageHost ? `${context}/**` : `${context}/**/*.html`]
+      : [];
   });
   const foldersToIgnore = [
     // Cross-process isolation: a single app directory can host several Meteor
@@ -357,7 +361,7 @@ export function configureMeteorForRspack() {
       testServer: `${RSPACK_BUILD_CONTEXT}/${testServerModule}`,
     }),
   };
-  if (isTestFullApp) {
+  if (isTestFullApp || isTestRunnerPackageHost) {
     appEntrypoints = {
       ...appEntrypoints,
       mainClient: `${RSPACK_BUILD_CONTEXT}/${testClientModule}`,

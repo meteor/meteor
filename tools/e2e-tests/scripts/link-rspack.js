@@ -7,14 +7,16 @@
  * Install before syncing dependencies so unpublished versions remain testable.
  */
 
-const path = require('path');
-const fs = require('fs');
+const path = require('node:path');
+const fs = require('node:fs');
 const execa = require('execa');
+const {
+  REPO_ROOT,
+  CONSTANTS_PATH,
+} = require('./link-modern-tools.js');
 
-const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
 const METEOR_EXECUTABLE = path.join(REPO_ROOT, 'meteor');
 const RSPACK_PACKAGE_DIR = path.join(REPO_ROOT, 'npm-packages', 'meteor-rspack');
-const CONSTANTS_PATH = path.join(REPO_ROOT, 'packages', 'rspack', 'lib', 'constants.js');
 
 function findUp(startDir, fileName) {
   let currentDir = startDir;
@@ -135,15 +137,14 @@ async function linkLocalRspack(appDir, { env, packageManager } = {}) {
 
 module.exports = { linkLocalRspack, REPO_ROOT, METEOR_EXECUTABLE, RSPACK_PACKAGE_DIR };
 
-// CLI mode
 if (require.main === module) {
   const appDir = process.argv[2];
   if (!appDir) {
     console.error('Usage: node link-rspack.js <appDir>');
     process.exit(1);
   }
-  linkLocalRspack(path.resolve(appDir)).catch(err => {
-    console.error(err.message);
+  linkLocalRspack(path.resolve(appDir)).catch(error => {
+    console.error(error.message);
     process.exit(1);
   });
 }

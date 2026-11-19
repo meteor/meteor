@@ -38,6 +38,10 @@ const KNOWN_ISOBUILD_FEATURE_PACKAGES = {
   // must explicitly depend on this feature package to use the API.
   'isobuild:linter-plugin': ['1.0.0'],
 
+  // This package directly calls Plugin.registerTestRunner. Package authors
+  // must explicitly depend on this feature package to use the API.
+  'isobuild:test-runner-plugin': ['1.0.0'],
+
   // This package is only published in the isopack-2 format, not isopack-1 or
   // older. ie, it contains "source" files for compiler plugins, not just
   // JS/CSS/static assets/head/body.
@@ -365,6 +369,39 @@ Object.assign(ProjectContext.prototype, {
   buildLocalPackages: function () {
     return Profile.run('ProjectContext buildLocalPackages', async () => {
       return this._completeStagesThrough(STAGE.BUILD_LOCAL_PACKAGES);
+    });
+  },
+
+  loadPackagePlugins: function (packageNames) {
+    return Profile.run('ProjectContext loadPackagePlugins', async () => {
+      buildmessage.assertInCapture();
+      const names = [...new Set(packageNames || [])];
+      if (names.length === 0) {
+        return [];
+      }
+
+      // Provider discovery happens after constraint resolution but before the
+      // provider can publish build-plugin context. Compile provider plugins in
+      // isolation so candidate runtime dependencies cannot initialize their
+      // compiler plugins too early.
+      if (!this.isopackCache) {
+        await this._completeStagesThrough(STAGE.DOWNLOAD_MISSING_PACKAGES);
+        if (buildmessage.jobHasMessages()) {
+          return [];
+        }
+        await this._ensureIsopackCache();
+      }
+
+      let isopacks = [];
+      await buildmessage.enterJob('loading test runner provider plugins', async () => {
+        isopacks = await this.isopackCache
+          .buildTestRunnerProviderPackages(names);
+        for (const isopack of isopacks) {
+          await isopack.ensurePluginsInitialized();
+        }
+      });
+
+      return isopacks;
     });
   },
   /**
@@ -1021,10 +1058,13 @@ Object.assign(ProjectContext.prototype, {
     });
   }),
 
-  _buildLocalPackages: Profile('_buildLocalPackages', async function () {
+  _ensureIsopackCache: async function () {
     var self = this;
     buildmessage.assertInCapture();
 
+    if (self.isopackCache) {
+      return;
+    }
 
     await self.packageMap.eachPackage((name, packageInfo) => {
       if (packageInfo.kind === 'local') {
@@ -1049,6 +1089,13 @@ Object.assign(ProjectContext.prototype, {
         self._forceRebuildPackages === true
           ? null : self._forceRebuildPackages);
     }
+  },
+
+  _buildLocalPackages: Profile('_buildLocalPackages', async function () {
+    var self = this;
+    buildmessage.assertInCapture();
+
+    await self._ensureIsopackCache();
 
     await buildmessage.enterJob('building local packages', async function () {
       return await self.isopackCache.buildLocalPackages();

@@ -7,6 +7,9 @@ description: Use when planning, implementing, reviewing, or debugging Meteor tes
 
 Choose useful coverage and the appropriate workflow for the Meteor codebase. Keep shared expectations here; load the selected workflow for its harness and execution details.
 
+For changes to provider selection, test-runner lifecycle, runtime drivers, or
+compiler adapters, use [test-runners](../test-runners/SKILL.md).
+
 ## Test Value
 
 Optimize for useful failure detection and maintainability. In implementation plans and tasks, read the behavior and nearby coverage before proposing tests. For each scenario, be able to explain briefly:

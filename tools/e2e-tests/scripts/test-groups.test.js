@@ -133,13 +133,23 @@ describe('CLI / E2E test group fallback /', () => {
     try {
       fs.symlinkSync(path.join(testRoot, 'node_modules'), path.join(probeDir, 'node_modules'), 'junction');
       fs.writeFileSync(probePath, `test('Unassigned group probe', () => { expect(${passes}).toBe(true); });`);
+      for (const ignoredPath of [
+        'scripts/link-modern-tools.test.js',
+        'apps/example/fixture.test.js',
+        'accounts.test.js',
+      ]) {
+        const filePath = path.join(probeDir, ignoredPath);
+        fs.mkdirSync(path.dirname(filePath), { recursive: true });
+        fs.writeFileSync(filePath, 'throw new Error("excluded suite was loaded");');
+      }
       const result = spawnSync(process.execPath, [
         path.join(__dirname, 'run-test-group.js'), 'uncategorized',
         '--rootDir', probeDir,
         '--setupFilesAfterEnv', path.join(testRoot, 'jest.setup.js'),
-        '--runTestsByPath', probePath, '--env=node', '--reporters=default',
+        '--env=node', '--reporters=default',
       ], { cwd: testRoot, encoding: 'utf8' });
       expect(result.error).toBeUndefined();
+      expect(result.stderr).not.toContain('excluded suite was loaded');
       expect(result.status).toBe(passes ? 0 : 1);
       expect(result.stderr).toContain('Unassigned group probe');
     } finally {

@@ -176,6 +176,16 @@ function createIgnoreRegex(globPatterns, rootPath) {
 }
 
 /**
+ * Creates an ignore regex whose matches are scoped below a project root.
+ * Rspack evaluates ContextModule `exclude` expressions against absolute
+ * resource paths, so an unscoped glob for a `private` directory can otherwise
+ * match `/private/.../<app>` and exclude every file in an app on macOS.
+ */
+function createProjectIgnoreRegex(projectDir, globPatterns) {
+  return createIgnoreRegex(globPatterns, projectDir);
+}
+
+/**
  * Builds the pieces a generated eager-test module needs to decide which test
  * files .meteorignore keeps.
  *
@@ -221,5 +231,6 @@ module.exports = {
   createIgnoreGlobConfig,
   createIgnoreMatcherSource,
   createIgnoreRegex,
+  createProjectIgnoreRegex,
   getMeteorIgnoreEntries,
 };

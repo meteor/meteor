@@ -103,6 +103,8 @@ export default class Builder {
     this.previousUsedAsFile = {};
 
     this.writtenHashes = {};
+    // Destination path to source path for directory symlinks created by this
+    // build. Destination ownership matters when node_modules trees overlap.
     this.createdSymlinks = {};
     this.previousWrittenHashes = {};
     this.previousCreatedSymlinks = {};
@@ -714,14 +716,19 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     }
 
     const walk = async (absFrom, relTo) => {
-      if (symlink && ! (relTo in this.usedAsFile)) {
+      const createdInThisBuild = Object.prototype.hasOwnProperty.call(
+        this.createdSymlinks,
+        relTo,
+      );
+      if (symlink && (! (relTo in this.usedAsFile) || createdInThisBuild)) {
         this._ensureDirectory(files.pathDirname(relTo));
         const absTo = files.pathResolve(this.buildPath, relTo);
-        if (this.previousCreatedSymlinks[absFrom] !== relTo) {
+        if (createdInThisBuild ||
+            this.previousCreatedSymlinks[relTo] !== absFrom) {
           await symlinkWithOverwrite(absFrom, absTo);
         }
         this.usedAsFile[relTo] = false;
-        this.createdSymlinks[absFrom] = relTo;
+        this.createdSymlinks[relTo] = absFrom;
         return;
       }
 
