@@ -31,6 +31,7 @@ const {
   isMeteorAppRun,
   isMeteorAppBuild,
   isMeteorAppNative,
+  getMeteorAppNativeMode,
   isMeteorBlazeProject,
   isMeteorBlazeHotProject,
   getMeteorInitialAppEntrypoints,
@@ -453,6 +454,7 @@ export function getRspackEnv({ isClient, isServer, arch, isTest: inIsTest, isTes
     ["isRun", isMeteorAppRun()],
     ["isBuild", isMeteorAppBuild()],
     ["isNative", isMeteorAppNative()],
+    ...((isMeteorAppNative() && [["nativeMode", getMeteorAppNativeMode()]]) || []),
     ["isClient", isClient],
     ["isServer", isServer],
     ...(arch ? [["arch", arch], ["isLegacy", architectureEntry.isLegacy]] : []),
@@ -568,9 +570,15 @@ export function startRspackClientServe(options = {}) {
   const appDir = getMeteorAppDir();
   const configFile = getConfigFilePath();
   const { params, envs } = getRspackEnv({ isClient: true, isServer: false });
-  const { command, args } = getRspackCliCommand(['serve', '--config', configFile, ...params]);
+  const devServerPort = process.env.RSPACK_DEVSERVER_PORT;
+  const { command, args } = getRspackCliCommand([
+    'serve',
+    '--config',
+    configFile,
+    ...(devServerPort ? ['--port', devServerPort] : []),
+    ...params,
+  ]);
   const sawPanic = createPanicDetector();
-
   const newClientProcess = spawnProcess(
     command,
     args, {

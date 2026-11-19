@@ -1,0 +1,36 @@
+appId: com.meteor.capacitortests
+---
+- launchApp:
+    clearState: true
+# A startup HCP can replace the document between these read-only checks.
+# Repeat the checks after that transition while retaining every assertion.
+- retry:
+    maxRetries: 3
+    commands:
+      - extendedWaitUntil:
+          visible: "Welcome to Meteor Capacitor Tests"
+          timeout: 120000
+      - extendedWaitUntil:
+          visible: "Native render ready"
+          timeout: 120000
+      - assertVisible: "Style preserved"
+      - extendedWaitUntil:
+          visible: "DDP verified"
+          timeout: 60000
+      - assertVisible: "Native client version initial"
+      - assertVisible: "Native server version initial"
+      - assertVisible: "window.Capacitor available"
+      - assertVisible: "Meteor.isCapacitor true"
+      - assertVisible: "Capacitor native platform ready"
+      - extendedWaitUntil:
+          visible: "Device plugin ready: native"
+          timeout: 60000
+      - extendedWaitUntil:
+          visible: "App plugin ready: com.meteor.capacitortests"
+          timeout: 60000
+      - assertVisible: "WebAppLocalServer shim ready"
+      - assertVisible: "WebAppLocalServer native bridge ready"
+      # The webDir bundle strips the prefix; an automatic startup HCP may already
+      # have replaced it with server assets. The updated flow requires served paths
+      # together with the changed client/server versions and the full HCP trace.
+      - assertVisible: "__cordova paths (adapted|served)"

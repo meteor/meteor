@@ -1,19 +1,38 @@
 import selftest from '../tool-testing/selftest.js';
 import utils from '../utils/utils.js';
-import { parseServerOptionsForRunCommand } from '../cli/commands.js';
+import {
+  parseServerOptionsForRunCommand,
+  setCommandMobileServerUrl,
+} from '../cli/commands.js';
+
+function expectedDetectedMobileServerUrl(port) {
+  let hostname;
+  try {
+    hostname = utils.ipAddress();
+  } catch (_) {
+    hostname = 'localhost';
+  }
+  return { hostname, port, protocol: "http" };
+}
 
 selftest.define('get mobile server argument for meteor run', ['cordova'], async function () {
   // meteor run -p 3000
   // => mobile server should be <detected ip>:3000
   await selftest.expectEqual(parseServerOptionsForRunCommand({
     port: "3000"
-  }).parsedMobileServerUrl, { hostname: utils.ipAddress(), port: "3000", protocol: "http" });
+  }).parsedMobileServerUrl, expectedDetectedMobileServerUrl("3000"));
 
   // meteor run -p example.com:3000
   // => mobile server should be <detected ip>:3000
   await selftest.expectEqual(parseServerOptionsForRunCommand({
     port: "example.com:3000"
-  }).parsedMobileServerUrl, { hostname: utils.ipAddress(), port: "3000", protocol: "http" });
+  }).parsedMobileServerUrl, expectedDetectedMobileServerUrl("3000"));
+
+  // meteor run -p 192.168.1.10:3000
+  // => mobile server should honor the explicitly bound non-loopback IP
+  await selftest.expectEqual(parseServerOptionsForRunCommand({
+    port: "192.168.1.10:3000"
+  }).parsedMobileServerUrl, { hostname: "192.168.1.10", port: "3000", protocol: "http" });
 
   // meteor run -p example.com:3000 --mobile-server 4000 => error, mobile
   // server must include a hostname
@@ -51,4 +70,22 @@ selftest.define('get mobile server argument for meteor run', ['cordova'], async 
     port: "example.com:3000",
     "cordova-server-port": "12500"
   }).parsedCordovaServerPort, 12500);
+
+  const previousCommand = global.currentCommand;
+  try {
+    global.currentCommand = { name: 'run', options: {} };
+    const mobileServerUrl = setCommandMobileServerUrl({
+      protocol: 'http',
+      hostname: 'localhost',
+      port: '3000',
+    });
+
+    await selftest.expectEqual(mobileServerUrl, 'http://localhost:3000/');
+    await selftest.expectEqual(
+      global.currentCommand.mobileServerUrl,
+      'http://localhost:3000/',
+    );
+  } finally {
+    global.currentCommand = previousCommand;
+  }
 });

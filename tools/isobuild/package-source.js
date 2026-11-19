@@ -319,6 +319,10 @@ var PackageSource = function () {
   // 'sources', and 'npmDependencies'.
   self.pluginInfo = {};
 
+  // Declarative metadata used by the Meteor tool to route package-owned
+  // platforms, build targets, and native lifecycles.
+  self.toolExtensions = [];
+
   // Analogous to watchSet in SourceArch but for plugins. At this
   // stage will typically contain just 'package.js'.
   self.pluginWatchSet = new watch.WatchSet;

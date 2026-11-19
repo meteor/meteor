@@ -62,3 +62,10 @@ Do not gate the call on `hasMeteorAppConfigAutoInstallDeps()`. The engine owns
 that decision, decides whether to install or warn, prints the correct log, and
 dedups within the process. See `packages/rspack/lib/dependencies.js` for a
 reference integration.
+
+Descriptors may set `requireDeclaredSection: true` to require the dependency in
+the section selected by `dev`, and `requireInstalled: true` to check the installed
+version as well as its declaration. Installed packages may be hoisted to a parent
+workspace's `node_modules`. These checks let native tools preserve runtime
+dependency placement and detect missing binaries without maintaining a second
+installer.
