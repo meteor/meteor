@@ -64,7 +64,6 @@ class Runner {
           selenium,
           seleniumBrowser,
           noReleaseCheck,
-          cordovaServerPort,
     ...optionsForAppRunner
     } = self.options;
 
@@ -165,7 +164,6 @@ class Runner {
         hmrPath: HMRPath,
         secret: hmrSecret,
         projectContext: self.projectContext,
-        cordovaServerPort
       });
     }
 
