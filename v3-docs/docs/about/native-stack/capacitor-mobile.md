@@ -98,15 +98,33 @@ native preparation before dependency installation or project generation.
 
 ### Run from a Meteor checkout
 
-Until the integration and its matching Rspack changes are published, link both
-checkout packages after installing application dependencies:
+Clone the integration branch with its submodules and initialize the checkout:
 
 ``` bash
-npm link --no-save /path/to/meteor/npm-packages/meteor-capacitor /path/to/meteor/npm-packages/meteor-rspack
+git clone --recursive --branch capacitor-integration https://github.com/meteor/meteor.git meteor
+cd meteor
+./meteor --help
+export METEOR_CHECKOUT="$PWD"
+export METEOR_BIN="$METEOR_CHECKOUT/meteor"
 ```
 
-Use that checkout's `meteor` binary for native commands. The selected checkout
-and both npm packages must include the features being tested.
+For an existing checkout, run `git submodule update --init --recursive` first.
+Inside your app, add Capacitor and install both local npm packages as archives
+so Rspack resolves its dependencies from the app:
+
+``` bash
+cd /absolute/path/to/my-app
+"$METEOR_BIN" add capacitor
+export METEOR_NPM_DIR="$(mktemp -d)"
+"$METEOR_BIN" npm pack --silent --pack-destination "$METEOR_NPM_DIR" \
+  "$METEOR_CHECKOUT/npm-packages/meteor-capacitor" \
+  "$METEOR_CHECKOUT/npm-packages/meteor-rspack"
+"$METEOR_BIN" npm install --save-dev "$METEOR_NPM_DIR"/*.tgz
+```
+
+Use `"$METEOR_BIN"` for the native commands below. Repeat the pack and install
+commands after changing either npm package. These are local snapshots; remove
+the machine-specific `file:` dependencies before committing a portable app.
 
 ### Upgrade early Capacitor 7 apps
 
