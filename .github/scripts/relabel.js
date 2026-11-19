@@ -10,6 +10,8 @@
  * 3. Open issues opened before Meteor 3.0 shipped, feature requests aside, get
  *    `legacy: needs-review`, once: an issue that ever had a `legacy:` label is
  *    skipped, so a triager who removed it after a check on 3.x keeps it removed.
+ * 4. The open items decided one by one (ITEMS below) get and lose the labels listed
+ *    there, as long as the migration lasts: until the merged labels are deleted.
  *
  * It is idempotent and stays under the hourly limits of the workflow token: when
  * one is reached it waits for it to clear and goes on, so one run migrates the whole
@@ -63,6 +65,32 @@ const MERGES = {
   hacktoberfest: 'help wanted',
 };
 
+// Open items decided one by one, on top of the renames and the merges: the labels
+// to add and to remove.
+const ITEMS = {
+  // `Project:NPM` is deleted. These items would end without any area, and #13436
+  // needs one more: a pull request gets the areas of the paths it changes
+  // (.github/labeler.yml), an issue the area it reports on.
+  11030: { add: ['area: build'] },
+  12329: { add: ['area: build'] },
+  13436: { add: ['area: build'] },
+  13597: { add: ['area: build'] },
+  13802: { add: ['area: build'] },
+  13936: { add: ['area: build'] },
+  14586: { add: ['area: cli'] },
+  14615: { add: ['area: cli'] },
+  14625: { add: ['area: cli'] },
+  14796: { add: ['area: cli', 'area: rspack'] },
+  14886: { add: ['area: rspack'] },
+  14889: { add: ['area: mobile'] },
+  // Experiments.
+  14218: { add: ['experimental'] },
+  14479: { add: ['experimental'] },
+  14751: { add: ['experimental'] },
+  // The npm dependencies with known CVEs: a security item, not a roadmap candidate.
+  14825: { add: ['type: security'], remove: ['type: bug', 'priority: candidate'] },
+};
+
 const NEEDS_TRIAGE = 'status: needs-triage';
 // `status: stale` says nothing about triage, so it does not count as a status here.
 const STALE = 'status: stale';
@@ -104,6 +132,14 @@ function readManifest(text) {
   }
   return { names, renames };
 }
+
+// Whether the migration is still going on. It deletes the merged labels when it ends,
+// so open items carrying one say it has not. An old name the sync could not rename
+// does not count: it stays until its `from_name` line goes.
+const isMigrating = (openItems) => openItems.some((item) => item.labels.some((label) => MERGES[label.name]));
+
+// Whether a decision removes this label from the item: a move must not add it back.
+const removes = (item, label) => item.state === 'open' && (ITEMS[item.number]?.remove?.includes(label) ?? false);
 
 // An open issue without a status says nobody triaged it yet.
 const isUntriaged = (item) =>
@@ -165,13 +201,13 @@ module.exports = async ({ github, context, dryRun, runTime = RUN_TIME }) => {
     }
   }
 
-  // Writes the label. A rate limit answers 403 or 429: wait as GitHub asks, until the
+  // Sends a request. A rate limit answers 403 or 429: wait as GitHub asks, until the
   // hourly budget is back when it is spent, a minute at least, and try again, three
   // times at most. Null when the wait would outlast the run.
-  async function write(item, label) {
+  async function request(call) {
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        return await github.rest.issues.addLabels({ owner, repo, issue_number: item.number, labels: [label] });
+        return await call();
       } catch (error) {
         const rateLimited = [403, 429].includes(error.status) && /rate limit/i.test(error.message);
         if (!rateLimited || attempt === 3) throw error;
@@ -189,24 +225,45 @@ module.exports = async ({ github, context, dryRun, runTime = RUN_TIME }) => {
     }
   }
 
-  const list = (params) =>
-    github.paginate(github.rest.issues.listForRepo, { owner, repo, per_page: 100, ...params });
+  // A read the run cannot wait for fails it: the old labels stay, and the next run
+  // reads again.
+  async function read(call) {
+    const result = await request(call);
+    if (result === null) throw new Error('Rate limited for longer than this run lasts');
+    return result;
+  }
 
-  async function addLabel(item, label) {
+  const list = (params) =>
+    read(() => github.paginate(github.rest.issues.listForRepo, { owner, repo, per_page: 100, ...params }));
+
+  // Someone may have removed the label since the item was listed: GitHub answers 404,
+  // and nothing is left to do.
+  const removeLabel = (target, name) =>
+    github.rest.issues.removeLabel({ ...target, name }).catch((error) => {
+      if (error.status !== 404) throw error;
+      return { headers: error.response?.headers ?? {} };
+    });
+
+  // Adds the label to the item, or removes it.
+  async function change(item, label, remove = false) {
+    const sign = remove ? '-' : '+';
     // An item can carry several old labels merging into the same new one.
-    const key = `${item.number} ${label}`;
+    const key = `${item.number} ${sign} ${label}`;
     if (planned.has(key)) return;
     planned.add(key);
     let response = null;
     if (!dryRun && left === 0 && (await waitForBudget())) {
-      response = await write(item, label);
+      const target = { owner, repo, issue_number: item.number };
+      response = await request(() =>
+        remove ? removeLabel(target, label) : github.rest.issues.addLabels({ ...target, labels: [label] })
+      );
     }
     if (!response) {
       if (!dryRun && left === 0) {
-        console.log('Stopping here: the next run adds the rest');
+        console.log('Stopping here: the next run does the rest');
       }
       left++;
-      console.log(`#${item.number}: + ${label}`);
+      console.log(`#${item.number}: ${sign} ${label}`);
       return;
     }
     remaining = Number(response.headers['x-ratelimit-remaining'] ?? Infinity);
@@ -224,8 +281,8 @@ module.exports = async ({ github, context, dryRun, runTime = RUN_TIME }) => {
     for (const [oldLabel, newLabel] of moves) {
       if (stopped()) return;
       for (const item of await list({ labels: oldLabel, state })) {
-        if (!carries(item, newLabel)) {
-          await addLabel(item, newLabel);
+        if (!carries(item, newLabel) && !removes(item, newLabel)) {
+          await change(item, newLabel);
         }
       }
     }
@@ -234,14 +291,29 @@ module.exports = async ({ github, context, dryRun, runTime = RUN_TIME }) => {
   // Open items first (about 300 writes, minutes), then the history of closed ones.
   await moveItems('open');
 
-  for (const item of await list({ state: 'open' })) {
+  const open = await list({ state: 'open' });
+  for (const item of open) {
     if (item.pull_request) continue;
     if (stopped()) break;
     if (isUntriaged(item)) {
-      await addLabel(item, NEEDS_TRIAGE);
+      await change(item, NEEDS_TRIAGE);
     }
-    if (isLegacy(item) && !(await hadLegacyLabel(github, context.repo, item))) {
-      await addLabel(item, LEGACY_REVIEW);
+    if (isLegacy(item) && !(await read(() => hadLegacyLabel(github, context.repo, item)))) {
+      await change(item, LEGACY_REVIEW);
+    }
+  }
+
+  // The decisions belong to the migration: once it is over, these items are left to
+  // the triagers.
+  if (isMigrating(open)) {
+    for (const item of open) {
+      const { add = [], remove = [] } = ITEMS[item.number] ?? {};
+      for (const label of add) {
+        if (!carries(item, label)) await change(item, label);
+      }
+      for (const label of remove) {
+        if (carries(item, label)) await change(item, label, true);
+      }
     }
   }
 
@@ -252,7 +324,7 @@ module.exports = async ({ github, context, dryRun, runTime = RUN_TIME }) => {
   if (!dryRun && left === 0) {
     for (const [oldLabel, newLabel] of moves) {
       for (const item of await list({ labels: oldLabel, state: 'all' })) {
-        if (!carries(item, newLabel)) {
+        if (!carries(item, newLabel) && !removes(item, newLabel)) {
           left++;
           console.log(`#${item.number}: still without ${newLabel}`);
         }
@@ -267,6 +339,8 @@ module.exports = async ({ github, context, dryRun, runTime = RUN_TIME }) => {
 Object.assign(module.exports, {
   MANIFEST,
   MERGES,
+  ITEMS,
+  isMigrating,
   NEEDS_TRIAGE,
   LEGACY_REVIEW,
   readManifest,

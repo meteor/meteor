@@ -80,10 +80,6 @@ Set by the Meteor Software team, since it reflects their planning.
 - `priority: candidate`: considered for the roadmap, not committed yet.
 - `priority: low`: valid, but not soon.
 
-### `ci:` switches for the E2E workflow
-
-Reserved for the E2E smart triggering of [#14479](https://github.com/meteor/meteor/pull/14479): once it lands, they choose which E2E slices a pull request runs, `ci:e2e` for all of them, `ci:e2e:apps`, `ci:e2e:skeletons` and `ci:e2e:examples` for one group each. `ci:e2e:native` is set aside for the native smoke tests.
-
 ### Standalone labels
 
 - `experimental`: exploration or proof of concept, with no commitment to adopt it. It combines with any type, status or priority: a proof of concept inside planned work is `priority: next` + `experimental`, a pure exploration has no priority at all.

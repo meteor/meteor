@@ -7,7 +7,7 @@ const os = require('os');
 const path = require('path');
 const writePreview = require('../labels-preview.js');
 const { readManifest, migrate, preview, report } = writePreview;
-const { MANIFEST } = require('../relabel.js');
+const { MANIFEST, ITEMS } = require('../relabel.js');
 
 const manifest = readManifest(fs.readFileSync(MANIFEST, 'utf8'));
 
@@ -61,11 +61,11 @@ test('adds the triage and legacy labels to open issues only', () => {
   ]);
 });
 
-test('lists the moves and the cases to decide', () => {
+test('lists the moves and the cases to check', () => {
   const result = preview(
     [
       item(1, ['Candidate 3.x.x']),
-      item(2, ['Severity:production', 'Impact:few', 'confirmed'], { state: 'open' }),
+      item(2, ['Severity:production', 'Next 3.x.x', 'confirmed'], { state: 'open' }),
       item(3, ['Severity:has-workaround', 'confirmed'], { state: 'open', title: 'Experiment with a new driver' }),
       item(4, ['ready'], { state: 'open', pull_request: {} }),
       item(5, ['help wanted']),
@@ -73,19 +73,192 @@ test('lists the moves and the cases to decide', () => {
       item(7, ['ready'], { pull_request: {}, title: 'PoC' }),
       item(8, ['confirmed'], { state: 'open', title: 'PoC of a cache' }),
       item(9, ['confirmed'], { state: 'open', title: 'Epoch dates drift' }),
+      item(10, ['Impact:few', 'confirmed', 'experimental'], { state: 'open', title: 'Prototype of a cache' }),
     ],
     manifest
   );
-  assert.deepStrictEqual(result.rows.map((row) => row.number), [1, 2, 3, 4, 6, 7, 8, 9]);
-  assert.deepStrictEqual(result.moves.get('Impact:few → priority: low'), { all: 1, open: 1 });
+  assert.deepStrictEqual(result.rows.map((row) => row.number), [1, 2, 3, 4, 6, 7, 8, 9, 10]);
+  assert.deepStrictEqual(result.moves.get('Impact:few → (deleted)'), { all: 1, open: 1 });
   assert.deepStrictEqual(result.moves.get('Severity:has-workaround → (deleted)'), { all: 1, open: 1 });
-  assert.deepStrictEqual(result.decide.candidates.map(({ number }) => number), [1]);
+  // #10 already carries `experimental`.
   assert.deepStrictEqual(result.decide.experiments.map(({ number }) => number), [3, 8]);
   assert.deepStrictEqual(result.decide.conflicts, [
-    { item: result.decide.conflicts[0].item, values: ['priority: critical', 'priority: low'] },
+    { item: result.decide.conflicts[0].item, values: ['priority: critical', 'priority: next'] },
   ]);
   assert.deepStrictEqual(result.decide.prStatuses.map(({ number }) => number), [4]);
   assert.match(report(result, 'https://github.com/meteor/meteor'), /- `Severity:has-workaround`: 1 open of 1/);
+});
+
+test('lists the open items of each priority, and `Impact:few` or `Impact:some` give none', () => {
+  const result = preview(
+    [
+      item(1, ['Severity:production', 'Impact:few'], { state: 'open' }),
+      item(2, ['Impact:few', 'Next 3.x.x'], { state: 'open' }),
+      item(3, ['Impact:few', 'Impact:some'], { state: 'open' }),
+      item(4, ['Impact:most']),
+      item(5, ['Candidate 3.x.x'], { state: 'open', pull_request: {} }),
+      item(6, ['Severity:production', 'Next 3.x.x'], { state: 'open' }),
+    ],
+    manifest
+  );
+  const listed = (name) => result.decide.priorities.get(name).map(({ number }) => number);
+  // #6 has two priorities and shows under both.
+  assert.deepStrictEqual(listed('priority: critical'), [1, 6]);
+  assert.deepStrictEqual(listed('priority: next'), [2, 6]);
+  assert.deepStrictEqual(listed('priority: candidate'), [5]);
+  assert.deepStrictEqual(listed('priority: low'), []);
+  assert.ok([...result.decide.priorities.keys()].every((name) => name.startsWith('priority: ')));
+  const text = report(result, 'https://github.com/meteor/meteor');
+  assert.match(text, /\*\*`priority: candidate`\*\* \(1\)\n\n- \[#5\]\(https:\/\/github.com\/meteor\/meteor\/issues\/5\) Item 5\n/);
+  assert.match(text, /\*\*`priority: low`\*\* \(0\)\n\nNone\./);
+});
+
+test('applies the decisions on single open items while an open item carries a merged label', () => {
+  // Two entries of ITEMS in relabel.js.
+  const cve = (extra) => item(14825, ['confirmed', 'Type:Bug', 'Candidate 3.x.x', 'Impact:most'], extra);
+  const installer = (labels) => item(14586, labels, { state: 'open', pull_request: {} });
+  const decided = ['priority: critical', 'status: confirmed', 'type: security'];
+  assert.deepStrictEqual(migrate(cve({ state: 'open' }), manifest), decided);
+  // Closed, it keeps what the renames give it.
+  assert.deepStrictEqual(migrate(cve(), manifest), [
+    'priority: candidate',
+    'priority: critical',
+    'status: confirmed',
+    'type: bug',
+  ]);
+
+  const result = preview(
+    [
+      cve({ state: 'open' }),
+      installer(['Project:NPM']),
+      item(3, ['help wanted']),
+      // Two more entries of ITEMS: a pull request merged since, and an experiment.
+      item(14889, ['Project:NPM'], { pull_request: {} }),
+      item(14479, ['Project:Tool'], { state: 'open', pull_request: {}, title: '[Experimental] E2E smart triggering' }),
+    ],
+    manifest
+  );
+  assert.deepStrictEqual(result.rows.map((row) => [row.number, row.after]), [
+    [14825, decided],
+    [14586, ['area: cli']],
+    [14889, []],
+    [14479, ['area: cli', 'experimental']],
+  ]);
+  assert.deepStrictEqual(result.decide.items.map(({ number }) => number), [14825, 14586, 14479]);
+  // The lists of the summary follow the decisions.
+  assert.deepStrictEqual(result.decide.priorities.get('priority: candidate'), []);
+  assert.deepStrictEqual(result.decide.priorities.get('priority: critical').map(({ number }) => number), [14825]);
+  assert.deepStrictEqual([result.decide.conflicts, result.decide.experiments, result.decide.noArea], [[], [], []]);
+  const text = report(result, 'https://github.com/meteor/meteor');
+  assert.match(text, /Item 14825: adds `type: security`; removes `type: bug`, `priority: candidate`\n/);
+  assert.match(text, /Item 14586: adds `area: cli`\n/);
+
+  // Once the merged labels are gone from the open items, the decisions no longer apply,
+  // whatever other label remains: one from outside the manifest, or an old name the
+  // sync could not rename.
+  const later = preview(
+    [
+      installer([]),
+      item(3, ['bug']),
+      item(4, ['github_actions', 'dependencies'], { state: 'open', pull_request: {} }),
+      item(5, ['Type:Bug', 'type: bug'], { state: 'open', pull_request: {} }),
+    ],
+    manifest
+  );
+  assert.deepStrictEqual(later.rows.map((row) => row.number), [3, 4, 5]);
+
+  // Afterwards the item keeps what people put back, and an old name the sync could not
+  // rename still does not give back a label that the decision removed.
+  const kept = cve({ state: 'open' });
+  kept.labels = ['status: confirmed', 'priority: critical', 'type: security', 'priority: candidate', 'Type:Bug'].map(
+    (name) => ({ name })
+  );
+  assert.deepStrictEqual(migrate(kept, manifest, new Set(), false), [
+    'priority: candidate',
+    'priority: critical',
+    'status: confirmed',
+    'type: security',
+  ]);
+  assert.deepStrictEqual(later.decide.items, []);
+  assert.match(report(later, 'https://github.com/meteor/meteor'), /while the migration lasts:\n\nNone\./);
+});
+
+// The labels of the items named in the decisions, on November 19, 2026, and the labels
+// they must end with, the latter as in labels-preview.csv.
+const DECIDED = [
+  [10903, 'issue', '2020-02-08', 'confirmed; Project:NPM; Impact:few; in-discussion; idle; modern-build-stack; Next 3.x.x',
+    'area: rspack; legacy: needs-review; priority: next; status: confirmed; status: in-discussion; status: stale'],
+  [11030, 'issue', '2020-04-27', 'confirmed; Project:NPM; idle',
+    'area: build; legacy: needs-review; status: confirmed; status: stale'],
+  [12329, 'issue', '2022-11-29', 'Project:NPM; good first issue; idle',
+    'area: build; good first issue; legacy: needs-review; status: needs-triage; status: stale'],
+  [13436, 'issue', '2024-10-30', 'Project:NPM; waiting-feedback; hacktoberfest; idle; modern-build-stack; Next 3.x.x',
+    'area: build; area: rspack; help wanted; priority: next; status: needs-info; status: stale'],
+  [13597, 'issue', '2025-02-01', 'Project:NPM; idle', 'area: build; status: needs-triage; status: stale'],
+  [13802, 'pr', '2025-06-22', 'Project:NPM', 'area: build'],
+  [13936, 'pr', '2025-09-19', 'Project:NPM; hacktoberfest-accepted', 'area: build; hacktoberfest-accepted'],
+  [14218, 'pr', '2026-03-11', 'Project:Isobuild:Minifiers; Project:JS Environment; Project:Tool; Project:Isobuild; Project:Tool:Shell',
+    'area: build; area: cli; experimental'],
+  [14279, 'pr', '2026-03-28', 'Project:Docs; Candidate 3.x.x', 'area: docs; priority: candidate'],
+  [14286, 'pr', '2026-03-30', 'Project:Mongo Driver; Candidate 3.x.x', 'area: mongo; priority: candidate'],
+  [14299, 'pr', '2026-04-01', 'Project:Docs; Project:Guide; Candidate 3.x.x', 'area: docs; priority: candidate'],
+  [14397, 'issue', '2026-05-01',
+    'confirmed; Project:Isobuild; Type:Bug; Severity:has-workaround; Severity:production; Impact:some; modern-build-stack; Next 3.x.x',
+    'area: build; area: rspack; priority: critical; priority: next; status: confirmed; type: bug'],
+  [14429, 'pr', '2026-05-24', 'Project:Docs; Project:Tool; Project:Isobuild; Candidate 3.x.x',
+    'area: build; area: cli; area: docs; priority: candidate'],
+  [14479, 'pr', '2026-06-22', 'Project:Tool', 'area: cli; experimental'],
+  [14586, 'pr', '2026-07-14', 'Project:NPM', 'area: cli'],
+  [14615, 'pr', '2026-07-28', 'Project:NPM', 'area: cli'],
+  [14625, 'pr', '2026-07-28', 'Project:NPM', 'area: cli'],
+  [14744, 'issue', '2026-09-12', 'confirmed; Type:Bug; Severity:production; Impact:few; modern-build-stack',
+    'area: rspack; priority: critical; status: confirmed; type: bug'],
+  [14751, 'pr', '2026-09-13',
+    'Project:DDP; Project:Mongo Driver; Project:Isobuild:Minifiers; Project:JS Environment; Project:Tool; Project:Isobuild; ' +
+      'Project:Release Process; Project:JS Environment:Typescript; Candidate 3.x.x',
+    'area: build; area: cli; area: ddp; area: mongo; area: release; area: types; experimental; priority: candidate'],
+  [14795, 'issue', '2026-09-25', 'confirmed; Project:Livequery; Type:Bug; Severity:has-workaround; Severity:production; Impact:few',
+    'area: livequery; priority: critical; status: confirmed; type: bug'],
+  [14796, 'pr', '2026-09-25', 'Project:NPM', 'area: cli; area: rspack'],
+  [14825, 'issue', '2026-10-08',
+    'confirmed; Project:Webapp; Project:Tool; Project:NPM; Type:Bug; Severity:has-workaround; Impact:most; Candidate 3.x.x',
+    'area: cli; area: webapp; priority: critical; status: confirmed; type: security'],
+  [14886, 'pr', '2026-10-30', 'Project:NPM', 'area: rspack'],
+  [14889, 'pr', '2026-10-30', 'Project:NPM', 'area: mobile'],
+];
+
+test('the items named in the decisions end with the labels chosen for them', () => {
+  for (const [number, kind, createdAt, before, after] of DECIDED) {
+    const named = item(number, before.split('; '), {
+      state: 'open',
+      created_at: createdAt,
+      pull_request: kind === 'pr' ? {} : undefined,
+    });
+    assert.deepStrictEqual(migrate(named, manifest), after.split('; '), `#${number}`);
+  }
+  // Every entry of ITEMS is in the table.
+  assert.deepStrictEqual(
+    Object.keys(ITEMS).filter((number) => !DECIDED.some(([named]) => named === Number(number))),
+    []
+  );
+});
+
+test('lists the open items a deleted `Project:` label leaves without an area', () => {
+  const result = preview(
+    [
+      item(1, ['Project:NPM'], { state: 'open', pull_request: {} }),
+      item(2, ['Project:NPM', 'Project:Tool'], { state: 'open', pull_request: {} }),
+      item(3, ['Project:NPM']),
+      item(4, ['confirmed'], { state: 'open' }),
+      item(14586, ['Project:NPM'], { state: 'open', pull_request: {} }),
+      item(5, ['bug'], { state: 'open' }),
+      // Renamed to `platform: windows`: no area, but nothing is lost.
+      item(6, ['Project:Windows'], { state: 'open' }),
+    ],
+    manifest
+  );
+  assert.deepStrictEqual(result.decide.noArea.map(({ number }) => number), [1]);
+  assert.match(report(result, 'https://github.com/meteor/meteor'), /end without an area\*\*:\n\n- \[#1\]\([^)]+\) Item 1\n/);
 });
 
 test('flags two values in the type and status facets, ignoring status: stale', () => {
@@ -130,7 +303,7 @@ test('lists only deleted labels that remain on open items', () => {
         item(1, ['Severity:has-workaround'], { state: 'open' }),
         item(2, ['Severity:has-workaround']),
         item(3, ['Project:NPM']),
-        item(4, ['Impact:few'], { state: 'open' }),
+        item(4, ['Impact:most'], { state: 'open' }),
       ],
       manifest
     ),

@@ -177,24 +177,6 @@
 - name: "priority: low"
   color: "d93f0b"
   description: "Valid, but not soon"
-  from_name: "Impact:few"
-
-# ci: switches for the E2E workflow (meteor/meteor#14479), applied on pull requests
-- name: "ci:e2e"
-  color: "b7d97b"
-  description: "Run all E2E slices"
-- name: "ci:e2e:apps"
-  color: "b7d97b"
-  description: "Run app lifecycle and bundling slices"
-- name: "ci:e2e:skeletons"
-  color: "b7d97b"
-  description: "Run meteor create skeleton slices"
-- name: "ci:e2e:examples"
-  color: "b7d97b"
-  description: "Run example creation slices"
-- name: "ci:e2e:native"
-  color: "b7d97b"
-  description: "Run native mobile smoke tests"
 
 # Standalone labels, outside the facets
 - name: "experimental"
