@@ -12,6 +12,7 @@ on:
       - "packages/tools-core/**"
       - "packages/babel-compiler/**"
       - "packages/meteor-tool/**"
+      - "packages/non-core/blaze"
       - "packages/test-in-browser/**"
       - "npm-packages/meteor-rspack/**"
       - "tools/isobuild/**"
@@ -114,6 +115,12 @@ jobs:
         uses: actions/checkout@v6
         with:
           submodules: recursive
+
+      # Blaze source assertions inspect both repositories from the container.
+      - name: Mark the checkout and Blaze submodule as safe for git
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git config --global --add safe.directory "$GITHUB_WORKSPACE/packages/non-core/blaze"
 
       - name: Cache dependencies
         id: deps-cache
