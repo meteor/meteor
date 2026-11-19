@@ -148,14 +148,13 @@ Beyond these, each release includes runtime and dependency updates, security and
 
 [📄 Native TypeScript Types Documentation](/cli/using-core-types) · [Implementation](https://github.com/meteor/meteor/pull/14699)
 
-## Delivered project: Meteor Agent Skills ✅
+## Delivered project: Meteor AI Skills ✅
 
 > Give AI coding assistants the Meteor context needed for real application work: release-specific APIs, package compatibility, what to inspect, and how to verify changes.
 
 **First delivered in:** [Agent Skills 1.1.0](https://github.com/meteor/agent-skills/releases/tag/v1.1.0) (November 10, 2026), validated with Meteor 3.6. The catalog is versioned independently of the framework.
 
-- **Phase 1 (1.1.0): Official catalog.** Published 17 focused skills for building, migrating, debugging, testing, securing, and deploying Meteor 3 applications. Coverage includes the build stack, TypeScript, reactive data, authentication, React and Blaze, native applications, and community packages. Developers can install the complete plugin or individual skills in compatible AI coding assistants.
-- **Phase 2 (1.1.1): Release follow-up.** Updated guidance for Meteor 3.6.1, 3.5.5, and 3.4.4, including security fixes, runtime compatibility, and backport boundaries, with installation, upgrade, and release-archive verification. 🔗 [Release](https://github.com/meteor/agent-skills/releases/tag/v1.1.1)
+Published 17 focused skills for building, migrating, debugging, testing, securing, and deploying Meteor 3 applications. Coverage includes the build stack, TypeScript, reactive data, authentication, React and Blaze, native applications, and community packages. Developers can install the complete plugin or individual skills in compatible AI coding assistants.
 
 **Ongoing work:** Keep guidance aligned with Meteor releases, including betas; check it against source and documentation; incorporate real application feedback; maintain installation and upgrade checks; and expand coverage as the framework evolves.
 
