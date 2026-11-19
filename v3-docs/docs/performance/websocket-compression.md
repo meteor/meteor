@@ -36,6 +36,10 @@ Available configuration options:
 - `noContextTakeover`: When true, compressor resets for each message (default: true)
 - `maxWindowBits`: Window size for compression (9-15, lower uses less memory)
 
+::: tip
+With the [`uws` transport](/performance/ddp-transport), `SERVER_WEBSOCKET_COMPRESSION=false` disables compression as well, and `threshold` applies there too. The other options configure SockJS only: `uws` compresses with the uWebSockets.js shared compressor at zlib's default level, keeps no context between messages, and compresses on the event loop rather than on Node's thread pool. Raise `threshold` if compression shows up in your CPU profiles.
+:::
+
 ## Configuration Examples
 
 Here are recommended configurations for different types of applications:
@@ -87,6 +91,8 @@ Meteor.server.stream_server.server.options.faye_server_options.extensions
 Results interpretation:
 - `[]` (empty array): Compression is disabled
 - `[{}]` (array with object): Compression is enabled
+
+With `DDP_TRANSPORT=uws`, check the `/websocket` request in your browser's Network tab instead: its `Sec-WebSocket-Extensions` response header lists `permessage-deflate` when compression is enabled.
 
 ## Performance Considerations
 
