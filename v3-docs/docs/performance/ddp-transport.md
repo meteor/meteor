@@ -163,8 +163,11 @@ The full set of settings:
 | `host` | `"127.0.0.1"` | Address the internal uws server binds to |
 | `payloadLength` | `48` | Max WebSocket payload, in KiB |
 | `timeout` | `45` | Idle timeout, in seconds |
+| `maxBackpressure` | `0` | Max data buffered for one client, in KiB. `0` means no limit, as with SockJS |
 
 If you cannot avoid running on the same port, use distinct loopback hosts (`127.0.0.2`, `127.0.0.3`, …) — Linux routes all of `127.0.0.0/8` to `lo` by default, so each process binds a distinct `(host, port)` tuple and the kernel demuxes correctly.
+
+A limit bounds the memory a slow or stalled client can hold on the server. When a client falls more than `maxBackpressure` behind, the server closes its connection and logs it; the client then reconnects and resubscribes. Keep the limit above the largest initial result of your subscriptions, or that client reconnects in a loop. Values from `1` to `4194303` KiB are accepted; anything else means no limit.
 
 #### Example: multi-tenant `docker-compose.yml`
 

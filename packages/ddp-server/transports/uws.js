@@ -49,9 +49,33 @@ export function createProxyAddressTracker() {
   };
 }
 
+// Above maxBackpressure, uWS drops each frame and keeps the socket open, which
+// breaks the send() contract in ./index.js: a client then misses DDP messages
+// and never learns it. 0 buffers without limit, as sockjs does. A configured
+// limit closes the socket instead, so the client reconnects to a consistent
+// state. uWS stores the limit as a 32-bit unsigned integer, so a value it
+// cannot hold would wrap to a tiny limit: treat it as no limit.
+export function backpressureOptions(settings) {
+  const requested = Number(settings.maxBackpressure);
+  const maxBackpressure = requested > 0 && requested < 2 ** 22 ? requested : 0;
+  return {
+    maxBackpressure: maxBackpressure * 1024,
+    closeOnBackpressureLimit: true,
+    dropped(socket) {
+      if (socket.backpressureLimitReached) return;
+      socket.backpressureLimitReached = true;
+      Meteor._debug(
+        `uws: closing the DDP connection of ${socket.remoteAddress}, which buffered ` +
+        `more than ${maxBackpressure} KiB ` +
+        '(Meteor.settings.packages["ddp-server"].uws.maxBackpressure)'
+      );
+    },
+  };
+}
+
 /**
  * Configuration via Meteor.settings:
- *   { "packages": { "ddp-server": { "transport": "uws", "uws": { "port": 5001, "host": "127.0.0.1", "payloadLength": 48, "timeout": 45 } } } }
+ *   { "packages": { "ddp-server": { "transport": "uws", "uws": { "port": 5001, "host": "127.0.0.1", "payloadLength": 48, "timeout": 45, "maxBackpressure": 0 } } } }
  */
 export function createUwsTransport() {
   return {
@@ -86,7 +110,7 @@ export function createUwsTransport() {
       });
 
       uwsApp.ws('/*', {
-        maxBackpressure: 16 * 1024 * 1024,
+        ...backpressureOptions(settings),
         maxPayloadLength: uwsPayloadLength * 1024,
         idleTimeout: uwsSocketTimeout,
 

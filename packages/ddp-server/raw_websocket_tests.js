@@ -2,6 +2,7 @@
 // These tests verify that DDP connections work correctly regardless of
 // the transport mode (SockJS or raw WebSocket).
 
+const crypto = Npm.require('crypto');
 const http = Npm.require('http');
 const net = Npm.require('net');
 const { ClientStream } = require('meteor/socket-stream-client');
@@ -88,6 +89,55 @@ if (process.env.DDP_TRANSPORT === 'uws') {
       else process.env.HTTP_FORWARDED_COUNT = previousCount;
       for (const socket of sockets) socket.destroy();
       if (relay.listening) await new Promise(resolve => relay.close(resolve));
+    }
+  });
+
+  // Twice the old 16 MiB limit, so that what the kernel absorbs cannot hide a
+  // drop. Random bodies keep it there when the transport compresses frames.
+  const largeResultCount = 32 * 1024;
+  Meteor.publish('raw_websocket_test_large_result', function () {
+    for (let i = 0; i < largeResultCount; i++) {
+      const body = crypto.randomBytes(1000).toString('base64');
+      this.added('raw_websocket_test_large_result', String(i), { body });
+    }
+    this.ready();
+  });
+
+  // #14996: above 16 MiB of pending frames, uws dropped the rest of the
+  // initial result and its 'ready' while the socket stayed open.
+  Tinytest.addAsync('stream server - uws delivers a subscription result larger than 16 MiB', async test => {
+    const url = new URL(Meteor.absoluteUrl('websocket'));
+    url.protocol = 'ws:';
+    url.hostname = '127.0.0.1';
+    url.port = WebApp.httpServer.address().port;
+    const socket = new WebSocket(url);
+    let added = 0;
+    let timer;
+    try {
+      const outcome = await new Promise(resolve => {
+        timer = Meteor.setTimeout(() => resolve('timeout'), 60000);
+        socket.addEventListener('open', () => {
+          socket.send(JSON.stringify({ msg: 'connect', version: '1', support: ['1'] }));
+        });
+        socket.addEventListener('message', event => {
+          const message = JSON.parse(event.data);
+          if (message.msg === 'connected') {
+            socket.send(JSON.stringify({ msg: 'sub', id: 'large', name: 'raw_websocket_test_large_result', params: [] }));
+          } else if (message.msg === 'added') {
+            added++;
+          } else if (message.msg === 'ready') {
+            resolve('ready');
+          } else if (message.msg === 'ping') {
+            socket.send(JSON.stringify({ msg: 'pong' }));
+          }
+        });
+        socket.addEventListener('close', () => resolve('closed'));
+      });
+      test.equal(outcome, 'ready');
+      test.equal(added, largeResultCount);
+    } finally {
+      Meteor.clearTimeout(timer);
+      socket.close();
     }
   });
 }
