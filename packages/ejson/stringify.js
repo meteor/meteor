@@ -7,6 +7,8 @@
 //
 //    NO WARRANTY EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
+import { isArguments } from "./utils";
+
 function quote(string) {
   return JSON.stringify(string);
 }
@@ -38,7 +40,7 @@ const str = (key, holder, singleIndent, outerIndent, canonical) => {
       let v;
 
       // Is the value an array?
-      if (Array.isArray(value) || {}.hasOwnProperty.call(value, "callee")) {
+      if (Array.isArray(value) || isArguments(value)) {
         // The value is an array. Stringify every element. Use null as a
         // placeholder for non-JSON values.
         const length = value.length;
