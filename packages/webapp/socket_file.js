@@ -50,6 +50,40 @@ export const removeExistingSocketFile = (socketPath) => {
   }
 };
 
+// Each cluster worker is a fully independent Meteor server with its own
+// in-memory state (DDP sessions, subscriptions), so by default every
+// worker gets its own socket file, named by appending the worker's
+// "name" environment variable (or its cluster worker id) to
+// UNIX_SOCKET_PATH. A reverse proxy can then target each worker
+// individually, e.g. for session affinity.
+//
+// When the forking process instead assigns each worker a unique path
+// directly (e.g. cluster.fork({ UNIX_SOCKET_PATH: ... })), setting
+// UNIX_SOCKET_NO_WORKER_SUFFIX to any non-empty value uses
+// UNIX_SOCKET_PATH exactly as given.
+export const getWorkerSocketPath = (
+  socketPath,
+  { env = process.env, loadCluster = () => require('cluster') } = {}
+) => {
+  if (env.UNIX_SOCKET_NO_WORKER_SUFFIX) {
+    return socketPath;
+  }
+
+  // Lazy-load cluster only when needed (UNIX_SOCKET_PATH with workers).
+  // Avoids loading the module in the common case where it is unused.
+  let cluster;
+  try {
+    cluster = loadCluster();
+  } catch (e) {
+    // cluster module unavailable in this runtime; continue without worker suffix.
+  }
+  if (cluster?.isWorker && cluster.worker) {
+    const workerName = cluster.worker.process.env.name || cluster.worker.id;
+    return socketPath + '.' + workerName + '.sock';
+  }
+  return socketPath;
+};
+
 // Remove the socket file when done to avoid leaving behind a stale one.
 // Note - a stale socket file is still left behind if the running node
 // process is killed via signal 9 - SIGKILL.
