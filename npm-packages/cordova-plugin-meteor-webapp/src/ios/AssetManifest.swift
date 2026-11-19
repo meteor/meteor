@@ -13,6 +13,18 @@ struct AssetManifest {
   let cordovaCompatibilityVersion: String
   var entries: [Entry]
 
+  /// The file URL APIs append manifest paths literally.
+  static func isValidFilePath(_ filePath: String) -> Bool {
+    return !filePath.isEmpty && !filePath.hasPrefix("/") && !filePath.contains("\0") &&
+      !filePath.components(separatedBy: "/").contains("..")
+  }
+
+  /// Requires one safe directory name.
+  static func isValidVersion(_ version: String) -> Bool {
+    return !version.isEmpty && version != "." && version != ".." && !version.contains("/") &&
+      !version.contains("\0") && version != "Downloading" && version != "PartialDownload"
+  }
+
   init(fileURL: URL) throws {
     try self.init(data: try Data(contentsOf: fileURL, options: []))
   }
@@ -54,6 +66,12 @@ struct AssetManifest {
         let cacheable = entryJSON["cacheable"] as? Bool {
           let sourceMapPath = entryJSON["sourceMap"] as? String
           let sourceMapURLPath = entryJSON["sourceMapUrl"] as? String
+
+          for path in [filePath, sourceMapPath] {
+            if let path = path, !AssetManifest.isValidFilePath(path) {
+              throw WebAppError.invalidAssetManifest(reason: "Asset manifest contains an invalid file path: \(path)", underlyingError: nil)
+            }
+          }
 
           let entry = Entry(filePath: filePath, URLPath: URLPath,
             fileType: fileType, cacheable: cacheable, hash: hash,
