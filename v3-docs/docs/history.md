@@ -9,6 +9,43 @@ This is a complete history of changes for Meteor releases.
 [//]: # (If you want to change something in this file)
 
 [//]: # (go to meteor/v3-docs/docs/generators/changelog/versions)
+## v3.6.2-beta.0, 2026-11-20
+
+### Highlights
+
+- Update the Windows dev bundle from Python 3.9.5 to 3.15.2 and from 7-Zip 16.04 to 26.06. Bundled setuptools provides `distutils` for native npm dependencies that still use older versions of `node-gyp`.
+- Fix native npm addon builds on Windows when the project path contains spaces. Meteor now disables Node.js 26's profile-guided and link-time optimization flags for addon builds by default.
+
+#### Breaking Changes
+
+N/A
+
+#### Internal API changes
+
+N/A
+
+#### Migration Steps
+
+```bash
+meteor update --release 3.6.2-beta.0
+```
+
+#### Bumped Meteor Packages
+
+- meteor-tool@3.6.2-beta.0
+
+#### Bumped NPM Packages
+
+N/A
+
+#### Special thanks to
+
+✨✨✨
+
+- [@Grubba27](https://github.com/Grubba27)
+- [@nachocodoner](https://github.com/nachocodoner)
+
+✨✨✨
 ## v3.6.1, 2026-11-12
 
 ### Highlights
