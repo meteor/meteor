@@ -111,6 +111,9 @@ const decode = (str) => {
   for (let i = 0; i < str.length; i++) {
     const c = str.charAt(i);
     const v = getVal(c);
+    if (typeof v === "undefined") {
+      throw new Error("invalid base64 string");
+    }
     switch (i % 4) {
       case 0:
         if (v < 0) {

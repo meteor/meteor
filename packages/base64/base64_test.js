@@ -230,3 +230,11 @@ Tinytest.add("base64 - newBinary contract", (test) => {
   test.equal(decoded[1], 0x42);
   test.equal(decoded[2], 0x43);
 });
+
+Tinytest.add("base64 - decode rejects invalid characters", (test) => {
+  ["!", "@", "QUJD!", "QU!D", "====", "A==="].forEach((invalidStr) => {
+    test.throws(() => {
+      Base64.decode(invalidStr);
+    }, /invalid base64 string/);
+  });
+});
