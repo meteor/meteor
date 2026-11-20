@@ -4,6 +4,16 @@ Labels are defined in [`.github/labels.yml`](.github/labels.yml) and applied to 
 
 Every label belongs to one facet, written as a prefix, apart from the few standalone labels listed at the end, so the label picker groups them and searches read well: `is:open label:"area: ddp" label:"status: needs-triage"`.
 
+### An example: from a bug report to its release
+
+How the labels work together, on a bug in the installer.
+
+1. **Report.** The bug report template sets `type: bug` and `status: needs-triage`.
+2. **Triage.** A triager adds `area: cli`, the area of the installer, and replaces `status: needs-triage` with `status: confirmed` once the bug is reproduced.
+3. **Fix.** On the pull request, GitHub Actions adds `area: cli` from the files changed ([path rules](.github/labeler.yml)), and CodeRabbit suggests `type: bug` for a maintainer to apply ([its instructions](.coderabbit.yaml)).
+4. **Priority.** If the bug blocks production deployments, a maintainer of the area flags it, and the Meteor Software team sets `priority: critical`.
+5. **Release.** Once the fix is planned for a patch release, the issue gets that release's [milestone](https://github.com/meteor/meteor/milestones). To see what a release targets in one area, open its milestone and filter by the label, `area: cli` here.
+
 ### `type:` what the item is
 
 One per item.

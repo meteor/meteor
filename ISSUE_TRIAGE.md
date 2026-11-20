@@ -2,7 +2,7 @@
 
 This document describes the process Meteor contributors use to organize issues. We use Github [issues](https://github.com/meteor/meteor/issues) in this repository to track bugs, and [Discussions](https://github.com/meteor/meteor/discussions) to track feature requests. Our goal is to maintain a list of issues that are relevant and well-defined (and [labeled](https://github.com/meteor/meteor/labels)) such that a contributor can immediately begin working on the code for a fix or feature request. Contributors who want to dive in and write code aren't likely to prioritize working on issues that are ambiguous and have low impact.
 
-Issues waiting for triage carry `status: needs-triage`, preset by the bug report template: [`is:issue is:open label:"status: needs-triage"`](https://github.com/meteor/meteor/issues?q=is%3Aissue+is%3Aopen+label%3A%22status%3A+needs-triage%22). The labels are described in [LABELS.md](LABELS.md).
+Issues waiting for triage carry `status: needs-triage`, preset by the bug report template: [`is:issue is:open label:"status: needs-triage"`](https://github.com/meteor/meteor/issues?q=is%3Aissue+is%3Aopen+label%3A%22status%3A+needs-triage%22). The labels are described in [LABELS.md](LABELS.md), which also follows [one bug from its report to its release](LABELS.md#an-example-from-a-bug-report-to-its-release).
 
 We would love to have more contributors who are willing to help out with triaging issues. You can begin by helping issue requesters create good reproductions and by confirming those reproductions on your own machine. It won't be long before the core maintainers notice your work and ask whether you'd like to be promoted to an issue maintainer.
 
