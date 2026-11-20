@@ -1,8 +1,9 @@
 name: Type Coverage
 on:
-  - pull_request
+  workflow_call:
+  pull_request:
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: type-coverage-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   type-coverage:

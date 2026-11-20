@@ -1,0 +1,31 @@
+name: Release CI
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    uses: ./.github/workflows/unit-tests.yml
+  test-tools:
+    uses: ./.github/workflows/test-tools.yml
+  windows-selftest:
+    uses: ./.github/workflows/windows-selftest.yml
+  test-packages:
+    uses: ./.github/workflows/test-packages.yml
+  test-ddp-transport:
+    uses: ./.github/workflows/test-ddp-transport.yml
+  e2e-tests:
+    uses: ./.github/workflows/e2e-tests.yml
+  e2e-accounts:
+    uses: ./.github/workflows/e2e-accounts.yml
+  type-coverage:
+    uses: ./.github/workflows/type-coverage.yml
+  check-code-style:
+    uses: ./.github/workflows/check-code-style.yml
+  check-syntax:
+    uses: ./.github/workflows/check-syntax.yml
+  upstream-services:
+    uses: ./.github/workflows/upstream-services.yml

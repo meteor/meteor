@@ -1,6 +1,7 @@
 name: Test Tools
 
 on:
+  workflow_call:
   pull_request:
     paths:
       - "tools/**"
@@ -13,7 +14,7 @@ on:
       - "scripts/ci/test-tools-cache-keys.test.js"
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: test-tools-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:

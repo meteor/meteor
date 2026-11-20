@@ -1,5 +1,6 @@
 name: Check code-style
 on:
+  workflow_call:
   push:
     paths:
       - 'packages/**'
@@ -9,7 +10,7 @@ on:
       - 'packages/**'
       - 'npm-packages/meteor-installer/**'
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: check-code-style-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   check-code-style:

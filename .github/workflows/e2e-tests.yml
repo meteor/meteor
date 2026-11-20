@@ -1,6 +1,7 @@
 name: E2E Tests
 
 on:
+  workflow_call:
   pull_request:
     paths:
       - "meteor"

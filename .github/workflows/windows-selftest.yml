@@ -1,6 +1,7 @@
 name: Windows Selftest
 
 on:
+  workflow_call:
   pull_request:
     types:
       - opened
@@ -38,7 +39,7 @@ jobs:
   test:
     runs-on: windows-2019-meteor
     concurrency:
-      group: ${{ github.head_ref }}-meteor-selftest-windows
+      group: ${{ github.head_ref || github.ref }}-meteor-selftest-windows
       cancel-in-progress: true
 
     steps:

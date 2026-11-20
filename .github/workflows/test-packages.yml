@@ -1,6 +1,7 @@
 name: Test Packages
 
 on:
+  workflow_call:
   pull_request:
     paths:
       - "packages/**"

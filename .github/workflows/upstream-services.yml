@@ -7,6 +7,7 @@ name: Upstream Services
 # scripts/ci/check-upstream-services.sh.
 
 on:
+  workflow_call:
   pull_request:
   workflow_dispatch:
 
