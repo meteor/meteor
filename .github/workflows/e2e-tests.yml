@@ -1,24 +1,10 @@
 name: E2E Tests
 
 on:
-  pull_request:
+  push:
+    branches: [ci/release-3.6.2]
     paths:
-      - "meteor"
-      - "package.json"
-      - "package-lock.json"
-      - "tools/cli/**"
-      - "tools/e2e-tests/**"
-      - "packages/rspack/**"
-      - "packages/tools-core/**"
-      - "packages/babel-compiler/**"
-      - "packages/meteor-tool/**"
-      - "packages/test-in-browser/**"
-      - "npm-packages/meteor-rspack/**"
-      - "tools/isobuild/**"
-      - "scripts/dev-bundle-tool-package.js"
-      - "tools/fs/safe-watcher.ts"
-      - "tools/static-assets/skel-**"
-      - ".github/workflows/e2e-tests.yml"
+      - '.github/workflows/e2e-tests.yml'
 
 concurrency:
   group: meteor-e2e-tests-${{ github.ref }}
@@ -48,6 +34,8 @@ jobs:
       matrix: ${{ steps.groups.outputs.matrix }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: 36a5f74cdd216e936d1f2a306fc534a9c3dbe9b0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -113,6 +101,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
         with:
+          ref: 36a5f74cdd216e936d1f2a306fc534a9c3dbe9b0
           submodules: recursive
 
       - name: Cache dependencies
@@ -142,7 +131,7 @@ jobs:
       - name: Set NPM_LINK_RSPACK=false for release branches
         shell: bash
         env:
-          BRANCH: ${{ github.head_ref || github.ref_name }}
+          BRANCH: release-3.6.2
         run: |
           echo "Current branch: $BRANCH"
           if [[ "$BRANCH" == release-* ]]; then

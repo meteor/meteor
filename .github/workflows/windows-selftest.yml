@@ -1,25 +1,10 @@
 name: Windows Selftest
 
 on:
-  pull_request:
-    types:
-      - opened
-      - reopened
-      - synchronize
-    paths:
-      - 'meteor'
-      - 'meteor.bat'
-      - 'tools/**'
-      - '!tools/e2e-tests/**'
-      - 'packages/babel-compiler/**'
-      - 'packages/dynamic-import/**'
-      - 'packages/meteor/**'
-      - 'packages/meteor-tool/**'
-      - '.github/workflows/windows-selftest.yml'
-
   push:
-    branches:
-      - devel
+    branches: [ci/release-3.6.2]
+    paths:
+      - '.github/workflows/windows-selftest.yml'
 
 env:
   # npm submits an audit request with every install. Meteor runs many installs
@@ -38,7 +23,7 @@ jobs:
   test:
     runs-on: windows-2019-meteor
     concurrency:
-      group: ${{ github.head_ref }}-meteor-selftest-windows
+      group: ${{ github.ref }}-meteor-selftest-windows
       cancel-in-progress: true
 
     steps:
@@ -52,6 +37,8 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: 36a5f74cdd216e936d1f2a306fc534a9c3dbe9b0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

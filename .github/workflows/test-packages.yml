@@ -1,12 +1,10 @@
 name: Test Packages
 
 on:
-  pull_request:
+  push:
+    branches: [ci/release-3.6.2]
     paths:
-      - "packages/**"
-      - ".github/workflows/test-packages.yml"
-
-
+      - '.github/workflows/test-packages.yml'
 
 jobs:
   test-packages:
@@ -37,6 +35,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          ref: 36a5f74cdd216e936d1f2a306fc534a9c3dbe9b0
           submodules: recursive
 
       - name: Set up Node.js
@@ -65,3 +64,47 @@ jobs:
           export TIMEOUT_SCALE_FACTOR="20"
           export METEOR_HEADLESS="true"
           ./packages/test-in-console/run.sh
+
+  deprecated-packages:
+    name: Test Deprecated Packages
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.ref }}-test-deprecated-packages
+      cancel-in-progress: true
+    timeout-minutes: 60
+
+    env:
+      PUPPETEER_DOWNLOAD_PATH: /home/runner/.npm/chromium
+
+    steps:
+      - name: Update and install dependencies
+        run: sudo apt-get update && sudo apt-get install -y libnss3 g++-12
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: 36a5f74cdd216e936d1f2a306fc534a9c3dbe9b0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.15.1
+
+      - name: Cache Node.js modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            .meteor
+            .babel-cache
+            dev_bundle
+            /home/runner/.npm/chromium
+          key: ${{ runner.os }}-node-${{ hashFiles('meteor', '**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: ./packages/test-in-console/run.sh

@@ -1,11 +1,9 @@
 name: NPM eslint-plugin-meteor
 on:
   push:
+    branches: [ci/release-3.6.2]
     paths:
-      - "npm-packages/eslint-plugin-meteor/**"
-  pull_request:
-    paths:
-      - "npm-packages/eslint-plugin-meteor/**"
+      - '.github/workflows/npm-eslint-plugin-meteor.yml'
 
 permissions:
   contents: read  #  to fetch code (actions/checkout)
@@ -18,6 +16,8 @@ jobs:
         working-directory: npm-packages/eslint-plugin-meteor
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: 36a5f74cdd216e936d1f2a306fc534a9c3dbe9b0
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:

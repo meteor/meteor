@@ -1,10 +1,10 @@
 name: Native mobile smoke tests
 
 on:
-  schedule:
-    - cron: "0 6 * * *"
-  pull_request:
-    types: [labeled]
+  push:
+    branches: [ci/release-3.6.2]
+    paths:
+      - '.github/workflows/native.yml'
 
 concurrency:
   group: native-${{ github.ref }}
@@ -12,11 +12,12 @@ concurrency:
 
 jobs:
   android:
-    if: github.event_name == 'schedule' || github.event.label.name == 'mobile'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: 36a5f74cdd216e936d1f2a306fc534a9c3dbe9b0
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -56,11 +57,12 @@ jobs:
           path: tools/native-tests/junit/
 
   ios:
-    if: github.event_name == 'schedule' || github.event.label.name == 'mobile'
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: 36a5f74cdd216e936d1f2a306fc534a9c3dbe9b0
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -75,6 +77,10 @@ jobs:
         run: npm run install:native
       - name: Pre-boot iOS Simulator
         run: |
+          if ! xcrun simctl list devices available | grep -Fq "iPhone 15 ("; then
+            runtime=$(xcrun simctl list runtimes --json | jq -er '[.runtimes[] | select(.isAvailable and (.identifier | contains(".iOS-")))] | sort_by(.version | split(".") | map(tonumber)) | last.identifier')
+            xcrun simctl create "iPhone 15" com.apple.CoreSimulator.SimDeviceType.iPhone-15 "$runtime"
+          fi
           xcrun simctl boot "iPhone 15" || true
           xcrun simctl bootstatus "iPhone 15" -b
       - name: Run smoke flow on iOS Simulator

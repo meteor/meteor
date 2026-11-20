@@ -2,12 +2,8 @@ name: V3 Docs
 
 on:
   push:
+    branches: [ci/release-3.6.2]
     paths:
-      - 'v3-docs/docs/**'
-      - '.github/workflows/v3-docs.yml'
-  pull_request:
-    paths:
-      - 'v3-docs/docs/**'
       - '.github/workflows/v3-docs.yml'
 
 permissions:
@@ -25,6 +21,8 @@ jobs:
         working-directory: v3-docs/docs
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: 36a5f74cdd216e936d1f2a306fc534a9c3dbe9b0
       - uses: actions/setup-node@v4
         with:
           node-version: 24.x

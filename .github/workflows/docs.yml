@@ -1,8 +1,10 @@
 name: Meteor Docs PR
 on:
-  pull_request:
+  push:
+    branches: [ci/release-3.6.2]
     paths:
-      - 'docs/**/*'
+      - '.github/workflows/docs.yml'
+
 jobs:
   preview:
     runs-on: ubuntu-latest
@@ -11,22 +13,10 @@ jobs:
         working-directory: docs/
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: 36a5f74cdd216e936d1f2a306fc534a9c3dbe9b0
       - uses: actions/setup-node@v4
         with:
           node-version: 12.x
       - name: Build the Docs
         run: npm ci && npm run build
-      - name: Deploy to Netlify for preview
-        uses: nwtgck/actions-netlify@v4.0.0
-        with:
-          publish-dir: './docs/public/'
-          production-branch: devel
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          deploy-message: Deploy from GitHub Actions ${{ github.event.pull_request.title }}
-          netlify-config-path: './docs/netlify.toml'
-          alias: deploy-preview-${{ github.event.number }}
-          enable-pull-request-comment: false
-          enable-commit-comment: false
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_DOCS_SITE_ID }}
