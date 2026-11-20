@@ -22,11 +22,14 @@ const issue = (number, createdAt, labels = [], extra = {}) => ({
 
 // A repository holding `items`; records every label added or removed. `limits` lists
 // the rate limit after each write ({ remaining, reset }), to make a run wait or stop.
+// Its labels are the ones the items carry, plus `labels`: those no item carries.
 function buildGithubMock(items, limits = []) {
   const added = [];
   const removed = [];
+  const labels = [];
   const listForRepo = Symbol('listForRepo');
   const listEvents = Symbol('listEvents');
+  const listLabelsForRepo = Symbol('listLabelsForRepo');
   const answer = () => {
     const { remaining = 5000, reset = 0 } = limits.shift() ?? {};
     return { headers: { 'x-ratelimit-remaining': String(remaining), 'x-ratelimit-reset': String(reset) } };
@@ -34,10 +37,12 @@ function buildGithubMock(items, limits = []) {
   return {
     added,
     removed,
+    labels,
     rest: {
       issues: {
         listForRepo,
         listEvents,
+        listLabelsForRepo,
         addLabels: async ({ issue_number, labels }) => {
           added.push(`#${issue_number} ${labels[0]}`);
           const item = items.find((candidate) => candidate.number === issue_number);
@@ -55,6 +60,10 @@ function buildGithubMock(items, limits = []) {
     paginate: async (method, params) => {
       if (method === listEvents) {
         return items.find((item) => item.number === params.issue_number).events ?? [];
+      }
+      if (method === listLabelsForRepo) {
+        const carried = items.flatMap((item) => item.labels.map((label) => label.name));
+        return [...new Set([...carried, ...labels])].map((name) => ({ name }));
       }
       return items.filter(
         (item) =>
@@ -291,6 +300,14 @@ test('waits out a rate limit on the read of an issue history', async () => {
   assert.deepStrictEqual(github.added, ['#1 legacy: needs-review']);
 });
 
+test('waits out a rate limit on the read of the repository labels', async () => {
+  const github = buildGithubMock([issue(14586, NEW, ['Impact:most'], { pull_request: {} })]);
+  const times = limitReads(github, github.rest.issues.listLabelsForRepo, 1, { 'retry-after': '120' });
+  assert.strictEqual(await runOnMockedClock(github), 0);
+  assert.strictEqual(times[1] - times[0], 120_000);
+  assert.deepStrictEqual(github.added, ['#14586 priority: critical', '#14586 area: cli']);
+});
+
 test('fails when a read is rate limited for longer than the run', async () => {
   const github = buildGithubMock([issue(1, NEW, ['status: confirmed', 'bug'])]);
   limitReads(github, github.rest.issues.listForRepo, 1, { 'retry-after': String(6 * 60 * 60) });
@@ -304,6 +321,15 @@ test('fails when a read is rate limited for longer than the run', async () => {
   limitReads(history, history.rest.issues.listEvents, 1, { 'retry-after': String(6 * 60 * 60) });
   await assert.rejects(runOnMockedClock(history), /longer than this run/);
   assert.deepStrictEqual(history.added, []);
+
+  // Labels that cannot be read must not read as "the migration is over".
+  const unread = buildGithubMock([
+    issue(14586, NEW, ['Project:NPM'], { pull_request: {} }),
+    issue(1, NEW, ['bug'], { closed: true }),
+  ]);
+  limitReads(unread, unread.rest.issues.listLabelsForRepo, 1, { 'retry-after': String(6 * 60 * 60) });
+  await assert.rejects(runOnMockedClock(unread), /longer than this run/);
+  assert.deepStrictEqual(unread.added, []);
 });
 
 test('fails on an error other than a rate limit', async () => {
@@ -449,11 +475,28 @@ test('the dry run counts the decisions without writing', async () => {
   assert.deepStrictEqual([github.added, github.removed], [[], []]);
 });
 
-test('leaves the decided items alone once no open item carries a merged label', async () => {
+test('applies the decisions while a merged label is left in the repository, whichever items carry it', async () => {
+  // The last open item with a merged label was closed before the run resumed. The
+  // run that stopped had already moved #2: it is not written again.
+  const resumed = buildGithubMock([
+    issue(14586, NEW, ['Project:NPM'], { pull_request: {} }),
+    issue(1, NEW, ['bug'], { closed: true }),
+    issue(2, NEW, ['bug', 'type: bug'], { closed: true }),
+  ]);
+  assert.strictEqual(await runOnMockedClock(resumed), 0);
+  assert.deepStrictEqual(resumed.added, ['#14586 area: cli', '#1 type: bug']);
+
+  // No item carries it any more, and it is not deleted yet.
+  const unused = buildGithubMock([issue(14586, NEW, ['Project:NPM'], { pull_request: {} })]);
+  unused.labels.push('bug');
+  assert.strictEqual(await runOnMockedClock(unused), 0);
+  assert.deepStrictEqual(unused.added, ['#14586 area: cli']);
+});
+
+test('leaves the decided items alone once no merged label is left in the repository', async () => {
   const github = buildGithubMock([
     issue(14586, NEW, [], { pull_request: {} }),
     issue(14825, NEW, ['status: confirmed', 'type: bug', 'priority: candidate']),
-    issue(3, NEW, ['bug', 'type: bug'], { closed: true }),
     // Neither a label from outside the manifest nor an old name the sync could not
     // rename says that the migration is still going on.
     issue(4, NEW, ['github_actions', 'dependencies'], { pull_request: {} }),

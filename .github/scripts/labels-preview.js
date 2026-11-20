@@ -55,8 +55,8 @@ const increment = (map, key, open) => {
   map.set(key, count);
 };
 
-// `repoLabels` are the names of the labels in the repository, to show the deletions
-// of the labels no item carries.
+// `repoLabels` are the names of the labels in the repository: they tell whether the
+// migration is still going on, and show the deletions of the labels no item carries.
 function preview(items, manifest, { reviewed, repoLabels = [] } = {}) {
   const rows = [];
   const moves = new Map();
@@ -66,7 +66,7 @@ function preview(items, manifest, { reviewed, repoLabels = [] } = {}) {
   }
   const decide = { items: [], priorities, experiments: [], conflicts: [], prStatuses: [], noArea: [] };
   // As in relabel.js, the decisions on single items apply while the migration lasts.
-  const migrating = isMigrating(items.filter((item) => item.state === 'open'));
+  const migrating = isMigrating(repoLabels);
   for (const item of items) {
     const before = item.labels.map((label) => label.name).sort();
     const after = migrate(item, manifest, reviewed, migrating);

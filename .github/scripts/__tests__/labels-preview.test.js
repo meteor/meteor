@@ -113,7 +113,7 @@ test('lists the open items of each priority, and `Impact:few` or `Impact:some` g
   assert.match(text, /\*\*`priority: low`\*\* \(0\)\n\nNone\./);
 });
 
-test('applies the decisions on single open items while an open item carries a merged label', () => {
+test('applies the decisions on single open items while a merged label is left in the repository', () => {
   // Two entries of ITEMS in relabel.js.
   const cve = (extra) => item(14825, ['confirmed', 'Type:Bug', 'Candidate 3.x.x', 'Impact:most'], extra);
   const installer = (labels) => item(14586, labels, { state: 'open', pull_request: {} });
@@ -136,7 +136,8 @@ test('applies the decisions on single open items while an open item carries a me
       item(14889, ['Project:NPM'], { pull_request: {} }),
       item(14479, ['Project:Tool'], { state: 'open', pull_request: {}, title: '[Experimental] E2E smart triggering' }),
     ],
-    manifest
+    manifest,
+    { repoLabels: ['confirmed', 'Type:Bug', 'Candidate 3.x.x', 'Impact:most', 'Project:NPM', 'help wanted', 'Project:Tool'] }
   );
   assert.deepStrictEqual(result.rows.map((row) => [row.number, row.after]), [
     [14825, decided],
@@ -153,19 +154,31 @@ test('applies the decisions on single open items while an open item carries a me
   assert.match(text, /Item 14825: adds `type: security`; removes `type: bug`, `priority: candidate`\n/);
   assert.match(text, /Item 14586: adds `area: cli`\n/);
 
-  // Once the merged labels are gone from the open items, the decisions no longer apply,
+  // The last open item with a merged label was closed since: the label is still in the
+  // repository, so the decisions still apply.
+  const resumed = preview([installer(['Project:NPM']), item(3, ['bug'])], manifest, { repoLabels: ['Project:NPM', 'bug'] });
+  assert.deepStrictEqual(resumed.rows.map((row) => [row.number, row.after]), [
+    [14586, ['area: cli']],
+    [3, ['type: bug']],
+  ]);
+  assert.deepStrictEqual(resumed.decide.items.map(({ number }) => number), [14586]);
+  // The same when no item carries it any more and it is not deleted yet.
+  const unused = preview([installer(['Project:NPM'])], manifest, { repoLabels: ['Project:NPM', 'bug'] });
+  assert.deepStrictEqual(unused.rows.map((row) => [row.number, row.after]), [[14586, ['area: cli']]]);
+
+  // Once the merged labels are gone from the repository, the decisions no longer apply,
   // whatever other label remains: one from outside the manifest, or an old name the
   // sync could not rename.
   const later = preview(
     [
       installer([]),
-      item(3, ['bug']),
       item(4, ['github_actions', 'dependencies'], { state: 'open', pull_request: {} }),
       item(5, ['Type:Bug', 'type: bug'], { state: 'open', pull_request: {} }),
     ],
-    manifest
+    manifest,
+    { repoLabels: ['github_actions', 'dependencies', 'Type:Bug', 'type: bug'] }
   );
-  assert.deepStrictEqual(later.rows.map((row) => row.number), [3, 4, 5]);
+  assert.deepStrictEqual(later.rows.map((row) => row.number), [4, 5]);
 
   // Afterwards the item keeps what people put back, and an old name the sync could not
   // rename still does not give back a label that the decision removed.
@@ -255,7 +268,8 @@ test('lists the open items a deleted `Project:` label leaves without an area', (
       // Renamed to `platform: windows`: no area, but nothing is lost.
       item(6, ['Project:Windows'], { state: 'open' }),
     ],
-    manifest
+    manifest,
+    { repoLabels: ['Project:NPM', 'Project:Tool', 'confirmed', 'bug', 'Project:Windows'] }
   );
   assert.deepStrictEqual(result.decide.noArea.map(({ number }) => number), [1]);
   assert.match(report(result, 'https://github.com/meteor/meteor'), /end without an area\*\*:\n\n- \[#1\]\([^)]+\) Item 1\n/);
