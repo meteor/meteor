@@ -1,0 +1,25 @@
+name: Release CI
+
+on:
+  push:
+    branches: [ci/release-3.6.2]
+    paths: ['.github/workflows/release-ci.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate release workflows
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ed872ec1f6172530605874bc4089f433d5a63d20
+          persist-credentials: false
+      - name: Run actionlint on the release workflow and its dependencies
+        run: |
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/actionlint.tar.gz" \
+            https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+          tar -xzf "$RUNNER_TEMP/actionlint.tar.gz" -C "$RUNNER_TEMP" actionlint
+          "$RUNNER_TEMP/actionlint" -shellcheck= -pyflakes=
