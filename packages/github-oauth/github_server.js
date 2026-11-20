@@ -101,7 +101,8 @@ const getEmails = async (accessToken) => {
         Authorization: `token ${accessToken}`
       } // http://developer.github.com/v3/#user-agent-required
     });
-    return await request.json();
+    const emails = await request.json();
+    return Array.isArray(emails) ? emails : [];
   } catch (err) {
     return [];
   }
