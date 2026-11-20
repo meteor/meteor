@@ -3,6 +3,7 @@ import { WebApp, WebAppInternals } from './webapp_server';
 const url = require("url");
 const crypto = require("crypto");
 const http = require("http");
+const net = require("net");
 const streamToString = require("stream-to-string");
 import { isModern } from "meteor/modern-browsers";
 
@@ -669,5 +670,44 @@ Tinytest.addAsync(
     } finally {
       delete WebAppInternals.staticFilesByArch[arch][hashedPath];
     }
+  }
+);
+
+// Node's HTTP client cannot send a malformed request, so write raw bytes and
+// collect everything the server sends before it closes the socket.
+function rawHttpExchange(request) {
+  const { port } = WebApp.httpServer.address();
+  return new Promise((resolve) => {
+    const socket = net.connect(port, "127.0.0.1");
+    let reply = "";
+    socket.setEncoding("utf8");
+    socket.on("data", (chunk) => {
+      reply += chunk;
+    });
+    socket.on("error", () => {});
+    socket.on("close", () => resolve(reply));
+    socket.setTimeout(5000, () => socket.destroy());
+    socket.write(request);
+  });
+}
+
+Tinytest.addAsync(
+  "webapp - parse errors - a malformed request line gets 400",
+  async function (test) {
+    const reply = await rawHttpExchange(
+      "FOO@ / HTTP/1.1\r\nHost: localhost\r\n\r\n"
+    );
+    test.matches(reply, /^HTTP\/1\.1 400 /);
+  }
+);
+
+Tinytest.addAsync(
+  "webapp - parse errors - oversized headers get 431",
+  async function (test) {
+    const reply = await rawHttpExchange(
+      "GET / HTTP/1.1\r\nHost: localhost\r\n" +
+        `X-Oversized: ${"a".repeat(http.maxHeaderSize)}\r\n\r\n`
+    );
+    test.matches(reply, /^HTTP\/1\.1 431 /);
   }
 );
