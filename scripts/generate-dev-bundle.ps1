@@ -4,7 +4,7 @@ $DebugPreference = "Continue"
 Import-Module -Force "$PSScriptRoot\windows\dev-bundle-lib.psm1"
 $PLATFORM = Get-MeteorPlatform
 
-$PYTHON_VERSION = "3.9.5" # For node-gyp
+$PYTHON_VERSION = "3.15.2" # For node-gyp
 & cmd /c 'du 2>&1'
 
 $dirCheckout = (Get-Item $PSScriptRoot).parent.FullName
@@ -56,8 +56,9 @@ $shell = New-Object -com shell.application
 Function Invoke-Install7ZipApplication {
   Write-Host "Downloading 7-zip..." -ForegroundColor Magenta
   $7zMsiPath = Join-Path $dirTemp '7z.msi'
-  # 32-bit, right now.  But this does not go in the bundle.
-  $webclient.DownloadFile("https://www.7-zip.org/a/7z1604.msi", $7zMsiPath)
+  # x64, to match the windows_x64 build. This does not go in the bundle.
+  # 7-zip.org links releases after 26.00 to the ip7z/7zip GitHub releases.
+  $webclient.DownloadFile("https://github.com/ip7z/7zip/releases/download/26.06/7z2606-x64.msi", $7zMsiPath)
 
   Write-Host "Installing 7-zip system-wide..." -ForegroundColor Magenta
   & "msiexec.exe" /i $7zMsiPath /quiet /qn /norestart | Out-Null
@@ -69,7 +70,7 @@ Function Invoke-Install7ZipApplication {
 Function Add-7ZipTool {
   Write-Host "Downloading 7-zip 'extra'..." -ForegroundColor Magenta
   $extraArchive = Join-Path $dirTemp 'extra.7z'
-  $webclient.DownloadFile("https://www.7-zip.org/a/7z1604-extra.7z", $extraArchive)
+  $webclient.DownloadFile("https://github.com/ip7z/7zip/releases/download/26.06/7z2606-extra.7z", $extraArchive)
 
   $pathToExtract = 'x64/7za.exe'
 
@@ -85,8 +86,11 @@ Function Add-Python {
   # On Windows we provide a reliable version of python.exe for use by
   # node-gyp (the tool that rebuilds binary node modules).
   # This self-hosted 7z is created by archiving the result of running the
-  # Python MSI installer (from python.org), targeted at a temp directory, and
-  # only including: "Python" and "Utility Scripts". Then, 7z the temp directory.
+  # Python installer (from python.org), targeted at a temp directory, and
+  # only including: "Python", "Utility Scripts" and "pip". Then pip installs
+  # setuptools and uninstalls itself: the setuptools distutils shim keeps
+  # node-gyp < 10 working, since Python 3.12 removed distutils. Then, 7z the
+  # temp directory.
   $pythonUrl = "https://s3.amazonaws.com/com.meteor.static/windows-python/",
     "$PLATFORM/python-${PYTHON_VERSION}.7z" -Join ''
   $pythonArchive = Join-Path $dirTemp 'python.7z'
@@ -99,8 +103,9 @@ Function Add-Python {
   $pythonExe = Join-Path $pythonDir 'python.exe'
 
   # Make sure the version is right, when python is called.
-  if (!(cmd /c python.exe --version '2>&1' -Eq "Python ${PYTHON_VERSION}")) {
-    throw "Python was not the version we expected it to be ($PYTHON_VERSION)"
+  $actualPythonVersion = & "$pythonExe" --version
+  if ("$actualPythonVersion" -ne "Python ${PYTHON_VERSION}") {
+    throw "Python was not the version we expected it to be ($PYTHON_VERSION), got: $actualPythonVersion"
   }
 
   Remove-Item $pythonArchive
@@ -348,7 +353,6 @@ Add-Mongo
 $env:PYTHON = Add-Python
 
 # Set additional options for node-gyp
-$env:GYP_MSVS_VERSION = "2015"
 $env:npm_config_nodedir = "$DIR"
 $env:npm_config_cache = "$dirNpmCache"
 

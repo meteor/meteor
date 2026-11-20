@@ -117,10 +117,6 @@ async function getEnv(options) {
   return env;
 }
 
-// Caching env.GYP_MSVS_VERSION allows us to avoid invoking Python every
-// time Meteor runs an npm command. TODO Store this on disk?
-let cachedMSVSVersion;
-
 function addWindowsVariables(devBundleDir, env) {
   // On Windows we provide a reliable version of python.exe for use by
   // node-gyp (the tool that rebuilds binary node modules). #WinPy
@@ -132,52 +128,19 @@ function addWindowsVariables(devBundleDir, env) {
   // so here we ensure env.PATH === env.Path on Windows.
   env.Path = env.PATH;
 
-  if (cachedMSVSVersion) {
-    env.GYP_MSVS_VERSION = cachedMSVSVersion;
-  }
-
-  if (env.GYP_MSVS_VERSION) {
-    return Promise.resolve(env);
-  }
-
-  // If $GYP_MSVS_VERSION was not provided, use the gyp Python library to
-  // infer it, or default to 2015 if that doesn't work.
-  return new Promise(function (resolve) {
-    const nodeGypPylibDir = path.join(
-      devBundleDir, "lib", "node_modules", "node-gyp", "gyp", "pylib"
-    );
-
-    const child = require("child_process").spawn(env.PYTHON, ["-c", [
-      "from gyp.MSVSVersion import SelectVisualStudioVersion",
-      "try:",
-      "  print SelectVisualStudioVersion(allow_fallback=False).short_name",
-      "except:",
-      "  print 2015"
-    ].join("\n")], {
-      cwd: nodeGypPylibDir,
-      stdio: "pipe"
-    });
-
-    const chunks = [];
-    child.stdout.on("data", function (chunk) {
-      chunks.push(chunk);
-    });
-
-    function finish(codeOrError) {
-      if (codeOrError) {
-        // In the event of any kind of error, default to 2015.
-        cachedMSVSVersion = "2015";
-      } else {
-        cachedMSVSVersion = Buffer.concat(chunks)
-          .toString("utf8").replace(/^\s+|\s+$/g, "");
-      }
-
-      env.GYP_MSVS_VERSION = cachedMSVSVersion;
-
-      resolve(env);
+  // Official Node.js Windows builds can enable PGO and ThinLTO (Node 26
+  // does), and node-gyp copies those settings from process.config into
+  // addon builds. Node's common.gypi then adds -flto=thin and
+  // -fprofile-use=$(SolutionDir)node.profdata, which addons can't use. The
+  // unquoted profile path also breaks the build when the project path
+  // contains spaces. node-gyp >= 13 disables LTO for addons but not PGO, so
+  // turn all three off through node-gyp's package config env, unless set.
+  ["enable_pgo_use", "enable_lto", "enable_thin_lto"].forEach(function (name) {
+    const key = "npm_package_config_node_gyp_" + name;
+    if (env[key] === undefined) {
+      env[key] = "false";
     }
-
-    child.on("error", finish);
-    child.on("exit", finish);
   });
+
+  return env;
 }
