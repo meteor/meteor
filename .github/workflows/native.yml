@@ -63,6 +63,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: 36a5f74cdd216e936d1f2a306fc534a9c3dbe9b0
+          submodules: recursive
       - uses: actions/setup-node@v4
         with:
           node-version: 20
