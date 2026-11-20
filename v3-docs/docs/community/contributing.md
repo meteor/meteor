@@ -16,7 +16,7 @@ Since documentation is always evolving, your help is really valuable to ensure c
 
 #### Identify elements that need improvement
 
-Are you new here? Please check our [documentation issues](https://github.com/meteor/meteor/issues?q=is%3Aissue%20state%3Aopen%20label%3AProject%3ADocs).
+Are you new here? Please check our [documentation issues](https://github.com/meteor/meteor/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22type%3A%20docs%22%2C%22area%3A%20docs%22).
 
 If in doubt about the best way to implement something, please create additional conversation on the issue.
 

@@ -27,9 +27,9 @@ If you can think of any changes to the project, [documentation](https://github.c
 
 Are you new here? Please [check](https://github.com/meteor/meteor/labels/good%20first%20issue) our issues `good-first-issue`.
 
-We curate specific issues that would make great pull requests for community contributors by applying the `ready` label.
+We curate specific issues that would make great pull requests for community contributors by applying the `status: ready` label.
 
-Any issue that does not have the `ready` label still requires discussion on implementation details, but input and positive commentary are welcome! Any pull request opened on an issue that is not `confirmed` is still welcome. However, the pull request is more likely to be sent back for reworking than a `ready` issue.  
+Any issue that does not have the `status: ready` label still requires discussion on implementation details, but input and positive commentary are welcome! Any pull request opened on an issue that is not `status: confirmed` is still welcome. However, the pull request is more likely to be sent back for reworking than a `status: ready` issue.  
 
 If in doubt about the best way to implement something, please create additional conversation on the issue. You can also reach one of the [Core Maintainers](https://github.com/meteor/meteor/blob/devel/CONTRIBUTING.md#core-maintainer), and they will help you to find something interesting to work on.
 
@@ -198,11 +198,11 @@ For more information about how to work with Meteor core, take a look at the [Dev
 
 You'll have the best chance of getting a change into core if you can build consensus in the community for it or if it is listed in the [roadmap](https://docs.meteor.com/about/roadmap.html). Start by creating a well specified Discussion [here](https://github.com/meteor/meteor/discussions).
 
-Help drive discussion and advocate for your feature on the GitHub ticket (and perhaps the forums). The higher the demand for the feature and the clearer its specification, the more likely a Core Maintainer is to prioritize it by applying the `ready` label.
+Help drive discussion and advocate for your feature on the GitHub ticket (and perhaps the forums). The higher the demand for the feature and the clearer its specification, the more likely a Core Maintainer is to prioritize it by applying the `status: ready` label.
 
 Split features up into smaller, logically separate chunks. It is unlikely that large and complicated PRs will be merged.
 
-Once your feature has been labelled with `ready`, leave a comment letting people know you're working on it and you can begin work on the code. We have the label `in-development` to track the items in progress.
+Once your feature has been labelled with `status: ready`, leave a comment letting people know you're working on it and you can begin work on the code. We have the label `status: in-progress` to track the items in progress.
 
 ### Submitting pull requests
 
