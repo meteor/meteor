@@ -197,7 +197,9 @@ test('applies the decisions on single open items while a merged label is left in
 });
 
 // The labels of the items named in the decisions, on November 19, 2026, and the labels
-// they must end with, the latter as in labels-preview.csv.
+// they must end with, the latter as in labels-preview.csv. #14397 was closed the day
+// after, and `Next 3.x.x` was removed from it: of its two priorities it keeps
+// `priority: critical`.
 const DECIDED = [
   [10903, 'issue', '2020-02-08', 'confirmed; Project:NPM; Impact:few; in-discussion; idle; modern-build-stack; Next 3.x.x',
     'area: rspack; legacy: needs-review; priority: next; status: confirmed; status: in-discussion; status: stale'],
@@ -216,8 +218,8 @@ const DECIDED = [
   [14286, 'pr', '2026-03-30', 'Project:Mongo Driver; Candidate 3.x.x', 'area: mongo; priority: candidate'],
   [14299, 'pr', '2026-04-01', 'Project:Docs; Project:Guide; Candidate 3.x.x', 'area: docs; priority: candidate'],
   [14397, 'issue', '2026-05-01',
-    'confirmed; Project:Isobuild; Type:Bug; Severity:has-workaround; Severity:production; Impact:some; modern-build-stack; Next 3.x.x',
-    'area: build; area: rspack; priority: critical; priority: next; status: confirmed; type: bug'],
+    'confirmed; Project:Isobuild; Type:Bug; Severity:has-workaround; Severity:production; Impact:some; modern-build-stack',
+    'area: build; area: rspack; priority: critical; status: confirmed; type: bug'],
   [14429, 'pr', '2026-05-24', 'Project:Docs; Project:Tool; Project:Isobuild; Candidate 3.x.x',
     'area: build; area: cli; area: docs; priority: candidate'],
   [14479, 'pr', '2026-06-22', 'Project:Tool', 'area: cli; experimental'],
