@@ -75,6 +75,13 @@ jobs:
         run: npm ci
       - name: Install native-tests deps
         run: npm run install:native
+      - name: Prepare the dev bundle and smoke app dependencies
+        run: |
+          app_dir=$(mktemp -d)
+          cp -R tools/native-tests/apps/smoke/. "$app_dir/"
+          cd "$app_dir"
+          "$GITHUB_WORKSPACE/meteor" npm install
+          "$GITHUB_WORKSPACE/meteor" --prepare-app
       - name: Pre-boot iOS Simulator
         run: |
           if ! xcrun simctl list devices available | grep -Fq "iPhone 15 ("; then
