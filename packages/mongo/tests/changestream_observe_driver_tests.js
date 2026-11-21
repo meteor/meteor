@@ -2232,6 +2232,46 @@ Tinytest.addAsync(
   }
 );
 
+Tinytest.addAsync(
+  'changestream - a failed start does not cause an unhandled rejection',
+  async function (test) {
+    const c = makeCollection();
+    const mongo = MongoInternals.defaultRemoteCollectionDriver().mongo;
+    const originalAcquire = mongo._acquireSharedChangeStream;
+    const originalConsoleError = console.error;
+    const unhandled = [];
+    const onUnhandled = (error) => unhandled.push(error);
+    const startError = new Error('simulated change stream start failure');
+
+    process.on('unhandledRejection', onUnhandled);
+    // _startWatching logs the failure; keep the expected log out of the output.
+    console.error = () => {};
+    mongo._acquireSharedChangeStream = function (collectionName) {
+      if (collectionName !== c._name) {
+        return originalAcquire.apply(this, arguments);
+      }
+      return {
+        addDriver: async () => { throw startError; },
+        removeDriver: async () => {},
+      };
+    };
+
+    let handle;
+    try {
+      handle = await c.find({}).observeChanges({ added() {} });
+      test.isTrue(isChangeStreamDriver(handle));
+
+      await new Promise(r => setTimeout(r, 50));
+      test.equal(unhandled.length, 0, 'the failed start should not reject unhandled');
+    } finally {
+      handle?.stop();
+      mongo._acquireSharedChangeStream = originalAcquire;
+      console.error = originalConsoleError;
+      process.removeListener('unhandledRejection', onUnhandled);
+    }
+  }
+);
+
 // ============================================================================
 // STOP CALLBACK TESTS
 // ============================================================================
