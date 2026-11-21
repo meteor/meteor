@@ -70,7 +70,10 @@ export class ChangeStreamObserveDriver {
     }
 
     this._startListening();
-    this._startWatching();
+    // Nothing awaits this promise. _startWatching already logs a failed start
+    // and readies the multiplexer, so swallow the rethrow here instead of
+    // letting it become an unhandled rejection that exits the server.
+    this._startWatching().catch(() => {});
   }
 
   _sendMultiplexerAdded(id, projectedDoc) {
