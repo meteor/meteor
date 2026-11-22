@@ -12,6 +12,7 @@ Package.onUse(function (api) {
   api.use('ejson@1.1.4');
   api.mainModule('decimal.js');
   api.export('Decimal');
+  api.types('mongo-decimal.d.ts');
 });
 
 Package.onTest(function (api) {

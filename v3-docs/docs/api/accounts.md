@@ -37,7 +37,7 @@ By default, Meteor uses Local Storage to store, among other things, login tokens
 
 ### Accounts with HttpOnly Cookies {#accounts-httponly-cookies}
 
-Meteor 3.5 introduces a native flow to keep the persistent resume token in an HttpOnly cookie instead of in Web Storage. This protects the token from malicious scripts and pairs nicely with in-memory client storage. Enable the feature with two small changes:
+Meteor 3.5 introduces a native flow to keep the persistent resume token in an HttpOnly cookie instead of in Web Storage. This keeps the durable copy out of script-readable storage and pairs with in-memory client storage. The client still requests the resume token into memory when it authenticates DDP, so this does not protect the token from a malicious script that is actively running in the application origin. Enable the feature with two small changes:
 
 1. On the server, call `Accounts.config` during startup and set both options:
 
@@ -69,6 +69,30 @@ Meteor 3.5 introduces a native flow to keep the persistent resume token in an Ht
    ```
 
 After restarting the app and logging in, `Meteor.loginToken*` keys should no longer appear in `localStorage`. Instead, the browser receives an HttpOnly `meteor_login_token` cookie and the client keeps credentials in memory only for the active tab. If you later disable the feature, remember to revert both the server configuration and the public settings so that Accounts resumes using Web Storage.
+
+The server-side `useHttpOnlyCookies` option is what enables the `/_accounts/cookie/set`, `/_accounts/cookie/refresh` and `/_accounts/cookie/clear` endpoints. When it is not set, the endpoints are not served and requests to them return `404`. Applications that never opted in expose nothing.
+
+#### Cookie endpoint protections {#accounts-httponly-cookies-protections}
+
+Because the cookie is an ambient credential, the endpoints that write it only accept requests from your own application:
+
+- `POST /_accounts/cookie/set` and `POST /_accounts/cookie/clear` require a trusted origin. The server accepts the request when the browser sends `Sec-Fetch-Site: same-origin`, or when the `Origin` header matches the origin of `ROOT_URL`, the origin of the request `Host`, or one of the origins listed in `httpOnlyCookieAllowedOrigins`. Configured origins receive credentialed CORS responses (including preflight support); anything else is rejected with `403`.
+- `POST /_accounts/cookie/set` requires `Content-Type: application/json`, a body of at most 4 KB, and a `token` that belongs to a user and has not expired. Unknown or expired tokens are rejected with `401` and no cookie is written.
+- The cookie is issued with `HttpOnly`, `SameSite=Strict`, `Path=/` and, over HTTPS, `Secure`.
+- All three endpoints are rate limited per client address (30 requests per 10 seconds by default). Behind a reverse proxy, set the `HTTP_FORWARDED_COUNT` environment variable so the real client address is used, exactly as for DDP connections.
+
+If custom browser code calls the cookie set or clear endpoint from another trusted origin, list that origin explicitly. The built-in Accounts client uses relative, same-origin endpoint URLs; this allowlist does not make it target a remote server automatically.
+
+```ts
+Accounts.config({
+  useHttpOnlyCookies: true,
+  httpOnlyCookieAllowedOrigins: ["https://app.example.com", "https://www.example.com"],
+  // Optional: tune or disable the per-address rate limit
+  httpOnlyCookieRateLimit: { max: 60, windowMs: 10_000 },
+});
+```
+
+The allowlist does not bypass browser cookie policy. Because the login cookie remains `SameSite=Strict`, an allowed page must also be same-site with the cookie endpoint for the browser to persist and send the cookie; different ports or trusted sibling subdomains are supported, while an unrelated cross-site domain is not.
 
 <ApiBox name="Meteor.user" hasCustomExample/>
 
@@ -367,11 +391,12 @@ sites:
 - Twitter, Weibo, Meteor developer accounts: `requestPermissions` currently not supported
 
 External login services typically require registering and configuring
-your application before use. The easiest way to do this is with the
-[`accounts-ui` package](../packages/accounts-ui.md) which presents a step-by-step guide
-to configuring each service. However, the data can be also be entered
-manually in the `ServiceConfiguration.configurations` collection, which
-is exported by the `service-configuration` package.
+your application before use. The configuration is stored in the
+`ServiceConfiguration.configurations` collection, which is exported by the
+`service-configuration` package. Set it from your server code or from
+`Meteor.settings`, as described below. In development, the
+[`accounts-ui` package](../packages/accounts-ui.md) can also walk you through
+configuring each service from the browser.
 
 ## Configuring Services {#service-configuration}
 
@@ -420,6 +445,18 @@ The correct property name to use for the API identifier (i.e. `clientId` in the 
 | `appId`       | Facebook                                                 |
 | `clientId`    | Github, Google, Meetup, Meteor Developer Accounts, Weibo |
 | `consumerKey` | Twitter                                                  |
+
+::: warning Configuring services from the client
+The `accounts-ui` configuration dialog saves credentials through the
+`configureLoginService` method, which accepts the first configuration for a
+service from any client. So that visitors cannot configure a service before
+you do, clients can call it only in development. In production, configure
+services on the server or in `Meteor.settings`. To change this default, set
+the `allowClientServiceConfiguration` option of
+[`Accounts.config`](#AccountsCommon-config). See
+[Using the accounts-ui dialog](../packages/service-configuration.md#client-configuration)
+for details.
+:::
 
 Additionally, each external service has its own login provider package and login function. For
 example, to support GitHub login, run the following in your terminal:
@@ -922,10 +959,10 @@ The login handler should return `undefined` if it's not going to handle the logi
 <h2 id="accounts_rate_limit">Rate Limiting</h2>
 
 By default, there are rules added to the [`DDPRateLimiter`](./DDPRateLimiter.md)
-that rate limit logins, new user registration and password reset calls to a
-limit of 5 requests per 10 seconds per session. These are a basic solution
-to dictionary attacks where a malicious user attempts to guess the passwords
-of legitimate users by attempting all possible passwords.
+that rate limit logins, new user registration, passwordless login token requests
+and password reset calls to a limit of 5 requests per 10 seconds per DDP connection.
+These provide basic abuse protection by slowing repeated credential-guessing
+attempts and repeated passwordless login token requests.
 
 These rate limiting rules can be removed by calling
 `Accounts.removeDefaultRateLimit()`. Please see the
@@ -1123,6 +1160,14 @@ To customize the contents of the email, see
 When the user visits the link in this email, the callback registered with
 [`Accounts.onEmailVerificationLink`](#Accounts-onEmailVerificationLink) will
 be called.
+
+Verification links expire after 3 days by default. Use the
+`emailVerificationTokenExpirationInDays` option of
+[`Accounts.config`](#AccountsCommon-config) to change this. Changing, resetting
+or setting the user's password (`Accounts.changePassword`, `Accounts.resetPassword`,
+`Accounts.setPasswordAsync`) revokes the user's outstanding verification links,
+because they would otherwise still log the user in. Send a new verification
+email if the address still needs to be verified.
 
 To customize the contents of the email, see
 [`Accounts.emailTemplates`](#Accounts-emailTemplates).

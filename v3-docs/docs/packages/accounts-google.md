@@ -14,7 +14,7 @@ Adding the package automatically implies [`accounts-base`](../api/accounts.md) a
 
 Before users can log in, you must register an OAuth application with Google and configure its credentials in your app. This is handled by the [`service-configuration`](./service-configuration.md) package — see the [OAuth Services Configuration](./service-configuration.md) guide for the full setup, including how to provide credentials through `settings.json`.
 
-If you prefer a step-by-step UI, the [`accounts-ui`](./accounts-ui.md) package presents a guided configuration dialog. If you use `accounts-ui` but have not configured the service through `service-configuration`, the package prints a console notice suggesting you also add the matching configuration UI:
+If you prefer a step-by-step UI during development, the [`accounts-ui`](./accounts-ui.md) package presents a guided configuration dialog. By default the dialog does not work in production; see [Using the accounts-ui dialog](./service-configuration.md#client-configuration). If you use `accounts-ui` but have not configured the service through `service-configuration`, the package prints a console notice suggesting you also add the matching configuration UI:
 
 ```bash
 meteor add google-config-ui
@@ -92,6 +92,29 @@ On Cordova, `Meteor.loginWithGoogle` uses the native `Google.signIn` flow (web O
 - the matching **reversed client ID** configured for the build (the `google-oauth` package pulls in the Cordova Google Sign-In plugin).
 
 Consult the current Google Sign-In Cordova plugin documentation for the exact per-platform values.
+
+Starting with Meteor 3.6, native Google sign-in verifies that the tokens belong to your application. The access token must be issued to the `clientId` in your Google service configuration or to a client in its optional `additionalClientIds` array. Alternatively, the access token can be accompanied by a Google-issued `idToken` whose audience is one of those accepted clients and whose user matches the access token's Google account.
+
+Configure your native SDK to return an ID token for your web client ID. If your app sends native access tokens without an ID token, list your Android/iOS client IDs in the Google service configuration. For example, in `settings.json`:
+
+```json
+{
+  "packages": {
+    "service-configuration": {
+      "google": {
+        "clientId": "WEB_CLIENT_ID.apps.googleusercontent.com",
+        "secret": "YOUR_CLIENT_SECRET",
+        "additionalClientIds": [
+          "IOS_CLIENT_ID.apps.googleusercontent.com",
+          "ANDROID_CLIENT_ID.apps.googleusercontent.com"
+        ]
+      }
+    }
+  }
+}
+```
+
+Only list client IDs from your own Google Cloud project. These checks apply to the native `googleSignIn` login path; the normal web OAuth configuration is unchanged.
 
 ## A complete example
 

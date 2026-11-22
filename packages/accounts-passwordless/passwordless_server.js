@@ -57,7 +57,9 @@ Accounts.registerLoginHandler('passwordless', async options => {
   });
   const { verifiedEmail, error } = result;
 
-  if (!error && verifiedEmail) {
+  // The user-level token (the one given to Accounts.onCreateLoginToken) is
+  // subject to the same 2FA check and single use as the email code.
+  if (!error) {
     // This method is added by the package accounts-2fa
     if (Accounts._check2faEnabled?.(user)) {
       if (!options.code) {
@@ -77,15 +79,25 @@ Accounts.registerLoginHandler('passwordless', async options => {
     // It's necessary to make sure we don't remove the token if the user has 2fa enabled
     // otherwise, it would be necessary to generate a new one if this method is called without
     // a 2fa code
-    await Meteor.users.updateAsync(
-      { _id: user._id, 'emails.address': verifiedEmail },
+    const consumed = await Meteor.users.updateAsync(
       {
-        $set: {
-          'emails.$.verified': true,
-        },
+        _id: user._id,
+        ...(verifiedEmail && { 'emails.address': verifiedEmail }),
+        'services.passwordless.token': user.services.passwordless.token,
+      },
+      {
+        // The user-level token is not sent to an email address, so it
+        // verifies none.
+        ...(verifiedEmail && { $set: { 'emails.$.verified': true } }),
         $unset: { 'services.passwordless': 1 },
       }
     );
+    if (consumed !== 1) {
+      return {
+        userId: user._id,
+        error: Accounts._handleError('Expired token', false),
+      };
+    }
   }
 
   return result;
@@ -93,7 +105,7 @@ Accounts.registerLoginHandler('passwordless', async options => {
 
 // Utility for plucking addresses from emails
 const pluckAddresses = (emails = []) => emails.map(email => email.address);
-const createUser = async userData => {
+const createUser = async (userData = {}) => {
   const { username, email } = userData;
   if (!username && !email) {
     throw new Meteor.Error(400, 'Need to set a username or email');
@@ -114,7 +126,20 @@ function generateSequence() {
 }
 
 Meteor.methods({
-  requestLoginTokenForUser: async ({ selector, userData, options = {} }) => {
+  requestLoginTokenForUser: async payload => {
+    // Check the method argument so audit-argument-checks recognizes it.
+    check(payload, {
+      selector: Accounts._userQueryValidator,
+      // Keep custom account-creation data while validating lookup fields.
+      userData: Match.Maybe(Match.ObjectIncluding({
+        username: Match.Optional(Match.OneOf(String, null)),
+        email: Match.Optional(Match.OneOf(String, null)),
+      })),
+      options: Match.Maybe(Object),
+    });
+
+    const { selector, userData, options = {} } = payload;
+
     let user = await Accounts._findUserByQuery(selector, {
       fields: { emails: 1 },
     });
@@ -235,15 +260,20 @@ Accounts.sendLoginTokenEmail = async ({ userId, sequence, email, extra = {} }) =
   return { email, user, token: sequence, url, options };
 };
 
-const setupUsersCollection = () => {
-  Meteor.users.createIndexAsync('services.passwordless.tokens.token', {
+const createPasswordlessIndexes = async (users) => {
+  await users.createIndexAsync('services.passwordless.tokens.token', {
     unique: true,
     sparse: true,
   });
-  Meteor.users.createIndexAsync('services.passwordless.token', {
+  await users.createIndexAsync('services.passwordless.token', {
     unique: true,
     sparse: true,
   });
 };
 
-Meteor.startup(() => setupUsersCollection());
+Meteor.startup(() => createPasswordlessIndexes(Meteor.users));
+Accounts.onUsersCollectionChanged(users => {
+  createPasswordlessIndexes(users).catch(err => {
+    console.error('Failed to create passwordless indexes:', err);
+  });
+});

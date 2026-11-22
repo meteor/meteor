@@ -14,7 +14,7 @@ const getTokenFromSecret = async ({ selector, secret: secretParam }) => {
   return token;
 };
 
-Accounts.config({ ambiguousErrorMessages: false });
+Accounts.config({ ambiguousErrorMessages: false, useHttpOnlyCookies: true });
 
 Meteor.methods({
   async removeAccountsTestUser(username) {

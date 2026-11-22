@@ -42,7 +42,7 @@ export class SessionCollectionView {
   }
 
   private diffDocument(id: string, prevDV: DocumentView, nowDV: DocumentView): void {
-    const fields: Record<string, any> = {};
+    const fields: Record<string, any> = Object.create(null);
     
     DiffSequence.diffObjects(prevDV.getFields(), nowDV.getFields(), {
       both: (key: string, prev: any, now: any) => {
@@ -76,7 +76,7 @@ export class SessionCollectionView {
     }
 
     docView.existsIn.add(subscriptionHandle);
-    const changeCollector: Record<string, any> = {};
+    const changeCollector: Record<string, any> = Object.create(null);
 
     Object.entries(fields).forEach(([key, value]) => {
       docView!.changeField(
@@ -96,7 +96,7 @@ export class SessionCollectionView {
   }
 
   public changed(subscriptionHandle: string, id: string, changed: Record<string, any>): void {
-    const changedResult: Record<string, any> = {};
+    const changedResult: Record<string, any> = Object.create(null);
     const docView = this.documents.get(id);
 
     if (!docView) {
@@ -134,7 +134,7 @@ export class SessionCollectionView {
       this.callbacks.removed(this.collectionName, id);
       this.documents.delete(id);
     } else {
-      const changed: Record<string, any> = {};
+      const changed: Record<string, any> = Object.create(null);
       // remove this subscription from every precedence list
       // and record the changes
       docView.dataByKey.forEach((precedenceList, key) => {

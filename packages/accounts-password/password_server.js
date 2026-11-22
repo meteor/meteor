@@ -449,7 +449,12 @@ Meteor.methods(
           $pull: {
             "services.resume.loginTokens": { hashedToken: { $ne: currentToken } }
           },
-          $unset: { "services.password.reset": 1, ...updator.$unset }
+          // Pending email verification links would still log the user in.
+          $unset: {
+            "services.password.reset": 1,
+            "services.email.verificationTokens": 1,
+            ...updator.$unset
+          }
         }
       );
 
@@ -484,6 +489,8 @@ Accounts.setPasswordAsync =
     let updator = await getUpdatorForUserPassword(newPlaintextPassword);
     updator.$unset = updator.$unset || {};
     updator.$unset["services.password.reset"] = 1;
+    // Pending email verification links would still log the user in.
+    updator.$unset["services.email.verificationTokens"] = 1;
 
     if (options.logout) {
       updator.$unset["services.resume.loginTokens"] = 1;
@@ -806,6 +813,8 @@ Meteor.methods(
               // Update the user record by:
               // - Changing the password to the new one
               // - Forgetting about the reset token or enroll token that was just used
+              // - Forgetting about pending email verification tokens, which would
+              //   otherwise still log the user in after the password change
               // - Verifying their email, since they got the password reset via email.
               let affectedRecords = {};
               // if reason is enroll then check services.password.enroll.token field for affected records
@@ -823,6 +832,7 @@ Meteor.methods(
                     },
                     $unset: {
                       "services.password.enroll": 1,
+                      "services.email.verificationTokens": 1,
                       ...updator.$unset
                     }
                   });
@@ -841,6 +851,7 @@ Meteor.methods(
                     },
                     $unset: {
                       "services.password.reset": 1,
+                      "services.email.verificationTokens": 1,
                       ...updator.$unset
                     }
                   });
@@ -947,29 +958,47 @@ Meteor.methods(
               error: new Meteor.Error(403, "Verify email link expired")
             };
 
-          const emailsRecord =
-            user.emails.find(e => e.address == tokenRecord.address);
+          const tokenIssuedAtMs = new Date(tokenRecord.when).getTime();
+          if (Number.isNaN(tokenIssuedAtMs) ||
+            (Date.now() - tokenIssuedAtMs) > Accounts._getEmailVerificationTokenLifetimeMs())
+            return {
+              userId: user._id,
+              error: new Meteor.Error(403, "Verify email link expired")
+            };
 
-          if (!emailsRecord)
+          const emailIndex =
+            user.emails.findIndex(e => e.address == tokenRecord.address);
+
+          if (emailIndex === -1)
             return {
               userId: user._id,
               error: new Meteor.Error(403, "Verify email link is for unknown address")
             };
 
-          // By including the address in the query, we can use 'emails.$' in the
-          // modifier to get a reference to the specific object in the emails
-          // array. See
-          // http://www.mongodb.org/display/DOCS/Updating/#Updating-The%24positionaloperator)
-          // http://www.mongodb.org/display/DOCS/Updating#Updating-%24pull
-          await Meteor.users.updateAsync(
+          // Consume the token and verify its address in one conditional write.
+          // The query matches two arrays, which makes 'emails.$' ambiguous, so
+          // address the email by the index read above. The selector re-checks
+          // that index, and a plain index (unlike arrayFilters) also works with
+          // minimongo and with schema validators attached to Meteor.users.
+          const affectedRecords = await Meteor.users.updateAsync(
             {
               _id: user._id,
-              'emails.address': tokenRecord.address
+              [`emails.${emailIndex}.address`]: tokenRecord.address,
+              'services.email.verificationTokens': {
+                $elemMatch: {token, address: tokenRecord.address}
+              }
             },
             {
-              $set: { 'emails.$.verified': true },
+              $set: { [`emails.${emailIndex}.verified`]: true },
               $pull: { 'services.email.verificationTokens': { address: tokenRecord.address } }
             });
+
+          if (affectedRecords !== 1) {
+            return {
+              userId: user._id,
+              error: new Meteor.Error(403, "Verify email link expired")
+            };
+          }
 
           if (Accounts._check2faEnabled?.(user)) {
         return {
@@ -1303,9 +1332,18 @@ Accounts.createUser = Accounts.createUserAsync;
 ///
 /// PASSWORD-SPECIFIC INDEXES ON USERS
 ///
-await Meteor.users.createIndexAsync('services.email.verificationTokens.token',
-  { unique: true, sparse: true });
-await Meteor.users.createIndexAsync('services.password.reset.token',
-  { unique: true, sparse: true });
-await Meteor.users.createIndexAsync('services.password.enroll.token',
-  { unique: true, sparse: true });
+const createPasswordIndexes = async (users) => {
+  await users.createIndexAsync('services.email.verificationTokens.token',
+    { unique: true, sparse: true });
+  await users.createIndexAsync('services.password.reset.token',
+    { unique: true, sparse: true });
+  await users.createIndexAsync('services.password.enroll.token',
+    { unique: true, sparse: true });
+};
+
+await createPasswordIndexes(Meteor.users);
+Accounts.onUsersCollectionChanged(users => {
+  createPasswordIndexes(users).catch(err => {
+    console.error('Failed to create password indexes:', err);
+  });
+});

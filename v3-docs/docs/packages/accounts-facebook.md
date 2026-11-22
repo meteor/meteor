@@ -14,7 +14,7 @@ Adding the package automatically implies [`accounts-base`](../api/accounts.md) a
 
 Before users can log in, you must register an application with Facebook and configure its credentials in your app. This is handled by the [`service-configuration`](./service-configuration.md) package — see the [OAuth Services Configuration](./service-configuration.md) guide for the full setup, including how to provide credentials through `settings.json`.
 
-If you prefer a step-by-step UI, the [`accounts-ui`](./accounts-ui.md) package presents a guided configuration dialog. If you use `accounts-ui` but have not configured the service through `service-configuration`, the package prints a console notice suggesting you also add the matching configuration UI:
+If you prefer a step-by-step UI during development, the [`accounts-ui`](./accounts-ui.md) package presents a guided configuration dialog. By default the dialog does not work in production; see [Using the accounts-ui dialog](./service-configuration.md#client-configuration). If you use `accounts-ui` but have not configured the service through `service-configuration`, the package prints a console notice suggesting you also add the matching configuration UI:
 
 ```bash
 meteor add facebook-config-ui
@@ -126,6 +126,8 @@ Meteor.logout();
 After login, Facebook profile data is stored under `services.facebook`. The fields actually requested by `facebook-oauth` are: `id`, `email`, `name`, `first_name`, `last_name`, `middle_name`, `name_format`, `picture`, and `short_name`, plus `accessToken` and `expiresAt`. The user's `profile.name` is also set from the Facebook name on account creation. The Graph API version can be set via the `facebook-oauth` package settings (`Meteor.settings.public.packages['facebook-oauth'].apiVersion`).
 
 ## Server behavior
+
+Starting with Meteor 3.6, native `facebookSignIn` requests are accepted only when Facebook confirms that the access token is valid for the `appId` in your Facebook service configuration and the identity lookup resolves to a Facebook user. Tokens issued for another app, failed verification, or a missing user identity are rejected. Configure your native SDK for the same Facebook app as the server. The normal web OAuth flow is unchanged.
 
 On the server, `accounts-facebook` registers the `facebook` OAuth service and, when the `autopublish` package is enabled, publishes the following fields of the Facebook service data:
 

@@ -172,6 +172,246 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
+  "livedata server - rejects inherited protocol handler names without stalling message queue",
+  async function (test) {
+    const invalidMessageTypes = [
+      "__proto__",
+      "constructor",
+      ["method"],
+      [["__proto__"]],
+      { toString: null, valueOf: null },
+    ];
+
+    for (const messageType of invalidMessageTypes) {
+      const { clientConn, serverConn } = await getTestConnections(test);
+
+      try {
+        const session = Meteor.server.sessions.get(serverConn.id);
+        clientConn._stream.send(JSON.stringify({ msg: messageType }));
+
+        const connectionId = await Promise.race([
+          clientConn.callAsync("livedata_server_test_inner"),
+          sleep(2000).then(() => {
+            throw new Error(
+              `message queue stalled after message type ${JSON.stringify(messageType)}`
+            );
+          }),
+        ]);
+
+        test.equal(connectionId, serverConn.id);
+        await sleep(50);
+        test.isTrue(session.inQueue.isEmpty());
+        test.isFalse(session.workerRunning);
+      } finally {
+        clientConn.disconnect();
+      }
+    }
+  }
+);
+
+Tinytest.addAsync(
+  "livedata server - inherited protocol handler names cannot throw outside the message queue",
+  async function (test) {
+    const { clientConn, serverConn } = await getTestConnections(test);
+
+    try {
+      const session = Meteor.server.sessions.get(serverConn.id);
+      // The second message runs in the scheduled queue turn.
+      session.processMessage({ msg: "toString" });
+      session.processMessage({ msg: "__proto__" });
+
+      const connectionId = await Promise.race([
+        clientConn.callAsync("livedata_server_test_inner"),
+        sleep(2000).then(() => {
+          throw new Error("message queue stalled after inherited message types");
+        }),
+      ]);
+
+      test.equal(connectionId, serverConn.id);
+      await sleep(50);
+      test.isTrue(session.inQueue.isEmpty());
+      test.isFalse(session.workerRunning);
+    } finally {
+      clientConn.disconnect();
+    }
+  }
+);
+
+Tinytest.addAsync(
+  "livedata server - rejected protocol handler does not escape the message queue",
+  async function (test) {
+    const publicationName = `livedata_server_test_bad_cursors_${Random.id()}`;
+    // A cursor-like result reaches async handling, then rejects.
+    Meteor.publish(publicationName, function () {
+      return [{ _publishCursor: true }];
+    });
+
+    const subscriptions = [
+      { name: publicationName, params: [] },
+      // Inherited constructor returns the supplied cursor-like value.
+      { name: "constructor", params: [[{ _publishCursor: 1 }]] },
+    ];
+
+    try {
+      for (const { name, params } of subscriptions) {
+        const { clientConn, serverConn } = await getTestConnections(test);
+
+        try {
+          const session = Meteor.server.sessions.get(serverConn.id);
+          clientConn._stream.send(
+            JSON.stringify({ msg: "sub", id: Random.id(), name, params })
+          );
+
+          const connectionId = await Promise.race([
+            clientConn.callAsync("livedata_server_test_inner"),
+            sleep(2000).then(() => {
+              throw new Error(`message queue stalled after subscribing to ${name}`);
+            }),
+          ]);
+
+          test.equal(connectionId, serverConn.id);
+          await sleep(50);
+          test.isTrue(session.inQueue.isEmpty());
+          test.isFalse(session.workerRunning);
+        } finally {
+          clientConn.disconnect();
+        }
+      }
+    } finally {
+      delete Meteor.server.publish_handlers[publicationName];
+    }
+  }
+);
+
+Tinytest.addAsync(
+  "livedata server - rejects unsub without a string id without stalling message queue",
+  async function (test) {
+    const malformedUnsubs = [{ msg: "unsub" }, { msg: "unsub", id: 42 }];
+
+    for (const unsub of malformedUnsubs) {
+      const { clientConn, serverConn } = await getTestConnections(test);
+
+      try {
+        const session = Meteor.server.sessions.get(serverConn.id);
+        const replies = [];
+        clientConn._stream.on("message", (raw) => replies.push(JSON.parse(raw)));
+        clientConn._stream.send(JSON.stringify(unsub));
+
+        const connectionId = await Promise.race([
+          clientConn.callAsync("livedata_server_test_inner"),
+          sleep(2000).then(() => {
+            throw new Error(`message queue stalled after ${JSON.stringify(unsub)}`);
+          }),
+        ]);
+
+        test.equal(connectionId, serverConn.id);
+        test.equal(
+          replies
+            .filter(({ msg }) => msg === "error" || msg === "nosub")
+            .map(({ msg, offendingMessage }) => ({ msg, offendingMessage })),
+          [{ msg: "error", offendingMessage: unsub }]
+        );
+        await pollUntil(() => session.inQueue.isEmpty() && !session.workerRunning);
+      } finally {
+        clientConn.disconnect();
+      }
+    }
+  }
+);
+
+Tinytest.addAsync(
+  "livedata server - rejects ping with a non-string id",
+  async function (test) {
+    const { clientConn, serverConn } = await getTestConnections(test);
+
+    try {
+      const replies = [];
+      clientConn._stream.on("message", (raw) => replies.push(JSON.parse(raw)));
+      const ping = { msg: "ping", id: 42 };
+      clientConn._stream.send(JSON.stringify(ping));
+
+      const connectionId = await clientConn.callAsync("livedata_server_test_inner");
+
+      test.equal(connectionId, serverConn.id);
+      test.equal(
+        replies
+          .filter(({ msg }) => msg === "error" || msg === "pong")
+          .map(({ msg, offendingMessage }) => ({ msg, offendingMessage })),
+        [{ msg: "error", offendingMessage: ping }]
+      );
+    } finally {
+      clientConn.disconnect();
+    }
+  }
+);
+
+Tinytest.addAsync(
+  "livedata server - throwing protocol handler does not stall message queue",
+  async function (test) {
+    const { clientConn, serverConn } = await getTestConnections(test);
+
+    try {
+      const session = Meteor.server.sessions.get(serverConn.id);
+      let thrown = 0;
+      session.protocol_handlers = {
+        ...session.protocol_handlers,
+        livedata_server_test_throw() {
+          thrown++;
+          throw new Error("livedata_server_test_throw");
+        },
+      };
+      clientConn._stream.send(JSON.stringify({ msg: "livedata_server_test_throw" }));
+
+      const connectionId = await Promise.race([
+        clientConn.callAsync("livedata_server_test_inner"),
+        sleep(2000).then(() => {
+          throw new Error("message queue stalled after a throwing handler");
+        }),
+      ]);
+
+      test.equal(thrown, 1);
+      test.equal(connectionId, serverConn.id);
+      await pollUntil(() => session.inQueue.isEmpty() && !session.workerRunning);
+    } finally {
+      clientConn.disconnect();
+    }
+  }
+);
+
+Tinytest.addAsync(
+  "livedata server - throwing protocol handler cannot throw outside the message queue",
+  async function (test) {
+    const { clientConn, serverConn } = await getTestConnections(test);
+
+    try {
+      const session = Meteor.server.sessions.get(serverConn.id);
+      let thrown = 0;
+      session.protocol_handlers = {
+        ...session.protocol_handlers,
+        livedata_server_test_throw() {
+          thrown++;
+          throw new Error("livedata_server_test_throw");
+        },
+      };
+      processInScheduledQueueTurn(session, { msg: "livedata_server_test_throw" });
+
+      const connectionId = await Promise.race([
+        clientConn.callAsync("livedata_server_test_inner"),
+        sleep(2000).then(() => {
+          throw new Error("message queue stalled after a throwing handler");
+        }),
+      ]);
+
+      test.equal(thrown, 1);
+      test.equal(connectionId, serverConn.id);
+      await pollUntil(() => session.inQueue.isEmpty() && !session.workerRunning);
+    } finally {
+      clientConn.disconnect();
+    }
+  }
+);
+
+Tinytest.addAsync(
   "livedata server - connection in method invocation",
   function (test, onComplete) {
     makeTestConnection(
@@ -269,7 +509,7 @@ Tinytest.addAsync(
       onSubscription[serverConn.id] = function (subscription) {
         delete onSubscription[serverConn.id];
         test.equal(subscription.connection.id, serverConn.id);
-        clientConn.disconnect();
+        clientConn.close();
         onComplete();
       };
       clientConn.subscribe("livedata_server_test_sub", serverConn.id);
@@ -284,7 +524,7 @@ Tinytest.addAsync(
       onSubscription[serverConn.id] = function (id) {
         delete onSubscription[serverConn.id];
         test.equal(id, serverConn.id);
-        clientConn.disconnect();
+        clientConn.close();
         onComplete();
       };
       clientConn.subscribe("livedata_server_test_sub_method", serverConn.id);
@@ -308,7 +548,7 @@ Tinytest.addAsync(
         test.isNotUndefined(publicationInvocation, "Should have been defined");
         if (this.userId === userId && fromOnStop) {
           delete onSubscription[serverConn.id];
-          clientConn.disconnect();
+          clientConn.close();
           onComplete();
         }
       };
@@ -351,10 +591,11 @@ Tinytest.addAsync(
     makeTestConnection(test, function (clientConn, serverConn) {
       let testsLength = 0;
 
-      onSubscriptions = function (subscription) {
-        clientConn.disconnect();
+      onSubscriptions = function () {
         testsLength++;
-        if (testsLength == 3) {
+        if (testsLength === 3) {
+          onSubscriptions = null;
+          clientConn.close();
           onComplete();
         }
       };
@@ -418,6 +659,7 @@ Tinytest.addAsync(
         handlers.map((sub) => sub.ready()).filter((o) => o).length === 1,
         true
       );
+      clientConn.close();
       onComplete();
     })
 );
@@ -642,6 +884,11 @@ function getTestConnections(test) {
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function processInScheduledQueueTurn(session, msg) {
+  session.processMessage({ msg: "unsub", id: Random.id() });
+  session.processMessage(msg);
 }
 
 // ============================================================================
@@ -1174,6 +1421,7 @@ Tinytest.addAsync(
       'Async onStop callback should have completed on disconnect'
     );
 
+    clientConn.close();
     delete asyncCleanupTracker[trackerId];
   }
 );
@@ -1244,6 +1492,114 @@ Tinytest.addAsync(
         });
       });
       test.isTrue(true, 'subscription became ready without a handler error');
+    } finally {
+      clientConn.disconnect();
+    }
+  }
+);
+
+Tinytest.addAsync(
+  "livedata server - method registry excludes inherited methods",
+  function (test, onComplete) {
+    makeTestConnection(test, async (clientConn) => {
+      const names = ["valueOf", "toString", "constructor", "hasOwnProperty", "__proto__"];
+      try {
+        for (const name of names) {
+          for (const invoke of [
+            () => clientConn.callAsync(name),
+            () => Meteor.server.applyAsync(name, []),
+          ]) {
+            let error;
+            try {
+              await invoke();
+            } catch (caught) {
+              error = caught;
+            }
+            test.equal(error && error.error, 404, name);
+          }
+        }
+
+        for (const name of names) {
+          const methods = Object.create(null);
+          methods[name] = function () { return "registered method"; };
+          Meteor.methods(methods);
+          try {
+            test.equal(await clientConn.callAsync(name), "registered method");
+            test.equal(await Meteor.server.applyAsync(name, []), "registered method");
+            test.throws(() => Meteor.methods(methods), /already defined/);
+          } finally {
+            delete Meteor.server.method_handlers[name];
+          }
+        }
+        test.equal(await clientConn.callAsync("livedata_server_test_inner"),
+          clientConn._lastSessionId);
+      } catch (error) {
+        test.exception(error);
+      } finally {
+        clientConn.disconnect();
+        onComplete();
+      }
+    }, onComplete);
+  }
+);
+
+// Resolves with "ready", the nosub error code, or "no response".
+function subscribeOutcome(clientConn, name, ...params) {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve("no response"), 2000);
+    clientConn.subscribe(name, ...params, {
+      onReady() {
+        clearTimeout(timer);
+        resolve("ready");
+      },
+      onStop(error) {
+        clearTimeout(timer);
+        resolve(error ? error.error : "stopped");
+      },
+    });
+  });
+}
+
+Tinytest.addAsync(
+  "livedata server - publish registry excludes inherited names",
+  async function (test) {
+    const names = ["valueOf", "toString", "constructor", "hasOwnProperty", "__proto__"];
+    const { clientConn } = await getTestConnections(test);
+
+    try {
+      for (const name of names) {
+        test.equal(await subscribeOutcome(clientConn, name), 404, name);
+      }
+
+      for (const name of names) {
+        Meteor.publish(name, function () {
+          this.ready();
+        });
+        try {
+          test.equal(await subscribeOutcome(clientConn, name), "ready", name);
+        } finally {
+          delete Meteor.server.publish_handlers[name];
+        }
+      }
+    } finally {
+      clientConn.disconnect();
+    }
+  }
+);
+
+Tinytest.addAsync(
+  "livedata server - inherited publication names cannot run with client params",
+  async function (test) {
+    const { clientConn } = await getTestConnections(test);
+
+    try {
+      // Reject inherited names before interpreting client-supplied results.
+      test.equal(
+        await subscribeOutcome(clientConn, "constructor", [{ _publishCursor: 1 }]),
+        404
+      );
+      test.equal(await clientConn.callAsync("livedata_server_test_inner"),
+        clientConn._lastSessionId);
     } finally {
       clientConn.disconnect();
     }

@@ -4,6 +4,7 @@ import { Meteor } from 'meteor/meteor';
 const VALID_CONFIG_KEYS = [
   'sendVerificationEmail',
   'forbidClientAccountCreation',
+  'allowClientServiceConfiguration',
   'restrictCreationByEmailDomain',
   'loginExpiration',
   'loginExpirationInDays',
@@ -12,6 +13,8 @@ const VALID_CONFIG_KEYS = [
   'passwordResetTokenExpiration',
   'passwordEnrollTokenExpirationInDays',
   'passwordEnrollTokenExpiration',
+  'emailVerificationTokenExpirationInDays',
+  'emailVerificationTokenExpiration',
   'ambiguousErrorMessages',
   'bcryptRounds',
   'argon2Enabled',
@@ -25,6 +28,8 @@ const VALID_CONFIG_KEYS = [
   'tokenSequenceLength',
   'clientStorage',
   'useHttpOnlyCookies',
+  'httpOnlyCookieAllowedOrigins',
+  'httpOnlyCookieRateLimit',
   'ddpUrl',
   'connection',
 ];
@@ -52,6 +57,11 @@ export class AccountsCommon {
     // Currently this is read directly by packages like accounts-password
     // and accounts-ui-unstyled.
     this._options = options || {};
+
+    // Callbacks registered by sub-packages (accounts-password, accounts-oauth,
+    // etc.) to re-run their setup (e.g. index creation) when the users
+    // collection is replaced via Accounts.config({ collection }).
+    this._usersCollectionChangeCallbacks = [];
 
     // Note that setting this.connection = null causes this.users to be a
     // LocalCollection, which is not what we want.
@@ -207,6 +217,7 @@ export class AccountsCommon {
    * @param {Object} options
    * @param {Boolean} options.sendVerificationEmail New users with an email address will receive an address verification email.
    * @param {Boolean} options.forbidClientAccountCreation Calls to [`createUser`](#accounts_createuser) from the client will be rejected. In addition, if you are using [accounts-ui](#accountsui), the "Create account" link will not be available. **Important**: This option must be set on both the client and server to take full effect. If only set on the server, account creation will be blocked but the UI will still show the "Create account" link.
+   * @param {Boolean} options.allowClientServiceConfiguration Allow clients to call the `configureLoginService` method, which the [accounts-ui](#accountsui) configuration dialog uses to save the first configuration of an OAuth service. Defaults to `true` in development and `false` in production, so that visitors of a deployed app cannot configure a service before you do. Configure services on the server or in `Meteor.settings` instead. This option only has an effect on the server.
    * @param {String | Function} options.restrictCreationByEmailDomain If set to a string, only allows new users if the domain part of their email address matches the string. If set to a function, only allows new users if the function returns true.  The function is passed the full email address of the proposed new user.  Works with password-based sign-in and external services that expose email addresses (Google, Facebook, GitHub). All existing users still can log in after enabling this option. Example: `Accounts.config({ restrictCreationByEmailDomain: 'school.edu' })`.
    * @param {Number} options.loginExpiration The number of milliseconds from when a user logs in until their token expires and they are logged out, for a more granular control. If `loginExpirationInDays` is set, it takes precedent.
    * @param {Number} options.loginExpirationInDays The number of days from when a user logs in until their token expires and they are logged out. Defaults to 90. Set to `null` to disable login expiration.
@@ -215,6 +226,8 @@ export class AccountsCommon {
    * @param {Number} options.passwordResetTokenExpiration The number of milliseconds from when a link to reset password is sent until token expires and user can't reset password with the link anymore. If `passwordResetTokenExpirationInDays` is set, it takes precedent.
    * @param {Number} options.passwordEnrollTokenExpirationInDays The number of days from when a link to set initial password is sent until token expires and user can't set password with the link anymore. Defaults to 30.
    * @param {Number} options.passwordEnrollTokenExpiration The number of milliseconds from when a link to set initial password is sent until token expires and user can't set password with the link anymore. If `passwordEnrollTokenExpirationInDays` is set, it takes precedent.
+   * @param {Number} options.emailVerificationTokenExpirationInDays The number of days from when a link to verify an email address is sent until token expires and user can't verify the address or log in with the link anymore. Defaults to 3.
+   * @param {Number} options.emailVerificationTokenExpiration The number of milliseconds from when a link to verify an email address is sent until token expires and user can't verify the address or log in with the link anymore. If set, it takes precedence over `emailVerificationTokenExpirationInDays`.
    * @param {Boolean} options.ambiguousErrorMessages Return ambiguous error messages from login failures to prevent user enumeration. Defaults to `true`.
    * @param {Number} options.bcryptRounds Allows override of number of bcrypt rounds (aka work factor) used to store passwords. The default is 10.
    * @param {Boolean} options.argon2Enabled Enable argon2 algorithm usage in replacement for bcrypt. The default is `false`.
@@ -223,10 +236,13 @@ export class AccountsCommon {
    * @param {Number} options.argon2MemoryCost Allows override of the amount of memory (in KiB) used by the argon2 algorithm. The default is 19456 (19MB).
    * @param {Number} options.argon2Parallelism Allows override of the number of threads used by the argon2 algorithm. The default is 1.
    * @param {MongoFieldSpecifier} options.defaultFieldSelector To exclude by default large custom fields from `Meteor.user()` and `Meteor.findUserBy...()` functions when called without a field selector, and all `onLogin`, `onLoginFailure` and `onLogout` callbacks.  Example: `Accounts.config({ defaultFieldSelector: { myBigArray: 0 }})`. Beware when using this. If, for instance, you do not include `email` when excluding the fields, you can have problems with functions like `forgotPassword` that will break because they won't have the required data available. It's recommend that you always keep the fields `_id`, `username`, and `email`.
-   * @param {String|Mongo.Collection} options.collection A collection name or a Mongo.Collection object to hold the users.
+   * @param {String|Mongo.Collection} options.collection A collection name or a Mongo.Collection object to hold the users. When set, `Meteor.users` is automatically updated to point to the new collection, and the default indexes (username, emails.address, login tokens, etc.) are created on it. This is useful when connecting to a remote users collection from another Meteor instance, or when storing users in a collection with a custom name. Should be set early in the startup sequence, before any clients connect or subscriptions are established, similar to other config options. Example: `Accounts.config({ collection: 'app_users' })` or `Accounts.config({ collection: new Mongo.Collection('users', { _driver: remoteDriver }) })`.
    * @param {Number} options.loginTokenExpirationHours When using the package `accounts-2fa`, use this to set the amount of time a token sent is valid. As it's just a number, you can use, for example, 0.5 to make the token valid for just half hour. The default is 1 hour.
    * @param {Number} options.tokenSequenceLength When using the package `accounts-2fa`, use this to the size of the token sequence generated. The default is 6.
    * @param {'session' | 'local'} options.clientStorage By default login credentials are stored in local storage, setting this to true will switch to using session storage.
+   * @param {Boolean} options.useHttpOnlyCookies Keep the persistent copy of the resume token in an HttpOnly cookie instead of Web Storage. The client still loads it into memory to authenticate DDP. Must be enabled on the server for the `/_accounts/cookie/*` endpoints to respond, and mirrored to the client through `Meteor.settings.public.packages.accounts.useHttpOnlyCookies`.
+   * @param {String[]} options.httpOnlyCookieAllowedOrigins Additional origins (`scheme://host[:port]`) allowed to call the cookie set and clear endpoints with credentialed CORS. The origin of `ROOT_URL` and of the request `Host` are always allowed. `SameSite=Strict` and browser cookie policy still apply. Server only.
+   * @param {Object | false} options.httpOnlyCookieRateLimit Per-client-address rate limit for the cookie endpoints as `{ max, windowMs }`. Defaults to 30 requests per 10 seconds; `false` disables it. Server only.
    * 
    * @example
    * // For UI-related options like forbidClientAccountCreation, call Accounts.config on both client and server
@@ -261,7 +277,7 @@ export class AccountsCommon {
     // We need to validate the oauthSecretKey option at the time
     // Accounts.config is called. We also deliberately don't store the
     // oauthSecretKey in Accounts._options.
-    if (Object.hasOwn(options, 'oauthSecretKey')) {
+    if (Object.prototype.hasOwnProperty.call(options, 'oauthSecretKey')) {
       if (Meteor.isClient) {
         throw new Error(
           'The oauthSecretKey option may only be specified on the server'
@@ -298,8 +314,33 @@ export class AccountsCommon {
       }
     }
 
-    if (options.collection && options.collection !== this.users._name && options.collection !== this.users) {
-      this.users = this._initializeCollection(options);
+    if (options.collection) {
+      const isNewCollection = options.collection instanceof Mongo.Collection
+        ? options.collection !== this.users
+        : options.collection !== this.users._name;
+      if (isNewCollection) {
+        this.users = this._initializeCollection(options);
+        this._onUsersCollectionChanged();
+      }
+    }
+  }
+
+  /**
+   * @summary Register a callback to be called when the users collection is
+   * replaced via `Accounts.config({ collection })`. This is used by
+   * sub-packages (accounts-password, accounts-oauth, accounts-passwordless)
+   * to recreate their indexes on the new collection.
+   * @locus Server
+   * @param {Function} callback Called with the new users collection.
+   */
+  onUsersCollectionChanged(callback) {
+    this._usersCollectionChangeCallbacks.push(callback);
+  }
+
+  // Called when this.users is replaced via config(). Override in subclasses.
+  _onUsersCollectionChanged() {
+    for (const callback of this._usersCollectionChangeCallbacks) {
+      callback(this.users);
     }
   }
 
@@ -404,6 +445,14 @@ export class AccountsCommon {
     );
   }
 
+  _getEmailVerificationTokenLifetimeMs() {
+    return (
+      this._options.emailVerificationTokenExpiration ||
+      (this._options.emailVerificationTokenExpirationInDays ||
+        DEFAULT_EMAIL_VERIFICATION_TOKEN_EXPIRATION_DAYS) * 86400000
+    );
+  }
+
   _tokenExpiration(when) {
     // We pass when through the Date constructor for backwards compatibility;
     // `when` used to be a number.
@@ -457,6 +506,8 @@ const DEFAULT_LOGIN_EXPIRATION_DAYS = 90;
 const DEFAULT_PASSWORD_RESET_TOKEN_EXPIRATION_DAYS = 3;
 // how long (in days) until enrol password token expires
 const DEFAULT_PASSWORD_ENROLL_TOKEN_EXPIRATION_DAYS = 30;
+// how long (in days) until email verification token expires
+const DEFAULT_EMAIL_VERIFICATION_TOKEN_EXPIRATION_DAYS = 3;
 // Clients don't try to auto-login with a token that is going to expire within
 // .1 * DEFAULT_LOGIN_EXPIRATION_DAYS, capped at MIN_TOKEN_LIFETIME_CAP_SECS.
 // Tries to avoid abrupt disconnects from expiring tokens.

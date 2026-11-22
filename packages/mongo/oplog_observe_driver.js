@@ -222,7 +222,7 @@ Object.assign(OplogObserveDriver.prototype, {
   _addPublished: function (id, doc) {
     var self = this;
     Meteor._noYieldsAllowed(function () {
-      var fields = Object.assign({}, doc);
+      var fields = {...doc};
       delete fields._id;
       self._published.set(id, self._sharedProjectionFn(doc));
       self._multiplexer.added(id, self._projectionFn(fields));
@@ -667,7 +667,7 @@ Object.assign(OplogObserveDriver.prototype, {
         var bufferedBefore = self._limit && self._unpublishedBuffer.has(id);
 
         if (isReplace) {
-          self._handleDoc(id, Object.assign({_id: id}, op.o));
+          self._handleDoc(id, {_id: id, ...op.o});
         } else if ((publishedBefore || bufferedBefore) &&
                    canDirectlyModifyDoc) {
           // Oh great, we actually know what the document is, so we can apply
@@ -1061,7 +1061,17 @@ OplogObserveDriver.cursorSupported = function (cursorDescription, matcher) {
   //            have a bug there)
   //           XXX: once we support it, we would need to think more on how we
   //           initialize the comparators when we create the driver.
-  return !matcher.hasWhere() && !matcher.hasGeoQuery();
+  if (matcher.hasWhere() || matcher.hasGeoQuery()) return false;
+
+  // Selectors whose local re-match can diverge from MongoDB ($type, negated
+  // $elemMatch, PCRE-only regex, collation) must fall back to polling, which
+  // re-queries MongoDB, so an excluded document cannot arrive via a live event.
+  if (LocalCollection._liveReMatchDivergence(
+        cursorDescription.selector, options)) {
+    return false;
+  }
+
+  return true;
 };
 
 var modifierCanBeDirectlyApplied = function (modifier) {

@@ -7,6 +7,7 @@ import {
   isOperatorObject,
   populateDocumentWithQueryFields,
   projectionDetails,
+  setOwnProperty,
 } from './common.js';
 
 import { getAsyncMethodName } from './constants';
@@ -1150,6 +1151,121 @@ LocalCollection._checkSupportedProjection = fields => {
   });
 };
 
+// Live observe drivers (oplog, Change Streams) take their initial set from
+// MongoDB but re-check later events locally with a Matcher. Where Minimongo's
+// semantics can diverge from MongoDB for the same selector, a document MongoDB
+// excluded could be admitted by the local re-match, so such cursors must fall
+// back to polling (which re-queries MongoDB). This mirrors the oplog driver's
+// existing $where/$near guard.
+//
+// Returns a short reason string if the selector, or the cursor's collation, can
+// diverge, otherwise null. It is conservative: it declines on the presence of a
+// risky construct rather than deciding the exact value that diverges.
+//
+// A collation diverges when LocalCollection._createCollator cannot build an
+// Intl.Collator that matches MongoDB's ICU for it.
+const collationDiverges = collation => {
+  if (!collation || typeof collation !== 'object') {
+    return false;
+  }
+  // strength 4-5 have no Intl.Collator equivalent (identical/quaternary).
+  if (collation.strength != null && collation.strength > 3) {
+    return true;
+  }
+  // caseLevel only maps faithfully at strength 1 (sensitivity 'case'); at
+  // strength 2 Intl.Collator has no accent-and-case sensitivity, so MongoDB's
+  // case-sensitive result is matched case-insensitively.
+  if (collation.caseLevel && collation.strength === 2) {
+    return true;
+  }
+  // Options _createCollator does not map are silently ignored, so a local match
+  // would diverge from MongoDB.
+  if (collation.alternate != null && collation.alternate !== 'non-ignorable') {
+    return true;
+  }
+  if (collation.maxVariable != null || collation.backwards ||
+      collation.normalization) {
+    return true;
+  }
+  return false;
+};
+
+LocalCollection._liveReMatchDivergence = (selector, options) => {
+  // Collations that LocalCollection._createCollator cannot represent with an
+  // Intl.Collator diverge from MongoDB's ICU (e.g. caseLevel at strength 2,
+  // which MongoDB makes case-sensitive but maps to case-insensitive 'accent'
+  // here; strength 4-5; and options that are silently ignored). Faithful
+  // collations (plain strength 1-3, numericOrdering, caseFirst, caseLevel at
+  // strength 1) stay on the live driver.
+  if (options && collationDiverges(options.collation)) {
+    return 'collation';
+  }
+
+  // PCRE constructs that JavaScript RegExp does not interpret the same way:
+  // \A \Z \z \G \h \H \R \K escapes, atomic groups and PCRE named groups
+  // ((?> (?P (?#), inline flag groups ((?i) (?-i:), \Q..\E literals and
+  // possessive quantifiers (a++ a*+ a?+ a}+). Any of these can diverge.
+  const PCRE_ONLY = /\\[AZzGhHRK]|\(\?[>P#]|\(\?-?[a-z]+[:)]|\\Q|[*+?}]\+/;
+
+  const regexDiverges = re => {
+    const source = re instanceof RegExp ? re.source : re;
+    return typeof source === 'string' && PCRE_ONLY.test(source);
+  };
+
+  // Walk the selector tree. `negated` is true inside a $not or $nor subtree.
+  const scan = (node, negated) => {
+    if (node instanceof RegExp) {
+      return regexDiverges(node) ? 'pcre-regex' : null;
+    }
+
+    if (!node || typeof node !== 'object') {
+      return null;
+    }
+
+    if (Array.isArray(node)) {
+      for (const item of node) {
+        const reason = scan(item, negated);
+        if (reason) {
+          return reason;
+        }
+      }
+      return null;
+    }
+
+    for (const key of Object.keys(node)) {
+      const value = node[key];
+
+      // Minimongo collapses all JS numbers to one type, so numeric BSON
+      // subtypes ($type 'double'/'int'/'long'/'decimal') match stored values
+      // MongoDB would exclude, and negated array $type also diverges. $type is
+      // rare on live cursors; decline any use.
+      if (key === '$type') {
+        return 'type';
+      }
+
+      if (key === '$elemMatch' && negated) {
+        return 'negated-elemMatch';
+      }
+
+      if (key === '$regex') {
+        if (regexDiverges(value)) {
+          return 'pcre-regex';
+        }
+        continue;
+      }
+
+      const reason = scan(value, negated || key === '$not' || key === '$nor');
+      if (reason) {
+        return reason;
+      }
+    }
+
+    return null;
+  };
+
+  return scan(selector, false);
+};
+
 // Knows how to compile a fields projection to a predicate function.
 // @returns - Function: a closure that filters out an object according to the
 //            fields projection rules:
@@ -1182,11 +1298,11 @@ LocalCollection._compileProjection = fields => {
       if (rule === Object(rule)) {
         // For sub-objects/subsets we branch
         if (doc[key] === Object(doc[key])) {
-          result[key] = transform(doc[key], rule);
+          setOwnProperty(result, key, transform(doc[key], rule));
         }
       } else if (details.including) {
         // Otherwise we don't even touch this subfield
-        result[key] = EJSON.clone(doc[key]);
+        setOwnProperty(result, key, EJSON.clone(doc[key]));
       } else {
         delete result[key];
       }
@@ -1234,7 +1350,7 @@ LocalCollection._createUpsertDocument = (selector, modifier) => {
   }
 
   // Replacement can take _id from query document
-  const replacement = Object.assign({}, modifier);
+  const replacement = {...modifier};
   if (newDoc._id) {
     replacement._id = newDoc._id;
   }
@@ -1523,7 +1639,7 @@ LocalCollection._modify = (doc, modifier, options = {}) => {
   });
 
   Object.keys(newDoc).forEach(key => {
-    doc[key] = newDoc[key];
+    setOwnProperty(doc, key, newDoc[key]);
   });
 };
 
@@ -1749,7 +1865,8 @@ LocalCollection._selectorIsId = selector =>
 // Is the selector just lookup by _id (shorthand or not)?
 LocalCollection._selectorIsIdPerhapsAsObject = selector =>
   LocalCollection._selectorIsId(selector) ||
-  LocalCollection._selectorIsId(selector && selector._id) &&
+  selector != null && hasOwn.call(selector, '_id') &&
+  LocalCollection._selectorIsId(selector._id) &&
   Object.keys(selector).length === 1
 ;
 
@@ -1869,14 +1986,14 @@ const MODIFIERS = {
       throw MinimongoError('Invalid $currentDate modifier', {field});
     }
 
-    target[field] = new Date();
+    setOwnProperty(target, field, new Date());
   },
   $inc(target, field, arg) {
     if (typeof arg !== 'number') {
       throw MinimongoError('Modifier $inc allowed for numbers only', {field});
     }
 
-    if (field in target) {
+    if (hasOwn.call(target, field)) {
       if (typeof target[field] !== 'number') {
         throw MinimongoError(
           'Cannot apply $inc modifier to non-number',
@@ -1886,7 +2003,7 @@ const MODIFIERS = {
 
       target[field] += arg;
     } else {
-      target[field] = arg;
+      setOwnProperty(target, field, arg);
     }
   },
   $min(target, field, arg) {
@@ -1894,7 +2011,7 @@ const MODIFIERS = {
       throw MinimongoError('Modifier $min allowed for numbers only', {field});
     }
 
-    if (field in target) {
+    if (hasOwn.call(target, field)) {
       if (typeof target[field] !== 'number') {
         throw MinimongoError(
           'Cannot apply $min modifier to non-number',
@@ -1903,10 +2020,10 @@ const MODIFIERS = {
       }
 
       if (target[field] > arg) {
-        target[field] = arg;
+        setOwnProperty(target, field, arg);
       }
     } else {
-      target[field] = arg;
+      setOwnProperty(target, field, arg);
     }
   },
   $max(target, field, arg) {
@@ -1914,7 +2031,7 @@ const MODIFIERS = {
       throw MinimongoError('Modifier $max allowed for numbers only', {field});
     }
 
-    if (field in target) {
+    if (hasOwn.call(target, field)) {
       if (typeof target[field] !== 'number') {
         throw MinimongoError(
           'Cannot apply $max modifier to non-number',
@@ -1923,10 +2040,10 @@ const MODIFIERS = {
       }
 
       if (target[field] < arg) {
-        target[field] = arg;
+        setOwnProperty(target, field, arg);
       }
     } else {
-      target[field] = arg;
+      setOwnProperty(target, field, arg);
     }
   },
   $mul(target, field, arg) {
@@ -1934,7 +2051,7 @@ const MODIFIERS = {
       throw MinimongoError('Modifier $mul allowed for numbers only', {field});
     }
 
-    if (field in target) {
+    if (hasOwn.call(target, field)) {
       if (typeof target[field] !== 'number') {
         throw MinimongoError(
           'Cannot apply $mul modifier to non-number',
@@ -1944,7 +2061,7 @@ const MODIFIERS = {
 
       target[field] *= arg;
     } else {
-      target[field] = 0;
+      setOwnProperty(target, field, 0);
     }
   },
   $rename(target, field, arg, keypath, doc) {
@@ -1985,7 +2102,7 @@ const MODIFIERS = {
       throw MinimongoError('$rename target field invalid', {field});
     }
 
-    target2[keyparts.pop()] = object;
+    setOwnProperty(target2, keyparts.pop(), object);
   },
   $set(target, field, arg) {
     if (target !== Object(target)) { // not an array or an object
@@ -2005,7 +2122,7 @@ const MODIFIERS = {
 
     assertHasValidFieldNames(arg);
 
-    target[field] = arg;
+    setOwnProperty(target, field, arg);
   },
   $setOnInsert(target, field, arg) {
     // converted to `$set` in `_modify`
@@ -2013,7 +2130,7 @@ const MODIFIERS = {
   $unset(target, field, arg) {
     if (target !== undefined) {
       if (target instanceof Array) {
-        if (field in target) {
+        if (hasOwn.call(target, field)) {
           target[field] = null;
         }
       } else {
@@ -2022,8 +2139,8 @@ const MODIFIERS = {
     }
   },
   $push(target, field, arg) {
-    if (target[field] === undefined) {
-      target[field] = [];
+    if (!hasOwn.call(target, field) || target[field] === undefined) {
+      setOwnProperty(target, field, []);
     }
 
     if (!(target[field] instanceof Array)) {
@@ -2123,11 +2240,11 @@ const MODIFIERS = {
     // Actually slice.
     if (slice !== undefined) {
       if (slice === 0) {
-        target[field] = []; // differs from Array.slice!
+        setOwnProperty(target, field, []); // differs from Array.slice!
       } else if (slice < 0) {
-        target[field] = target[field].slice(slice);
+        setOwnProperty(target, field, target[field].slice(slice));
       } else {
-        target[field] = target[field].slice(0, slice);
+        setOwnProperty(target, field, target[field].slice(0, slice));
       }
     }
   },
@@ -2138,10 +2255,10 @@ const MODIFIERS = {
 
     assertHasValidFieldNames(arg);
 
-    const toPush = target[field];
+    const toPush = hasOwn.call(target, field) ? target[field] : undefined;
 
     if (toPush === undefined) {
-      target[field] = arg;
+      setOwnProperty(target, field, arg);
     } else if (!(toPush instanceof Array)) {
       throw MinimongoError(
         'Cannot apply $pushAll modifier to non-array',
@@ -2166,9 +2283,9 @@ const MODIFIERS = {
 
     assertHasValidFieldNames(values);
 
-    const toAdd = target[field];
+    const toAdd = hasOwn.call(target, field) ? target[field] : undefined;
     if (toAdd === undefined) {
-      target[field] = values;
+      setOwnProperty(target, field, values);
     } else if (!(toAdd instanceof Array)) {
       throw MinimongoError(
         'Cannot apply $addToSet modifier to non-array',
@@ -2240,7 +2357,7 @@ const MODIFIERS = {
       out = toPull.filter(element => !LocalCollection._f._equal(element, arg));
     }
 
-    target[field] = out;
+    setOwnProperty(target, field, out);
   },
   $pullAll(target, field, arg) {
     if (!(typeof arg === 'object' && arg instanceof Array)) {
@@ -2267,9 +2384,9 @@ const MODIFIERS = {
       );
     }
 
-    target[field] = toPull.filter(object =>
+    setOwnProperty(target, field, toPull.filter(object =>
       !arg.some(element => LocalCollection._f._equal(object, element))
-    );
+    ));
   },
   $bit(target, field, arg) {
     // XXX mongo only supports $bit on integers, and we only support
@@ -2411,13 +2528,13 @@ function findModTarget(doc, keyparts, options = {}) {
     } else {
       assertIsValidFieldName(keypart);
 
-      if (!(keypart in doc)) {
+      if (!hasOwn.call(doc, keypart)) {
         if (options.noCreate) {
           return undefined;
         }
 
         if (!last) {
-          doc[keypart] = {};
+          setOwnProperty(doc, keypart, {});
         }
       }
     }

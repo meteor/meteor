@@ -5,7 +5,7 @@ Package.describe({
   // 2.2.x in the future. The version was also bumped to 2.0.0 temporarily
   // during the Meteor 1.5.1 release process, so versions 2.0.0-beta.2
   // through -beta.5 and -rc.0 have already been published.
-  version: '3.3.1',
+  version: '3.3.3',
 });
 
 Npm.depends({
@@ -15,7 +15,7 @@ Npm.depends({
 });
 
 Package.onUse((api) => {
-  api.use(["accounts-base", "sha", "ddp"], ["client", "server"]);
+  api.use(["accounts-base@3.4.1", "sha", "ddp"], ["client", "server"]);
 
   // Export Accounts (etc) to packages using this one.
   api.imply("accounts-base", ["client", "server"]);
@@ -28,6 +28,8 @@ Package.onUse((api) => {
   api.addFiles("email_templates.js", "server");
   api.addFiles("password_server.js", "server");
   api.addFiles("password_client.js", "client");
+
+  api.types("accounts-password.d.ts");
 });
 
 Package.onTest((api) => {
@@ -42,6 +44,7 @@ Package.onTest((api) => {
     "email",
     "check",
     "ddp",
+    "mongo",
     "ecmascript"
   ]);
   api.addFiles("password_tests_setup.js", "server");

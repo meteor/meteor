@@ -240,17 +240,30 @@ DiffSequence.diffMaps = function (left, right, callbacks) {
   }
 };
 
+function setOwnProperty(target, key, value) {
+  if (key === "__proto__") {
+    Object.defineProperty(target, key, {
+      value,
+      enumerable: true,
+      configurable: true,
+      writable: true,
+    });
+  } else {
+    target[key] = value;
+  }
+}
+
 DiffSequence.makeChangedFields = function (newDoc, oldDoc) {
   const fields = {};
   DiffSequence.diffObjects(oldDoc, newDoc, {
     leftOnly: function (key, _value) {
-      fields[key] = undefined;
+      setOwnProperty(fields, key, undefined);
     },
     rightOnly: function (key, value) {
-      fields[key] = value;
+      setOwnProperty(fields, key, value);
     },
     both: function (key, leftValue, rightValue) {
-      if (!EJSON.equals(leftValue, rightValue)) fields[key] = rightValue;
+      if (!EJSON.equals(leftValue, rightValue)) setOwnProperty(fields, key, rightValue);
     },
   });
   return fields;
@@ -262,7 +275,7 @@ DiffSequence.applyChanges = function (doc, changeFields) {
     if (typeof value === "undefined") {
       delete doc[key];
     } else {
-      doc[key] = value;
+      setOwnProperty(doc, key, value);
     }
   });
 };
