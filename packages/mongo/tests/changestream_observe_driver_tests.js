@@ -2238,14 +2238,15 @@ Tinytest.addAsync(
     const c = makeCollection();
     const mongo = MongoInternals.defaultRemoteCollectionDriver().mongo;
     const originalAcquire = mongo._acquireSharedChangeStream;
-    const originalConsoleError = console.error;
+    const originalDebug = Meteor._debug;
+    const debugCalls = [];
     const unhandled = [];
     const onUnhandled = (error) => unhandled.push(error);
     const startError = new Error('simulated change stream start failure');
 
     process.on('unhandledRejection', onUnhandled);
-    // _startWatching logs the failure; keep the expected log out of the output.
-    console.error = () => {};
+    // Capture the failure notification and keep it out of the test output.
+    Meteor._debug = (...args) => debugCalls.push(args);
     mongo._acquireSharedChangeStream = function (collectionName) {
       if (collectionName !== c._name) {
         return originalAcquire.apply(this, arguments);
@@ -2263,10 +2264,13 @@ Tinytest.addAsync(
 
       await new Promise(r => setTimeout(r, 50));
       test.equal(unhandled.length, 0, 'the failed start should not reject unhandled');
+      test.equal(debugCalls.length, 1, 'the failed start should be reported once');
+      test.matches(debugCalls[0][0], new RegExp(`"${c._name}" failed to start`));
+      test.isTrue(debugCalls[0][1] === startError, 'the report should carry the start error');
     } finally {
       handle?.stop();
       mongo._acquireSharedChangeStream = originalAcquire;
-      console.error = originalConsoleError;
+      Meteor._debug = originalDebug;
       process.removeListener('unhandledRejection', onUnhandled);
     }
   }

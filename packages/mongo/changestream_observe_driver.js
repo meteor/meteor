@@ -70,10 +70,16 @@ export class ChangeStreamObserveDriver {
     }
 
     this._startListening();
-    // Nothing awaits this promise. _startWatching already logs a failed start
-    // and readies the multiplexer, so swallow the rethrow here instead of
-    // letting it become an unhandled rejection that exits the server.
-    this._startWatching().catch(() => {});
+    // Nothing awaits this promise. _startWatching readies the multiplexer and
+    // drains queued writes on a failed start, then rethrows; report it here
+    // instead of letting it become an unhandled rejection that exits the server.
+    this._startWatching().catch((error) => {
+      Meteor._debug(
+        `[ChangeStreams] Change stream for "${this._cursorDescription.collectionName}" failed to start; ` +
+          'this observer will not receive live updates.',
+        error
+      );
+    });
   }
 
   _sendMultiplexerAdded(id, projectedDoc) {
@@ -207,7 +213,7 @@ export class ChangeStreamObserveDriver {
       await this._flushWritesToCommit();
 
     } catch (error) {
-      console.error('Failed to start ChangeStream:', error);
+      // The constructor reports the failure; this only cleans up.
       // Make sure the multiplexer is ready'd even on failure — without this
       // the publication's _readyPromise never resolves, the subscription
       // never sends `ready` to the client, and any test that polls
