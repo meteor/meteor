@@ -14,17 +14,26 @@ This is a complete history of changes for Meteor releases.
 ### Highlights
 
 - Update Node.js to 26.13.1, preserving this release line’s Node major, with the [November 11 security fixes](https://nodejs.org/en/blog/vulnerability/november-2026-security-releases).
+- **Cordova security fix.** New Android and iOS builds reject unsafe asset paths. [Hot Code Push impact](#cordova-hcp-3-6-1).
 - Harden archive extraction, including symlink containment, and update the dev bundle to tar-fs 2.1.5.
 - Expire email verification tokens, restrict client-side OAuth configuration in production, and reject malformed DDP messages without stalling connections.
 - Fall back to MongoDB polling for selectors that cannot be safely re-evaluated locally, and preserve top-level `__proto__` data in oplog conversion.
 - Prevent credential leakage through the HMR server and remove deployment settings from the legacy deployment information URL.
-- Update the Cordova webapp plugin to reject unsafe asset paths and update the HTTP query parser.
+- Update the HTTP query parser.
 - Update the npm installer dependencies and protect its JavaScript extraction fallback against paths and links escaping the installation directory.
 - Restrict automatic accounts-express credential forwarding to trusted origins.
 
 #### Breaking Changes
 
 No general API removals. Security restrictions on previously unsafe behavior are described in Migration Steps.
+
+<a id="cordova-hcp-3-6-1" name="cordova-hcp-3-6-1"></a>
+
+##### Hot Code Push for installed Cordova apps
+
+When you upgrade to Meteor 3.6.1, your app gets `cordova-plugin-meteor-webapp@2.0.5` by default. Once you deploy your server, Android and iOS apps still on `2.0.4` keep running their current web code and skip Hot Code Push updates from that server. Users get the security fix when they install the updated store app. [Choose your deployment order](#cordova-deploy-3-6-1).
+
+We’ll ship planned Cordova changes that interrupt Hot Code Push in a Meteor minor release. An urgent security fix may need to ship sooner.
 
 #### Internal API changes
 
@@ -43,6 +52,26 @@ meteor update --release 3.6.1
 - Queries using selectors that cannot be safely matched locally may use polling; monitor query load after updating.
 - Unsafe archive or Cordova asset paths are rejected. Keep assets and extraction links within their intended directories.
 - For automatic authentication to a separate trusted API origin, configure `Meteor.settings.public.packages["accounts-express"].authFetchAllowedOrigins`. Explicit Authorization headers remain supported.
+
+<a id="cordova-deploy-3-6-1" name="cordova-deploy-3-6-1"></a>
+
+##### How to deploy your Cordova app
+
+**Store app first.** Publish the mobile app with `2.0.5`, then deploy your server with the same version.
+
+**Server first.** To keep Hot Code Push working for apps on `2.0.4`, the Cordova platform and all other plugin versions must match the installed app. Keep your existing `2.0.4` pin, or run this from your app directory before deploying.
+
+```bash
+meteor add cordova:cordova-plugin-meteor-webapp@2.0.4
+```
+
+Test a web update on an installed app against staging. Keep the server on `2.0.4` during store review. Before building the patched store app, update your existing pin to `2.0.5` or remove the temporary pin.
+
+```bash
+meteor remove cordova:cordova-plugin-meteor-webapp
+```
+
+Once the store update is available, deploy your server with `2.0.5`. [Forum report by @nauzer](https://forums.meteor.com/t/meteor-security-releases-3-4-4-3-5-5-and-3-6-1/64874/2).
 
 #### Bumped Meteor Packages
 
@@ -404,11 +433,12 @@ Support Meteor through the [Meteor Sponsorship Program](https://www.meteor.com/s
 ### Highlights
 
 - Update Node.js to 24.22.3, preserving this release line’s Node major, with the [November 11 security fixes](https://nodejs.org/en/blog/vulnerability/november-2026-security-releases).
+- **Cordova security fix.** New Android and iOS builds reject unsafe asset paths. [Hot Code Push impact](#cordova-hcp-3-5-5).
 - Harden archive extraction, including symlink containment, and update the dev bundle to tar-fs 2.1.5.
 - Expire email verification tokens, restrict client-side OAuth configuration in production, and reject malformed DDP messages without stalling connections.
 - Fall back to MongoDB polling for selectors that cannot be safely re-evaluated locally, and preserve top-level `__proto__` data in oplog conversion.
 - Prevent credential leakage through the HMR server and remove deployment settings from the legacy deployment information URL.
-- Update the Cordova webapp plugin to reject unsafe asset paths and update the HTTP query parser.
+- Update the HTTP query parser.
 - Update the npm installer dependencies and protect its JavaScript extraction fallback against paths and links escaping the installation directory.
 - Validate malformed passwordless login requests before user lookup and preserve custom user data.
 - Fix the Rspack static-asset manifest and legacy warehouse handling.
@@ -418,6 +448,14 @@ Support Meteor through the [Meteor Sponsorship Program](https://www.meteor.com/s
 #### Breaking Changes
 
 No general API removals. Security restrictions on previously unsafe behavior are described in Migration Steps.
+
+<a id="cordova-hcp-3-5-5" name="cordova-hcp-3-5-5"></a>
+
+##### Hot Code Push for installed Cordova apps
+
+When you upgrade to Meteor 3.5.5, your app gets `cordova-plugin-meteor-webapp@2.0.5` by default. Once you deploy your server, Android and iOS apps still on `2.0.4` keep running their current web code and skip Hot Code Push updates from that server. Users get the security fix when they install the updated store app. [Choose your deployment order](#cordova-deploy-3-5-5).
+
+We’ll ship planned Cordova changes that interrupt Hot Code Push in a Meteor minor release. An urgent security fix may need to ship sooner.
 
 #### Internal API changes
 
@@ -437,6 +475,26 @@ meteor update --release 3.5.5
 - Unsafe archive or Cordova asset paths are rejected. Keep assets and extraction links within their intended directories.
 - For automatic authentication to a separate trusted API origin, configure `Meteor.settings.public.packages["accounts-express"].authFetchAllowedOrigins`. Explicit Authorization headers remain supported.
 - If using HttpOnly login cookies, enable them on the server as well as the client. Configure `httpOnlyCookieAllowedOrigins` for additional trusted origins and review the default endpoint rate limit of 30 requests per 10 seconds.
+
+<a id="cordova-deploy-3-5-5" name="cordova-deploy-3-5-5"></a>
+
+##### How to deploy your Cordova app
+
+**Store app first.** Publish the mobile app with `2.0.5`, then deploy your server with the same version.
+
+**Server first.** To keep Hot Code Push working for apps on `2.0.4`, the Cordova platform and all other plugin versions must match the installed app. Keep your existing `2.0.4` pin, or run this from your app directory before deploying.
+
+```bash
+meteor add cordova:cordova-plugin-meteor-webapp@2.0.4
+```
+
+Test a web update on an installed app against staging. Keep the server on `2.0.4` during store review. Before building the patched store app, update your existing pin to `2.0.5` or remove the temporary pin.
+
+```bash
+meteor remove cordova:cordova-plugin-meteor-webapp
+```
+
+Once the store update is available, deploy your server with `2.0.5`. [Forum report by @nauzer](https://forums.meteor.com/t/meteor-security-releases-3-4-4-3-5-5-and-3-6-1/64874/2).
 
 #### Bumped Meteor Packages
 
@@ -1018,11 +1076,12 @@ N/A
 ### Highlights
 
 - Update Node.js to 22.23.5, preserving this release line’s Node major, with the [November 11 security fixes](https://nodejs.org/en/blog/vulnerability/november-2026-security-releases).
+- **Cordova security fix.** New Android and iOS builds reject unsafe asset paths. [Hot Code Push impact](#cordova-hcp-3-4-4).
 - Harden archive extraction, including symlink containment, and update the dev bundle to tar-fs 2.1.5.
 - Expire email verification tokens, restrict client-side OAuth configuration in production, and reject malformed DDP messages without stalling connections.
 - Fall back to MongoDB polling for selectors that cannot be safely re-evaluated locally, and preserve top-level `__proto__` data in oplog conversion.
 - Prevent credential leakage through the HMR server and remove deployment settings from the legacy deployment information URL.
-- Update the Cordova webapp plugin to reject unsafe asset paths and update the HTTP query parser.
+- Update the HTTP query parser.
 - Update the npm installer dependencies and protect its JavaScript extraction fallback against paths and links escaping the installation directory.
 - Validate malformed passwordless login requests before user lookup and preserve custom user data.
 - Fix the Rspack static-asset manifest and legacy warehouse handling.
@@ -1030,6 +1089,14 @@ N/A
 #### Breaking Changes
 
 No general API removals. Security restrictions on previously unsafe behavior are described in Migration Steps.
+
+<a id="cordova-hcp-3-4-4" name="cordova-hcp-3-4-4"></a>
+
+##### Hot Code Push for installed Cordova apps
+
+When you upgrade to Meteor 3.4.4, your app gets `cordova-plugin-meteor-webapp@2.0.5` by default. Once you deploy your server, Android and iOS apps still on `2.0.4` keep running their current web code and skip Hot Code Push updates from that server. Users get the security fix when they install the updated store app. [Choose your deployment order](#cordova-deploy-3-4-4).
+
+We’ll ship planned Cordova changes that interrupt Hot Code Push in a Meteor minor release. An urgent security fix may need to ship sooner.
 
 #### Internal API changes
 
@@ -1047,6 +1114,26 @@ meteor update --release 3.4.4
 - Configure OAuth services on the server or through settings in production. Client calls to `configureLoginService` require explicit server opt-in with `allowClientServiceConfiguration`.
 - Queries using selectors that cannot be safely matched locally may use polling; monitor query load after updating.
 - Unsafe archive or Cordova asset paths are rejected. Keep assets and extraction links within their intended directories.
+
+<a id="cordova-deploy-3-4-4" name="cordova-deploy-3-4-4"></a>
+
+##### How to deploy your Cordova app
+
+**Store app first.** Publish the mobile app with `2.0.5`, then deploy your server with the same version.
+
+**Server first.** To keep Hot Code Push working for apps on `2.0.4`, the Cordova platform and all other plugin versions must match the installed app. Keep your existing `2.0.4` pin, or run this from your app directory before deploying.
+
+```bash
+meteor add cordova:cordova-plugin-meteor-webapp@2.0.4
+```
+
+Test a web update on an installed app against staging. Keep the server on `2.0.4` during store review. Before building the patched store app, update your existing pin to `2.0.5` or remove the temporary pin.
+
+```bash
+meteor remove cordova:cordova-plugin-meteor-webapp
+```
+
+Once the store update is available, deploy your server with `2.0.5`. [Forum report by @nauzer](https://forums.meteor.com/t/meteor-security-releases-3-4-4-3-5-5-and-3-6-1/64874/2).
 
 #### Bumped Meteor Packages
 

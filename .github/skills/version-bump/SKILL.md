@@ -196,7 +196,10 @@ For each changed package, Claude should analyze the diff to determine the bump m
 git diff devel -- packages/<name>/
 ```
 
-**IMPORTANT — Auto-update safety rule:** Meteor patch versions are picked up automatically by apps using `~` semver ranges. A patch bump that changes observable behavior can silently break apps on their next update. **When in doubt, bump minor** — it's always safer. Minor bumps require explicit opt-in, giving users control over when they adopt changes.
+Apps on an older Meteor release can pick up newer Atmosphere patches during
+dependency resolution because release package maps use `~` constraints.
+When a behavior change warrants deliberate adoption, consider a minor bump and
+verify the actual release, app, and package constraints.
 
 **Check for minor bump signals:**
 - New functions or methods exported in `package.js` (`api.export`, `api.addFiles` for new files)
@@ -205,6 +208,7 @@ git diff devel -- packages/<name>/
 - Significant new features even without new exports (e.g., new bundler capabilities)
 - **Removed internal methods/functions** — even `_`-prefixed methods, since Meteor users commonly monkey-patch internals
 - **Changed which implementation runs** — e.g., switching from a polyfill to native, or replacing a dependency, even if the API is the same
+- **Changed a default Cordova plugin that affects Hot Code Push**. Evaluate a minor bump for the Atmosphere package declaring `Cordova.depends()` when earlier releases should retain their previous default through the normal `~` release constraints.
 - **Behavioral changes in existing code paths** — changed defaults, different error handling, altered timing/ordering, even if "correct"
 - **Changed HTML templates or UI content** — packages that deliver HTML via `addFiles` (e.g., `*-config-ui` packages with OAuth setup instructions) produce different user-visible output when their templates change
 
@@ -220,6 +224,28 @@ git diff devel -- packages/<name>/
 - Changed function signatures (new required parameters, changed return types)
 - Removed public methods from classes
 - Behavior changes that could break existing user code
+
+### Cordova Hot Code Push compatibility
+
+When a candidate changes a default Cordova plugin or platform pin, compare the
+per-platform `cordovaCompatibilityVersions` of a representative app before and
+after the upgrade. Use the previous published release as the baseline. Build
+with the default plugin selection and check an explicit app pin when its
+precedence matters to the rollout.
+
+Choose the Cordova npm package version from its own changes. Any change to the
+effective plugin version contributes to the hash. An Atmosphere package minor
+can limit update uptake under older releases' normal `~` constraints. Apps that
+upgrade to the Meteor release carrying the changed hash still need a native
+rollout. A Cordova platform pin is owned by the tool and has the same HCP
+impact when its hash changes.
+
+Schedule planned changes that break HCP for a Meteor minor release. When a
+security fix needs to ship as a patch, record the exception and explain the
+impact on installed apps in Breaking Changes. Put the native rebuild and rollout
+steps in Migration Steps. Include a temporary app pin only when it preserves
+compatibility with the shipped binary, and state which native fix remains
+pending until users update.
 
 ### Presenting the Decision
 

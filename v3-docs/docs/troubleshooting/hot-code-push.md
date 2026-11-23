@@ -21,15 +21,17 @@ Make sure that you have:
 
 ## Known issues
 
-### Override compatibility versions
+### Cordova compatibility after an upgrade {#override-compatibility-versions}
 
-Did the app suddenly stop getting new code after you updated Meteor, or you changed plugins?
+Did your installed app stop receiving updates after you deployed a new Meteor release or changed a Cordova plugin?
 
 The client probably logs: `Skipping downloading new version because the Cordova platform version or plugin versions have changed and are potentially incompatible`
 
-Meteor, Cordova and plugins cannot be updated through Hot Code Push. So Meteor by default disables Hot Code Push to app versions that have different versions than the server. This avoids crashing a user's app, for example, when new JS calls a plugin that their app version doesn't yet have.
+Meteor computes a compatibility hash for each platform from the Cordova platform version and the names and versions of the plugins selected for the app. Native clients reject an update when the hash in the server's `/__cordova/manifest.json` differs from the one on the device. Compare the `cordovaCompatibilityVersions` entry for each affected platform with the manifest from the shipped binary.
 
-You can override this behavior by setting the `AUTOUPDATE_VERSION` environment variable. Just make sure you deal with potentially incompatible versions in your JS instead.
+Your app can get a plugin from a Meteor package through `Cordova.depends`, even if you never added it to `.meteor/cordova-plugins`. If that plugin version is the only difference, you can keep Hot Code Push working by pinning the version your users already have. Run `meteor add cordova:PLUGIN_ID@VERSION` from your app directory, compare the hashes again, and test an update against staging with the app from the store.
+
+Users get a native change or security fix when they install the new store build. Remove the temporary pin before building that app, then deploy your server with the same plugin version when the store update is available. `AUTOUPDATE_VERSION` controls the web bundle version. Native clients check the compatibility hash separately.
 
 ### Update your AUTOUPDATE_VERSION
 
