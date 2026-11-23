@@ -140,6 +140,9 @@ External package changelogs go after the PR link block.
 ### Breaking Changes
 
 * Use `N/A` if none
+* Describe who is affected, what stops working, and what triggers it in terms an app maintainer can recognize. Include deployment compatibility breaks even when public APIs are unchanged.
+* Put the commands, workarounds, and rollout sequence in Migration Steps and point affected readers there.
+* For a backported change, verify which published releases introduced it on each line. Give each affected entry its own Breaking Changes anchor and check the links in the generated histories.
 * Package-level changes:
 
     * Backtick package names
