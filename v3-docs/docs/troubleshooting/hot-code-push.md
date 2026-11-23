@@ -27,7 +27,9 @@ Did your installed app stop receiving updates after you deployed a new Meteor re
 
 The client probably logs: `Skipping downloading new version because the Cordova platform version or plugin versions have changed and are potentially incompatible`
 
-Meteor computes a compatibility hash for each platform from the Cordova platform version and the names and versions of the plugins selected for the app. Native clients reject an update when the hash in the server's `/__cordova/manifest.json` differs from the one on the device. Compare the `cordovaCompatibilityVersions` entry for each affected platform with the manifest from the shipped binary.
+By default, Meteor computes each platform's compatibility hash from its Cordova version and the names and versions of its plugins. Native clients skip an update when their compatibility version differs from the one in the server's `/__cordova/manifest.json`. Compare the `cordovaCompatibilityVersions` entry for the affected platform with the manifest from the store build.
+
+If the versions differ unexpectedly, check the environment used for each build. `METEOR_CORDOVA_COMPAT_VERSION_EXCLUDE` lists plugin names to omit from the hash. `METEOR_CORDOVA_COMPAT_VERSION_ANDROID` and `METEOR_CORDOVA_COMPAT_VERSION_IOS` each replace the computed hash for that platform.
 
 Your app can get a plugin from a Meteor package through `Cordova.depends`, even if you never added it to `.meteor/cordova-plugins`. If that plugin version is the only difference, you can keep Hot Code Push working by pinning the version your users already have. Run `meteor add cordova:PLUGIN_ID@VERSION` from your app directory, compare the hashes again, and test an update against staging with the app from the store.
 

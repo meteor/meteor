@@ -233,8 +233,11 @@ after the upgrade. Use the previous published release as the baseline. Build
 with the default plugin selection and check an explicit app pin when its
 precedence matters to the rollout.
 
-Choose the Cordova npm package version from its own changes. Any change to the
-effective plugin version contributes to the hash. An Atmosphere package minor
+Choose the Cordova npm package version from its own changes. By default, a
+plugin version change affects the computed hash. When reviewing an app build,
+check whether `METEOR_CORDOVA_COMPAT_VERSION_EXCLUDE` omits that plugin or
+`METEOR_CORDOVA_COMPAT_VERSION_ANDROID` or `METEOR_CORDOVA_COMPAT_VERSION_IOS`
+supplies the compatibility version for that platform. An Atmosphere package minor
 can limit update uptake under older releases' normal `~` constraints. Apps that
 upgrade to the Meteor release carrying the changed hash still need a native
 rollout. A Cordova platform pin is owned by the tool and has the same HCP
