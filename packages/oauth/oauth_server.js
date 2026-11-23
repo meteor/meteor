@@ -200,7 +200,7 @@ const middleware = async (req, res) => {
 const router = WebApp.express.Router({ caseSensitive: true });
 router.use('/_oauth/:service',
   WebApp.express.json(),
-  WebApp.express.urlencoded({ extended: false }),
+  WebApp.express.urlencoded(),
   middleware
 );
 WebApp.handlers.use(router);
