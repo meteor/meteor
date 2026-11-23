@@ -44,7 +44,7 @@ const testPendingCredential = async (test, method) => {
 
     const req = {
       method,
-      url: `/_oauth/${serviceName}`
+      params: { service: serviceName }
     };
 
     const payload = {

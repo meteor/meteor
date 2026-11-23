@@ -38,10 +38,6 @@ Package.onUse(api => {
   api.types('oauth.d.ts');
 });
 
-Npm.depends({
-  'body-parser': '1.20.9',
-});
-
 Package.onTest(api => {
   api.use('tinytest');
   api.use('random');

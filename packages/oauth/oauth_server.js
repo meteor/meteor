@@ -1,5 +1,3 @@
-import bodyParser from 'body-parser';
-
 OAuth = {};
 OAuthTest = {};
 
@@ -136,19 +134,13 @@ OAuth._checkRedirectUrlOrigin = redirectUrl => {
   );
 };
 
-const middleware = async (req, res, next) => {
+const middleware = async (req, res) => {
   let requestData;
 
   // Make sure to catch any exceptions because otherwise we'd crash
   // the runner
   try {
-    const serviceName = oauthServiceName(req);
-    if (!serviceName) {
-      // not an oauth request. pass to next middleware.
-      next();
-      return;
-    }
-
+    const { service: serviceName } = req.params;
     const service = registeredServices[serviceName];
 
     // Skip everything if there's no service set by the oauth middleware
@@ -165,7 +157,7 @@ const middleware = async (req, res, next) => {
     if (req.method === 'GET') {
       requestData = req.query;
     } else {
-      requestData = req.body;
+      requestData = req.body ?? {};
     }
     await handler(service, requestData, res);
   } catch (err) {
@@ -204,38 +196,17 @@ const middleware = async (req, res, next) => {
   }
 };
 
-// Listen to incoming OAuth http requests
-WebApp.handlers.use('/_oauth', bodyParser.json());
-WebApp.handlers.use('/_oauth', bodyParser.urlencoded({ extended: false }));
-WebApp.handlers.use(middleware);
+// Match the original, case-sensitive callback prefix, including provider suffixes.
+const router = WebApp.express.Router({ caseSensitive: true });
+router.use('/_oauth/:service',
+  WebApp.express.json(),
+  WebApp.express.urlencoded(),
+  middleware
+);
+WebApp.handlers.use(router);
 
 OAuthTest.middleware = middleware;
-
 OAuthTest.registeredServices = registeredServices;
-
-// Handle /_oauth/* paths and extract the service name.
-//
-// @returns {String|null} e.g. "facebook", or null if this isn't an
-// oauth request
-const oauthServiceName = req => {
-  // req.url will be "/_oauth/<service name>" with an optional "?close".
-  const i = req.url.indexOf('?');
-  let barePath;
-  if (i === -1)
-    barePath = req.url;
-  else
-    barePath = req.url.substring(0, i);
-  const splitPath = barePath.split('/');
-
-  // Any non-oauth request will continue down the default
-  // middlewares.
-  if (splitPath[1] !== '_oauth')
-    return null;
-
-  // Find service based on url
-  const serviceName = splitPath[2];
-  return serviceName;
-};
 
 // Make sure we're configured
 const ensureConfigured =

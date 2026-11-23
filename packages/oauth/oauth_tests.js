@@ -150,3 +150,32 @@ Tinytest.addAsync("oauth - _endOfLoginResponse with redirect loginStyle supports
     await OAuth._endOfLoginResponse(res, details);
   }
 );
+
+Tinytest.addAsync('oauth - HTTP callback routing and request data', async test => {
+  const serviceName = Random.id();
+  const version = Random.id();
+  const url = Meteor.absoluteUrl(`_oauth/${serviceName}`);
+  await ServiceConfiguration.configurations.insertAsync({ service: serviceName });
+  try {
+    OAuth.registerService(serviceName, version, {}, () => {});
+    OAuth._requestHandlers[version] = (service, data, res) => {
+      res.end(JSON.stringify(data));
+    };
+
+    const queryResponse = await fetch(url + '?value=query');
+    test.equal(await queryResponse.json(), { value: 'query' });
+
+    for (const [headers, body, expected] of [
+      [{ 'Content-Type': 'application/json' }, '{"value":"json"}', { value: 'json' }],
+      [{ 'Content-Type': 'application/x-www-form-urlencoded' }, 'value=form', { value: 'form' }],
+      [{}, undefined, {}],
+    ]) {
+      const response = await fetch(url + '/return', { method: 'POST', headers, body });
+      test.equal(await response.json(), expected);
+    }
+  } finally {
+    delete OAuth._requestHandlers[version];
+    OAuthTest.unregisterService(serviceName);
+    await ServiceConfiguration.configurations.removeAsync({ service: serviceName });
+  }
+});

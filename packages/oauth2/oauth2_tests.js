@@ -23,7 +23,7 @@ const testPendingCredential = async function (test, method) {
     // simulate logging in using foobook
     const req = {
       method,
-      url: `/_oauth/${serviceName}`
+      params: { service: serviceName }
     };
 
     const payload = {
