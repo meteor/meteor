@@ -1,6 +1,3 @@
-import { RoutePolicy } from 'meteor/routepolicy';
-import { WebApp } from 'meteor/webapp';
-
 OAuth = {};
 OAuthTest = {};
 
@@ -132,59 +129,23 @@ OAuth._checkRedirectUrlOrigin = redirectUrl => {
     replaceLocalhost: true
   });
   return (
-    redirectUrl.substring(0, appHost.length) !== appHost &&
-    redirectUrl.substring(0, appHostReplacedLocalhost.length) !== appHostReplacedLocalhost
+    redirectUrl.substr(0, appHost.length) !== appHost &&
+    redirectUrl.substr(0, appHostReplacedLocalhost.length) !== appHostReplacedLocalhost
   );
 };
 
-// Handle /_oauth/* paths and extract the service name.
-//
-// @returns {String|null} e.g. "facebook", or null if this isn't an
-// oauth request
-const oauthServiceName = req => {
-  // req.url will be "/_oauth/<service name>" with an optional "?close".
-  const i = req.url.indexOf('?');
-  let barePath;
-  if (i === -1) {
-    barePath = req.url;
-  } else {
-    barePath = req.url.substring(0, i);
-  }
-  const splitPath = barePath.split('/');
-
-  // Any non-oauth request will continue down the default
-  // middlewares.
-  if (splitPath[1] !== '_oauth')
-    return null;
-
-  // Find service based on url
-  const serviceName = splitPath[2];
-  return serviceName;
-};
-
-const middleware = async (req, res, next) => {
+const middleware = async (req, res) => {
   let requestData;
 
   // Make sure to catch any exceptions because otherwise we'd crash
   // the runner
   try {
-    // Try to use params first
-    let serviceName = req.params?.service;
-    if (!serviceName) {
-      serviceName = oauthServiceName(req);
-    }
-    if (!serviceName) {
-      // not an oauth request. pass to next middleware.
-      next();
-      return;
-    }
-
+    const { service: serviceName } = req.params;
     const service = registeredServices[serviceName];
 
     // Skip everything if there's no service set by the oauth middleware
-    if (!service) {
+    if (!service)
       throw new Error(`Unexpected OAuth service ${serviceName}`);
-    }
 
     // Make sure we're configured
     await ensureConfigured(serviceName);
@@ -196,7 +157,7 @@ const middleware = async (req, res, next) => {
     if (req.method === 'GET') {
       requestData = req.query;
     } else {
-      requestData = req.body;
+      requestData = req.body ?? {};
     }
     await handler(service, requestData, res);
   } catch (err) {
@@ -208,8 +169,7 @@ const middleware = async (req, res, next) => {
     // we were passed. But then the developer wouldn't be able to
     // style the error or react to it in any way.
     if (requestData?.state && err instanceof Error) {
-      try {
-        // catch any exceptions to avoid crashing runner
+      try { // catch any exceptions to avoid crashing runner
         await OAuth._storePendingCredential(OAuth._credentialTokenFromQuery(requestData), err);
       } catch (err) {
         // Ignore the error and just give up. If we failed to store the
@@ -236,16 +196,16 @@ const middleware = async (req, res, next) => {
   }
 };
 
-// Listen to incoming OAuth http requests
-const OAuthRouter = WebApp.express.Router();
-OAuthRouter.use(WebApp.express.json());
-OAuthRouter.use(WebApp.express.urlencoded({ extended: false }));
-OAuthRouter.use('/:service', middleware);
-WebApp.handlers.use('/_oauth', OAuthRouter);
+// Match the original, case-sensitive callback prefix, including provider suffixes.
+const router = WebApp.express.Router({ caseSensitive: true });
+router.use('/_oauth/:service',
+  WebApp.express.json(),
+  WebApp.express.urlencoded({ extended: false }),
+  middleware
+);
+WebApp.handlers.use(router);
 
 OAuthTest.middleware = middleware;
-OAuthTest.router = OAuthRouter;
-
 OAuthTest.registeredServices = registeredServices;
 
 // Make sure we're configured

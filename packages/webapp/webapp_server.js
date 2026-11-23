@@ -1,12 +1,14 @@
-import assert from 'node:assert';
-import { readFileSync, chmodSync, chownSync } from 'node:fs';
-import { createServer } from 'node:http';
-import { userInfo } from 'node:os';
-import { join as pathJoin, dirname as pathDirname } from 'node:path';
-import { createHash } from 'node:crypto';
+import assert from 'assert';
+import { readFileSync, chmodSync, chownSync } from 'fs';
+import { createServer } from 'http';
+import { userInfo } from 'os';
+import { join as pathJoin, dirname as pathDirname } from 'path';
+import { createHash } from 'crypto';
 import express from 'express';
 import compress from 'compression';
 import cookieParser from 'cookie-parser';
+import qs from 'qs';
+import parseRequest from 'parseurl';
 import { lookup as lookupUserAgent } from 'useragent-ng';
 import { isModern } from 'meteor/modern-browsers';
 import send from 'send';
@@ -14,32 +16,29 @@ import {
   removeExistingSocketFile,
   registerSocketFileCleanup,
 } from './socket_file.js';
-import cluster from 'node:cluster';
-import { execSync } from 'node:child_process';
-import { URL } from 'node:url';
-import qs from 'qs';
-import { RoutePolicy } from 'meteor/routepolicy';
+import { execSync } from 'child_process';
 import { onMessage } from 'meteor/inter-process-messaging';
 
-const SHORT_SOCKET_TIMEOUT = 5 * 1000;
-const LONG_SOCKET_TIMEOUT = 120 * 1000;
+var SHORT_SOCKET_TIMEOUT = 5 * 1000;
+var LONG_SOCKET_TIMEOUT = 120 * 1000;
 
 const createExpressApp = () => {
   const app = express();
-  // Security and performance headers
+  // Security and performace headers
   // these headers come from these docs: https://expressjs.com/en/api.html#app.settings.table
   app.set('x-powered-by', false);
   app.set('etag', false);
   app.set('query parser', qs.parse);
   return app;
-};
+}
 export const WebApp = {};
 export const WebAppInternals = {};
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
+
 WebAppInternals.NpmModules = {
-  express: {
+  express : {
     version: Npm.require('express/package.json').version,
     module: express,
   }
@@ -164,7 +163,7 @@ WebApp.categorizeRequest = function(req) {
   const path =
     typeof req.pathname === 'string'
       ? req.pathname
-      : new URL(req.url, Meteor.absoluteUrl()).pathname;
+      : parseRequest(req).pathname;
 
   const categorized = {
     browser,
@@ -217,13 +216,13 @@ WebApp.categorizeRequest = function(req) {
 var htmlAttributeHooks = [];
 var getHtmlAttributes = function(request) {
   var combinedAttributes = {};
-  for (const hook of htmlAttributeHooks || []) {
+  (htmlAttributeHooks || []).forEach(function(hook) {
     var attributes = hook(request);
-    if (attributes === null) continue;
+    if (attributes === null) return;
     if (typeof attributes !== 'object')
       throw Error('HTML attribute hook must return null or object');
     Object.assign(combinedAttributes, attributes);
-  }
+  });
   return combinedAttributes;
 };
 
@@ -316,9 +315,9 @@ WebApp._timeoutAdjustmentRequestCallback = function(req, res) {
   res.on('finish', function() {
     res.setTimeout(SHORT_SOCKET_TIMEOUT);
   });
-  for(const l of Object.values(finishListeners) || []) {
+  Object.values(finishListeners).forEach(function(l) {
     res.on('finish', l);
-  }
+  });
 };
 
 // Will be updated by main before we listen.
@@ -562,7 +561,7 @@ async function getBoilerplateAsync(request, arch, response) {
   let madeChanges = false;
   let promise = Promise.resolve();
 
-  for (const key of Object.keys(boilerplateDataCallbacks)) {
+  Object.keys(boilerplateDataCallbacks).forEach(key => {
     promise = promise
       .then(() => {
         const callback = boilerplateDataCallbacks[key];
@@ -574,7 +573,7 @@ async function getBoilerplateAsync(request, arch, response) {
           madeChanges = true;
         }
       });
-  }
+  });
 
   return promise.then(() => ({
     stream: boilerplate.toHTMLStream(data),
@@ -689,7 +688,7 @@ WebAppInternals.staticFilesMiddleware = async function(
   next,
   resolveStaticFile = getStaticFileInfo
 ) {
-  var pathname = new URL(req.url, Meteor.absoluteUrl()).pathname;
+  var pathname = parseRequest(req).pathname;
   try {
     pathname = decodeURIComponent(pathname);
   } catch (e) {
@@ -937,9 +936,9 @@ async function runWebAppServer() {
         configJson.clientArchs || Object.keys(configJson.clientPaths);
 
       try {
-        for (const arch of clientArchs) {
+        clientArchs.forEach(arch => {
           generateClientProgram(arch, staticFilesByArch);
-        }
+        });
         WebAppInternals.staticFilesByArch = staticFilesByArch;
       } catch (e) {
         Log.error('Error reloading the client program: ' + e.stack);
@@ -1008,7 +1007,7 @@ async function runWebAppServer() {
     const staticFiles = (staticFilesByArch[arch] = Object.create(null));
 
     const { manifest } = programJson;
-    for (const item of manifest) {
+    manifest.forEach(item => {
       if (item.url && item.where === 'client') {
         staticFiles[getItemPathname(item.url)] = {
           absolutePath: pathJoin(clientDir, item.path),
@@ -1028,7 +1027,7 @@ async function runWebAppServer() {
           };
         }
       }
-    }
+    });
 
     const { PUBLIC_SETTINGS } = __meteor_runtime_config__;
     const configOverrides = {
@@ -1145,9 +1144,7 @@ async function runWebAppServer() {
     // the device's server, it is important to set the DDP url to the actual
     // Meteor server accepting DDP connections and not the device's file server.
     await syncQueue.runTask(function() {
-      for (const arch of Object.keys(WebApp.clientPrograms)) {
-        generateBoilerplateForArch(arch);
-      }
+      Object.keys(WebApp.clientPrograms).forEach(generateBoilerplateForArch);
     });
   };
 
@@ -1174,15 +1171,14 @@ async function runWebAppServer() {
   await WebAppInternals.reloadClientPrograms();
 
   // webserver
-  const app = createExpressApp();
+  var app = createExpressApp()
 
   // Packages and apps can add handlers that run before any other Meteor
   // handlers via WebApp.rawExpressHandlers.
-  const rawExpressHandlers = createExpressApp();
+  var rawExpressHandlers = createExpressApp()
   app.use(rawExpressHandlers);
 
   // Auto-compress any json, javascript, or text.
-  // TODO We should consider adding configuration options for people to adjust compression options
   app.use(compress({ filter: shouldCompress }));
 
   // parse cookies into an object
@@ -1300,7 +1296,7 @@ async function runWebAppServer() {
    */
   // Packages and apps can add handlers to this via WebApp.expressHandlers.
   // They are inserted before our default handler.
-  var packageAndAppHandlers = createExpressApp();
+  var packageAndAppHandlers = createExpressApp()
   app.use(packageAndAppHandlers);
 
   let suppressExpressErrors = false;
@@ -1336,7 +1332,7 @@ async function runWebAppServer() {
       };
 
       if (shuttingDown) {
-        headers.Connection = 'Close';
+        headers['Connection'] = 'Close';
       }
 
       var request = WebApp.categorizeRequest(req);
@@ -1446,28 +1442,6 @@ async function runWebAppServer() {
   // own.
   httpServer.on('request', WebApp._timeoutAdjustmentRequestCallback);
 
-  // If the client gave us a bad request, tell it instead of just closing the
-  // socket. This lets load balancers in front of us differentiate between "a
-  // server is randomly closing sockets for no reason" and "client sent a bad
-  // request".
-  //
-  // This will only work on Node 6; Node 4 destroys the socket before calling
-  // this event. See https://github.com/nodejs/node/pull/4557/ for details.
-  httpServer.on('clientError', (err, socket) => {
-    // Pre-Node-6, do nothing.
-    if (socket.destroyed) {
-      return;
-    }
-
-    if (err.message === 'Parse Error') {
-      socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
-    } else {
-      // For other errors, use the default behavior as if we had no clientError
-      // handler.
-      socket.destroy(err);
-    }
-  });
-
   const suppressErrors = function() {
     suppressExpressErrors = true;
   };
@@ -1526,9 +1500,9 @@ async function runWebAppServer() {
             }
             const callbacks = onListeningCallbacks;
             onListeningCallbacks = null;
-            for (const callback of callbacks || []) {
+            callbacks?.forEach(callback => {
               callback();
-            }
+            });
           },
           e => {
             console.error('Error listening:', e);

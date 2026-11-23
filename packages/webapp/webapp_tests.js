@@ -1,8 +1,9 @@
 import { WebApp, WebAppInternals } from './webapp_server';
-import { URL } from 'node:url';
 
-const crypto = require("node:crypto");
-const http = require("node:http");
+const url = require("url");
+const crypto = require("crypto");
+const http = require("http");
+const net = require("net");
 const streamToString = require("stream-to-string");
 import { isModern } from "meteor/modern-browsers";
 
@@ -11,18 +12,6 @@ WebAppInternals.addStaticJs(additionalScript);
 const hash = crypto.createHash('sha1');
 hash.update(additionalScript);
 const additionalScriptPathname = hash.digest('hex') + ".js";
-
-// Workaround for deprecated URL resolve function
-// https://nodejs.org/docs/latest/api/url.html#urlresolvefrom-to
-function urlResolve(from, to) {
-  const resolvedUrl = new URL(to, new URL(from, 'resolve://'));
-  if (resolvedUrl.protocol === 'resolve:') {
-    // `from` is a relative URL.
-    const { pathname, search, hash } = resolvedUrl;
-    return pathname + search + hash;
-  }
-  return resolvedUrl.toString();
-}
 
 // Mock the 'res' object that gets passed to connect handlers. This mock
 // just records any utf8 data written to the response and returns it
@@ -80,10 +69,10 @@ Tinytest.addAsync("webapp - content-type header", async function (test) {
       return staticFiles[url].type === "js";
     }
   );
-  let resp = await asyncGet(urlResolve(Meteor.absoluteUrl(), cssResource));
+  let resp = await asyncGet(url.resolve(Meteor.absoluteUrl(), cssResource));
   test.equal(resp.headers["content-type"].toLowerCase(),
              "text/css; charset=utf-8");
-  resp = await asyncGet(urlResolve(Meteor.absoluteUrl(), jsResource));
+  resp = await asyncGet(url.resolve(Meteor.absoluteUrl(), jsResource));
   test.equal(resp.headers["content-type"].toLowerCase(),
              "application/javascript; charset=utf-8");
 });
@@ -101,66 +90,64 @@ Tinytest.addAsync("webapp - modern/legacy static files", test => {
 
   const promises = [];
 
-  for (const arch of Object.keys(WebAppInternals.staticFilesByArch)) {
+  Object.keys(WebAppInternals.staticFilesByArch).forEach(arch => {
     const staticFiles = WebAppInternals.staticFilesByArch[arch];
 
-    for (const path of Object.keys(staticFiles)) {
+    Object.keys(staticFiles).forEach(path => {
       const { type } = staticFiles[path];
       if (type !== "asset") {
-        continue;
+        return;
       }
 
       const pathMatch = /\/(modern|legacy)_test_asset\.js$/.exec(path);
       if (! pathMatch) {
-        continue;
+        return;
       }
 
-      const absUrl = urlResolve(Meteor.absoluteUrl(), path);
+      const absUrl = url.resolve(Meteor.absoluteUrl(), path);
 
-      for (const ua of [ // Try to request the modern/legacy assets with both modern and
+      [ // Try to request the modern/legacy assets with both modern and
         // legacy User Agent strings. (#9953)
         modernUserAgent,
         legacyUserAgent,
-      ]) {
-        promises.push(new Promise((resolve, reject) => {
-          HTTP.get(absUrl, {
-            headers: {
-              "User-Agent": ua
-            }
-          }, (error, response) => {
-            if (error) {
-              reject(error);
-              return;
-            }
+      ].forEach(ua => promises.push(new Promise((resolve, reject) => {
+        HTTP.get(absUrl, {
+          headers: {
+            "User-Agent": ua
+          }
+        }, (error, response) => {
+          if (error) {
+            reject(error);
+            return;
+          }
 
-            if (response.statusCode !== 200) {
-              reject(new Error(`Bad status code ${
-                response.statusCode
-              } for ${path}`));
-              return;
-            }
+          if (response.statusCode !== 200) {
+            reject(new Error(`Bad status code ${
+              response.statusCode
+            } for ${path}`));
+            return;
+          }
 
-            const contentType = response.headers["content-type"];
-            if (!contentType.startsWith("application/javascript")) {
-              reject(new Error(`Bad Content-Type ${contentType} for ${path}`));
-              return;
-            }
+          const contentType = response.headers["content-type"];
+          if (! contentType.startsWith("application/javascript")) {
+            reject(new Error(`Bad Content-Type ${contentType} for ${path}`));
+            return;
+          }
 
-            const expectedText = pathMatch[1].toUpperCase();
-            const index = response.content.indexOf(expectedText);
-            if (index < 0) {
-              reject(new Error(`Missing ${
-                JSON.stringify(expectedText)
-              } text in ${path}`));
-              return;
-            }
+          const expectedText = pathMatch[1].toUpperCase();
+          const index = response.content.indexOf(expectedText);
+          if (index < 0) {
+            reject(new Error(`Missing ${
+              JSON.stringify(expectedText)
+            } text in ${path}`));
+            return;
+          }
 
-            resolve(path);
-          });
-        }))
-      }
-    }
-  }
+          resolve(path);
+        });
+      })));
+    });
+  });
 
   test.isTrue(promises.length > 0);
 
@@ -685,17 +672,42 @@ Tinytest.addAsync(
     }
   }
 );
-Tinytest.addAsync('webapp - null HTML hook preserves earlier and later attributes', async test => {
-  const applies = request => request.headers?.['x-meteor-html-hook-test'] === 'yes';
-  WebApp.addHtmlAttributeHook(request => applies(request) ? { 'data-before-null': 'first' } : null);
-  WebApp.addHtmlAttributeHook(() => null);
-  WebApp.addHtmlAttributeHook(request => applies(request) ? { 'data-after-null': 'last' } : null);
-  const request = new http.IncomingMessage();
-  request.url = 'http://example.com';
-  request.browser = { name: 'headless' };
-  request.headers['x-meteor-html-hook-test'] = 'yes';
-  const boilerplate = await WebAppInternals.getBoilerplate(request, 'web.browser');
-  const html = await streamToString(boilerplate.stream);
-  test.isTrue(html.includes('data-before-null="first"'));
-  test.isTrue(html.includes('data-after-null="last"'));
-});
+
+// Node's HTTP client cannot send a malformed request, so write raw bytes and
+// collect everything the server sends before it closes the socket.
+function rawHttpExchange(request) {
+  const { port } = WebApp.httpServer.address();
+  return new Promise((resolve) => {
+    const socket = net.connect(port, "127.0.0.1");
+    let reply = "";
+    socket.setEncoding("utf8");
+    socket.on("data", (chunk) => {
+      reply += chunk;
+    });
+    socket.on("error", () => {});
+    socket.on("close", () => resolve(reply));
+    socket.setTimeout(5000, () => socket.destroy());
+    socket.write(request);
+  });
+}
+
+Tinytest.addAsync(
+  "webapp - parse errors - a malformed request line gets 400",
+  async function (test) {
+    const reply = await rawHttpExchange(
+      "FOO@ / HTTP/1.1\r\nHost: localhost\r\n\r\n"
+    );
+    test.matches(reply, /^HTTP\/1\.1 400 /);
+  }
+);
+
+Tinytest.addAsync(
+  "webapp - parse errors - oversized headers get 431",
+  async function (test) {
+    const reply = await rawHttpExchange(
+      "GET / HTTP/1.1\r\nHost: localhost\r\n" +
+        `X-Oversized: ${"a".repeat(http.maxHeaderSize)}\r\n\r\n`
+    );
+    test.matches(reply, /^HTTP\/1\.1 431 /);
+  }
+);

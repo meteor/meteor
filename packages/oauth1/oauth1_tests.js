@@ -1,4 +1,4 @@
-import http from 'node:http';
+import http from 'http';
 import { OAuth1Binding } from './oauth1_binding';
 
 const testPendingCredential = async (test, method) => {
@@ -27,7 +27,7 @@ const testPendingCredential = async (test, method) => {
 
   try {
     // register a fake login service
-    OAuth.registerService(serviceName, 1, urls, async () => ({
+    OAuth.registerService(serviceName, 1, urls, async query => ({
       serviceData: {
         id: twitterfooId,
         screenName: twitterfooName,
@@ -44,7 +44,7 @@ const testPendingCredential = async (test, method) => {
 
     const req = {
       method,
-      url: `/_oauth/${serviceName}`
+      params: { service: serviceName }
     };
 
     const payload = {

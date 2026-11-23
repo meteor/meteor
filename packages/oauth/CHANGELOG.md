@@ -1,9 +1,5 @@
 ## Changelog
 
-## 3.0.0
-### Breaking changes
-- Meteor v3 compatibility
-
 ## 2.0.0
 ### Breaking changes
 - Removed compatibility code for before Meteor v1
