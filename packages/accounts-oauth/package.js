@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Common code for OAuth-based login services",
-  version: '1.4.8-rc360.1',
+  version: '1.4.8',
 });
 
 Package.onUse(api => {
@@ -25,5 +25,13 @@ Package.onUse(api => {
 
 
 Package.onTest(api => {
+  api.use([
+    'accounts-oauth',
+    'ddp',
+    'ecmascript',
+    'random',
+    'service-configuration',
+    'tinytest',
+  ]);
   api.addFiles("oauth_tests.js", 'server');
 });

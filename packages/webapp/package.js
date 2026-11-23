@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Serves a Meteor app over HTTP",
-  version: '2.4.0-rc360.1',
+  version: '2.4.1',
 });
 
 Npm.depends({
@@ -12,7 +12,7 @@ Npm.depends({
   parseurl: "1.3.3",
   send: "1.1.0",
   "stream-to-string": "1.2.1",
-  qs: "6.13.0",
+  qs: "6.16.1",
   "useragent-ng": "2.4.4",
   "tmp": "0.2.3",
 });
@@ -24,7 +24,7 @@ Npm.strip({
 
 // whitelist plugin is now included in the core
 Cordova.depends({
-  "cordova-plugin-meteor-webapp": "2.0.4",
+  "cordova-plugin-meteor-webapp": "2.0.5",
 });
 
 Package.onUse(function (api) {
