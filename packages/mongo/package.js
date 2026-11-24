@@ -9,7 +9,7 @@
 
 Package.describe({
   summary: "Adaptor for using MongoDB and Minimongo over DDP",
-  version: '2.6.0',
+  version: '2.6.1',
 });
 
 Npm.depends({
@@ -34,7 +34,7 @@ Package.onUse(function (api) {
   api.use([
     "random",
     "ejson",
-    "minimongo",
+    "minimongo@2.2.2",
     "ddp",
     "tracker",
     "diff-sequence",
