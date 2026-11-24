@@ -1,6 +1,6 @@
 /**
  * Preview of the label migration, run by .github/workflows/labels.yml before anything
- * changes. It lists every issue and pull request and writes:
+ * changes. It lists every issue, pull request and discussion and writes:
  * - labels-before.json: the labels each item carries now, to compare with afterwards;
  * - labels-preview.csv: the items whose labels change, before and after;
  * - the job summary: the count of each move, the items decided one by one, the open
@@ -12,11 +12,13 @@ const {
   MANIFEST,
   MERGES,
   ITEMS,
+  decisionFor,
   isMigrating,
   NEEDS_TRIAGE,
   LEGACY_REVIEW,
   readManifest,
   hadLegacyLabel,
+  listDiscussions,
   isUntriaged,
   isLegacy,
 } = require('./relabel.js');
@@ -32,21 +34,21 @@ function migrate(item, { names, renames }, reviewed = new Set(), migrating = tru
   for (const name of before) {
     if (MERGES[name]) after.add(MERGES[name]);
   }
-  if (item.state === 'open' && !item.pull_request) {
+  if (item.state === 'open' && !item.pull_request && !item.discussion) {
     if (isUntriaged(item)) after.add(NEEDS_TRIAGE);
     if (isLegacy(item) && !reviewed.has(item.number)) after.add(LEGACY_REVIEW);
   }
-  if (item.state === 'open') {
-    const { add = [], remove = [] } = ITEMS[item.number] ?? {};
-    if (migrating) {
-      for (const name of add) after.add(name);
-    }
-    for (const name of remove) {
-      if (migrating || !before.includes(name)) after.delete(name);
-    }
+  const { add = [], remove = [] } = decisionFor(item) ?? {};
+  if (migrating) {
+    for (const name of add) after.add(name);
+  }
+  for (const name of remove) {
+    if (migrating || !before.includes(name)) after.delete(name);
   }
   return [...after].filter((name) => names.has(name)).sort();
 }
+
+const kind = (item) => (item.discussion ? 'discussion' : item.pull_request ? 'pr' : 'issue');
 
 const increment = (map, key, open) => {
   const count = map.get(key) ?? { all: 0, open: 0 };
@@ -72,7 +74,7 @@ function preview(items, manifest, { reviewed, repoLabels = [] } = {}) {
     const after = migrate(item, manifest, reviewed, migrating);
     const open = item.state === 'open';
     if (before.join() !== after.join()) {
-      rows.push({ number: item.number, pr: Boolean(item.pull_request), state: item.state, before, after });
+      rows.push({ number: item.number, kind: kind(item), state: item.state, before, after });
     }
     for (const name of before) {
       const target = manifest.renames.get(name) ?? MERGES[name] ?? (manifest.names.has(name) ? null : '(deleted)');
@@ -84,7 +86,7 @@ function preview(items, manifest, { reviewed, repoLabels = [] } = {}) {
       }
     }
     if (!open) continue;
-    if (migrating && ITEMS[item.number]) decide.items.push(item);
+    if (migrating && decisionFor(item)) decide.items.push(item);
     for (const name of after) priorities.get(name)?.push(item);
     if (/experiment|proof of concept|\bpoc\b|prototype/i.test(item.title) && !after.includes('experimental')) {
       decide.experiments.push(item);
@@ -109,7 +111,7 @@ function preview(items, manifest, { reviewed, repoLabels = [] } = {}) {
 
 // Markdown for the job summary.
 function report({ rows, moves, decide }, repoUrl) {
-  const link = (item) => `[#${item.number}](${repoUrl}/issues/${item.number})`;
+  const link = (item) => `[#${item.number}](${repoUrl}/${item.discussion ? 'discussions' : 'issues'}/${item.number})`;
   const list = (items) => items.map((item) => `- ${link(item)} ${item.title}`).join('\n') || 'None.';
   const code = (names) => names.map((name) => `\`${name}\``).join(', ');
   const sorted = [...moves].sort(([a], [b]) => a.localeCompare(b));
@@ -146,13 +148,14 @@ const csvCell = (value) => `"${String(value).replace(/"/g, '""')}"`;
 
 module.exports = async ({ github, context, core }) => {
   const { owner, repo } = context.repo;
-  const items = await github.paginate(github.rest.issues.listForRepo, { owner, repo, state: 'all', per_page: 100 });
+  const issues = await github.paginate(github.rest.issues.listForRepo, { owner, repo, state: 'all', per_page: 100 });
   const reviewed = new Set();
-  for (const item of items) {
+  for (const item of issues) {
     if (item.state === 'open' && !item.pull_request && isLegacy(item) && (await hadLegacyLabel(github, context.repo, item))) {
       reviewed.add(item.number);
     }
   }
+  const items = [...issues, ...(await listDiscussions(github, context.repo))];
   const repoLabels = await github.paginate(github.rest.issues.listLabelsForRepo, { owner, repo, per_page: 100 });
   const result = preview(items, readManifest(fs.readFileSync(MANIFEST, 'utf8')), {
     reviewed,
@@ -161,6 +164,7 @@ module.exports = async ({ github, context, core }) => {
   const exported = items.map((item) => ({
     number: item.number,
     pull_request: Boolean(item.pull_request),
+    discussion: Boolean(item.discussion),
     state: item.state,
     created_at: item.created_at,
     title: item.title,
@@ -171,7 +175,7 @@ module.exports = async ({ github, context, core }) => {
     'labels-preview.csv',
     ['number,kind,state,before,after']
       .concat(result.rows.map((row) =>
-        [row.number, row.pr ? 'pr' : 'issue', row.state, row.before.join('; '), row.after.join('; ')].map(csvCell).join(',')
+        [row.number, row.kind, row.state, row.before.join('; '), row.after.join('; ')].map(csvCell).join(',')
       ))
       .join('\n')
   );

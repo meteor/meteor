@@ -52,6 +52,7 @@ jobs:
       contents: read
       issues: write
       pull-requests: write
+      discussions: write
     env:
       # Only devel applies; a pull request or a dispatch on another branch is a dry run.
       APPLY: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/devel' }}

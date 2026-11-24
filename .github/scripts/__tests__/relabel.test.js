@@ -20,13 +20,22 @@ const issue = (number, createdAt, labels = [], extra = {}) => ({
   ...extra,
 });
 
+const discussion = (number, labels = [], extra = {}) => issue(number, NEW, labels, { discussion: true, ...extra });
+
 // A repository holding `items`; records every label added or removed. `limits` lists
 // the rate limit after each write ({ remaining, reset }), to make a run wait or stop.
-// Its labels are the ones the items carry, plus `labels`: those no item carries.
+// Its labels are the ones of the manifest, the ones the items carry, and `labels`:
+// those no item carries. Its discussions answer to GraphQL only, two per page.
 function buildGithubMock(items, limits = []) {
   const added = [];
   const removed = [];
   const labels = [];
+  const issues = () => items.filter((item) => !item.discussion);
+  const discussions = () => items.filter((item) => item.discussion);
+  const repoLabels = () => {
+    const carried = items.flatMap((item) => item.labels.map((label) => label.name));
+    return [...new Set([...manifest.names, ...carried, ...labels])].map((name) => ({ name, node_id: `L_${name}` }));
+  };
   const listForRepo = Symbol('listForRepo');
   const listEvents = Symbol('listEvents');
   const listLabelsForRepo = Symbol('listLabelsForRepo');
@@ -45,13 +54,13 @@ function buildGithubMock(items, limits = []) {
         listLabelsForRepo,
         addLabels: async ({ issue_number, labels }) => {
           added.push(`#${issue_number} ${labels[0]}`);
-          const item = items.find((candidate) => candidate.number === issue_number);
+          const item = issues().find((candidate) => candidate.number === issue_number);
           if (!item.ignoresWrites) item.labels.push({ name: labels[0] });
           return answer();
         },
         removeLabel: async ({ issue_number, name }) => {
           removed.push(`#${issue_number} ${name}`);
-          const item = items.find((candidate) => candidate.number === issue_number);
+          const item = issues().find((candidate) => candidate.number === issue_number);
           item.labels = item.labels.filter((label) => label.name !== name);
           return answer();
         },
@@ -61,15 +70,40 @@ function buildGithubMock(items, limits = []) {
       if (method === listEvents) {
         return items.find((item) => item.number === params.issue_number).events ?? [];
       }
-      if (method === listLabelsForRepo) {
-        const carried = items.flatMap((item) => item.labels.map((label) => label.name));
-        return [...new Set([...carried, ...labels])].map((name) => ({ name }));
-      }
-      return items.filter(
+      if (method === listLabelsForRepo) return repoLabels();
+      return issues().filter(
         (item) =>
           (params.state === 'all' || (params.state === 'closed') === Boolean(item.closed)) &&
           (!params.labels || item.labels.some((label) => label.name === params.labels))
       );
+    },
+    graphql: async (query, variables) => {
+      if (query.includes('addLabelsToLabelable')) {
+        const item = discussions().find((candidate) => `D_${candidate.number}` === variables.item);
+        const label = repoLabels().find((candidate) => candidate.node_id === variables.label);
+        if (!item || !label) throw new Error('Could not resolve to a node with that global id');
+        added.push(`#${item.number} ${label.name}`);
+        if (!item.ignoresWrites) item.labels.push({ name: label.name });
+        return { addLabelsToLabelable: { clientMutationId: null } };
+      }
+      const start = Number(variables.after ?? 0);
+      return {
+        repository: {
+          discussions: {
+            pageInfo: { hasNextPage: start + 2 < discussions().length, endCursor: String(start + 2) },
+            nodes: discussions()
+              .slice(start, start + 2)
+              .map((item) => ({
+                id: `D_${item.number}`,
+                number: item.number,
+                title: `Discussion ${item.number}`,
+                closed: Boolean(item.closed),
+                createdAt: item.created_at,
+                labels: { nodes: item.labels.map(({ name }) => ({ name })) },
+              })),
+          },
+        },
+      };
     },
   };
 }
@@ -141,6 +175,35 @@ test('merges into the new label, keeps every other label, closed items included'
   assert.strictEqual(left, 0);
 });
 
+test('gives the discussions their new labels too, open ones first', async () => {
+  const github = buildGithubMock([
+    issue(1, NEW, ['status: confirmed', 'bug'], { closed: true }),
+    // https://github.com/meteor/meteor/discussions/13823: its only label is a merged one.
+    discussion(13823, ['Project:Server Performance']),
+    discussion(11633, ['status: confirmed', 'Project:Apple'], { closed: true }),
+    // Already moved, by hand or by a run that stopped.
+    discussion(13353, ['Project:Server Performance', 'area: webapp']),
+    // Two old labels merging into the same new one. Without a status and opened before
+    // 3.0: the triage and legacy labels are for issues.
+    discussion(11516, ['Project:Accounts (in user apps)', 'Project:Accounts:UI'], { created_at: OLD }),
+    discussion(2, ['good first issue']),
+  ]);
+  assert.strictEqual(await runOnMockedClock(github), 0);
+  assert.deepStrictEqual(github.added, ['#11516 area: accounts', '#13823 area: webapp', '#1 type: bug', '#11633 area: mobile']);
+  assert.deepStrictEqual(github.removed, []);
+});
+
+test('the dry run counts the discussions without writing', async () => {
+  const github = buildGithubMock([
+    discussion(13823, ['Project:Server Performance']),
+    discussion(13725, ['Project:DDP', 'TypeScript']),
+    // `Project:JS Environment:Typescript` is renamed to `area: types`.
+    discussion(3, ['Project:JS Environment:Typescript', 'TypeScript']),
+  ]);
+  assert.strictEqual(await run(github, true), 2);
+  assert.deepStrictEqual(github.added, []);
+});
+
 const HOUR = 60 * 60 * 1000;
 const T0 = 1_700_000_000_000;
 
@@ -170,6 +233,8 @@ async function runOnMockedClock(github, runTime) {
   }
 }
 
+const isWrite = (query) => query.includes('mutation');
+
 // Records the time of every write.
 function timeWrites(github) {
   const times = [];
@@ -180,6 +245,11 @@ function timeWrites(github) {
       return write(params);
     };
   }
+  const graphql = github.graphql;
+  github.graphql = (query, variables) => {
+    if (isWrite(query)) times.push(Date.now());
+    return graphql(query, variables);
+  };
   return times;
 }
 
@@ -224,6 +294,15 @@ function limitWrites(github, failures, headers = {}, status = 403) {
       return write(params);
     };
   }
+  const graphql = github.graphql;
+  github.graphql = async (query, variables) => {
+    if (!isWrite(query)) return graphql(query, variables);
+    times.push(Date.now());
+    if (times.length <= failures) {
+      throw Object.assign(new Error('You have exceeded a secondary rate limit'), { status, response: { headers } });
+    }
+    return graphql(query, variables);
+  };
   return times;
 }
 
@@ -233,6 +312,32 @@ test('waits out a secondary rate limit and writes again', async () => {
   assert.strictEqual(await runOnMockedClock(github), 0);
   assert.deepStrictEqual(times, [T0, T0 + 120_000]);
   assert.deepStrictEqual(github.added, ['#1 type: bug']);
+});
+
+test('a discussion is written under the same limits', async () => {
+  // The first write leaves the budget low until 10 minutes later.
+  const low = buildGithubMock(
+    [
+      issue(1, NEW, ['status: confirmed', 'bug']),
+      discussion(13823, ['Project:Server Performance']),
+      issue(2, NEW, ['Project:Apple'], { closed: true }),
+    ],
+    [{ remaining: 150, reset: (T0 + 600_000) / 1000 }]
+  );
+  const waited = timeWrites(low);
+  assert.strictEqual(await runOnMockedClock(low), 0);
+  assert.deepStrictEqual(low.added, ['#1 type: bug', '#13823 area: webapp', '#2 area: mobile']);
+  assert.deepStrictEqual(waited, [T0, T0 + 600_000, T0 + 601_000]);
+
+  const limited = buildGithubMock([
+    discussion(13823, ['Project:Server Performance']),
+    discussion(13353, ['needs-investigation']),
+  ]);
+  const times = limitWrites(limited, 1, { 'retry-after': '120' });
+  assert.strictEqual(await runOnMockedClock(limited), 0);
+  // The write again, then the pause before the next one.
+  assert.deepStrictEqual(times, [T0, T0 + 120_000, T0 + 121_000]);
+  assert.deepStrictEqual(limited.added, ['#13823 area: webapp', '#13353 status: confirmed']);
 });
 
 test('waits a minute when the rate limit comes without a delay', async () => {
@@ -284,6 +389,21 @@ function limitReads(github, method, failures, headers = {}) {
   return times;
 }
 
+// The same for the reads of the discussions; `fails` tells which ones, by their rank.
+function limitDiscussionReads(github, fails, headers = {}) {
+  const times = [];
+  const graphql = github.graphql;
+  github.graphql = async (query, variables) => {
+    if (isWrite(query)) return graphql(query, variables);
+    times.push(Date.now());
+    if (fails(times.length)) {
+      throw Object.assign(new Error('You have exceeded a secondary rate limit'), { status: 403, response: { headers } });
+    }
+    return graphql(query, variables);
+  };
+  return times;
+}
+
 test('waits out a rate limit on a read and reads again', async () => {
   const github = buildGithubMock([issue(1, NEW, ['status: confirmed', 'bug'])]);
   const times = limitReads(github, github.rest.issues.listForRepo, 1, { 'retry-after': '120' });
@@ -308,6 +428,55 @@ test('waits out a rate limit on the read of the repository labels', async () => 
   assert.deepStrictEqual(github.added, ['#14586 priority: critical', '#14586 area: cli']);
 });
 
+test('waits out a rate limit on the read of the discussions', async () => {
+  const github = buildGithubMock([discussion(13823, ['Project:Server Performance'])]);
+  const times = limitDiscussionReads(github, (rank) => rank === 1, { 'retry-after': '120' });
+  assert.strictEqual(await runOnMockedClock(github), 0);
+  assert.strictEqual(times[1] - times[0], 120_000);
+  assert.deepStrictEqual(github.added, ['#13823 area: webapp']);
+});
+
+// What github.graphql throws when GitHub answers 200 with errors in the body: no
+// status, and the headers on the error itself.
+const graphqlError = (message, headers = {}) =>
+  Object.assign(new Error(`Request failed due to following response errors:\n - ${message}`), {
+    name: 'GraphqlResponseError',
+    headers,
+    response: { data: null, errors: [{ message }] },
+  });
+
+test('waits out a rate limit that GraphQL answers with 200', async () => {
+  // The hourly budget of GraphQL is spent: its first answer, a read, tells until when.
+  const spent = buildGithubMock([discussion(13823, ['Project:Server Performance'])]);
+  const graphql = spent.graphql;
+  const times = [];
+  spent.graphql = async (query, variables) => {
+    times.push(Date.now());
+    if (times.length === 1) {
+      const reset = String((T0 + 30 * 60_000) / 1000);
+      throw graphqlError('API rate limit exceeded for installation ID 1.', { 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': reset });
+    }
+    return graphql(query, variables);
+  };
+  assert.strictEqual(await runOnMockedClock(spent), 0);
+  assert.strictEqual(times[1], T0 + 30 * 60_000);
+  assert.deepStrictEqual(spent.added, ['#13823 area: webapp']);
+
+  // A secondary limit on a write.
+  const limited = buildGithubMock([discussion(13823, ['Project:Server Performance'])]);
+  const write = limited.graphql;
+  const writes = [];
+  limited.graphql = async (query, variables) => {
+    if (isWrite(query) && writes.push(Date.now()) === 1) {
+      throw graphqlError('You have exceeded a secondary rate limit.', { 'retry-after': '120' });
+    }
+    return write(query, variables);
+  };
+  assert.strictEqual(await runOnMockedClock(limited), 0);
+  assert.deepStrictEqual(writes, [T0, T0 + 120_000]);
+  assert.deepStrictEqual(limited.added, ['#13823 area: webapp']);
+});
+
 test('fails when a read is rate limited for longer than the run', async () => {
   const github = buildGithubMock([issue(1, NEW, ['status: confirmed', 'bug'])]);
   limitReads(github, github.rest.issues.listForRepo, 1, { 'retry-after': String(6 * 60 * 60) });
@@ -330,6 +499,15 @@ test('fails when a read is rate limited for longer than the run', async () => {
   limitReads(unread, unread.rest.issues.listLabelsForRepo, 1, { 'retry-after': String(6 * 60 * 60) });
   await assert.rejects(runOnMockedClock(unread), /longer than this run/);
   assert.deepStrictEqual(unread.added, []);
+
+  // Discussions that cannot be read must not read as "none carries an old label":
+  // neither at the start nor before the old labels are deleted.
+  for (const rank of [1, 2]) {
+    const unlisted = buildGithubMock([discussion(13823, ['Project:Server Performance'], { ignoresWrites: true })]);
+    limitDiscussionReads(unlisted, (read) => read === rank, { 'retry-after': String(6 * 60 * 60) });
+    await assert.rejects(runOnMockedClock(unlisted), /longer than this run/);
+    assert.strictEqual(unlisted.added.length, rank - 1);
+  }
 });
 
 test('fails on an error other than a rate limit', async () => {
@@ -338,6 +516,17 @@ test('fails on an error other than a rate limit', async () => {
     throw Object.assign(new Error('Resource not accessible by integration'), { status: 403 });
   };
   await assert.rejects(run(github), /not accessible/);
+
+  // A token that may not label the discussions.
+  const refused = buildGithubMock([discussion(13823, ['Project:Server Performance'])]);
+  const graphql = refused.graphql;
+  let attempts = 0;
+  refused.graphql = async (query, variables) => {
+    if (isWrite(query) && ++attempts) throw graphqlError('Resource not accessible by integration');
+    return graphql(query, variables);
+  };
+  await assert.rejects(runOnMockedClock(refused), /not accessible/);
+  assert.strictEqual(attempts, 1);
 });
 
 test('once stopped, reads no more issue history', async () => {
@@ -384,6 +573,23 @@ test('keeps the old labels while a closed item still misses its new label', asyn
   assert.strictEqual(await run(github), 1);
 });
 
+test('keeps the old labels while a discussion still misses its new label', async () => {
+  for (const closed of [false, true]) {
+    const github = buildGithubMock([discussion(13823, ['Project:Server Performance'], { ignoresWrites: true, closed })]);
+    assert.strictEqual(await runOnMockedClock(github), 1);
+  }
+
+  // Labelled while the run was going on: the read before the deletion finds it.
+  const items = [issue(1, NEW, ['status: confirmed', 'bug'])];
+  const late = buildGithubMock(items);
+  const reads = limitDiscussionReads(late, () => {
+    if (reads.length === 2) items.push(discussion(13823, ['Project:Server Performance']));
+    return false;
+  });
+  assert.strictEqual(await runOnMockedClock(late), 1);
+  assert.deepStrictEqual(late.added, ['#1 type: bug']);
+});
+
 test('counts an item once when several old labels merge into the same new one', async () => {
   const github = buildGithubMock([issue(1, NEW, ['status: confirmed', 'Project:CSS', 'Project:HMR', 'Project:Modules'])]);
   assert.strictEqual(await run(github, true), 1);
@@ -395,9 +601,10 @@ test('gives the new label to the items of an old label the sync could not rename
     issue(1, NEW, ['status: confirmed', 'idle']),
     issue(2, NEW, ['status: confirmed', 'idle', 'status: stale']),
     issue(3, NEW, ['idle'], { closed: true }),
+    discussion(4, ['idle']),
   ]);
   assert.strictEqual(await run(github), 0);
-  assert.deepStrictEqual(github.added, ['#1 status: stale', '#3 status: stale']);
+  assert.deepStrictEqual(github.added, ['#1 status: stale', '#4 status: stale', '#3 status: stale']);
 });
 
 test('applies the decisions on single items, open ones only', async () => {
@@ -410,6 +617,12 @@ test('applies the decisions on single items, open ones only', async () => {
   assert.strictEqual(await runOnMockedClock(github), 0);
   assert.deepStrictEqual(github.added, ['#14825 priority: critical', '#14825 type: security', '#14586 area: cli']);
   assert.deepStrictEqual(github.removed, ['#14825 type: bug', '#14825 priority: candidate']);
+
+  // The decisions name issues and pull requests. A discussion gets none: the removal
+  // decided for #14825 does not hold back its move (the sync could not rename `Type:Bug`).
+  const discussed = buildGithubMock([discussion(14825, ['Type:Bug'])]);
+  assert.strictEqual(await runOnMockedClock(discussed), 0);
+  assert.deepStrictEqual(discussed.added, ['#14825 type: bug']);
 });
 
 test('applies the decisions before the history of closed items', async () => {

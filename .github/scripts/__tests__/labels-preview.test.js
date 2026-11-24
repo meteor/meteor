@@ -53,6 +53,7 @@ test('adds the triage and legacy labels to open issues only', () => {
   ]);
   assert.deepStrictEqual(migrate(item(2, [], { created_at: old }), manifest), []);
   assert.deepStrictEqual(migrate(item(3, [], { state: 'open', created_at: old, pull_request: {} }), manifest), []);
+  assert.deepStrictEqual(migrate(item(6, [], { state: 'open', created_at: old, discussion: true }), manifest), []);
   // A status, old name or new, counts as triaged; `idle` alone does not.
   assert.deepStrictEqual(migrate(item(4, ['confirmed'], { state: 'open' }), manifest), ['status: confirmed']);
   assert.deepStrictEqual(migrate(item(5, ['idle'], { state: 'open' }), manifest), [
@@ -87,6 +88,32 @@ test('lists the moves and the cases to check', () => {
   ]);
   assert.deepStrictEqual(result.decide.prStatuses.map(({ number }) => number), [4]);
   assert.match(report(result, 'https://github.com/meteor/meteor'), /- `Severity:has-workaround`: 1 open of 1/);
+});
+
+test('previews the discussions with the issues and the pull requests', () => {
+  const result = preview(
+    [
+      item(1, ['Project:Server Performance'], { state: 'open' }),
+      // https://github.com/meteor/meteor/discussions/13823, and a closed one.
+      item(13823, ['Project:Server Performance'], { state: 'open', discussion: true }),
+      item(11633, ['confirmed', 'not-ready', 'Project:Apple'], { discussion: true }),
+      item(11696, ['Project:NPM'], { state: 'open', discussion: true }),
+      item(2, ['good first issue'], { state: 'open', discussion: true }),
+    ],
+    manifest
+  );
+  assert.deepStrictEqual(result.rows.map((row) => [row.number, row.kind, row.after]), [
+    [1, 'issue', ['area: webapp', 'status: needs-triage']],
+    [13823, 'discussion', ['area: webapp']],
+    [11633, 'discussion', ['area: mobile', 'status: confirmed', 'status: needs-info']],
+    [11696, 'discussion', []],
+  ]);
+  assert.deepStrictEqual(result.moves.get('Project:Server Performance → area: webapp'), { all: 2, open: 2 });
+  assert.deepStrictEqual(result.moves.get('Project:NPM → (deleted)'), { all: 1, open: 1 });
+  assert.match(
+    report(result, 'https://github.com/meteor/meteor'),
+    /end without an area\*\*:\n\n- \[#11696\]\(https:\/\/github.com\/meteor\/meteor\/discussions\/11696\) Item 11696\n/
+  );
 });
 
 test('lists the open items of each priority, and `Impact:few` or `Impact:some` give none', () => {
@@ -146,6 +173,12 @@ test('applies the decisions on single open items while a merged label is left in
     [14479, ['area: cli', 'experimental']],
   ]);
   assert.deepStrictEqual(result.decide.items.map(({ number }) => number), [14825, 14586, 14479]);
+  // The decisions name issues and pull requests: a discussion gets none.
+  const discussed = preview([item(14586, ['Project:NPM'], { state: 'open', discussion: true })], manifest, {
+    repoLabels: ['Project:NPM', 'bug'],
+  });
+  assert.deepStrictEqual(discussed.rows.map((row) => row.after), [[]]);
+  assert.deepStrictEqual(discussed.decide.items, []);
   // The lists of the summary follow the decisions.
   assert.deepStrictEqual(result.decide.priorities.get('priority: candidate'), []);
   assert.deepStrictEqual(result.decide.priorities.get('priority: critical').map(({ number }) => number), [14825]);
@@ -347,14 +380,27 @@ test('exports the current labels and writes the preview', async () => {
     item(2, ['Type:Bug'], { state: 'open', created_at: '2023-05-02T10:00:00Z', pull_request: {} }),
     item(3, ['help wanted']),
   ];
+  const discussions = [
+    { id: 'D_4', number: 4, title: 'Item 4', closed: false, createdAt: '2023-05-02T10:00:00Z', labels: { nodes: [{ name: 'bug' }] } },
+    { id: 'D_5', number: 5, title: 'Item 5', closed: true, createdAt: '2025-03-10T10:00:00Z', labels: { nodes: [] } },
+  ];
   const github = {
     rest: { issues: { listForRepo: 'items', listEvents: 'events', listLabelsForRepo: 'labels' } },
     paginate: async (method, params) => {
       if (method === 'items') return params.state === 'all' ? items : [];
-      // Issue 1 already had the legacy label once.
-      if (method === 'events') return [{ event: 'labeled', label: { name: 'legacy: needs-review' } }];
-      return [{ name: 'Type:Bug' }, { name: 'confirmed' }, { name: 'help wanted' }, { name: 'tip' }];
+      // Issue 1 already had the legacy label once. A discussion has no issue history.
+      if (method === 'events') {
+        if (params.issue_number !== 1) throw Object.assign(new Error('Not Found'), { status: 404 });
+        return [{ event: 'labeled', label: { name: 'legacy: needs-review' } }];
+      }
+      return [{ name: 'Type:Bug' }, { name: 'confirmed' }, { name: 'help wanted' }, { name: 'tip' }, { name: 'bug' }];
     },
+    // One discussion per page.
+    graphql: async (query, { after = 0 }) => ({
+      repository: {
+        discussions: { pageInfo: { hasNextPage: after + 1 < discussions.length, endCursor: after + 1 }, nodes: [discussions[after]] },
+      },
+    }),
   };
   let summary;
   const core = {
@@ -374,17 +420,23 @@ test('exports the current labels and writes the preview', async () => {
     assert.deepStrictEqual(JSON.parse(fs.readFileSync('labels-before.json', 'utf8'))[0], {
       number: 1,
       pull_request: false,
+      discussion: false,
       state: 'open',
       created_at: '2023-05-02T10:00:00Z',
       title: 'Item 1',
       labels: ['Type:Bug', 'confirmed'],
     });
+    assert.deepStrictEqual(JSON.parse(fs.readFileSync('labels-before.json', 'utf8')).slice(3), [
+      { number: 4, pull_request: false, discussion: true, state: 'open', created_at: '2023-05-02T10:00:00Z', title: 'Item 4', labels: ['bug'] },
+      { number: 5, pull_request: false, discussion: true, state: 'closed', created_at: '2025-03-10T10:00:00Z', title: 'Item 5', labels: [] },
+    ]);
     assert.deepStrictEqual(fs.readFileSync('labels-preview.csv', 'utf8').split('\n'), [
       'number,kind,state,before,after',
       '"1","issue","open","Type:Bug; confirmed","status: confirmed; type: bug"',
       '"2","pr","open","Type:Bug","type: bug"',
+      '"4","discussion","open","bug","type: bug"',
     ]);
-    assert.match(summary, /^## Label migration preview\n\n2 items change\./);
+    assert.match(summary, /^## Label migration preview\n\n3 items change\./);
     assert.match(summary, /\| tip → \(deleted\) \| 0 \| 0 \|/);
   } finally {
     process.chdir(cwd);
