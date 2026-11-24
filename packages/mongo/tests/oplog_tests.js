@@ -72,6 +72,41 @@ Tinytest.addAsync('mongo-livedata - oplog replacements preserve ownership fields
   }
 });
 
+Tinytest.addAsync('mongo-livedata - oplog $set on a top-level __proto__ field transfers ownership', async function(test) {
+  const collection = new Mongo.Collection('proto_owner_oplog_' + Random.id());
+  const raw = collection.rawCollection();
+  const events = {A: [], B: []};
+  const observers = [];
+  const writeAndWait = async modifier => {
+    const fence = new DDPServer._WriteFence;
+    await DDPServer._CurrentWriteFence.withValue(fence, () => collection.updateAsync('doc', modifier));
+    await fence.armAndWait();
+  };
+  try {
+    await raw.insertOne(JSON.parse('{"_id":"doc","__proto__":"A","secret":"s0"}'));
+    for (const owner of ['A', 'B']) {
+      const observer = await collection.find(JSON.parse(`{"__proto__":"${owner}"}`)).observeChangesAsync({
+        added(id, fields) { events[owner].push(['added', id, fields.secret]); },
+        changed(id, fields) { events[owner].push(['changed', id, fields.secret]); },
+        removed(id) { events[owner].push(['removed', id]); }
+      });
+      observers.push(observer);
+      test.isTrue(observer._multiplexer._observeDriver._usesOplog);
+    }
+
+    await writeAndWait({$set: JSON.parse('{"__proto__":"B"}')});
+    await writeAndWait({$set: {secret: 's1'}});
+
+    test.equal(events, {
+      A: [['added', 'doc', 's0'], ['removed', 'doc']],
+      B: [['added', 'doc', 's0'], ['changed', 'doc', 's1']]
+    });
+  } finally {
+    for (const observer of observers) await observer.stop();
+    await raw.deleteMany({});
+  }
+});
+
 var randomId = Random.id();
 var OplogCollection = new Mongo.Collection("oplog-" + randomId);
 
@@ -128,6 +163,40 @@ Tinytest.addAsync('mongo-livedata - oplog - cursorSupported', async function(
   // implement $elemMatch inside $all which MongoDB supports.)
   await supported(false, { x: { $all: [{ $elemMatch: { y: 2 } }] } });
 
+  // Selectors whose local re-match can diverge from MongoDB fall back to
+  // polling (see LocalCollection._liveReMatchDivergence).
+  // Numeric $type: Minimongo collapses JS number subtypes.
+  await supported(false, { foo: { $type: 'double' } });
+  await supported(false, { foo: { $type: 1 } });
+  // Negated $type (array) and negated document $elemMatch.
+  await supported(false, { foo: { $not: { $type: 4 } } });
+  await supported(false, { foo: { $not: { $elemMatch: { y: 2 } } } });
+  await supported(false, { $nor: [{ foo: { $elemMatch: { y: 2 } } }] });
+  // PCRE-only regex syntax (\A anchor, atomic group) is not JS-equivalent.
+  await supported(false, { foo: { $regex: '\\Aabc' } });
+  await supported(false, { foo: /\Aabc/ });
+  // These stay on oplog: plain $elemMatch and ordinary regex are fine.
+  await supported(true, { foo: { $elemMatch: { y: 2 } } });
+  await supported(true, { foo: { $regex: '^abc.*z$' } });
+  await supported(true, { foo: /^abc\d+$/i });
+  // Collations with no faithful Intl.Collator equivalent fall back; plain ones
+  // stay on oplog.
+  await supported(
+    false,
+    { foo: 'abc' },
+    { collation: { locale: 'en', strength: 2, caseLevel: true } }
+  );
+  await supported(
+    false,
+    { foo: 'abc' },
+    { collation: { locale: 'en', strength: 5 } }
+  );
+  await supported(
+    true,
+    { foo: 'abc' },
+    { collation: { locale: 'en', strength: 2 } }
+  );
+
   await supported(true, {}, { sort: { x: 1 } });
   await supported(true, {}, { sort: { x: 1 }, limit: 5 });
   await supported(false, {}, { sort: { $natural: 1 }, limit: 5 });
@@ -135,6 +204,83 @@ Tinytest.addAsync('mongo-livedata - oplog - cursorSupported', async function(
   await supported(false, {}, { skip: 2, limit: 5 });
   await supported(false, {}, { skip: 2 });
 });
+
+// Poll a condition until it holds or the timeout elapses. The polling fallback
+// re-queries MongoDB shortly after each local write, so this resolves quickly.
+const pollUntil = async function (conditionFn, timeoutMs = 5000, intervalMs = 50) {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if (await conditionFn()) return true;
+    await new Promise(r => setTimeout(r, intervalMs));
+  }
+  return false;
+};
+
+// Real-document coverage for the divergence fallback checked by cursorSupported
+// above: once the live oplog cursor is declined, a subscriber must only ever see
+// what MongoDB's query returns. `\A` anchors the match to the start of the
+// string in MongoDB's PCRE, but is a literal "A" in a JS RegExp, so Minimongo's
+// re-match diverges from MongoDB. A live driver re-checks later events with
+// Minimongo and would leak a MongoDB-excluded document; the polling fallback
+// cannot, because it re-queries MongoDB.
+Tinytest.addAsync(
+  'mongo-livedata - oplog - divergent selector polls MongoDB and never leaks excluded docs',
+  async function (test) {
+    const c = new Mongo.Collection('oplog_divergent_' + Random.id());
+
+    const events = [];
+    const handle = await c.find({ foo: /\Aabc/ }).observeChanges({
+      added(id, fields) { events.push({ type: 'added', id, fields }); },
+      changed(id, fields) { events.push({ type: 'changed', id, fields }); },
+      removed(id) { events.push({ type: 'removed', id }); },
+    });
+
+    // The divergent selector must decline the live oplog cursor and poll.
+    const driver = handle._multiplexer._observeDriver;
+    test.isFalse(!!driver._usesOplog, 'divergent selector must not use oplog');
+    test.isFalse(
+      !!driver._usesChangeStreams,
+      'divergent selector must not use change streams'
+    );
+
+    try {
+      // MongoDB excludes this ("Aabcxyz" does not start with "abc"), but
+      // Minimongo's /\Aabc/ matches the literal "Aabc" substring, so a live
+      // driver would re-match it locally and leak it.
+      await c.insertAsync({ _id: 'excluded', foo: 'Aabcxyz' });
+      // MongoDB includes this ("abcdef" starts with "abc"); Minimongo would not
+      // match it. It proves the fallback still delivers valid results.
+      await c.insertAsync({ _id: 'allowed', foo: 'abcdef' });
+
+      test.isTrue(
+        await pollUntil(() =>
+          events.some(e => e.type === 'added' && e.id === 'allowed')
+        ),
+        'a MongoDB-matching document must be delivered by the polling fallback'
+      );
+      test.isFalse(
+        events.some(e => e.id === 'excluded'),
+        'a document MongoDB excludes must never reach the observer'
+      );
+
+      // An update that keeps the excluded doc out of MongoDB's result set must
+      // not surface it either, though Minimongo would still "match" it.
+      events.length = 0;
+      await c.updateAsync('excluded', { $set: { foo: 'Aabc-updated' } });
+      await c.updateAsync('allowed', { $set: { marker: 1 } });
+      test.isTrue(
+        await pollUntil(() => events.some(e => e.id === 'allowed')),
+        'updates to a MongoDB-matching document must be delivered'
+      );
+      test.isFalse(
+        events.some(e => e.id === 'excluded'),
+        'updates to an excluded document must stay hidden'
+      );
+    } finally {
+      await handle.stop();
+    }
+  }
+);
 
 process.env.MONGO_OPLOG_URL &&
   testAsyncMulti('mongo-livedata - oplog - entry skipping', [

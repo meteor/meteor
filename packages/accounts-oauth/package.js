@@ -25,5 +25,13 @@ Package.onUse(api => {
 
 
 Package.onTest(api => {
+  api.use([
+    'accounts-oauth',
+    'ddp',
+    'ecmascript',
+    'random',
+    'service-configuration',
+    'tinytest',
+  ]);
   api.addFiles("oauth_tests.js", 'server');
 });
