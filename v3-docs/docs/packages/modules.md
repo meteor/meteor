@@ -153,6 +153,8 @@ module.exports.default = incompleteCountDenormalizer;
 
 You can also simply write `exports` instead of `module.exports` if you prefer. If you need to `require` from an ES2015 module with a `default` export, you can access the export with `require('package').default`.
 
+For a side-by-side comparison of ES modules and CommonJS, including static analysis, bindings, and common interop pitfalls such as default versus named imports, see [ESM vs CommonJS: interop, packaging, and build behavior](https://frontendatlas.com/javascript/trivia/js-esm-vs-cjs).
+
 There is a case where you might *need* to use CommonJS, even if your project has the `ecmascript` package: if you want to conditionally include a module. `import` statements must be at top-level scope, so they cannot be within an `if` block. If you’re writing a common file, loaded on both client and server, you might want to import a module in only one or the other environment:
 
 ```js
