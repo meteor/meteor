@@ -1,108 +1,39 @@
 /**
- * Migration to the labels of .github/labels.yml, run by .github/workflows/labels.yml.
+ * Labels what the sync of .github/labels.yml leaves out, run by
+ * .github/workflows/labels.yml.
  *
- * The sync renames the main old label of each new label (`from_name`). This script
- * covers what a rename cannot:
- * 1. Merges: every issue, pull request or discussion carrying one of the old labels
- *    below gets the new one, open items first, closed ones last. An old label the sync
- *    could not rename, because its new name already existed, is moved the same way.
+ * The sync creates the labels and renames the ones with a `from_name` line. This
+ * script covers the rest:
+ * 1. An old label the sync could not rename, because its new name already existed:
+ *    every issue, pull request or discussion carrying it gets the new one, open items
+ *    first, closed ones last.
  * 2. Open issues without any `status:` label get `status: needs-triage`.
  * 3. Open issues opened before Meteor 3.0 shipped, feature requests aside, get
  *    `legacy: needs-review`, once: an issue that ever had a `legacy:` label is
  *    skipped, so a triager who removed it after a check on 3.x keeps it removed.
- * 4. The open issues and pull requests decided one by one (ITEMS below) get and lose
- *    the labels listed there, as long as the migration lasts: until the merged labels
- *    are deleted.
  *
  * It is idempotent and stays under the hourly limits of the workflow token: when
- * one is reached it waits for it to clear and goes on, so one run migrates the whole
+ * one is reached it waits for it to clear and goes on, so one run labels the whole
  * repository. Close to the job's time limit it stops, and the next run picks up
  * where it left off.
- * It returns 0 when nothing is left to label, so the workflow deletes the old labels
- * only then: after a complete run it lists the old labels again and counts every item
- * still missing its new label. A run that stopped returns a number above 0, which is
- * not the count of what remains.
+ * It returns 0 when nothing is left to label: after a complete run it lists the old
+ * labels again and counts every item still missing its new label. The workflow deletes
+ * the labels missing from the manifest only then. An old label named by a `from_name`
+ * line is not one of them: it stays until that line is removed, after a run that
+ * returned 0. A run that stopped returns a number above 0, which is not the count of
+ * what remains.
  */
 const fs = require('fs');
 const path = require('path');
 
-const MERGES = {
-  bug: 'type: bug',
-  enhancement: 'type: feature',
-  'Project:Accounts (in user apps)': 'area: accounts',
-  'Project:Accounts:UI': 'area: accounts',
-  'Project:Accounts:OAuth': 'area: accounts',
-  'Project:Accounts:Passwordless': 'area: accounts',
-  'Project:Accounts:2fa': 'area: accounts',
-  'Project:roles': 'area: accounts',
-  'Project:JS Environment': 'area: build',
-  'Project:Isobuild:Minifiers': 'area: build',
-  'Project:Isobuild:Performance': 'area: build',
-  'Project:Isobuild:Compilers': 'area: build',
-  'Project:CSS': 'area: build',
-  'Project:HMR': 'area: build',
-  'Project:Dynamic Import': 'area: build',
-  'Project:Modules': 'area: build',
-  'Project:Tree shaking': 'area: build',
-  'legacy-build-stack': 'area: build',
-  'native-build-stack': 'area: build',
-  'Project:TypeScript-conversion': 'area: types',
-  TypeScript: 'area: types',
-  'Project:Tool:Shell': 'area: cli',
-  'Project:Installer': 'area: cli',
-  'Project:Version Solver': 'area: cli',
-  'Project:Guide': 'area: docs',
-  'Project:Apple': 'area: mobile',
-  'Project:Utilities': 'area: packages',
-  'Project:Utilities:HTTP': 'area: packages',
-  'Project:Imported Packages': 'area: packages',
-  'Project:Fetch': 'area: packages',
-  'Project:Webapp:Browser Policy': 'area: webapp',
-  'Project:Deploy Server': 'area: webapp',
-  'Project:Server Performance': 'area: webapp',
-  'waiting-feedback': 'status: needs-info',
-  'needs-investigation': 'status: confirmed',
-  'Impact:most': 'priority: critical',
-  hacktoberfest: 'help wanted',
-};
-
-// Open issues and pull requests decided one by one, on top of the renames and the
-// merges: the labels to add and to remove.
-const ITEMS = {
-  // `Project:NPM` is deleted. These items would end without any area, and #13436
-  // needs one more: a pull request gets the areas of the paths it changes
-  // (.github/labeler.yml), an issue the area it reports on.
-  11030: { add: ['area: build'] },
-  12329: { add: ['area: build'] },
-  13436: { add: ['area: build'] },
-  13597: { add: ['area: build'] },
-  13802: { add: ['area: build'] },
-  13936: { add: ['area: build'] },
-  14586: { add: ['area: cli'] },
-  14615: { add: ['area: cli'] },
-  14625: { add: ['area: cli'] },
-  14796: { add: ['area: cli', 'area: rspack'] },
-  14886: { add: ['area: rspack'] },
-  14889: { add: ['area: mobile'] },
-  // Experiments.
-  14218: { add: ['experimental'] },
-  14479: { add: ['experimental'] },
-  14751: { add: ['experimental'] },
-  // The npm dependencies with known CVEs: a security item, not a roadmap candidate.
-  14825: { add: ['type: security'], remove: ['type: bug', 'priority: candidate'] },
-};
-
 const NEEDS_TRIAGE = 'status: needs-triage';
 // `status: stale` says nothing about triage, so it does not count as a status here.
 const STALE = 'status: stale';
-// Status labels before the rename, so the dry run on the pull request is accurate.
-const OLD_STATUSES = ['triage', 'needs-reproduction', 'not-ready', 'waiting-feedback', 'confirmed',
-  'needs-investigation', 'in-discussion', 'ready', 'in-development', 'pending-tests'];
 const LEGACY_REVIEW = 'legacy: needs-review';
 // Meteor 3.0 shipped on July 15, 2024.
 const METEOR_3 = '2024-07-15';
-// Feature labels before and after the migration: a feature request is not tied to a release.
-const FEATURES = ['type: feature', 'Type:Feature', 'enhancement'];
+// A feature request is not tied to a release.
+const FEATURE = 'type: feature';
 // Requests kept in reserve for the other workflows sharing the token budget.
 const RESERVE = 200;
 // Writes per rolling hour, below GitHub's secondary limit of 500, which also counts
@@ -152,28 +83,13 @@ function readManifest(text) {
   return { names, renames };
 }
 
-// Whether the migration is still going on. It deletes the merged labels when it ends,
-// so one left in the repository says it has not, whichever items carry it, or none.
-// An old name the sync could not rename does not count: it stays until its
-// `from_name` line goes.
-const isMigrating = (repoLabels) => repoLabels.some((name) => MERGES[name]);
-
-// The decision taken on an item: open issues and pull requests only.
-const decisionFor = (item) => (item.state === 'open' && !item.discussion ? ITEMS[item.number] : undefined);
-
-// Whether a decision removes this label from the item: a move must not add it back.
-const removes = (item, label) => decisionFor(item)?.remove?.includes(label) ?? false;
-
 // An open issue without a status says nobody triaged it yet.
-const isUntriaged = (item) =>
-  !item.labels.some(
-    (label) => (label.name.startsWith('status: ') && label.name !== STALE) || OLD_STATUSES.includes(label.name)
-  );
+const isUntriaged = (item) => !item.labels.some((label) => label.name.startsWith('status: ') && label.name !== STALE);
 
 // Opened before 3.0, not a feature request, never reviewed.
 const isLegacy = (item) =>
   item.created_at < METEOR_3 &&
-  !item.labels.some((label) => label.name.startsWith('legacy: ') || FEATURES.includes(label.name));
+  !item.labels.some((label) => label.name.startsWith('legacy: ') || label.name === FEATURE);
 
 // Whether a `legacy:` label was ever added to the issue, even if removed since.
 // Only `labeled` and `unlabeled` events carry a label, and the issue events API
@@ -210,16 +126,17 @@ async function listDiscussions(github, { owner, repo }) {
   return discussions;
 }
 
-module.exports = async ({ github, context, dryRun, runTime = RUN_TIME }) => {
+module.exports = async ({ github, context, dryRun, runTime = RUN_TIME, manifest = fs.readFileSync(MANIFEST, 'utf8') }) => {
   const { owner, repo } = context.repo;
-  const { renames } = readManifest(fs.readFileSync(MANIFEST, 'utf8'));
-  // Old label → new label. A dry run comes before the sync, so it reads the labels as
-  // renamed. A real run comes after it: an old name still there is one the sync could
-  // not rename, and its items get the new label like those of a merge.
-  const moves = dryRun ? Object.entries(MERGES) : [...Object.entries(MERGES), ...renames];
-  const nameOf = (label) => (dryRun ? renames.get(label.name) ?? label.name : label.name);
-  const carries = (item, name) => item.labels.some((label) => nameOf(label) === name);
-  const planned = new Set();
+  const { renames } = readManifest(manifest);
+  // Old label → new label. A dry run comes before the sync, so it has nothing to move.
+  // A real run comes after it: an old name still there is one the sync could not
+  // rename, and its items get the new label.
+  const moves = dryRun ? [] : [...renames];
+  // The triage reads an old name as its new label: the item gets it from the rename,
+  // or from the move.
+  const renamed = (item) => ({ ...item, labels: item.labels.map(({ name }) => ({ name: renames.get(name) ?? name })) });
+  const carries = (item, name) => item.labels.some((label) => label.name === name);
   const stopAt = Date.now() + runTime;
   // Times of the writes in the last hour.
   const writes = [];
@@ -293,27 +210,13 @@ module.exports = async ({ github, context, dryRun, runTime = RUN_TIME }) => {
     ),
   ];
 
-  // Someone may have removed the label since the item was listed: GitHub answers 404,
-  // and nothing is left to do.
-  const removeLabel = (target, name) =>
-    github.rest.issues.removeLabel({ ...target, name }).catch((error) => {
-      if (error.status !== 404) throw error;
-      return { headers: error.response?.headers ?? {} };
-    });
-
-  // Adds the label to the item, or removes it.
-  async function change(item, label, remove = false) {
-    const sign = remove ? '-' : '+';
-    // An item can carry several old labels merging into the same new one.
-    const key = `${item.number} ${sign} ${label}`;
-    if (planned.has(key)) return;
-    planned.add(key);
+  // Adds the label to the item.
+  async function change(item, label) {
     let response = null;
     if (!dryRun && left === 0 && (await waitForBudget())) {
-      const target = { owner, repo, issue_number: item.number };
       response = await request(() => {
         if (item.discussion) return github.graphql(ADD_LABEL, { item: item.node_id, label: labelIds.get(label) });
-        return remove ? removeLabel(target, label) : github.rest.issues.addLabels({ ...target, labels: [label] });
+        return github.rest.issues.addLabels({ owner, repo, issue_number: item.number, labels: [label] });
       });
     }
     if (!response) {
@@ -321,7 +224,7 @@ module.exports = async ({ github, context, dryRun, runTime = RUN_TIME }) => {
         console.log('Stopping here: the next run does the rest');
       }
       left++;
-      console.log(`#${item.number}: ${sign} ${label}`);
+      console.log(`#${item.number}: + ${label}`);
       return;
     }
     // An answer of the REST API tells what is left of its hourly budget.
@@ -342,27 +245,26 @@ module.exports = async ({ github, context, dryRun, runTime = RUN_TIME }) => {
     for (const [oldLabel, newLabel] of moves) {
       if (stopped()) return;
       for (const item of await carrying(oldLabel, state)) {
-        if (!carries(item, newLabel) && !removes(item, newLabel)) {
+        if (!carries(item, newLabel)) {
           await change(item, newLabel);
         }
       }
     }
   }
 
-  // The labels of the repository tell whether the migration is still going on, and the
-  // discussions cannot be listed label by label. Both are read first, before anything
-  // can stop the run.
+  // A discussion is labelled by the id of the label, and the discussions cannot be
+  // listed label by label. Both are read first, before anything can stop the run.
   const repoLabels = await read(() =>
     github.paginate(github.rest.issues.listLabelsForRepo, { owner, repo, per_page: 100 })
   );
   const labelIds = new Map(repoLabels.map((label) => [label.name, label.node_id]));
   let discussions = await read(() => listDiscussions(github, context.repo));
 
-  // Open items first (about 300 writes, minutes), then the history of closed ones.
+  // Open items first, then the history of closed ones.
   await moveItems('open');
 
   const open = await list({ state: 'open' });
-  for (const item of open) {
+  for (const item of open.map(renamed)) {
     if (item.pull_request) continue;
     if (stopped()) break;
     if (isUntriaged(item)) {
@@ -373,29 +275,15 @@ module.exports = async ({ github, context, dryRun, runTime = RUN_TIME }) => {
     }
   }
 
-  // The decisions belong to the migration: once it is over, these items are left to
-  // the triagers.
-  if (isMigrating(repoLabels.map((label) => label.name))) {
-    for (const item of open) {
-      const { add = [], remove = [] } = decisionFor(item) ?? {};
-      for (const label of add) {
-        if (!carries(item, label)) await change(item, label);
-      }
-      for (const label of remove) {
-        if (carries(item, label)) await change(item, label, true);
-      }
-    }
-  }
-
   await moveItems('closed');
 
-  // Before the old labels are deleted, read them again, and the discussions with them:
-  // every item still carrying one must already carry its new label.
+  // Before saying that nothing is left, read the old labels again, and the discussions
+  // with them: every item still carrying one must already carry its new label.
   if (!dryRun && left === 0) {
     discussions = await read(() => listDiscussions(github, context.repo));
     for (const [oldLabel, newLabel] of moves) {
       for (const item of await carrying(oldLabel, 'all')) {
-        if (!carries(item, newLabel) && !removes(item, newLabel)) {
+        if (!carries(item, newLabel)) {
           left++;
           console.log(`#${item.number}: still without ${newLabel}`);
         }
@@ -409,10 +297,6 @@ module.exports = async ({ github, context, dryRun, runTime = RUN_TIME }) => {
 
 Object.assign(module.exports, {
   MANIFEST,
-  MERGES,
-  ITEMS,
-  decisionFor,
-  isMigrating,
   NEEDS_TRIAGE,
   LEGACY_REVIEW,
   readManifest,
