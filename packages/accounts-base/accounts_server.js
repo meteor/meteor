@@ -790,8 +790,20 @@ export class AccountsServer extends AccountsCommon {
 
     // Allow a one-time configuration for a login service. Modifications
     // to this collection are also allowed in insecure mode.
-    methods.configureLoginService = async (options) => {
+    methods.configureLoginService = async function (options) {
       check(options, Match.ObjectIncluding({service: String}));
+      // A client could claim an unconfigured service before the app owner.
+      // Server calls have no connection and remain allowed.
+      const allowClient = accounts._options.allowClientServiceConfiguration
+        ?? Meteor.isDevelopment;
+      if (this.connection && !allowClient) {
+        throw new Meteor.Error(
+          403,
+          "Configuring login services from the client is disabled. " +
+            "Use ServiceConfiguration on the server instead."
+        );
+      }
+
       // Don't let random users configure a service we haven't added yet (so
       // that when we do later add it, it's set up with their configuration
       // instead of ours).
@@ -1172,6 +1184,35 @@ export class AccountsServer extends AccountsCommon {
     };
 
     await expirePasswordToken(this, oldestValidDate, tokenFilter, userId);
+  }
+
+  // Optional arguments scope expiry to a test user and cutoff.
+  async _expireEmailVerificationTokens(oldestValidDate, userId) {
+    const tokenLifetimeMs = this._getEmailVerificationTokenLifetimeMs();
+
+    if ((oldestValidDate && !userId) || (!oldestValidDate && userId)) {
+      throw new Error("Bad test. Must specify both oldestValidDate and userId.");
+    }
+
+    oldestValidDate = oldestValidDate ||
+      (new Date(new Date() - tokenLifetimeMs));
+    const userFilter = userId ? {_id: userId} : {};
+
+    await this.users.updateAsync({ ...userFilter,
+      $or: [
+        { "services.email.verificationTokens.when": { $lt: oldestValidDate } },
+        { "services.email.verificationTokens.when": { $lt: +oldestValidDate } }
+      ]
+    }, {
+      $pull: {
+        "services.email.verificationTokens": {
+          $or: [
+            { when: { $lt: oldestValidDate } },
+            { when: { $lt: +oldestValidDate } }
+          ]
+        }
+      }
+    }, { multi: true });
   }
 
   // Deletes expired tokens from the database and closes all open connections
@@ -1808,6 +1849,7 @@ const setExpireTokensInterval = accounts => {
    await accounts._expireTokens();
    await accounts._expirePasswordResetTokens();
    await accounts._expirePasswordEnrollTokens();
+   await accounts._expireEmailVerificationTokens();
   }, EXPIRE_TOKENS_INTERVAL_MS);
 };
 
@@ -1915,6 +1957,7 @@ const setupUsersCollection = async users => {
   // For expiring password tokens
   await users.createIndexAsync('services.password.reset.when', { sparse: true });
   await users.createIndexAsync('services.password.enroll.when', { sparse: true });
+  await users.createIndexAsync('services.email.verificationTokens.when', { sparse: true });
 };
 
 
