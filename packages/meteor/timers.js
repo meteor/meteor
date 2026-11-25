@@ -13,7 +13,10 @@ function withoutInvocation(f) {
     }
 
     return function () {
-      CurrentInvocation.withValue(null, f);
+      // Return the callback result so bindEnvironment can attach .catch
+      // to a rejected promise. Dropping it made async timer callbacks an
+      // unhandled rejection, which exits the server.
+      return CurrentInvocation.withValue(null, f);
     };
   }
   return f;
