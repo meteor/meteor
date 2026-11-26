@@ -13,21 +13,24 @@ const {
   NEEDS_TRIAGE,
   LEGACY_REVIEW,
   readManifest,
+  renamed,
   hadLegacyLabel,
   listDiscussions,
   isUntriaged,
   isLegacy,
 } = require('./relabel.js');
 
-// The labels an item carries once the sync and relabel.js are done. `reviewed` holds
-// the numbers of the issues that already had a `legacy:` label, which relabel.js skips.
+// The labels an item carries once the sync and relabel.js are done and the `from_name`
+// lines removed: an old name the sync could not rename stays on its items until then.
+// `reviewed` holds the numbers of the issues that already had a `legacy:` label, which
+// relabel.js skips.
 function labelsAfter(item, { names, renames }, reviewed = new Set()) {
-  const after = new Set(item.labels.map((label) => renames.get(label.name) ?? label.name));
+  // As relabel.js does, read the labels as renamed.
+  const renamedItem = renamed(item, renames);
+  const after = new Set(renamedItem.labels.map((label) => label.name));
   if (item.state === 'open' && !item.pull_request && !item.discussion) {
-    // relabel.js comes after the sync: it reads the labels as renamed.
-    const renamed = { ...item, labels: [...after].map((name) => ({ name })) };
-    if (isUntriaged(renamed)) after.add(NEEDS_TRIAGE);
-    if (isLegacy(renamed) && !reviewed.has(item.number)) after.add(LEGACY_REVIEW);
+    if (isUntriaged(renamedItem)) after.add(NEEDS_TRIAGE);
+    if (isLegacy(renamedItem) && !reviewed.has(item.number)) after.add(LEGACY_REVIEW);
   }
   return [...after].filter((name) => names.has(name)).sort();
 }
@@ -118,15 +121,15 @@ const csvCell = (value) => `"${String(value).replace(/"/g, '""')}"`;
 module.exports = async ({ github, context, core, manifest = fs.readFileSync(MANIFEST, 'utf8') }) => {
   const { owner, repo } = context.repo;
   const issues = await github.paginate(github.rest.issues.listForRepo, { owner, repo, state: 'all', per_page: 100 });
+  const parsed = readManifest(manifest);
   const reviewed = new Set();
   for (const item of issues) {
-    if (item.state === 'open' && !item.pull_request && isLegacy(item) && (await hadLegacyLabel(github, context.repo, item))) {
-      reviewed.add(item.number);
-    }
+    const legacy = item.state === 'open' && !item.pull_request && isLegacy(renamed(item, parsed.renames));
+    if (legacy && (await hadLegacyLabel(github, context.repo, item))) reviewed.add(item.number);
   }
   const items = [...issues, ...(await listDiscussions(github, context.repo))];
   const repoLabels = await github.paginate(github.rest.issues.listLabelsForRepo, { owner, repo, per_page: 100 });
-  const result = preview(items, readManifest(manifest), {
+  const result = preview(items, parsed, {
     reviewed,
     repoLabels: repoLabels.map((label) => label.name),
   });

@@ -34,11 +34,11 @@ One or more per item. Pull requests get them automatically from the paths they c
 | `area: blaze` | Blaze integration in this repository (Blaze itself lives in [meteor/blaze](https://github.com/meteor/blaze)) |
 | `area: build` | Isobuild, compilers, minifiers, modules, HMR, CSS, Babel and SWC |
 | `area: cli` | the `meteor` command: tool, shell, installer, version solver, self-tests |
-| `area: core` | runtime packages: meteor, core-runtime, EJSON, check, logging, random |
+| `area: core` | runtime packages: meteor, core-runtime, EJSON, check, random |
 | `area: create` | `meteor create`, skeletons and example apps |
 | `area: ddp` | DDP client and server, transports, methods and subscriptions |
 | `area: docs` | pull requests that change the docs or the guide and nothing else |
-| `area: instrumentation` | instrumentation and OpenTelemetry, while this roadmap front is active (then `area: core`) |
+| `area: instrumentation` | instrumentation, logging and OpenTelemetry, while this roadmap front is active (then `area: core`) |
 | `area: livequery` | oplog, change streams and the observe drivers |
 | `area: minimongo` | Minimongo: client collections, selectors, modifiers, observe |
 | `area: mobile` | Cordova, Capacitor, iOS and Android builds |
