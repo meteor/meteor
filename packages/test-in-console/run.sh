@@ -124,10 +124,17 @@ export URL="http://127.0.0.1:${TEST_PORT}/"
 export METEOR_PACKAGE_DIRS='packages/deprecated'
 export METEOR_NO_DEPRECATION=true
 
+# TEST_EXTRA_PACKAGES adds packages to the test app without testing them, e.g.
+# "npm-mongo-next" to run the suite against the next MongoDB driver.
+TEST_ARGS=(--driver-package test-in-console -p "${TEST_PORT}" --exclude "${TEST_PACKAGES_EXCLUDE:-}")
+if [ -n "${TEST_EXTRA_PACKAGES:-}" ]; then
+  TEST_ARGS+=(--extra-packages "${TEST_EXTRA_PACKAGES}")
+fi
+
 if [ "$#" -gt 0 ]; then
-  exec 3< <(./meteor test-packages --driver-package test-in-console -p "${TEST_PORT}" --exclude "${TEST_PACKAGES_EXCLUDE:-}" "$1")
+  exec 3< <(./meteor test-packages "${TEST_ARGS[@]}" "$1")
 else
-  exec 3< <(./meteor test-packages --driver-package test-in-console -p "${TEST_PORT}" --exclude "${TEST_PACKAGES_EXCLUDE:-}")
+  exec 3< <(./meteor test-packages "${TEST_ARGS[@]}")
 fi
 EXEC_PID=$!
 OUTPUT_PID=""

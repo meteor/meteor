@@ -21,22 +21,35 @@ if (
 
 NpmMongoTest = { redactMongoUrl };
 
-const useLegacyMongo = !!Package['npm-mongo-legacy']
+// An app picks a different driver by adding one of these packages. Both load
+// before npm-mongo when present: npm-mongo-next as a weak dependency, and
+// npm-mongo-legacy because the tool lists it ahead of mongo in .meteor/packages.
+const legacyMongo = Package['npm-mongo-legacy'];
+const nextMongo = Package['npm-mongo-next'];
+
+if (legacyMongo && nextMongo) {
+  throw new Error(
+    'npm-mongo-legacy and npm-mongo-next select different MongoDB drivers ' +
+    'and cannot be used together. Remove one of them with `meteor remove`.'
+  );
+}
+
+const selectedMongo = nextMongo || legacyMongo;
 const oldNoDeprecationValue = process.noDeprecation;
 
-useLegacyMongo && console.log('WARN: npm-mongo-legacy package detected, using package for mongo <= 3.6');
+legacyMongo && console.log('WARN: npm-mongo-legacy package detected, using package for mongo <= 3.6');
 
 try {
   // Silence deprecation warnings introduced in a patch update to mongodb:
   // https://github.com/meteor/meteor/pull/9942#discussion_r218564879
   process.noDeprecation = true;
-  NpmModuleMongodb = useLegacyMongo
-    ? Package['npm-mongo-legacy'].NpmModuleMongodb
+  NpmModuleMongodb = selectedMongo
+    ? selectedMongo.NpmModuleMongodb
     : Npm.require('mongodb');
 } finally {
   process.noDeprecation = oldNoDeprecationValue;
 }
 
-NpmModuleMongodbVersion = useLegacyMongo
-  ? Package['npm-mongo-legacy'].NpmModuleMongodbVersion
+NpmModuleMongodbVersion = selectedMongo
+  ? selectedMongo.NpmModuleMongodbVersion
   : Npm.require('mongodb/package.json').version;
