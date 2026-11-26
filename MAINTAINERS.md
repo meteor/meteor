@@ -12,8 +12,8 @@ Find an area you use, see who looks after it, and open its issues or pull reques
 
 | Area | What we look after | Core Maintainers | Open work |
 | --- | --- | --- | --- |
-| `area: accounts` | Accounts and OAuth |  | [Issues](https://github.com/meteor/meteor/issues?q=is%3Aopen%20is%3Aissue%20label%3A%22area%3A%20accounts%22) · [PRs](https://github.com/meteor/meteor/pulls?q=is%3Aopen%20is%3Apr%20label%3A%22area%3A%20accounts%22) |
-| `area: blaze` | Blaze integration in core |  | [Issues](https://github.com/meteor/meteor/issues?q=is%3Aopen%20is%3Aissue%20label%3A%22area%3A%20blaze%22) · [PRs](https://github.com/meteor/meteor/pulls?q=is%3Aopen%20is%3Apr%20label%3A%22area%3A%20blaze%22) |
+| `area: accounts` | Accounts and OAuth | @dupontbertrand | [Issues](https://github.com/meteor/meteor/issues?q=is%3Aopen%20is%3Aissue%20label%3A%22area%3A%20accounts%22) · [PRs](https://github.com/meteor/meteor/pulls?q=is%3Aopen%20is%3Apr%20label%3A%22area%3A%20accounts%22) |
+| `area: blaze` | Blaze integration in core | @dupontbertrand | [Issues](https://github.com/meteor/meteor/issues?q=is%3Aopen%20is%3Aissue%20label%3A%22area%3A%20blaze%22) · [PRs](https://github.com/meteor/meteor/pulls?q=is%3Aopen%20is%3Apr%20label%3A%22area%3A%20blaze%22) |
 | `area: build` | Isobuild, compilers and minifiers |  | [Issues](https://github.com/meteor/meteor/issues?q=is%3Aopen%20is%3Aissue%20label%3A%22area%3A%20build%22) · [PRs](https://github.com/meteor/meteor/pulls?q=is%3Aopen%20is%3Apr%20label%3A%22area%3A%20build%22) |
 | `area: cli` | CLI, installer and version solver |  | [Issues](https://github.com/meteor/meteor/issues?q=is%3Aopen%20is%3Aissue%20label%3A%22area%3A%20cli%22) · [PRs](https://github.com/meteor/meteor/pulls?q=is%3Aopen%20is%3Apr%20label%3A%22area%3A%20cli%22) |
 | `area: core` | Meteor runtime |  | [Issues](https://github.com/meteor/meteor/issues?q=is%3Aopen%20is%3Aissue%20label%3A%22area%3A%20core%22) · [PRs](https://github.com/meteor/meteor/pulls?q=is%3Aopen%20is%3Apr%20label%3A%22area%3A%20core%22) |
