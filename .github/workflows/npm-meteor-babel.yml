@@ -14,7 +14,7 @@ jobs:
   test:
     uses: ./.github/workflows/linux-check.yml
     with:
-      image: node:14-bullseye
+      image: node:26-bookworm
       directory: npm-packages/meteor-babel
       npm-lockfile: npm-packages/meteor-babel/package-lock.json
       command: |
