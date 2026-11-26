@@ -43,22 +43,24 @@ concurrency:
 
 jobs:
   labels:
-    # Forks keep their own labels: this only runs in the main repository.
-    if: github.repository == 'meteor/meteor'
-    runs-on: ubuntu-latest
-    # relabel.js stops after 5 hours, under the 6 hour limit of a job.
+    # Pull requests and dispatches outside devel only preview changes.
+    if: github.repository == 'meteor/meteor' && (github.event_name == 'pull_request' || github.ref != 'refs/heads/devel')
+    runs-on: oss-vm
     timeout-minutes: 330
     permissions:
       contents: read
-      issues: write
-      pull-requests: write
-      discussions: write
+      issues: read
+      pull-requests: read
+      discussions: read
     env:
-      # Only devel applies; a pull request or a dispatch on another branch is a dry run.
-      APPLY: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/devel' }}
-    steps:
+      APPLY: 'false'
+    steps: &label-steps
       - name: Checkout
         uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
 
       - name: Test the label scripts
         timeout-minutes: 5
@@ -106,3 +108,18 @@ jobs:
       - name: Delete labels missing from the manifest
         if: env.APPLY == 'true' && steps.relabel.outputs.left == '0'
         uses: crazy-max/ghaction-github-labeler@v6
+
+  apply:
+    # Take the label backup and apply changes on the same fresh runner.
+    if: github.repository == 'meteor/meteor' && github.event_name != 'pull_request' && github.ref == 'refs/heads/devel'
+    runs-on: ubuntu-latest
+    # relabel.js stops after 5 hours, under the 6 hour limit of a job.
+    timeout-minutes: 330
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+      discussions: write
+    env:
+      APPLY: 'true'
+    steps: *label-steps

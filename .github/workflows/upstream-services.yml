@@ -17,7 +17,7 @@ permissions:
 jobs:
   probe:
     name: Upstream services
-    runs-on: ubuntu-latest
+    runs-on: oss-vm
     timeout-minutes: 5
     steps:
       - name: Checkout code

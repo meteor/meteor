@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: oss-vm
     defaults:
       run:
         working-directory: v3-docs/docs

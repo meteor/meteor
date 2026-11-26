@@ -4,16 +4,16 @@ name: Test Deprecated Packages
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: oss-vm
     concurrency:
       group: ${{ github.head_ref }}-test-deprecated-packages
       cancel-in-progress: true
     timeout-minutes: 60
-
-    env:
-      PUPPETEER_DOWNLOAD_PATH: /home/runner/.npm/chromium
 
     steps:
       - name: Update and install dependencies
@@ -35,7 +35,6 @@ jobs:
             .meteor
             .babel-cache
             dev_bundle
-            /home/runner/.npm/chromium
           key: ${{ runner.os }}-node-${{ hashFiles('meteor', '**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-

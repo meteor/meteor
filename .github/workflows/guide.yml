@@ -3,9 +3,16 @@ on:
   pull_request:
     paths:
       - 'guide/**/*'
+
+permissions:
+  contents: read
+  deployments: write
+  statuses: write
+
 jobs:
   preview:
-    runs-on: ubuntu-latest
+    # Fork PRs build without deployment secrets. Netlify previews use a fresh VM.
+    runs-on: ${{ github.event.pull_request.head.repo.full_name == github.repository && 'ubuntu-latest' || 'oss-vm' }}
     defaults:
       run:
         working-directory: guide/
@@ -17,6 +24,7 @@ jobs:
       - name: Build the Guide
         run: npm ci && npm run build
       - name: Deploy to Netlify for preview
+        if: github.event.pull_request.head.repo.full_name == github.repository
         uses: nwtgck/actions-netlify@v4.0.0
         with:
           publish-dir: './guide/public'

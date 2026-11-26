@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: oss-vm
     defaults:
       run:
         working-directory: npm-packages/eslint-plugin-meteor

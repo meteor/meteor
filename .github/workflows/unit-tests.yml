@@ -21,10 +21,13 @@ concurrency:
   group: unit-tests-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Unit Tests
-    runs-on: ubuntu-latest
+    runs-on: oss-vm
 
     steps:
       - name: Checkout code

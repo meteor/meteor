@@ -21,7 +21,7 @@ permissions:
 jobs:
   actionlint:
     name: actionlint
-    runs-on: ubuntu-latest
+    runs-on: oss-vm
     steps:
       - name: Checkout
         uses: actions/checkout@v4

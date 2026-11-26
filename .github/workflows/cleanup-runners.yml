@@ -20,7 +20,7 @@ permissions:
 jobs:
   cleanup:
     name: Cleanup (${{ inputs.runner_label }})
-    runs-on: ${{ inputs.runner_label }}
+    runs-on: [self-hosted, linux, "${{ inputs.runner_label }}"]
     steps:
       - name: Run runner cleanup
         uses: actions/github-script@v9
