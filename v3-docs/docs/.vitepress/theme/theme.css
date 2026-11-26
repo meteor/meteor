@@ -561,3 +561,8 @@
 :root {
   --vp-z-index-nav: 100;
 }
+
+.roadmap-releases td a {
+  display: inline-block;
+  vertical-align: middle;
+}

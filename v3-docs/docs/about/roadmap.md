@@ -4,7 +4,7 @@ Describes the high-level features and actions for the Meteor project in the near
 
 ## Introduction
 
-**Last updated: November 19, 2026.**
+**Last updated: November 26, 2026.**
 
 The description of many items includes sentences and ideas from Meteor community members.
 
@@ -26,13 +26,14 @@ Sponsorship funds go back into the community through the [Meteor Contributor Spo
 
 ## Current projects
 
-Our immediate focus is stabilizing recent releases and addressing security reports, alongside the ongoing Capacitor and Blaze work.
+Our immediate focus is stabilizing recent releases and addressing security reports, alongside work on Capacitor, Blaze, and email-based two-factor authentication.
 
 ### Release stabilization
 
 > Resolve regressions reported against Meteor 3.6 and earlier affected releases, and turn application feedback into validated patch releases.
 
 **Status:** Working through reported issues and release follow-ups for Meteor 3.6.2.
+
 **Goal:** Prioritize production-impacting regressions, reproduce failures, add meaningful regression coverage, and validate fixes on the affected release lines. This includes reviewing community fixes and preparing backports where needed.
 
 🔗 [Meteor 3.6.2 stabilization milestone](https://github.com/meteor/meteor/milestone/135)
@@ -41,7 +42,8 @@ Our immediate focus is stabilizing recent releases and addressing security repor
 
 > Investigate current security reports and dependency advisories, validate fixes, and coordinate updates for affected releases.
 
-**Status:** Ongoing review and remediation for upcoming Meteor 3.6.x patches and backported releases, following the security releases [3.6.1](/history#v3-6-1-2026-11-12), [3.5.5](/history#v3-5-5-2026-11-12), and [3.4.4](/history#v3-4-4-2026-11-12).
+**Status:** We are reviewing security fixes for Meteor 3.6.2 and backports for affected releases, following the security releases [3.6.1](/history#v3-6-1-2026-11-12), [3.5.5](/history#v3-5-5-2026-11-12), and [3.4.4](/history#v3-4-4-2026-11-12).
+
 **Goal:** Address newly reported vulnerabilities and remaining hardening work, verify compatibility and upgrade behavior, and prepare the necessary security backports for affected earlier release lines. Security fixes may ship alongside the stabilization work above or in separate security releases, depending on urgency and readiness. Published fixes are recorded in the delivered security project below.
 
 ### Native stack (CapacitorJS)
@@ -53,6 +55,7 @@ Our immediate focus is stabilizing recent releases and addressing security repor
 🔗 [CapacitorJS is coming to Meteor as its modern native stack](https://forums.meteor.com/t/capacitorjs-is-coming-to-meteor-as-its-modern-native-stack/64722)
 
 **Status:** Experimental integration available from a source checkout ([PR](https://github.com/meteor/meteor/pull/14633)). The implementation includes Capacitor 8, native plugins, bundled and live-reload modes, Hot Code Push, production builds, a Cordova migration guide, and [companion examples](https://github.com/meteor/examples/pull/47).
+
 **Goal:** Prepare an initial opt-in beta and gather real application and Cordova migration feedback. Broader Android and iOS validation, review, and adoption feedback will guide the path to a stable release.
 
 The integration introduces reusable tool-extension APIs so native targets can evolve through packages. Cordova remains supported while Capacitor is developed.
@@ -62,21 +65,40 @@ The integration introduces reusable tool-extension APIs so native targets can ev
 > Modernize Blaze with an optional jQuery dependency, native DOM event handling, and improvements to async helpers, reactive updates, and error reporting. Preserve a compatibility path for applications using jQuery.
 
 **Status:** [Blaze 3.1](https://github.com/meteor/blaze/pull/492) has published `3.1.0-beta.1`. [Meteor integration](https://github.com/meteor/meteor/pull/14754) and [documentation deployment](https://github.com/meteor/blaze/pull/531) remain in progress.
+
 **Goal:** Consolidate the beta through application feedback, validate the native and jQuery backends with Meteor, finish the documentation rollout, and prepare RC and stable releases.
+
+### Email codes for two-factor authentication
+
+> Give apps using `accounts-2fa` the option to send a sign-in code by email for users who cannot use an authenticator app.
+
+**Status:** A [community PR](https://github.com/meteor/meteor/pull/14819) implements email codes alongside the existing authenticator flow.
+
+**Goal:** Review and test both sign-in flows and ship the email option in Meteor 3.7.
 
 ## Next priorities
 
-These priorities remain on the roadmap beyond our immediate focus. Together with the current projects above, they will form the basis of a new roadmap for 2027, where scope, sequencing, and release targets will be refined.
+For Meteor 3.8, we plan to ship Rstest for Meteor apps and packages and the first phase of OpenTelemetry support. These projects and the work above will also inform the 2027 roadmap.
 
-* Testing infrastructure for Meteor applications and packages ([PR](https://github.com/meteor/meteor/pull/14804))
+* Rstest for Meteor applications and packages ([PR](https://github.com/meteor/meteor/pull/14804))
 > Provide a modern workflow for unit, component, browser, end-to-end, and real Meteor runtime tests. An experimental Rstest integration already implements application and Atmosphere package testing, snapshots, coverage, watch mode, and isolated runtime workers. Further review, compatibility validation, and publication remain ahead of broader adoption. 🔗 [Discussion](https://forums.meteor.com/t/meteor-rstest-a-natural-modern-testing-integration-for-meteor-rspack-apps/64744)
 
 * OpenTelemetry & Observability support ([PR](https://github.com/meteor/meteor/pull/14086))
-> Build on the [`instrumentation` package](/packages/instrumentation) delivered in Meteor 3.6 to provide OpenTelemetry support. The proposed integration remains unreleased, with the following goals:
-> - Phase 1: Validate and ship server-side tracing and metrics for methods, publications, and DDP connections.
-> - Phase 2: Extend observability with logging and HTTP/MongoDB instrumentation integrations.
+> Build on the [`instrumentation` package](/packages/instrumentation) delivered in Meteor 3.6 to provide OpenTelemetry support. The goal for 3.8 is to validate the exporter and ship server-side tracing and metrics for methods, publications, and DDP connections. Logging and instrumentation for HTTP and MongoDB are planned for a later release.
 
 Beyond these, each release includes runtime and dependency updates, security and reliability fixes, Meteor core code quality improvements, documentation, and community contributions. Release scope is tracked in the [milestones](https://github.com/meteor/meteor/milestones); work in progress is subject to review and validation before inclusion.
+
+## 🤝 Help with an upcoming release
+
+<div class="roadmap-releases">
+
+<!-- @include: ../../../README.md#release-collaboration -->
+
+[roadmap-priorities]: #next-priorities
+
+</div>
+
+[View the release table in the repository README](https://github.com/meteor/meteor/blob/devel/README.md#-help-with-an-upcoming-release)
 
 ## Delivered project: Modern Build Stack ✅
 
@@ -118,11 +140,13 @@ Beyond these, each release includes runtime and dependency updates, security and
 ### Phase 1: Default implementation
 
 **Delivered in:** [3.5](/history#v3-5-0-2026-06-30) ✅
+
 **Goal:** Ship MongoDB Change Streams support in Meteor. Change Streams became the **default** reactivity engine in 3.5 for supported MongoDB deployments and queries, with `oplog` and `polling` as automatic fallbacks. Applications can still force `oplog` via `settings.json` (`packages.mongo.reactivity`) or the `METEOR_REACTIVITY_ORDER` environment variable.
 
 ### Phase 2: Hardening & real-world feedback
 
 **Delivered across:** [3.5.1](/history#v3-5-1-2026-08-04) to [3.6](/history#v3-6-0-2026-11-10) ✅
+
 **Goal:** Improve recovery, write synchronization, and query compatibility based on application feedback. Shipped fixes cover lost stream history, stalled methods, multiple MongoDB connections, snapshot/event races, oversized change events, and fallback for unsupported selectors. Performance still depends on the application's queries and database workload; ongoing fixes continue through regular releases.
 
 ## Delivered project: Security hardening & backports ✅
