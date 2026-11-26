@@ -262,7 +262,7 @@ The applications are built and deployed independently, but their shared database
 - Configure the same production `MONGO_URL` in both deployments.
 - Deploy backward-compatible schema changes before code that requires them.
 - Keep collection indexes idempotent and decide which app owns data migrations.
-- Ensure only one app owns scheduled jobs, email delivery, billing, and similar side effects unless duplicates are safe.
+- Ensure only one app owns scheduled jobs, email delivery, billing, and similar side effects unless duplicates are safe. See [Background Jobs](/tutorials/background-jobs/background-jobs) for the job options and how they behave with several instances.
 - Test the supported combinations when the customer and admin apps can run different versions.
 
 In-process events, timers, and memory are not shared between the apps. If a customer write must reliably trigger admin-side work, use a durable job, a database-backed handoff, or an explicit DDP/HTTP call.

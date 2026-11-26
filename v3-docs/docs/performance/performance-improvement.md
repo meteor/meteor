@@ -142,6 +142,8 @@ In general heavy tasks that take a lot of resources or take long and block the s
 
 Reoccurring jobs are another prime candidate to be taken out into its own application. What this means is that you will have an independent server that is going to be tasked with running the reoccurring jobs and the main application will only add to the list and be recipient of the results, most likely via database results.
 
+See [Background Jobs](/tutorials/background-jobs/background-jobs) for the job packages and libraries available for Meteor 3 and how they behave with several instances.
+
 ### Rate limiting
 
 Rate limit your methods to reduce effectiveness of DDoS attacks and spare your server. This is also a good practice to ensure that you don't accidentally DDoS yourself. For example a user who clicks multiple times on a button that triggers an expensive function.
