@@ -101,6 +101,16 @@ test('adds the triage and legacy labels to open issues only', () => {
     'status: confirmed',
     'type: feature',
   ]);
+  // A rename can take a status or a `legacy:` label away: the issue is read without it.
+  const away = readManifest(
+    `${manifestText}- name: "blocked"\n  from_name: "status: blocked"\n- name: "area: cordova"\n  from_name: "legacy: cordova"\n`
+  );
+  assert.deepStrictEqual(labelsAfter(item(8, ['status: blocked', 'legacy: cordova'], { state: 'open', created_at: old }), away), [
+    'area: cordova',
+    'blocked',
+    'legacy: needs-review',
+    'status: needs-triage',
+  ]);
 });
 
 test('lists the moves and the cases to check', () => {
@@ -261,9 +271,11 @@ test('exports the current labels and writes the preview', async () => {
     rest: { issues: { listForRepo: 'items', listEvents: 'events', listLabelsForRepo: 'labels' } },
     paginate: async (method, params) => {
       if (method === 'items') return params.state === 'all' ? items : [];
-      // Issue 1 already had the legacy label once. A discussion has no issue history.
+      // Issues 1 and 6 already had the legacy label once, issue 7 never had it. A discussion
+      // has no issue history.
       if (method === 'events') {
-        if (params.issue_number !== 1) throw Object.assign(new Error('Not Found'), { status: 404 });
+        if (params.issue_number === 7) return [{ event: 'labeled', label: { name: 'confirmed' } }];
+        if (![1, 6].includes(params.issue_number)) throw Object.assign(new Error('Not Found'), { status: 404 });
         return [{ event: 'labeled', label: { name: 'legacy: needs-review' } }];
       }
       return [{ name: 'Type:Bug' }, { name: 'confirmed' }, { name: 'help wanted' }, { name: 'tip' }];
@@ -322,6 +334,24 @@ test('exports the current labels and writes the preview', async () => {
       '"2","pr","open","Type:Bug",""',
       '"4","discussion","open","Type:Bug",""',
     ]);
+
+    // A rename can make an issue one the legacy label is for: `legacy: cordova` becomes
+    // `area: cordova`. Its history is read on the labels as renamed, as relabel.js does.
+    const old = '2023-05-02T10:00:00Z';
+    items.push(
+      item(6, ['legacy: cordova', 'confirmed'], { state: 'open', created_at: old }),
+      // Never had the legacy label: the preview announces it.
+      item(7, ['confirmed'], { state: 'open', created_at: old }),
+      // No history to read: a feature request once renamed, a closed issue, a recent one.
+      item(8, ['Type:Feature', 'confirmed'], { state: 'open', created_at: old }),
+      item(9, ['confirmed'], { created_at: old }),
+      item(10, ['confirmed'], { state: 'open' }),
+    );
+    const renamedAway = `${manifestText}- name: "area: cordova"\n  from_name: "legacy: cordova"\n`;
+    await writePreview({ github, context, core, manifest: renamedAway });
+    const rows = fs.readFileSync('labels-preview.csv', 'utf8').split('\n');
+    assert.ok(rows.includes('"6","issue","open","confirmed; legacy: cordova","area: cordova; status: confirmed"'));
+    assert.ok(rows.includes('"7","issue","open","confirmed","legacy: needs-review; status: confirmed"'));
   } finally {
     process.chdir(cwd);
     fs.rmSync(directory, { recursive: true });

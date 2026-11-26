@@ -83,6 +83,13 @@ function readManifest(text) {
   return { names, renames };
 }
 
+// The item as the triage reads it: an old name counts as its new label, which the item
+// gets from the rename, or from the move.
+const renamed = (item, renames) => ({
+  ...item,
+  labels: item.labels.map(({ name }) => ({ name: renames.get(name) ?? name })),
+});
+
 // An open issue without a status says nobody triaged it yet.
 const isUntriaged = (item) => !item.labels.some((label) => label.name.startsWith('status: ') && label.name !== STALE);
 
@@ -133,9 +140,6 @@ module.exports = async ({ github, context, dryRun, runTime = RUN_TIME, manifest 
   // A real run comes after it: an old name still there is one the sync could not
   // rename, and its items get the new label.
   const moves = dryRun ? [] : [...renames];
-  // The triage reads an old name as its new label: the item gets it from the rename,
-  // or from the move.
-  const renamed = (item) => ({ ...item, labels: item.labels.map(({ name }) => ({ name: renames.get(name) ?? name })) });
   const carries = (item, name) => item.labels.some((label) => label.name === name);
   const stopAt = Date.now() + runTime;
   // Times of the writes in the last hour.
@@ -264,7 +268,7 @@ module.exports = async ({ github, context, dryRun, runTime = RUN_TIME, manifest 
   await moveItems('open');
 
   const open = await list({ state: 'open' });
-  for (const item of open.map(renamed)) {
+  for (const item of open.map((issue) => renamed(issue, renames))) {
     if (item.pull_request) continue;
     if (stopped()) break;
     if (isUntriaged(item)) {
@@ -300,6 +304,7 @@ Object.assign(module.exports, {
   NEEDS_TRIAGE,
   LEGACY_REVIEW,
   readManifest,
+  renamed,
   hadLegacyLabel,
   listDiscussions,
   isUntriaged,
