@@ -59,9 +59,12 @@ jobs:
   ios:
     if: >-
       github.event_name == 'schedule' || github.event.label.name == 'area: mobile'
-    runs-on: macos-15
+    runs-on: macos-26
     env:
-      MAESTRO_IOS_DEVICE: iPhone 16
+      # Match the Xcode version used to build Maestro’s bundled XCTest driver.
+      DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
+      MAESTRO_VERSION: 2.12.1
+      MAESTRO_IOS_DEVICE: iPhone 17
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
