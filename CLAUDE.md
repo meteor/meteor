@@ -17,6 +17,7 @@ Load these for detailed context on specific topics:
 | [sync-modern-tool-versions](.github/skills/sync-modern-tool-versions/SKILL.md) | Synchronizing modern-tool npm packages, dependency floors, constants, templates, and fixtures |
 | [ai-context](.github/skills/ai-context/SKILL.md) | Creating, updating, or maintaining AI documentation files |
 | [changelog](.github/skills/changelog/SKILL.md) | Writing, reviewing, or editing changelog entries for releases |
+| [release-roadmap](.github/skills/release-roadmap/SKILL.md) | Updating roadmap priorities and the README release table when planning or shipping a release |
 | [version-bump](.github/skills/version-bump/SKILL.md) | Bumping package versions for beta, RC, and official releases |
 | [docs-gap](.github/skills/docs-gap/SKILL.md) | Analyzing release changes for missing user-facing documentation |
 
