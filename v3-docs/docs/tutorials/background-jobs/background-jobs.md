@@ -83,6 +83,8 @@ The facts below come from each project's source and README as of November 2026. 
 
 The example below shows the core of what the options above do for a recurring job: every instance tries to claim the current time slot in MongoDB, and only the first claim succeeds while it is stored (see the write concern note below). It uses only `meteor/mongo`. It is meant to show the mechanism, not to replace one of the options: it has no retries, no crash recovery and no job history beyond one document per run.
 
+The claim relies on the unique index on `_id`, so leave the `jobRuns` collection unsharded (the default) or use `_id` alone as its shard key. A shard key that can route the same `_id` to different shards, including a compound key that starts with `_id`, lets two claims for one slot both succeed, even with majority acknowledgment.
+
 Save it as `server/jobs.js` and import it from your server entry point, for example with `import './jobs';` in `server/main.js`. If your app does not use the `mongo` package yet (apps created with `meteor create --minimal` don't), run `meteor add mongo`.
 
 ```js
@@ -102,7 +104,8 @@ async function runOncePerSlot(name, job) {
   const _id = `${name}:${slot.toISOString()}`;
 
   try {
-    // _id is unique, so other inserts for this slot fail while this claim is stored.
+    // With jobRuns unsharded or sharded on _id alone, other inserts
+    // for this slot fail while this claim is stored.
     await JobRuns.insertAsync({ _id, startedAt: new Date() });
   } catch (error) {
     if (error.code === 11000) return; // another instance claimed this slot
