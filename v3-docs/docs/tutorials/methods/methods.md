@@ -21,7 +21,7 @@ We'll be referring to Meteor Methods with a capital M to differentiate them from
 
 In a basic app, defining a Meteor Method is as simple as defining a function. Note that Methods should always be defined in common code loaded on the client and the server to enable Optimistic UI.
 
-This example uses the [simpl-schema](https://www.npmjs.com/package/simpl-schema) npm package to validate the Method arguments; Meteor's [`check`](/api/check), `aldeed:simple-schema`, Zod, or AJV-style JSON schemas work too:
+This example uses the [simpl-schema](https://www.npmjs.com/package/simpl-schema) npm package to validate the Method arguments; Meteor's [`check`](/api/check), `aldeed:simple-schema`, Zod, or AJV-style JSON schemas work too. It also uses Meteor's `check` package, which new apps don't include: add it with `meteor add check`.
 
 ```js
 import { Meteor } from 'meteor/meteor';

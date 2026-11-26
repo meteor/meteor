@@ -187,7 +187,7 @@ The amount of foresight you bake into your schema design will depend on your app
 
 ### Schemas on write
 
-Although there are a variety of ways that you can run data through a Simple Schema before sending it to your collection (for instance you could check a schema in every method call), the simplest and most reliable is to use the [`aldeed:collection2`](https://atmospherejs.com/aldeed/collection2) package to run every mutator (`insert/update/upsert` call) through the schema.
+Although there are a variety of ways that you can run data through a Simple Schema before sending it to your collection (for instance you could check a schema in every method call), the simplest and most reliable is to use the [`aldeed:collection2`](https://atmospherejs.com/aldeed/collection2) package to validate every insert, update and upsert against the schema.
 
 Since 4.2, Collection2 doesn't bundle a validator: add the one you plan to use next to it. It can validate with `aldeed:simple-schema`, Zod, or AJV-style JSON schemas. Collection2 5 requires Meteor 3.1.2+; if you use `aldeed:simple-schema` it must be version 3, and if you use Zod it must be version 4. With Collection2 5 and `aldeed:simple-schema`:
 
