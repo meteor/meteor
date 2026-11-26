@@ -76,7 +76,7 @@ import SimpleSchema from 'simpl-schema'; // [!code --]
 import SimpleSchema from 'meteor/aldeed:simple-schema'; // [!code ++]
 ```
 
-Then swap the packages:
+If your app uses AutoForm 8.x or earlier, keep `aldeed:simple-schema` below 3.0.0 until you upgrade AutoForm: [SimpleSchema 3 isn't compatible with it](https://github.com/Meteor-Community-Packages/meteor-simple-schema#readme). Otherwise, swap the packages:
 
 ```bash
 # Remove the npm package if nothing else in your app imports it
@@ -85,7 +85,7 @@ meteor npm remove simpl-schema # [!code highlight]
 meteor add aldeed:simple-schema@3.0.0 # [!code highlight]
 ```
 
-In `aldeed:simple-schema` 3, `validate()` (on a schema or a validation context) returns a promise: await it before you write, for example `await schema.validate(doc);`. `isValid()` and `validationErrors()` stay synchronous. With SimpleSchema 3, Collection2 5 supports only `insertAsync`, `updateAsync` and `upsertAsync`: synchronous `insert`, `update` and `upsert` calls throw, so replace them.
+In `aldeed:simple-schema` 3, `validate()` (on a schema or a validation context) returns a promise: await it before you write, for example `await schema.validate(doc);`. `clean()` also returns a promise, so await it before you use its result, for example `const cleaned = await schema.clean(doc);`. `isValid()` and `validationErrors()` stay synchronous. With SimpleSchema 3, Collection2 5 supports only `insertAsync`, `updateAsync` and `upsertAsync`: synchronous `insert`, `update` and `upsert` calls throw, so replace them.
 
 Collection2 4.0 and 4.1 bundle `aldeed:simple-schema`, so no separate install is needed. Collection2 4.2 to 4.x needs `aldeed:simple-schema` 1.13.1 or 2.x instead of 3: see the [Collection2 README](https://github.com/Meteor-Community-Packages/meteor-collection2#installation) for that version.
 
