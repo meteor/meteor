@@ -213,7 +213,7 @@ In a server-side-rendered framework like Ruby on Rails, it's sufficient to not d
 
 All of the points above about Methods apply to publications as well:
 
-1. Validate all arguments using `check` or npm `simpl-schema`.
+1. Validate all arguments using `check` or a schema library such as `simpl-schema`, `aldeed:simple-schema`, Zod or AJV-style JSON schemas.
 1. Never pass the current user ID as an argument.
 1. Don't take generic arguments; make sure you know exactly what your publication is getting from the client.
 1. Use rate limiting to stop people from spamming you with subscriptions.
@@ -706,7 +706,7 @@ For more detail please read the following guide: [Frameguard](https://helmetjs.g
 This is a collection of points to check about your app that might catch common errors. However, it's not an exhaustive list yet---if we missed something, please let us know or file a pull request!
 
 1. Make sure your app doesn't have the `insecure` or `autopublish` packages.
-1. Validate all Method and publication arguments, and include the `audit-argument-checks` to check this automatically.
+1. Validate all Method and publication arguments. The [`audit-argument-checks`](/packages/audit-argument-checks) package checks this automatically, but only counts arguments passed to `check`: if you validate with a schema library, pass each argument to `check` as well (`aldeed:simple-schema` does this when you pass `check` in its `check` option). Collection schemas validate documents on write; they don't validate Method or publication arguments.
 1. Apply rate limiting to your application to prevent DDoS attacks.
 1. [Deny writes to the `profile` field on user documents.](/tutorials/accounts/accounts#don-t-use-profile)
 1. [Use Methods instead of client-side insert/update/remove and allow/deny.](#avoid-allow-deny)

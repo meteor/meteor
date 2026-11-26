@@ -21,7 +21,7 @@ We'll be referring to Meteor Methods with a capital M to differentiate them from
 
 In a basic app, defining a Meteor Method is as simple as defining a function. Note that Methods should always be defined in common code loaded on the client and the server to enable Optimistic UI.
 
-This example uses the [simpl-schema](https://www.npmjs.com/package/simpl-schema) npm package to validate the Method arguments:
+This example uses the [simpl-schema](https://www.npmjs.com/package/simpl-schema) npm package to validate the Method arguments; Meteor's [`check`](/api/check), `aldeed:simple-schema`, Zod, or AJV-style JSON schemas work too:
 
 ```js
 import { Meteor } from 'meteor/meteor';
@@ -48,6 +48,8 @@ Meteor.methods({
   }
 });
 ```
+
+If your app uses [`audit-argument-checks`](/packages/audit-argument-checks), each original argument (not a copy or a destructured field) must also be passed to `check`, or the Method throws. A validator can do this for you: `aldeed:simple-schema` calls `check` when you pass it in the `check` option.
 
 ### Calling a Method
 
