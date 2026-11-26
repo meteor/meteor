@@ -2,7 +2,7 @@
 name: 🐛 Bug
 about: Create a report to help us improve Meteor
 title: ''
-labels: ''
+labels: ["type: bug", "status: needs-triage"]
 assignees: ''
 ---
 <!--

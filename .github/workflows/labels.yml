@@ -1,0 +1,108 @@
+name: Labels
+
+# Applies .github/labels.yml to the repository. On pull requests everything is a
+# dry run: the preview of every label change goes to the job summary and the
+# `labels-preview` artifact (.github/scripts/labels-preview.js). On devel: export the
+# current labels to the same artifact, create and rename labels, label what the sync
+# leaves out (.github/scripts/relabel.js), then delete the labels missing from
+# the manifest once a fresh read finds every item moved. The relabel waits whenever
+# it reaches an hourly limit of the token, so one run labels everything; the daily
+# run takes over if a run is cut short.
+
+on:
+  pull_request:
+    paths:
+      - '.github/labels.yml'
+      - '.github/scripts/relabel.js'
+      - '.github/scripts/labels-preview.js'
+      - '.github/scripts/inactive-issues.js'
+      - '.github/scripts/__tests__/relabel.test.js'
+      - '.github/scripts/__tests__/labels-preview.test.js'
+      - '.github/scripts/__tests__/inactive-issues.test.js'
+      - '.github/workflows/labels.yml'
+  push:
+    branches:
+      - devel
+    paths:
+      - '.github/labels.yml'
+      - '.github/scripts/relabel.js'
+      - '.github/scripts/labels-preview.js'
+      - '.github/scripts/inactive-issues.js'
+      - '.github/scripts/__tests__/relabel.test.js'
+      - '.github/scripts/__tests__/labels-preview.test.js'
+      - '.github/scripts/__tests__/inactive-issues.test.js'
+      - '.github/workflows/labels.yml'
+  schedule:
+    - cron: '30 2 * * *'
+  workflow_dispatch:
+
+# Each pull request previews on its own; the runs that apply wait for each other.
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('labels-pr-{0}', github.ref) || 'labels-apply' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  labels:
+    # Forks keep their own labels: this only runs in the main repository.
+    if: github.repository == 'meteor/meteor'
+    runs-on: ubuntu-latest
+    # relabel.js stops after 5 hours, under the 6 hour limit of a job.
+    timeout-minutes: 330
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+      discussions: write
+    env:
+      # Only devel applies; a pull request or a dispatch on another branch is a dry run.
+      APPLY: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/devel' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Test the label scripts
+        timeout-minutes: 5
+        run: node --test --test-timeout=60000 .github/scripts/__tests__/relabel.test.js .github/scripts/__tests__/labels-preview.test.js .github/scripts/__tests__/inactive-issues.test.js
+
+      # Every run exports before it writes. Re-running a run drops its artifacts, so keep the export
+      # of the pull request's last check, and resume a run cut short with a new run, not a re-run.
+      - name: Preview the changes and export the current labels
+        uses: actions/github-script@v9
+        with:
+          retries: 3
+          script: |
+            await require('./.github/scripts/labels-preview.js')({ github, context, core })
+
+      - name: Upload the preview and the export
+        uses: actions/upload-artifact@v7
+        with:
+          name: labels-preview
+          path: |
+            labels-before.json
+            labels-preview.csv
+
+      - name: Create and rename labels
+        uses: crazy-max/ghaction-github-labeler@v6
+        with:
+          skip-delete: ${{ env.APPLY == 'true' }}
+          dry-run: ${{ env.APPLY != 'true' }}
+
+      # The preview above already lists these additions: a dry run does not read them twice.
+      - name: Label what the sync leaves out
+        id: relabel
+        if: env.APPLY == 'true'
+        uses: actions/github-script@v9
+        with:
+          retries: 3
+          # relabel.js waits out rate limits itself. With `retries` set, the client still sends a
+          # request answered by one of these codes three more times at once before the script
+          # sees the answer (actions/github-script#732).
+          retry-exempt-status-codes: 400,401,403,404,422,429
+          script: |
+            const relabel = require('./.github/scripts/relabel.js')
+            const left = await relabel({ github, context })
+            core.setOutput('left', left)
+
+      - name: Delete labels missing from the manifest
+        if: env.APPLY == 'true' && steps.relabel.outputs.left == '0'
+        uses: crazy-max/ghaction-github-labeler@v6

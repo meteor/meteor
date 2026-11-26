@@ -46,6 +46,13 @@ function buildGithubMock({ issues, commentsByIssue }) {
             (issue.labels || (issue.labels = [])).push(...labels.map(l => ({ name: l })));
           }
           return {};
+        },
+        removeLabel: async ({ issue_number, name }) => {
+          const issue = issues.find(i => i.number === issue_number);
+          if (issue) {
+            issue.labels = issue.labels.filter(l => l.name !== name);
+          }
+          return {};
         }
       }
     }
@@ -91,7 +98,7 @@ test('60 days inactivity -> adds reminder comment (no prior reminder)', async ()
   const botComments = commentsByIssue[issue.number].filter(c => c.user.login === 'github-actions[bot]');
   assert.equal(botComments.length, 1, 'Should have 1 reminder comment');
   assert.match(botComments[0].body, /60 days/);
-  assert.ok(!issue.labels.some(l => l.name === 'idle'), 'Should not label yet');
+  assert.ok(!issue.labels.some(l => l.name === 'status: stale'), 'Should not label yet');
 });
 
 test('60 days inactivity but already reminded -> no duplicate comment', async () => {
@@ -121,14 +128,14 @@ test('90 days inactivity -> label + comment', async () => {
 
   await runScript({ issues, commentsByIssue });
 
-  assert.ok(issue.labels.some(l => l.name === 'idle'), 'Should add idle label');
+  assert.ok(issue.labels.some(l => l.name === 'status: stale'), 'Should add the stale label');
   const botComments = commentsByIssue[issue.number].filter(c => c.user.login === 'github-actions[bot]');
   assert.equal(botComments.length, 1, 'Should comment when labeling');
   assert.match(botComments[0].body, /90 days/i);
 });
 
 test('90 days inactivity but already labeled -> no action', async () => {
-  const issue = makeIssue({ daysSinceHumanActivity: 100, labels: ['idle'] });
+  const issue = makeIssue({ daysSinceHumanActivity: 100, labels: ['status: stale'] });
   const issues = [issue];
   const commentsByIssue = { [issue.number]: [] };
 
@@ -138,8 +145,8 @@ test('90 days inactivity but already labeled -> no action', async () => {
   assert.equal(botComments.length, 0, 'Should not comment again');
 });
 
-test('90 days inactivity but already labeled `in-development` -> no action', async () => {
-  const issue = makeIssue({ daysSinceHumanActivity: 100, labels: ['in-development'] });
+test('90 days inactivity but already labeled `status: in-progress` -> no action', async () => {
+  const issue = makeIssue({ daysSinceHumanActivity: 100, labels: ['status: in-progress'] });
   const issues = [issue];
   const commentsByIssue = { [issue.number]: [] };
 
@@ -175,7 +182,7 @@ test('Human reply after reminder resets cycle (no immediate labeling)', async ()
 
   const botComments = commentsByIssue[issue.number].filter(c => c.user.login === 'github-actions[bot]');
   assert.equal(botComments.length, 1, 'Should not add a new bot comment');
-  assert.ok(!issue.labels.some(l => l.name === 'idle'), 'Should not label');
+  assert.ok(!issue.labels.some(l => l.name === 'status: stale'), 'Should not label');
 });
 
 test('Only bot comments (no human ever) counts from creation date', async () => {
@@ -195,4 +202,52 @@ test('Only bot comments (no human ever) counts from creation date', async () => 
   await runScript({ issues, commentsByIssue });
   const botComments = commentsByIssue[issue.number].filter(c => /60 days/.test(c.body));
   assert.equal(botComments.length, 1, 'Should add a 60-day reminder');
+});
+
+test('Stale issue with a human comment in the last 90 days -> label removed, no comment', async () => {
+  const issue = makeIssue({ daysSinceHumanActivity: 200, labels: ['status: stale'] });
+  const issues = [issue];
+  const commentsByIssue = {
+    [issue.number]: [
+      {
+        id: 1,
+        body: 'This issue has been automatically labeled as `status: stale` due to 90 days of inactivity (no human interaction).',
+        created_at: daysAgo(110),
+        user: { login: 'github-actions[bot]', type: 'Bot' }
+      },
+      {
+        id: 2,
+        body: 'Still happening on 3.6',
+        created_at: daysAgo(3),
+        user: { login: 'some-human', type: 'User' }
+      }
+    ]
+  };
+
+  await runScript({ issues, commentsByIssue });
+
+  assert.ok(!issue.labels.some(l => l.name === 'status: stale'), 'Should remove the stale label');
+  assert.equal(commentsByIssue[issue.number].length, 2, 'Should not comment');
+});
+
+test('Stale issue with no human comment since -> label kept, no comment', async () => {
+  const issue = makeIssue({ daysSinceHumanActivity: 120, labels: ['status: stale'] });
+  const issues = [issue];
+  const commentsByIssue = { [issue.number]: [] };
+
+  await runScript({ issues, commentsByIssue });
+
+  assert.ok(issue.labels.some(l => l.name === 'status: stale'), 'Should keep the stale label');
+  assert.equal(commentsByIssue[issue.number].length, 0, 'Should not comment');
+});
+
+test('Stale issue marked `status: in-progress` -> label removed without a comment', async () => {
+  const issue = makeIssue({ daysSinceHumanActivity: 200, labels: ['status: stale', 'status: in-progress'] });
+  const commentsByIssue = { [issue.number]: [] };
+
+  await runScript({ issues: [issue], commentsByIssue });
+
+  assert.ok(!issue.labels.some(l => l.name === 'status: stale'), 'Should remove the stale label');
+  assert.ok(issue.labels.some(l => l.name === 'status: in-progress'), 'Should keep the in-progress label');
+  assert.equal(commentsByIssue[issue.number].length, 0, 'Should not comment');
 });
