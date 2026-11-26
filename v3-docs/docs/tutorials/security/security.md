@@ -708,7 +708,7 @@ This is a collection of points to check about your app that might catch common e
 1. Make sure your app doesn't have the `insecure` or `autopublish` packages.
 1. Validate all Method and publication arguments, and include the `audit-argument-checks` to check this automatically.
 1. Apply rate limiting to your application to prevent DDoS attacks.
-1. [Deny writes to the `profile` field on user documents.](/tutorials/accounts/accounts#dont-use-profile)
+1. [Deny writes to the `profile` field on user documents.](/tutorials/accounts/accounts#don-t-use-profile)
 1. [Use Methods instead of client-side insert/update/remove and allow/deny.](#avoid-allow-deny)
 1. Use specific selectors and [filter fields](#always-restrict-fields) in publications.
 1. Don't use [raw HTML inclusion in Blaze](http://blazejs.org/guide/spacebars.html#Rendering-raw-HTML) unless you really know what you are doing.

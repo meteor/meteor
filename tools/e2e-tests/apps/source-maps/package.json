@@ -1,0 +1,16 @@
+{
+  "name": "source-maps",
+  "private": true,
+  "dependencies": {
+    "@babel/runtime": "^7.23.5",
+    "@swc/helpers": "^0.5.23",
+    "meteor-node-stubs": "^1.2.12"
+  },
+  "meteor": {
+    "mainModule": {
+      "client": "client/main.ts",
+      "server": "server/main.ts"
+    },
+    "modern": false
+  }
+}

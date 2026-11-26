@@ -958,7 +958,7 @@ Object.assign(AppRunner.prototype, {
 
     async function runPostStartupCallbacks(bundleResult) {
       const callbacks = bundleResult.postStartupCallbacks;
-      if (! callbacks) return;
+      if (! callbacks || callbacks.length === 0) return;
 
       const messages = await buildmessage.capture({
         title: "running post-startup callbacks"
@@ -984,6 +984,13 @@ Object.assign(AppRunner.prototype, {
           errors: messages,
           watchSet: bundleResult.clientWatchSet,
         };
+      }
+
+      // Delayed client builds add their dependencies to clientWatchSet after
+      // the watcher starts. Recreate it so changes to those files are watched,
+      // while keeping the previous watcher active during the delayed build.
+      if (self.watchForChanges && canRefreshClient) {
+        setupClientWatcher();
       }
     }
 

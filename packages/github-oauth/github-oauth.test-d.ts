@@ -16,3 +16,4 @@ Github.requestCredential(() => {}, () => {});
 
 expectTypeOf(Github.retrieveCredential).parameters.toEqualTypeOf<[string, (string | null)?]>();
 expectTypeOf(Github.retrieveCredential).returns.toMatchTypeOf<Promise<unknown>>();
+expectTypeOf(Github.retrieveCredential).returns.resolves.extract<Error>().toEqualTypeOf<Error>();

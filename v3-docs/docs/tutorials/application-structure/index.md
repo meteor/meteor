@@ -31,7 +31,7 @@ import './loading.html';              // import Blaze compiled HTML from relativ
 import '/imports/ui/style.css';       // import CSS from absolute path
 ```
 
-> For more ways to import styles, see the [Build System](/about/build-tool#css-importing) article.
+> For more ways to import styles, see the [Build System](/about/build-tool#importing-styles) article.
 
 Meteor also supports the standard ES2015 modules `export` syntax:
 
@@ -271,7 +271,7 @@ The following directories are also not loaded as part of your app code:
 
 - Files/directories whose names start with a dot, like `.meteor` and `.git`
 - `packages/`: Used for local packages
-- `cordova-build-override/`: Used for [advanced mobile build customizations](/about/cordova#advanced-build)
+- `cordova-build-override/`: Used for [advanced mobile build customizations](/about/cordova#build)
 - `programs`: For legacy reasons
 
 ### Files outside special directories
@@ -300,7 +300,7 @@ However there are some challenges to splitting your code in this way that should
 
 ### Sharing code
 
-The primary challenge is properly sharing code between the different applications you are building. The simplest approach to deal with this issue is to deploy the *same* application on different web servers, controlling the behavior via different [settings](/tutorials/deployment/deployment#environment). This approach allows you to deploy different versions with different scaling behavior but doesn't enjoy most of the other advantages stated above.
+The primary challenge is properly sharing code between the different applications you are building. The simplest approach to deal with this issue is to deploy the *same* application on different web servers, controlling the behavior via different [settings](/tutorials/deployment/deployment#deployment-environments). This approach allows you to deploy different versions with different scaling behavior but doesn't enjoy most of the other advantages stated above.
 
 If you want to create Meteor applications with separate code, you'll have some modules that you'd like to share between them. If those modules are something the wider world could use, you should consider [publishing them to a package system](../../packages/#writing-atmosphere-packages), either npm or Atmosphere, depending on whether the code is Meteor-specific or otherwise.
 

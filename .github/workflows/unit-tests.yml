@@ -9,6 +9,7 @@ on:
       # still run the suite.
       - 'npm-packages/meteor-rspack/**'
       - 'packages/rspack/**'
+      - 'packages/tools-core/**'
       - 'npm-packages/meteor-rspack/**'
       - 'package.json'
       - '.github/workflows/unit-tests.yml'

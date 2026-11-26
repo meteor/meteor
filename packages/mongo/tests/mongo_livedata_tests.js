@@ -1,6 +1,36 @@
 import isObject from 'lodash.isobject';
 import times from 'lodash.times';
 import { ObserveMultiplexer } from '../observe_multiplex';
+import { ReplicationMethods } from '../collection/methods_replication';
+
+Tinytest.addAsync('collection - replication keeps prototype fields as data', async test => {
+  const collection = new Mongo.Collection(null);
+  let store;
+  const register = (name, value) => { store = value; return true; };
+  collection._connection = {registerStoreClient: register, registerStoreServer: register};
+  await ReplicationMethods._maybeSetUpReplication.call(collection, 'local-security-test');
+  const marker = 'meteorReplicationPrototypeMarker';
+  try {
+    await store.update({msg: 'added', id: 'safe', fields: {ordinary: 1}});
+    await store.update({msg: 'changed', id: 'safe', fields: JSON.parse('{"__proto__":{}}')});
+    test.isTrue(Object.prototype.hasOwnProperty.call(await collection.findOneAsync('safe'), '__proto__'));
+    await store.update({msg: 'changed', id: 'safe', fields: {[`__proto__.${marker}`]: 2}});
+    test.isFalse(Object.prototype.hasOwnProperty.call(Object.prototype, marker));
+    let doc = await collection.findOneAsync('safe');
+    test.equal(doc.__proto__[marker], 2);
+    await store.update({msg: 'changed', id: 'safe', fields: JSON.parse('{"__proto__":{"kept":true}}')});
+    doc = await collection.findOneAsync('safe');
+    test.equal(Object.getPrototypeOf(doc), Object.prototype);
+    test.isTrue(Object.prototype.hasOwnProperty.call(doc, '__proto__'));
+    test.equal(doc.__proto__, {kept: true});
+    await store.update({msg: 'changed', id: 'safe', fields: {['__proto__']: undefined, ordinary: 3}});
+    doc = await collection.findOneAsync('safe');
+    test.isFalse(Object.prototype.hasOwnProperty.call(doc, '__proto__'));
+    test.equal(doc.ordinary, 3);
+  } finally {
+    delete Object.prototype[marker];
+  }
+});
 
 // This is a magic collection that fails its writes on the server when
 // the selector (or inserted document) contains fail: true.
