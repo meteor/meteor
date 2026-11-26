@@ -197,7 +197,7 @@ meteor add aldeed:collection2 aldeed:simple-schema@3.0.0
 
 For Zod, run `meteor add aldeed:collection2` and `meteor npm install zod@4`. For AJV-style JSON schemas, run `meteor add aldeed:collection2` and `meteor npm install ajv`. See the [Collection2 README](https://github.com/Meteor-Community-Packages/meteor-collection2#installation) for older versions and for loading it with dynamic imports.
 
-What Collection2 checks depends on the validator. With AJV-style JSON schemas, Collection2 5 checks inserts only for top-level `required` fields and top-level `string`, `number` and `boolean` types. It doesn't check other JSON Schema keywords, such as `minimum`, and doesn't validate update modifiers. Installing `ajv` doesn't add these checks, so validate other rules yourself. The cleaning described [below](#defaultvalue-and-data-cleaning) is SimpleSchema behavior; Zod schemas support defaults but not SimpleSchema's other cleaning, and AJV-style schemas aren't cleaned.
+What Collection2 checks depends on the validator. With AJV-style JSON schemas, Collection2 5 checks inserts only for top-level `required` fields and top-level `string`, `number` and `boolean` types. It doesn't check other JSON Schema keywords, such as `minimum`, and doesn't validate update modifiers. Installing `ajv` doesn't add these checks, so validate other rules yourself. The cleaning described [below](#defaultvalue-and-data-cleaning) is SimpleSchema behavior; Zod schemas support defaults and Collection2's experimental autoValues, and AJV-style schemas aren't cleaned.
 
 Import Collection2 once, for example in a file your client and server both load, then attach the schema with `attachSchema()`:
 
@@ -207,7 +207,7 @@ import 'meteor/aldeed:collection2/static';
 Lists.attachSchema(Lists.schema);
 ```
 
-With this SimpleSchema schema attached, every time we call `Lists.insertAsync()`, `Lists.updateAsync()`, `Lists.upsertAsync()`, first our document or modifier will be automatically checked against the schema (in subtly different ways depending on the exact mutator).
+With this SimpleSchema schema attached, every time we call `Lists.insertAsync()`, `Lists.updateAsync()`, `Lists.upsertAsync()`, first our document or modifier will be automatically checked against the schema (in subtly different ways depending on the exact mutator). With `aldeed:simple-schema` 3, Collection2 5 supports only these async methods: the synchronous `insert()`, `update()` and `upsert()` throw.
 
 ### `defaultValue` and data cleaning
 

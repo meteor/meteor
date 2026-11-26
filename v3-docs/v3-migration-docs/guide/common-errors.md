@@ -85,7 +85,7 @@ meteor npm remove simpl-schema # [!code highlight]
 meteor add aldeed:simple-schema@3.0.0 # [!code highlight]
 ```
 
-In `aldeed:simple-schema` 3, `validate()` (on a schema or a validation context) returns a promise: await it before you write, for example `await schema.validate(doc);`. `isValid()` and `validationErrors()` stay synchronous. Collection2 5 validates only `insertAsync`, `updateAsync` and `upsertAsync`, so use those instead of `insert`, `update` and `upsert`.
+In `aldeed:simple-schema` 3, `validate()` (on a schema or a validation context) returns a promise: await it before you write, for example `await schema.validate(doc);`. `isValid()` and `validationErrors()` stay synchronous. With SimpleSchema 3, Collection2 5 supports only `insertAsync`, `updateAsync` and `upsertAsync`: synchronous `insert`, `update` and `upsert` calls throw, so replace them.
 
 Collection2 4.0 and 4.1 bundle `aldeed:simple-schema`, so no separate install is needed. Collection2 4.2 to 4.x needs `aldeed:simple-schema` 1.13.1 or 2.x instead of 3: see the [Collection2 README](https://github.com/Meteor-Community-Packages/meteor-collection2#installation) for that version.
 

@@ -25,15 +25,19 @@ This example uses the [simpl-schema](https://www.npmjs.com/package/simpl-schema)
 
 ```js
 import { Meteor } from 'meteor/meteor';
+import { check } from 'meteor/check';
 import SimpleSchema from 'simpl-schema';
 import { Todos } from '/imports/api/todos/todos';
 
 Meteor.methods({
-  async 'todos.updateText'({ todoId, newText }) {
+  async 'todos.updateText'(args) {
+    // Check the original argument before the first await (see below)
+    check(args, Object);
     new SimpleSchema({
       todoId: { type: String },
       newText: { type: String }
-    }).validate({ todoId, newText });
+    }).validate(args);
+    const { todoId, newText } = args;
 
     const todo = await Todos.findOneAsync(todoId);
 
@@ -49,7 +53,7 @@ Meteor.methods({
 });
 ```
 
-If your app uses [`audit-argument-checks`](/packages/audit-argument-checks), each original argument (not a copy or a destructured field) must also be passed to `check` before the Method's first `await`, or the call fails with an audit error. That error doesn't stop work the Method has already started. The example above doesn't pass this audit, because it destructures its argument. A validator can call `check` for you: with `aldeed:simple-schema`, make `await schema.validate(args, { check })` the Method's first statement. Its `check` option works only with `schema.validate()`, not with a validation context from `newContext()`.
+If your app uses [`audit-argument-checks`](/packages/audit-argument-checks), each original argument (not a copy or a destructured field) must also be passed to `check` before the Method's first `await`, or the call fails with an audit error. That error doesn't stop work the Method has already started. The example above does this with `check(args, Object)` and leaves the field rules to the schema. A validator can call `check` for you: with `aldeed:simple-schema`, make `await schema.validate(args, { check })` the Method's first statement. Its `check` option works only with `schema.validate()`, not with a validation context from `newContext()`.
 
 ### Calling a Method
 
