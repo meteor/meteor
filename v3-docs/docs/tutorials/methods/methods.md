@@ -83,7 +83,7 @@ To reduce boilerplate and gain additional features, we recommend using the [`jam
 meteor add jam:method
 ```
 
-Here's the same Method defined with the package. Its `schema` is a [`check`](/api/check) pattern, which `jam:method` validates with `check`, so the Method also passes `audit-argument-checks`. `jam:method` accepts other schemas too, but with a `SimpleSchema` it calls only `schema.validate()` and never `check`, so such a Method fails `audit-argument-checks`:
+Here's the same Method defined with the package. Its `schema` is a [`check`](/api/check) pattern, which `jam:method` validates with `check`, so a call that reaches validation also passes `audit-argument-checks` (by default, `jam:method` rejects logged-out calls before it validates). `jam:method` accepts other schemas too, but with an npm `simpl-schema` schema it calls only `schema.validate()` and never `check`, so such a Method fails `audit-argument-checks`:
 
 ```js
 import { createMethod } from 'meteor/jam:method';
