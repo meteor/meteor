@@ -48,7 +48,8 @@ jobs:
   labels:
     # Pull requests and dispatches outside devel only preview changes.
     if: github.repository == 'meteor/meteor' && (github.event_name == 'pull_request' || github.ref != 'refs/heads/devel')
-    runs-on: oss-vm
+    # Keep fork PRs on disposable GitHub-hosted runners.
+    runs-on: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-latest' || 'oss-vm' }}
     timeout-minutes: 330
     permissions:
       contents: read

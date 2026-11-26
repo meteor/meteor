@@ -7,12 +7,13 @@ on:
     types: [labeled]
 
 concurrency:
-  group: native-${{ github.ref }}
+  group: native-${{ github.ref }}-${{ github.event.label.name }}
   cancel-in-progress: true
 
 jobs:
   android:
-    if: github.event_name == 'schedule' || github.event.label.name == 'mobile'
+    if: >-
+      github.event_name == 'schedule' || github.event.label.name == 'area: mobile'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -56,8 +57,11 @@ jobs:
           path: tools/native-tests/junit/
 
   ios:
-    if: github.event_name == 'schedule' || github.event.label.name == 'mobile'
-    runs-on: macos-14
+    if: >-
+      github.event_name == 'schedule' || github.event.label.name == 'area: mobile'
+    runs-on: macos-15
+    env:
+      MAESTRO_IOS_DEVICE: iPhone 16
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -75,8 +79,8 @@ jobs:
         run: npm run install:native
       - name: Pre-boot iOS Simulator
         run: |
-          xcrun simctl boot "iPhone 15" || true
-          xcrun simctl bootstatus "iPhone 15" -b
+          xcrun simctl boot "$MAESTRO_IOS_DEVICE" || true
+          xcrun simctl bootstatus "$MAESTRO_IOS_DEVICE" -b
       - name: Run smoke flow on iOS Simulator
         run: npm run test:native -- --platform=ios
       - name: Upload JUnit and device logs
