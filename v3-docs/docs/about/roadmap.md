@@ -1,3 +1,8 @@
+---
+outline:
+  level: [2, 3]
+---
+
 # Roadmap
 
 Describes the high-level features and actions for the Meteor project in the near-to-medium term future.
@@ -100,7 +105,11 @@ Beyond these, each release includes runtime and dependency updates, security and
 
 [View the release table in the repository README](https://github.com/meteor/meteor/blob/devel/README.md#-help-with-an-upcoming-release)
 
-## Delivered project: Modern Build Stack ✅
+## ✅ Delivered projects {#delivered-projects}
+
+For the full list of changes in each Meteor release, see the [changelog](/history).
+
+### Modern Build Stack {#delivered-project-modern-build-stack-✅}
 
 > Improve bundle size and build performance via tree-shaking, code-splitting, and integration with modern bundlers like Rspack.
 
@@ -115,7 +124,7 @@ Beyond these, each release includes runtime and dependency updates, security and
 - **Phase 5 (3.4.1): Resource optimization & feedback.** Memory improvements on large apps and bundler stabilization based on real-world usage. 🔗 [Article](https://blog.galaxycloud.app/meteor-3-4-1-is-out-rspack-consolidation-revitalized-examples-and-important-fixes/)
 - **Phase 6 (3.5 to 3.6): Consolidation & Rspack 2.** Build/test isolation, cache and memory improvements, automatic build dependency installation, Rspack 2 support, React Compiler integration, and pnpm workspace support. 🔗 [Changelog](/history#v3-6-0-2026-11-10)
 
-## Delivered project: Release CI/CD Speed & Reliability ✅
+### Release CI/CD Speed & Reliability {#delivered-project-release-ci-cd-speed-reliability-✅}
 
 > Shorten contributor feedback and make release preparation and validation more repeatable through CI automation, real application tests, and shared workflows.
 
@@ -125,7 +134,7 @@ Beyond these, each release includes runtime and dependency updates, security and
 - **Phase 2 (3.4.1): CI migration & release preparation.** Moved CircleCI tool/package testing to GitHub Actions, with caching, concurrency controls, and test artifacts. Added AI-assisted workflows for changelogs, package versions, and documentation-gap analysis, with maintainer review. 🔗 [CircleCI migration](https://github.com/meteor/meteor/pull/14326) · [Release workflows](https://github.com/meteor/meteor/pull/14293)
 - **Phase 3 (3.5 to 3.6): Validation & publication safeguards.** Expanded browser, package, production-build, and native tests; improved process cleanup and retry isolation; shared local and CI test-group selection; and added dev-bundle publication checks. 🔗 [E2E cleanup](https://github.com/meteor/meteor/pull/14424) · [Testing guide](https://github.com/meteor/meteor/blob/devel/DEVELOPMENT.md#tests) · [Publication safeguards](https://github.com/meteor/meteor/pull/14868)
 
-## Delivered project: Change Streams ✅
+### Change Streams {#delivered-project-change-streams-✅}
 
 > Use MongoDB Change Streams to deliver reactive updates, with automatic fallback to oplog tailing or polling when a deployment or query cannot use Change Streams.
 
@@ -137,19 +146,19 @@ Beyond these, each release includes runtime and dependency updates, security and
 
 [📄 Change Streams Documentation](/performance/change-streams-observer-driver)
 
-### Phase 1: Default implementation
+#### Phase 1: Default implementation
 
 **Delivered in:** [3.5](/history#v3-5-0-2026-06-30) ✅
 
 **Goal:** Ship MongoDB Change Streams support in Meteor. Change Streams became the **default** reactivity engine in 3.5 for supported MongoDB deployments and queries, with `oplog` and `polling` as automatic fallbacks. Applications can still force `oplog` via `settings.json` (`packages.mongo.reactivity`) or the `METEOR_REACTIVITY_ORDER` environment variable.
 
-### Phase 2: Hardening & real-world feedback
+#### Phase 2: Hardening & real-world feedback
 
 **Delivered across:** [3.5.1](/history#v3-5-1-2026-08-04) to [3.6](/history#v3-6-0-2026-11-10) ✅
 
 **Goal:** Improve recovery, write synchronization, and query compatibility based on application feedback. Shipped fixes cover lost stream history, stalled methods, multiple MongoDB connections, snapshot/event races, oversized change events, and fallback for unsupported selectors. Performance still depends on the application's queries and database workload; ongoing fixes continue through regular releases.
 
-## Delivered project: Security hardening & backports ✅
+### Security hardening & backports {#delivered-project-security-hardening-backports-✅}
 
 > Deliver coordinated Meteor and Node.js security fixes, with validated backports for affected earlier releases.
 
@@ -159,7 +168,7 @@ Beyond these, each release includes runtime and dependency updates, security and
 - **Phase 2: Runtime updates & further hardening.** Node.js security updates, token-consumption fixes, safe handling of prototype-named fields, and HTTP/TLS hardening. Delivered in [3.5.4](/history#v3-5-4-2026-10-27), [3.4.3](/history#v3-4-3-2026-10-27), and [3.3.4](/history#v3-3-4-2026-10-27).
 - **Phase 3: Coordinated security updates.** Updated Node.js within each release line's major version and hardened accounts, DDP, MongoDB reactivity, archive extraction, the installer, and Cordova asset handling. Delivered in [3.6.1](/history#v3-6-1-2026-11-12), [3.5.5](/history#v3-5-5-2026-11-12), and [3.4.4](/history#v3-4-4-2026-11-12).
 
-## Delivered project: TypeScript Improvements ✅
+### TypeScript Improvements {#delivered-project-typescript-improvements-✅}
 
 > Give Meteor applications and packages native TypeScript declarations, improving editor support, type checking, and package-author integration.
 
@@ -172,7 +181,7 @@ Beyond these, each release includes runtime and dependency updates, security and
 
 [📄 Native TypeScript Types Documentation](/cli/using-core-types) · [Implementation](https://github.com/meteor/meteor/pull/14699)
 
-## Delivered project: Meteor AI Skills ✅
+### Meteor AI Skills {#delivered-project-meteor-ai-skills-✅}
 
 > Give AI coding assistants the Meteor context needed for real application work: release-specific APIs, package compatibility, what to inspect, and how to verify changes.
 
@@ -184,7 +193,7 @@ Published 17 focused skills for building, migrating, debugging, testing, securin
 
 [📄 Meteor Agent Skills Documentation](/ai/agent-skills) · [Repository](https://github.com/meteor/agent-skills) · [Forum announcement](https://forums.meteor.com/t/meteor-agent-skills-17-official-ai-skills-for-building-with-meteor-3/64868)
 
-## Other delivered improvements ✅
+### Other improvements {#other-delivered-improvements-✅}
 
 These previously planned improvements are available in released versions:
 
@@ -193,7 +202,3 @@ These previously planned improvements are available in released versions:
 - **Meteor 3.5 to 3.6: Runtime updates.** Node.js 24 in [3.5](/history#v3-5-0-2026-06-30), then Node.js 26 and the MongoDB 8 local development database in [3.6](/history#v3-6-0-2026-11-10).
 - **Meteor 3.6: App creation & CLI.** PWA and pnpm workspace templates, Git-based app and package installation, interactive package selection, and shell completion. 🔗 [Changelog](/history#v3-6-0-2026-11-10)
 - **Meteor 3.6: Instrumentation.** The [`instrumentation` package](/packages/instrumentation) exposes lifecycle events for methods, publications, and DDP connections. 🔗 [Changelog](/history#v3-6-0-2026-11-10)
-
----
-
-For more completed items, refer to our [changelog](/history).
