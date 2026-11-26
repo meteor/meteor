@@ -55,7 +55,7 @@
 "area: core":
   - changed-files:
       - any-glob-to-any-file:
-          - packages/{meteor,core-runtime,ejson,base64,promise,callback-hook,id-map,ordered-dict,diff-sequence,binary-heap,retry,meteor-base,logging,check,random,geojson-utils,audit-argument-checks}/**
+          - packages/{meteor,core-runtime,ejson,base64,promise,callback-hook,id-map,ordered-dict,diff-sequence,binary-heap,retry,meteor-base,check,random,geojson-utils,audit-argument-checks}/**
           - npm-packages/meteor-promise/**
 
 "area: create":
@@ -81,6 +81,7 @@
   - changed-files:
       - any-glob-to-any-file:
           - packages/instrumentation*/**
+          - packages/logging/**
 
 "area: livequery":
   - changed-files:
