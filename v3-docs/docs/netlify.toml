@@ -1,3 +1,5 @@
 [build]
   publish = ".vitepress/dist"
   command = "npm run test:links && npm run docs:build"
+  # The roadmap includes the release collaboration section from the root README.
+  ignore = 'test "$CACHED_COMMIT_REF" != "$COMMIT_REF" && git diff --quiet "$CACHED_COMMIT_REF" "$COMMIT_REF" -- . ":(top)README.md"'
