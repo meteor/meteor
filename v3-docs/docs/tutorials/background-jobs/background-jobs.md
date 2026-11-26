@@ -129,7 +129,7 @@ Meteor.startup(async () => {
 
 To watch it, set `EVERY` to `10 * 1000` and the check to `1000`, then run two instances on one database. Start the first with `meteor run`, and a second copy of the app with `MONGO_URL=mongodb://127.0.0.1:3001/meteor meteor run --port 4000` so it uses the first one's database. Each slot is logged by one of the two terminals, never both.
 
-Each slot runs at most once. What the example leaves out is what separates the options above:
+Each slot runs at most once, as long as the claim is acknowledged by a majority of the replica set. Meteor sets no write concern of its own, so the database default applies: `w: "majority"` on most MongoDB 5.0+ deployments, but `w: 1` on some replica sets with arbiters (such as primary-secondary-arbiter), on MongoDB versions before 5.0, or when a custom default is configured. With `w: 1`, a failover can roll back an acknowledged claim, and another instance can then claim and run the same slot. What the example leaves out is what separates the options above:
 
 - If the instance that claimed a slot crashes before the job finishes, that slot is not run again.
 - If no instance is running during a slot, that slot is skipped.
