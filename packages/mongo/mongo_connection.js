@@ -351,12 +351,15 @@ MongoConnection.prototype.dropCollectionAsync = async function(collectionName) {
     })
     .catch(async e => {
       try { await session.endSession(); } catch (_) { /* ignore */ }
-      await write.committed();
       // Driver 6 throws when the collection does not exist; driver 7 returns
-      // false. Give callers the driver 7 result with either driver.
+      // false. Give callers the driver 7 result, and the same refresh, with
+      // either driver.
       if (e?.code === 26 || e?.codeName === 'NamespaceNotFound') {
+        await refresh();
+        await write.committed();
         return false;
       }
+      await write.committed();
       throw e;
     });
 };

@@ -12,8 +12,9 @@ Npm.depends({
 });
 
 Package.onUse(function (api) {
-  // Opt-in driver override; loads before this package when the app has it.
+  // Opt-in driver overrides; each loads before this package when the app has it.
   api.use("npm-mongo-next", "server", { weak: true });
+  api.use("npm-mongo-legacy", "server", { weak: true });
   api.addFiles("wrapper.js", "server");
   api.export(["NpmModuleMongodb", "NpmModuleMongodbVersion"], "server");
   api.export("NpmMongoTest", "server", { testOnly: true });

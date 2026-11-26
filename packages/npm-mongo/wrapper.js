@@ -21,9 +21,8 @@ if (
 
 NpmMongoTest = { redactMongoUrl };
 
-// An app picks a different driver by adding one of these packages. Both load
-// before npm-mongo when present: npm-mongo-next as a weak dependency, and
-// npm-mongo-legacy because the tool lists it ahead of mongo in .meteor/packages.
+// An app picks a different driver by adding one of these packages. Both are
+// weak dependencies of npm-mongo, so either one loads first when present.
 const legacyMongo = Package['npm-mongo-legacy'];
 const nextMongo = Package['npm-mongo-next'];
 
