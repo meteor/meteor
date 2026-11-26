@@ -27,7 +27,7 @@ When a package doesn't have a Meteor 3-compatible version:
 
 | Old Package | Replacement | Notes |
 |---|---|---|
-| `aldeed:collection2` | `aldeed:collection2@5.0.0` | Meteor 3-compatible since 4.0; 5.0 requires Meteor 3.1.2+. 4.0 and 4.1 bundle `aldeed:simple-schema`, from 4.2 add your validation package (`aldeed:simple-schema`, Zod, or AJV-style JSON schemas) — don't attach npm `simpl-schema` schemas |
+| `aldeed:collection2` | `aldeed:collection2@5.0.0` | Meteor 3-compatible since 4.0; 5.0 requires Meteor 3.1.2+. 4.0 and 4.1 bundle `aldeed:simple-schema`, from 4.2 add your validation package (`aldeed:simple-schema`, Zod, or AJV-style JSON schemas) — don't attach npm `simpl-schema` schemas. 5.0 validates only `insertAsync`, `updateAsync` and `upsertAsync`: replace synchronous `insert`/`update`/`upsert` calls |
 | `aldeed:schema-index` | `communitypackages:schema-index` | Transferred to Community Packages |
 | `aldeed:schema-deny` | `communitypackages:schema-deny` | Transferred to Community Packages |
 | `konecty:mongo-counter` | Inline MongoDB `$inc` operations | Simple enough to implement directly |

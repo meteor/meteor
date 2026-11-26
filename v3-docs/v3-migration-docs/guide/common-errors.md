@@ -69,7 +69,14 @@ If a package does not support async callbacks, consider lazy-loading it inside `
 
 **Common issues and solutions:**
 
-1. **Do not attach npm `simpl-schema` v3+ schemas with Collection2** — they conflict. If you validate collections with SimpleSchema, use the compatible `aldeed:simple-schema` instead:
+1. **Do not attach npm `simpl-schema` v3+ schemas with Collection2** — they conflict. If you validate collections with SimpleSchema, use the compatible `aldeed:simple-schema` instead. First change the import in your schema files:
+
+```js
+import SimpleSchema from 'simpl-schema'; // [!code --]
+import SimpleSchema from 'meteor/aldeed:simple-schema'; // [!code ++]
+```
+
+Then swap the packages:
 
 ```bash
 # Remove the npm package if nothing else in your app imports it
@@ -77,6 +84,8 @@ meteor npm remove simpl-schema # [!code highlight]
 # Collection2 5: add aldeed:simple-schema 3
 meteor add aldeed:simple-schema@3.0.0 # [!code highlight]
 ```
+
+In `aldeed:simple-schema` 3, `validate()` (on a schema or a validation context) returns a promise: await it before you write, for example `await schema.validate(doc);`. `isValid()` and `validationErrors()` stay synchronous. Collection2 5 validates only `insertAsync`, `updateAsync` and `upsertAsync`, so use those instead of `insert`, `update` and `upsert`.
 
 Collection2 4.0 and 4.1 bundle `aldeed:simple-schema`, so no separate install is needed. Collection2 4.2 to 4.x needs `aldeed:simple-schema` 1.13.1 or 2.x instead of 3: see the [Collection2 README](https://github.com/Meteor-Community-Packages/meteor-collection2#installation) for that version.
 

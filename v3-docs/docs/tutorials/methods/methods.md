@@ -49,7 +49,7 @@ Meteor.methods({
 });
 ```
 
-If your app uses [`audit-argument-checks`](/packages/audit-argument-checks), each original argument (not a copy or a destructured field) must also be passed to `check`, or the Method throws. A validator can do this for you: `aldeed:simple-schema` calls `check` when you pass it in the `check` option.
+If your app uses [`audit-argument-checks`](/packages/audit-argument-checks), each original argument (not a copy or a destructured field) must also be passed to `check` before the Method's first `await`, or the call fails with an audit error. That error doesn't stop work the Method has already started. The example above doesn't pass this audit, because it destructures its argument. A validator can call `check` for you: with `aldeed:simple-schema`, make `await schema.validate(args, { check })` the Method's first statement. Its `check` option works only with `schema.validate()`, not with a validation context from `newContext()`.
 
 ### Calling a Method
 
