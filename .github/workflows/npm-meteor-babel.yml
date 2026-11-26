@@ -12,16 +12,11 @@ permissions:
 
 jobs:
   test:
-    runs-on: oss-vm
-    defaults:
-      run:
-        working-directory: npm-packages/meteor-babel
-    steps:
-      - uses: actions/checkout@v4
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: 14.x
-          cache: npm
-      - run: npm ci
-      - run: npm run test
+    uses: ./.github/workflows/linux-check.yml
+    with:
+      image: node:14-bullseye
+      directory: npm-packages/meteor-babel
+      npm-lockfile: npm-packages/meteor-babel/package-lock.json
+      command: |
+        npm ci
+        npm run test

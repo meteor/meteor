@@ -9,12 +9,10 @@ permissions:
 
 jobs:
   check-code-style:
-    runs-on: oss-vm
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 26.x
-      - run: cd scripts/admin/check-legacy-syntax && npm ci
-      - name: Check syntax
-        run: cd scripts/admin/check-legacy-syntax && node check-syntax.js
+    uses: ./.github/workflows/linux-check.yml
+    with:
+      image: node:26-bookworm
+      directory: scripts/admin/check-legacy-syntax
+      command: |
+        npm ci
+        node check-syntax.js

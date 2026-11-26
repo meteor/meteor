@@ -27,19 +27,9 @@ permissions:
 jobs:
   test:
     name: Unit Tests
-    runs-on: oss-vm
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 26.x
-
-      - name: Install unit test deps
-        run: npm run install:unit
-
-      - name: Run unit tests
-        run: npm run test:unit
+    uses: ./.github/workflows/linux-check.yml
+    with:
+      image: node:26-bookworm
+      command: |
+        npm run install:unit
+        npm run test:unit

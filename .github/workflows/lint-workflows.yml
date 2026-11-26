@@ -21,20 +21,16 @@ permissions:
 jobs:
   actionlint:
     name: actionlint
-    runs-on: oss-vm
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Run actionlint
-        env:
-          ACTIONLINT_VERSION: 1.7.12
-        run: |
-          curl -sSfL -o actionlint.tar.gz \
-            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
-          tar -xzf actionlint.tar.gz actionlint
-          # shellcheck/pyflakes are disabled on purpose: this guard's job is to catch
-          # structural/parse errors that make GitHub dispatch 0 jobs (duplicate keys,
-          # invalid YAML), not run-script style. The pre-existing-issue baseline lives
-          # in .github/actionlint.yaml (paths.ignore) so this stays green on devel.
-          ./actionlint -color -shellcheck= -pyflakes=
+    uses: ./.github/workflows/linux-check.yml
+    with:
+      image: node:24-bookworm
+      command: |
+        ACTIONLINT_VERSION=1.7.12
+        curl -sSfL -o actionlint.tar.gz \
+          "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+        tar -xzf actionlint.tar.gz actionlint
+        # shellcheck/pyflakes are disabled on purpose: this guard's job is to catch
+        # structural/parse errors that make GitHub dispatch 0 jobs (duplicate keys,
+        # invalid YAML), not run-script style. The pre-existing-issue baseline lives
+        # in .github/actionlint.yaml (paths.ignore) so this stays green on devel.
+        ./actionlint -color -shellcheck= -pyflakes=

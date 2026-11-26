@@ -17,13 +17,8 @@ permissions:
 jobs:
   probe:
     name: Upstream services
-    runs-on: oss-vm
-    timeout-minutes: 5
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-        with:
-          persist-credentials: false
-
-      - name: Probe upstream services
-        run: bash scripts/ci/check-upstream-services.sh
+    uses: ./.github/workflows/linux-check.yml
+    with:
+      image: node:24-bookworm
+      timeout-minutes: 5
+      command: bash scripts/ci/check-upstream-services.sh

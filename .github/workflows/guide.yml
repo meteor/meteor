@@ -10,9 +10,19 @@ permissions:
   statuses: write
 
 jobs:
+  build:
+    if: github.event.pull_request.head.repo.full_name != github.repository
+    permissions:
+      contents: read
+    uses: ./.github/workflows/linux-check.yml
+    with:
+      image: node:26-bookworm
+      directory: guide
+      command: npm ci && npm run build
+
   preview:
-    # Fork PRs build without deployment secrets. Netlify previews use a fresh VM.
-    runs-on: ${{ github.event.pull_request.head.repo.full_name == github.repository && 'ubuntu-latest' || 'oss-vm' }}
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: guide/
@@ -24,7 +34,6 @@ jobs:
       - name: Build the Guide
         run: npm ci && npm run build
       - name: Deploy to Netlify for preview
-        if: github.event.pull_request.head.repo.full_name == github.repository
         uses: nwtgck/actions-netlify@v4.0.0
         with:
           publish-dir: './guide/public'
