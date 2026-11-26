@@ -81,7 +81,7 @@ The facts below come from each project's source and README as of November 2026. 
 
 ## Example: one recurring job on two instances
 
-The example below shows the core of what the options above do for a recurring job: every instance tries to claim the current time slot in MongoDB, and only the first claim succeeds. It uses only `meteor/mongo`. It is meant to show the mechanism, not to replace one of the options: it has no retries, no crash recovery and no job history beyond one document per run.
+The example below shows the core of what the options above do for a recurring job: every instance tries to claim the current time slot in MongoDB, and only the first claim succeeds while it is stored (see the write concern note below). It uses only `meteor/mongo`. It is meant to show the mechanism, not to replace one of the options: it has no retries, no crash recovery and no job history beyond one document per run.
 
 Save it as `server/jobs.js` and import it from your server entry point, for example with `import './jobs';` in `server/main.js`. If your app does not use the `mongo` package yet (apps created with `meteor create --minimal` don't), run `meteor add mongo`.
 
@@ -102,7 +102,7 @@ async function runOncePerSlot(name, job) {
   const _id = `${name}:${slot.toISOString()}`;
 
   try {
-    // _id is unique, so only the first instance to insert it runs this slot.
+    // _id is unique, so other inserts for this slot fail while this claim is stored.
     await JobRuns.insertAsync({ _id, startedAt: new Date() });
   } catch (error) {
     if (error.code === 11000) return; // another instance claimed this slot
@@ -129,9 +129,9 @@ Meteor.startup(async () => {
 
 To watch it, set `EVERY` to `10 * 1000` and the check to `1000`, then run two instances on one database. Start the first with `meteor run`, and a second copy of the app with `MONGO_URL=mongodb://127.0.0.1:3001/meteor meteor run --port 4000` so it uses the first one's database. Each slot is logged by one of the two terminals, never both.
 
-Each slot runs at most once, as long as the claim is acknowledged by a majority of the replica set. Meteor sets no write concern of its own, so the database default applies: `w: "majority"` on most MongoDB 5.0+ deployments, but `w: 1` on some replica sets with arbiters (such as primary-secondary-arbiter), on MongoDB versions before 5.0, or when a custom default is configured. With `w: 1`, a failover can roll back an acknowledged claim, and another instance can then claim and run the same slot. What the example leaves out is what separates the options above:
+Each slot runs at most once as long as its claim survives a failover, which needs the insert to be acknowledged by a majority of the replica set (`w: "majority"`). Meteor adds no write concern to the insert. When the connection sets none either (in `MONGO_URL` or `Meteor.settings.packages.mongo.options`), MongoDB's default applies: an administrator-set cluster-wide default if there is one, otherwise the implicit default, which is `w: "majority"` on most MongoDB 5.0+ deployments and `w: 1` on some replica sets with arbiters (such as primary-secondary-arbiter) and on versions before 5.0. With an effective `w: 1`, a failover can roll back an acknowledged claim, and another instance can then insert the same `_id` and run the slot again. What the example leaves out is what separates the options above:
 
-- If the instance that claimed a slot crashes before the job finishes, that slot is not run again.
+- If the instance that claimed a slot crashes before the job finishes, that slot is not run again while the claim is stored.
 - If no instance is running during a slot, that slot is skipped.
 - A job that throws is logged and waits for the next slot.
 - Slots are fixed windows of time, not cron expressions.
