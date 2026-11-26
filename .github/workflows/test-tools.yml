@@ -194,7 +194,8 @@ jobs:
     runs-on: oss-vm
     container:
       image: meteor/circleci:2026.07.28-android-36-node-24
-      options: ${{ matrix.resources == 'heavy' && '--init --user root --cpus 4 --memory 16g --security-opt seccomp=unconfined' || '--init --user root' }}
+      # A quota caps CPU time and lets Docker start the job on smaller runners.
+      options: ${{ matrix.resources == 'heavy' && '--init --user root --cpu-period 100000 --cpu-quota 400000 --memory 16g --security-opt seccomp=unconfined' || '--init --user root' }}
     needs: setup
     timeout-minutes: 55
     strategy:

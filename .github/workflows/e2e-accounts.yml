@@ -47,7 +47,8 @@ jobs:
       # --init runs tini as PID 1 so orphaned processes get reaped. Without it
       # the container's PID 1 is `tail -f /dev/null`, which never calls wait(),
       # leaving every orphan (chrome, mongod, sh, ...) as a permanent zombie.
-      options: --init --cpus 6 --memory 16g --security-opt seccomp=unconfined
+      # A quota caps CPU time and lets Docker start the job on smaller runners.
+      options: --init --cpu-period 100000 --cpu-quota 600000 --memory 16g --security-opt seccomp=unconfined
 
     steps:
       - name: Checkout code

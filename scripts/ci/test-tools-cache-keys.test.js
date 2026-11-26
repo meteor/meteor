@@ -99,7 +99,7 @@ test('dev bundle caches use dependency keys with fallback restores', () => {
 test('Node 26 workflows do not restore caches created by older Node majors', () => {
   assert.match(
     ddpWorkflow,
-    /key: \$\{\{ runner\.os \}\}-node-26-\$\{\{ hashFiles\('meteor', '\*\*\/package-lock\.json'\) \}\}/,
+    /key: \$\{\{ runner\.os \}\}-node-26-\$\{\{ hashFiles\('\.ci-ddp\/meteor', '\.ci-ddp\/\*\*\/package-lock\.json'\) \}\}/,
   );
   assert.match(ddpWorkflow, /\$\{\{ runner\.os \}\}-node-26-/);
   assert.doesNotMatch(ddpWorkflow, /\$\{\{ runner\.os \}\}-node-24-/);
