@@ -3,10 +3,10 @@ name: Labels
 # Applies .github/labels.yml to the repository. On pull requests everything is a
 # dry run: the preview of every label change goes to the job summary and the
 # `labels-preview` artifact (.github/scripts/labels-preview.js). On devel: export the
-# current labels to the same artifact, create and rename labels, move the items of
-# merged labels (.github/scripts/relabel.js), then delete the labels missing from
+# current labels to the same artifact, create and rename labels, label what the sync
+# leaves out (.github/scripts/relabel.js), then delete the labels missing from
 # the manifest once a fresh read finds every item moved. The relabel waits whenever
-# it reaches an hourly limit of the token, so one run migrates everything; the daily
+# it reaches an hourly limit of the token, so one run labels everything; the daily
 # run takes over if a run is cut short.
 
 on:
@@ -65,7 +65,7 @@ jobs:
         run: node --test --test-timeout=60000 .github/scripts/__tests__/relabel.test.js .github/scripts/__tests__/labels-preview.test.js .github/scripts/__tests__/inactive-issues.test.js
 
       # Every run exports before it writes. Re-running a run drops its artifacts, so keep the export
-      # of the pull request's last check, and resume a migration with a new run, not a re-run.
+      # of the pull request's last check, and resume a run cut short with a new run, not a re-run.
       - name: Preview the changes and export the current labels
         uses: actions/github-script@v9
         with:
@@ -88,7 +88,7 @@ jobs:
           dry-run: ${{ env.APPLY != 'true' }}
 
       # The preview above already lists these additions: a dry run does not read them twice.
-      - name: Move items of merged labels
+      - name: Label what the sync leaves out
         id: relabel
         if: env.APPLY == 'true'
         uses: actions/github-script@v9

@@ -110,10 +110,8 @@ module.exports = async ({ github, context }) => {
       continue;
     }
 
-    // `idle` and `in-development` are the names from before the Labels workflow renames them:
-    // a run that comes first must not mark and comment those issues again
-    const isStale = issue.labels.some((l) => l.name === STALE_LABEL || l.name === 'idle');
-    const inProgress = issue.labels.some((l) => l.name === IN_PROGRESS_LABEL || l.name === 'in-development');
+    const isStale = issue.labels.some((l) => l.name === STALE_LABEL);
+    const inProgress = issue.labels.some((l) => l.name === IN_PROGRESS_LABEL);
     if (inProgress && !isStale) {
       continue;
     }
