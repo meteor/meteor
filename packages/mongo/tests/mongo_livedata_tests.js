@@ -4039,8 +4039,9 @@ Meteor.isServer &&
 
 Meteor.isServer &&
   Tinytest.add('mongo-livedata - npm modules', function(test) {
-    // Make sure the version number looks like a version number.
-    test.matches(MongoInternals.NpmModules.mongodb.version, /^6\.(\d+)\.(\d+)/);
+    // Make sure the version number looks like a supported driver version:
+    // 6 is bundled with npm-mongo, 7 comes from the opt-in npm-mongo-next.
+    test.matches(MongoInternals.NpmModules.mongodb.version, /^[67]\.(\d+)\.(\d+)/);
     test.equal(typeof MongoInternals.NpmModules.mongodb.module, 'object');
     test.equal(
       typeof MongoInternals.NpmModules.mongodb.module.ObjectId,

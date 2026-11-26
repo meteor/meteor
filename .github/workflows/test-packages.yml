@@ -16,9 +16,16 @@ jobs:
         reactivity_order:
           - 'changeStreams,polling'
           - 'oplog,polling'
+        # The bundled driver, and the opt-in next major driver (npm-mongo-next).
+        mongo_driver:
+          - name: bundled
+            extra_packages: ''
+          - name: next
+            extra_packages: 'npm-mongo-next'
+    name: test-packages (${{ matrix.reactivity_order }}, ${{ matrix.mongo_driver.name }} driver)
     runs-on: oss-vm
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.reactivity_order }}
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.reactivity_order }}-${{ matrix.mongo_driver.name }}
       cancel-in-progress: true
     timeout-minutes: 90
     env:
@@ -32,6 +39,7 @@ jobs:
       METEOR_MODERN: true
       NODE_ENV: CI
       METEOR_REACTIVITY_ORDER: ${{ matrix.reactivity_order }}
+      TEST_EXTRA_PACKAGES: ${{ matrix.mongo_driver.extra_packages }}
     steps:
 
       - name: Checkout repository

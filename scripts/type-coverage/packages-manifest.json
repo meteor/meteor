@@ -52,6 +52,7 @@
     "non-core/xmlbuilder",
     "npm-mongo",
     "npm-mongo-legacy",
+    "npm-mongo-next",
     "oauth",
     "oauth-encryption",
     "oauth1",

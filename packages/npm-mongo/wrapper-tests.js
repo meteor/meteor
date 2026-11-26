@@ -1,6 +1,7 @@
 // Evaluate the packaged source with the real MongoDB parser. Only connection
 // methods are intercepted, before evaluation, and restored in the same turn.
-function evaluateMongoWrapper(source, mongoUrl, legacy) {
+// `overrides` maps driver-selecting package names to their fake exports.
+function evaluateMongoWrapper(source, mongoUrl, overrides) {
   var MongoClient = NpmModuleMongodb.MongoClient;
   var originalConnect = MongoClient.prototype.connect;
   var originalStaticConnect = MongoClient.connect;
@@ -12,7 +13,7 @@ function evaluateMongoWrapper(source, mongoUrl, legacy) {
   }
   var context = {
     process: { env: environment, noDeprecation: false },
-    Package: legacy ? { 'npm-mongo-legacy': legacy } : {},
+    Package: overrides || {},
     console: {
       log: function () {},
       warn: function () {
@@ -116,12 +117,38 @@ mongoWrapperTest('preserves the legacy driver export', function (test, source) {
     NpmModuleMongodbVersion: 'legacy-test-version'
   };
   var result = evaluateMongoWrapper(source,
-    'mongodb://user:password@localhost:27017/database', legacy);
+    'mongodb://user:password@localhost:27017/database',
+    { 'npm-mongo-legacy': legacy });
   test.equal(result.connectionAttempts, 0);
   test.equal(result.warnings, []);
   test.isTrue(result.context.NpmModuleMongodb === legacy.NpmModuleMongodb);
   test.equal(result.context.NpmModuleMongodbVersion, legacy.NpmModuleMongodbVersion);
   test.isFalse(result.context.process.noDeprecation);
+});
+
+mongoWrapperTest('exports the opt-in next driver', function (test, source) {
+  var next = {
+    NpmModuleMongodb: { next: true },
+    NpmModuleMongodbVersion: 'next-test-version'
+  };
+  var result = evaluateMongoWrapper(source,
+    'mongodb://user:password@localhost:27017/database',
+    { 'npm-mongo-next': next });
+  test.equal(result.connectionAttempts, 0);
+  test.equal(result.warnings, []);
+  test.isTrue(result.context.NpmModuleMongodb === next.NpmModuleMongodb);
+  test.equal(result.context.NpmModuleMongodbVersion, next.NpmModuleMongodbVersion);
+  test.isFalse(result.context.process.noDeprecation);
+});
+
+mongoWrapperTest('rejects the legacy and next drivers together', function (test, source) {
+  var overrides = {
+    'npm-mongo-legacy': { NpmModuleMongodb: {}, NpmModuleMongodbVersion: 'legacy' },
+    'npm-mongo-next': { NpmModuleMongodb: {}, NpmModuleMongodbVersion: 'next' }
+  };
+  test.throws(function () {
+    evaluateMongoWrapper(source, undefined, overrides);
+  }, /npm-mongo-legacy and npm-mongo-next/);
 });
 
 Tinytest.add('npm-mongo - redacts credentials in invalid MongoDB URLs', function (test) {
