@@ -28,7 +28,7 @@ meteor create myapp --typescript
 
 Meteor offers flags to generate different types of apps, like choosing a different front-end framework or configurations during project setup.
 
-Additional options are available in the [Meteor CLI](/cli/#meteor-create-app-name) section.
+Additional options are available in the [Meteor CLI](/cli/#meteorcreate) section.
 
 ## Step 3: Run Your Project Locally
 

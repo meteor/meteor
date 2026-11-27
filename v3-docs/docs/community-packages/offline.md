@@ -68,7 +68,7 @@ if (!Meteor.status().connected) { // check that the user is offline
   queueMethod(name, arg1, arg2...) // the arguments should be the same form that you'd use for Meteor.callAsync
 }
 ```
-where name is the method's name and the arguments are what the method expects. You'll still want to call the method when offline and it's recommended that you use [Meteor.applyAsync](https://docs.meteor.com/api/methods.html#Meteor-applyAsync) with the option `noRetry: true` to avoid using Meteor's built-in retry mechanism since we'll be handling replay separately. For this to work as intended, the methods that you call should be isomorphic so that they're availble to the client.
+where name is the method's name and the arguments are what the method expects. You'll still want to call the method when offline and it's recommended that you use [Meteor.applyAsync](https://docs.meteor.com/api/meteor#Meteor-applyAsync) with the option `noRetry: true` to avoid using Meteor's built-in retry mechanism since we'll be handling replay separately. For this to work as intended, the methods that you call should be isomorphic so that they're availble to the client.
 
 **`Note`**: If you're using [jam:method](https://github.com/jamauro/method), queuing methods for replay is handled automatically for you. 🎉
 
