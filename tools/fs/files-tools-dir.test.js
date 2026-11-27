@@ -17,7 +17,7 @@ jest.mock("rimraf", () => ({}), { virtual: true });
 jest.mock("source-map", () => ({}), { virtual: true });
 jest.mock("../tool-env/source-map-retriever-stack.js", () => ({ push: () => {} }));
 
-const { getCurrentToolsDir } = require("./files");
+const { convertToStandardPath, getCurrentToolsDir } = require("./files");
 
 // The directory this tool (a checkout here) runs from: tools/fs/../..
 const runningToolsDir = path.resolve(__dirname, "../..");
@@ -44,7 +44,7 @@ describe("getCurrentToolsDir with METEOR_WAREHOUSE_DIR", () => {
     fs.writeFileSync(path.join(otherTool, "meteor"), "");
     process.env.METEOR_WAREHOUSE_DIR = path.dirname(runningToolsDir);
 
-    expect(getCurrentToolsDir()).toBe(runningToolsDir);
+    expect(getCurrentToolsDir()).toBe(convertToStandardPath(runningToolsDir));
   });
 
   test("uses the warehouse tool for a checkout outside the warehouse", () => {
@@ -54,6 +54,6 @@ describe("getCurrentToolsDir with METEOR_WAREHOUSE_DIR", () => {
     fs.symlinkSync(path.join("packages", "meteor-tool", "mt", "meteor"), path.join(tmpDir, "meteor"));
     process.env.METEOR_WAREHOUSE_DIR = tmpDir;
 
-    expect(getCurrentToolsDir()).toBe(warehouseTool);
+    expect(getCurrentToolsDir()).toBe(convertToStandardPath(warehouseTool));
   });
 });
