@@ -458,7 +458,7 @@ The `--prototype` option adds packages that make development faster but shouldn'
 **Meteor packages:**
 - `meteor-base`, `mobile-experience`, `mongo`, `blaze-html-templates`, `jquery`, `reactive-var`,
 `tracker`, `standard-minifier-css`, `standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`,
-`hot-module-replacement`, `blaze-hot`
+`hot-module-replacement`, `blaze-hot`, `ostrio:flow-router-extra`, `rspack`
 </details>
 
 <details>
