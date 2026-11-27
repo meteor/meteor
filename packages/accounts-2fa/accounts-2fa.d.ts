@@ -6,6 +6,19 @@ export interface TwoFactorActivationData {
   uri: string;
 }
 
+/**
+ * Payload passed to `Accounts.validate2faChange` callbacks.
+ * `stage` is only set for an activation: `setup` when a secret is about to be
+ * issued, `confirm` when 2FA is about to be turned on.
+ */
+export interface TwoFactorChangeAttempt {
+  type: 'activation' | 'deactivation';
+  stage?: 'setup' | 'confirm';
+  /** Same shape as `Meteor.user()`, so it respects `defaultFieldSelector`. */
+  user: Meteor.User;
+  connection: Meteor.Connection | null;
+}
+
 declare module 'meteor/accounts-base' {
   namespace Accounts {
     /**
@@ -32,6 +45,15 @@ declare module 'meteor/accounts-base' {
      * Disable 2FA for the logged-in user.
      */
     function disableUser2fa(callback?: (error?: Error) => void): void;
+
+    /**
+     * Refuse a 2FA activation or deactivation (server only).
+     * Throw a `Meteor.Error` from the callback to refuse the change and report
+     * the reason to the user. Any other exception reaches the client as a 500.
+     */
+    function validate2faChange(
+      callback: (attempt: TwoFactorChangeAttempt) => void | Promise<void>
+    ): { stop: () => void };
 
     /** Returns true if the user document has an active `services.twoFactorAuthentication`. */
     function _check2faEnabled(user: Meteor.User): boolean;
