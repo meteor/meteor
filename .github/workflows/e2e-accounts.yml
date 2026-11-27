@@ -44,9 +44,13 @@ jobs:
   test:
     name: Accounts
     runs-on: >-
-      ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
-          && (github.repository == 'meteor/meteor' || github.event.repository.private)
-          && (vars.METEOR_CI_LINUX_RUNNER || 'oss-vm') || 'ubuntu-latest' }}
+      ${{ github.repository == 'meteor/meteor' && !github.event.repository.private
+          && (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository)
+          && 'ubuntu-latest'
+          || fromJSON(format('["self-hosted","linux",{0}]', toJSON(
+               (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository)
+               && (vars.METEOR_CI_FORK_LINUX_RUNNER || 'meteor-fork-ci')
+               || vars.METEOR_CI_LINUX_RUNNER || 'oss-vm'))) }}
     timeout-minutes: 60
     defaults:
       run:

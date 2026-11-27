@@ -17,9 +17,15 @@ For a new lightweight job, follow the [unit test caller](../../workflows/unit-te
 
 ## Select the runner
 
-The reusable Linux check, E2E, CLI, package and DDP test jobs select GitHub-hosted Ubuntu for cross-repository PRs and for runs in ordinary public forks. For same-repository work in Meteor or a private repository, they use `METEOR_CI_LINUX_RUNNER` with a default of `oss-vm`. E2E defines its own Actions containers and uses the same routing. Check the trigger and runner expression when adapting another workflow.
+| Where the Linux check runs | Runner |
+| --- | --- |
+| Public `meteor/meteor`, small checks such as unit tests and workflow lint | Standard GitHub-hosted Ubuntu. This is the reusable workflow's default. |
+| Public `meteor/meteor`, trusted code style, type coverage, E2E, CLI, package or DDP tests | The repository's self-hosted Linux pool. For reusable workflow callers, set `self-hosted-in-public: true` to select it. |
+| PR from another repository into public `meteor/meteor` | Standard GitHub-hosted Ubuntu for checks that execute the contributor's code. |
+| Own pushes and same-repository PRs in a synchronized fork | Self-hosted Linux with the label in `METEOR_CI_LINUX_RUNNER`, default `oss-vm`. |
+| PR from another repository into a synchronized fork | Disposable self-hosted Linux runners in an isolated pool with the label in `METEOR_CI_FORK_LINUX_RUNNER`, default `meteor-fork-ci`. The job waits until a matching runner is available. |
 
-Keep synchronized workflow files portable across public and private repositories. Select a private pool by its runner label and restrict its machines to the intended repositories through runner registration or group access. For new public fork jobs, use disposable workers and keep private build machines out of reach. Keep `pull_request_target` jobs that use write permissions on trusted base-branch code. For a cost-sensitive private workflow, verify where fork-origin PRs run as well as same-repository pushes and PRs.
+Use the base repository for routing. Every custom selector requires the `self-hosted` and `linux` labels as well as the pool label. Restrict runner groups to the intended repositories. Keep `pull_request_target` jobs that use write permissions on trusted base-branch code. Mobile jobs select their platform-specific runners in the native workflow.
 
 ## Cache and clean up
 

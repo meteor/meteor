@@ -17,6 +17,10 @@ on:
       command:
         type: string
         required: true
+      self-hosted-in-public:
+        description: Use Meteor's own runners for trusted jobs in the public repository.
+        type: boolean
+        default: false
       directory:
         type: string
         default: .
@@ -32,12 +36,17 @@ permissions:
 
 jobs:
   check:
-    # Contributor forks have no access to Meteor's runners. Private repositories
-    # can select their own pool without changing the workflow when syncing branches.
+    # The public repository uses standard GitHub runners for small checks and fork PRs.
+    # Other repositories supply their own workers. Fork PRs need an isolated pool.
     runs-on: >-
-      ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
-          && (github.repository == 'meteor/meteor' || github.event.repository.private)
-          && (vars.METEOR_CI_LINUX_RUNNER || 'oss-vm') || 'ubuntu-latest' }}
+      ${{ github.repository == 'meteor/meteor' && !github.event.repository.private
+          && (!inputs.self-hosted-in-public ||
+              (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository))
+          && 'ubuntu-latest'
+          || fromJSON(format('["self-hosted","linux",{0}]', toJSON(
+               (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository)
+               && (vars.METEOR_CI_FORK_LINUX_RUNNER || 'meteor-fork-ci')
+               || vars.METEOR_CI_LINUX_RUNNER || 'oss-vm'))) }}
     timeout-minutes: ${{ inputs.timeout-minutes }}
     defaults:
       run:

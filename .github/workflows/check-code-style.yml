@@ -19,6 +19,7 @@ jobs:
   check-code-style:
     uses: ./.github/workflows/run-linux-check-in-docker.yml
     with:
+      self-hosted-in-public: true
       image: node:26-bookworm
       npm-lockfile: package-lock.json
       command: |
