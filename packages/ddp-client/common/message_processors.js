@@ -32,8 +32,9 @@ export class MessageProcessors {
       self._heartbeat.start();
     }
 
-    // If this is a reconnect, we'll have to reset all stores.
-    if (self._lastSessionId) self._resetStores = true;
+    // If this is a reconnect, we'll have to reset all stores. So do stores
+    // filled before the first connection (_reviveAllSubscriptions).
+    if (self._lastSessionId || self._reviveAllSubscriptions) self._resetStores = true;
 
     let reconnectedToPreviousSession;
     if (typeof msg.session === 'string') {

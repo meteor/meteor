@@ -1,5 +1,4 @@
 import { Meteor } from 'meteor/meteor';
-import { DDP } from 'meteor/ddp-client';
 import { Tracker } from 'meteor/tracker';
 import * as db from './db.js';
 import { hydrate, mirror } from './mirror.js';
@@ -34,15 +33,22 @@ let started = false;
 const made = new Set(); // subscription ids
 let loaded = false; // the boot copy is in Minimongo
 
+const holdsDocuments = () => collections.some((collection) => collection.find({}, { reactive: false }).count() > 0);
+
 function readyFromCopy() {
   if (!loaded) return;
-  const held = collections.some((collection) => collection.find({}, { reactive: false }).count() > 0);
+  const held = holdsDocuments();
   made.forEach((id) => {
     const record = Meteor.connection._subscriptions[id];
     if (!held || !record || record.ready) return;
-    // What the server's ready message does.
+    // What the server's ready message does. The callback is the app's: its
+    // failure stops neither the start nor the other subscriptions.
     record.ready = true;
-    if (record.readyCallback) record.readyCallback();
+    try {
+      if (record.readyCallback) record.readyCallback();
+    } catch (error) {
+      Meteor._debug('[offline] onReady callback failed', error);
+    }
     record.readyDeps.changed();
   });
   made.clear();
@@ -86,7 +92,6 @@ async function activate(userId, { boot }) {
     readyFromCopy();
   }
   emit('ready', { userId, calls, documents });
-  return documents;
 }
 
 export const Offline = {
@@ -100,26 +105,20 @@ export const Offline = {
     queue.configure(methods, emit);
     const connection = Meteor.connection;
     connection.disconnect();
-    let documents = 0;
     try {
-      documents = await activate(currentUserId(), { boot: true });
+      await activate(currentUserId(), { boot: true });
     } finally {
       // The copy is replaced by the server's documents the way a reconnection
-      // replaces the previous session's: once the stream is up, the current
-      // subscriptions are treated as revived and the stores are reset together
-      // with their data, in one paused batch. Without a subscription yet the
-      // reset is immediate, as on a reconnection, and the subscriptions made
-      // later fill the stores again: a copy nothing replaces would keep the
-      // documents deleted while the app was away. Nothing to replace when the
-      // copy was empty.
-      if (documents > 0) {
-        const firstConnection = DDP.onReconnect((reconnecting) => {
-          if (reconnecting !== connection) return;
-          firstConnection.stop();
-          connection._resetStores = true;
-          connection._reviveAllSubscriptions = true;
-        });
-      }
+      // replaces the previous session's: on the `connected` message, the
+      // current subscriptions are treated as revived and the stores are reset
+      // together with their data, in one paused batch. Not before: a reset
+      // asked for earlier would run with the first stub and empty the copy.
+      // Without a subscription yet the reset is immediate, as on a
+      // reconnection, and the subscriptions made later fill the stores again:
+      // a copy nothing replaces would keep the documents deleted while the app
+      // was away. Nothing to replace when the stores are empty; whatever they
+      // hold is replaced, even if the start failed halfway.
+      if (holdsDocuments()) connection._reviveAllSubscriptions = true;
       connection.reconnect();
     }
     // Another user means another copy; the previous one is deleted. Changes

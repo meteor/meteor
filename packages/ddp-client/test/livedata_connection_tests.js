@@ -1981,7 +1981,6 @@ Tinytest.addAsync('livedata connection - reset waits for the current subscriptio
   coll._collection.insert({ _id: 'kept', a: 1 });
   coll._collection.insert({ _id: 'gone', a: 2 });
   const sub = conn.subscribe('my_data');
-  conn._resetStores = true;
   conn._reviveAllSubscriptions = true;
 
   stream.sent.length = 0;

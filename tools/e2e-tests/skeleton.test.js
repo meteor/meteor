@@ -221,6 +221,10 @@ WebApp.handlers.get('${LINKS_PATH}', async (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.end(JSON.stringify(await Links.find({}, { sort: { createdAt: 1 } }).fetchAsync()));
 });
+WebApp.handlers.delete('${LINKS_PATH}', async (req, res) => {
+  await Links.removeAsync({});
+  res.end();
+});
 `;
 
 async function assertReact19Dependencies({ tempDir }, includeTypes = false) {
@@ -720,7 +724,20 @@ describe('Meteor Skeletons /', () => {
       await page.waitForSelector('.links li:has-text("Meteor")');
       expect(await page.locator('.links li').count()).toBe(1);
       console.log('✅ Pending call sent once on reconnection, link in the database');
-    }, 240_000);
+
+      // A link removed while the app was closed: the next start shows it from
+      // the device, then the server's data replaces the copy.
+      await page.goto('about:blank');
+      await page.request.delete(`${origin}${LINKS_PATH}`);
+      await stopServer();
+      await page.goto(`${origin}/`);
+      await page.waitForSelector('.links li:has-text("Meteor")');
+      await startProduction();
+      await page.evaluate(() => Meteor.reconnect());
+      await waitForStatus('Online');
+      await page.waitForFunction(() => document.querySelectorAll('.links li').length === 0, null, { timeout: 30_000 });
+      console.log('✅ Link removed while the app was closed left the device with the first data from the server');
+    }, 300_000);
   });
 
   describe(

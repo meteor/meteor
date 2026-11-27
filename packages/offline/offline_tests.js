@@ -3,6 +3,7 @@ import { Meteor } from 'meteor/meteor';
 import { Accounts } from 'meteor/accounts-base';
 import { Mongo } from 'meteor/mongo';
 import { Random } from 'meteor/random';
+import { Tracker } from 'meteor/tracker';
 import { Offline } from 'meteor/offline';
 import { Items, Amount } from './offline_tests_common.js';
 import * as db from './db.js';
@@ -430,6 +431,7 @@ Tinytest.addAsync('offline - a subscription made without connection is ready fro
   await Meteor.callAsync('offline_test.insert', { _id: Random.id(), value: 'held' });
   await until(() => Items.find().count() > 0, 'a published document');
   const handles = [];
+  let computation;
   Meteor.disconnect();
   try {
     const handle = Meteor.subscribe('offline_test.items', 'without connection');
@@ -438,6 +440,20 @@ Tinytest.addAsync('offline - a subscription made without connection is ready fro
     await until(() => handle.ready(), 'the subscription to be ready from the copy');
     test.isFalse(Meteor.status().connected);
     await new Promise((resolve) => handles.push(Meteor.subscribe('offline_test.items', 'with onReady', { onReady: resolve })));
+    // An onReady that throws is reported, and its subscription is ready all
+    // the same, for the computations too.
+    Meteor._suppress_log(1);
+    const throwing = Meteor.subscribe('offline_test.items', 'onReady throws', {
+      onReady() {
+        throw new Error('thrown by the app');
+      },
+    });
+    handles.push(throwing);
+    let seen = false;
+    computation = Tracker.autorun(() => {
+      seen = throwing.ready();
+    });
+    await until(() => seen, 'the computations to see the subscription ready');
     Meteor.reconnect();
     await until(() => Meteor.status().connected, 'the connection');
     test.isTrue(handle.ready(), 'still ready once connected');
@@ -453,6 +469,7 @@ Tinytest.addAsync('offline - a subscription made without connection is ready fro
     await until(() => empty.ready(), 'the subscription to be ready from the server');
   } finally {
     Meteor.reconnect();
+    if (computation) computation.stop();
     handles.forEach((handle) => handle.stop());
   }
 });
