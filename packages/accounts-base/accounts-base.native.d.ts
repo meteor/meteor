@@ -147,6 +147,12 @@ export namespace Accounts {
   // Per-client-address rate limit for the cookie endpoints
   // (default 30 requests per 10 seconds); `false` disables it. Server only.
   httpOnlyCookieRateLimit?: { max?: number; windowMs?: number } | false | undefined;
+  // With accounts-2fa, decides whether a login must present a second factor.
+  // Ignored, with a warning, when accounts-2fa is not installed. Server only.
+  require2fa?:
+    | boolean
+    | ((userId: string, context: TwoFactorPolicyContext) => boolean | Promise<boolean>)
+    | undefined;
   }): void;
 
   function onLogin(
@@ -242,6 +248,15 @@ export namespace Accounts {
   };
 }
 
+/** Context passed to an `Accounts.config({ require2fa })` function. */
+export interface TwoFactorPolicyContext {
+  loginMethod: string;
+  connection: Meteor.Connection | null;
+  /** Data sent by `Accounts.set2faContextProvider` (accounts-2fa), or null. */
+  clientContext: Record<string, string> | null;
+  availableMethods: Array<'otp' | 'email'>;
+}
+
 export interface Header {
   [id: string]: string;
 }
@@ -253,6 +268,15 @@ export interface EmailTemplates {
   resetPassword: EmailFields;
   enrollAccount: EmailFields;
   verifyEmail: EmailFields;
+  // Email second factor of accounts-2fa. `url` is the site root; `extra.code` holds the code.
+  twoFactorCode?:
+    | {
+        from?: ((user: Meteor.User) => string) | undefined;
+        subject?: ((user: Meteor.User) => string) | undefined;
+        text?: ((user: Meteor.User, url: string, extra: { code: string }) => string) | undefined;
+        html?: ((user: Meteor.User, url: string, extra: { code: string }) => string) | undefined;
+      }
+    | undefined;
 }
 
 export namespace Accounts {
