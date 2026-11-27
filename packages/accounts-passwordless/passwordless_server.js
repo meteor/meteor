@@ -20,7 +20,7 @@ const findUserWithOptions = async ({ selector }) => {
       ...(email && { 'emails.address': email })
     },
     {
-      fields: {
+      projection: {
         services: 1,
         emails: 1,
       },
@@ -139,7 +139,7 @@ Meteor.methods({
     });
 
     const { selector, userData, options = {} } = payload;
-
+    Accounts._validateClientUserCreationOptions(userData);
     let user = await Accounts._findUserByQuery(selector, {
       fields: { emails: 1 },
     });
