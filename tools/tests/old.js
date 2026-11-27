@@ -85,6 +85,10 @@ selftest.define("bundler-devonly", ["checkout"], function () {
   return runOldTest('test-bundler-devonly.js');
 });
 
+selftest.define("bundler-devonly-author-packages", ["checkout"], function () {
+  return runOldTest('test-bundler-devonly-author-packages.js');
+});
+
 selftest.define("bundler-devdepends", ["checkout"], function () {
   return runOldTest('test-bundler-devdepends.js');
 });
