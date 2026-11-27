@@ -75,7 +75,7 @@ A method or publication event looks like this:
   eventName: 'method.start',      // = type, optionally prefixed (see configure)
   ts: 1750000000000,              // emit time, ms since epoch
   traceId: '4bf92f3577b34da6a3ce929d0e0e4736', // identifies the invocation; shared start↔end
-  spanId: '00f067aa0ba902b7',                 // identifies this single event
+  spanId: '00f067aa0ba902b7',                 // the invocation's span; shared start↔end too
   name: 'orders.create',          // the method / publication name
   connectionId: 'ML8NkBJoadu…',   // the client's DDP connection, or null
   userId: 'abc123',               // the logged-in user, or null
