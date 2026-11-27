@@ -180,8 +180,7 @@ export class OrderedDict {
     const elt = this._dict[this._k(key)];
     // Only null/undefined mean "move to the end". Falsy keys such as 0 and
     // '' are valid destinations and must be looked up, not treated as end.
-    const eltBefore =
-      before !== null && before !== undefined ? this._dict[this._k(before)] : null;
+    const eltBefore = before !== null && before !== undefined ? this._dict[this._k(before)] : null;
     if (typeof elt === "undefined") {
       throw new Error("Item to move is not present");
     }
