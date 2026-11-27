@@ -16,7 +16,7 @@ permissions:
 jobs:
   label:
     runs-on: >-
-      ${{ github.repository == 'meteor/meteor' && !github.event.repository.private && 'ubuntu-latest'
+      ${{ github.repository == 'meteor/meteor' && 'ubuntu-latest'
           || fromJSON(format('["self-hosted","linux",{0}]', toJSON(vars.METEOR_CI_LINUX_RUNNER || 'oss-vm'))) }}
     steps:
     - uses: actions/labeler@v5

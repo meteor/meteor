@@ -39,7 +39,7 @@ jobs:
     # The public repository uses standard GitHub runners for small checks and fork PRs.
     # Other repositories supply their own workers. Fork PRs need an isolated pool.
     runs-on: >-
-      ${{ github.repository == 'meteor/meteor' && !github.event.repository.private
+      ${{ github.repository == 'meteor/meteor'
           && (!inputs.self-hosted-in-public ||
               (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository))
           && 'ubuntu-latest'

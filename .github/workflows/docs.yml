@@ -23,7 +23,7 @@ jobs:
   preview:
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: >-
-      ${{ github.repository == 'meteor/meteor' && !github.event.repository.private && 'ubuntu-latest'
+      ${{ github.repository == 'meteor/meteor' && 'ubuntu-latest'
           || fromJSON(format('["self-hosted","linux",{0}]', toJSON(vars.METEOR_CI_LINUX_RUNNER || 'oss-vm'))) }}
     defaults:
       run:
