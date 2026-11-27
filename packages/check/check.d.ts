@@ -54,6 +54,10 @@ export namespace Match {
     dico: T
   ): Matcher<PatternMatch<T>>;
 
+  function ObjectWithValues<T extends Pattern>(
+    pattern: T
+  ): Matcher<Record<string, PatternMatch<T>>>;
+
   /** Matches any value that matches at least one of the provided patterns. */
   function OneOf<T extends Pattern[]>(
     ...patterns: T
