@@ -125,6 +125,22 @@ This behavior is enabled by default. You can control it via `Meteor.settings`:
 
 Setting `includeVaryUserAgent` to `false` will disable the header for **all** static files. 
 
+#### Skipping compression for responses with a Content-Length
+
+By default, `webapp` may compress responses (dropping their `Content-Length` header in the process). If you sit behind a proxy or CDN — or have clients — that rely on an explicit `Content-Length` (for example, to show download progress or to serve range requests), you can opt in to leave already-sized responses uncompressed:
+
+```json
+{
+  "packages": {
+    "webapp": {
+      "skipCompressionWithContentLength": true
+    }
+  }
+}
+```
+
+When enabled, any response that already declares a `Content-Length` header is served as-is, without compression. Responses without a `Content-Length` are unaffected and still compress as before. This setting is `false` by default.
+
 ### React SSR Optimization (Meteor 3.4)
 
 **Experimental: Disable Boilerplate Response** ([PR#13855](https://github.com/meteor/meteor/pull/13855))

@@ -4,7 +4,34 @@
 
 import fs from 'fs-extra';
 import path from 'path';
-import { wait } from "./helpers";
+import { chromium } from 'playwright';
+
+let fallbackBrowser;
+
+async function getPlaywrightPage() {
+  if (typeof page !== 'undefined' && !page.isClosed()) {
+    return page;
+  }
+
+  if (typeof browser !== 'undefined' && browser?.isConnected?.()) {
+    global.page = await browser.newPage();
+    return global.page;
+  }
+
+  // Fallback only: recover a usable page after the shared Jest Playwright
+  // browser/page has already been closed during test teardown.
+  fallbackBrowser = await chromium.launch({ headless: true });
+  global.browser = fallbackBrowser;
+  global.page = await global.browser.newPage();
+  return global.page;
+}
+
+afterAll(async () => {
+  if (fallbackBrowser?.isConnected()) {
+    await fallbackBrowser.close();
+  }
+  fallbackBrowser = null;
+});
 
 /**
  * Helper function to assert that a Meteor app is running correctly
@@ -15,28 +42,30 @@ import { wait } from "./helpers";
  * @returns {Promise<void>}
  */
 export async function assertMeteorApp(port, options = {}) {
+  const activePage = await getPlaywrightPage();
+
   // Extract options with default values
   const { title: inTitle, h1: inH1 = "Welcome to Meteor!" } = options;
 
   // Collect browser errors and failed HTTP responses to diagnose failures
   const consoleErrors = [];
   const failedResponses = [];
-  page.on('console', msg => {
+  activePage.on('console', msg => {
     if (msg.type() === 'error') consoleErrors.push(msg.text());
   });
-  page.on('pageerror', err => consoleErrors.push(err.message));
-  page.on('response', response => {
+  activePage.on('pageerror', err => consoleErrors.push(err.message));
+  activePage.on('response', response => {
     if (response.status() >= 400) {
       failedResponses.push(`${response.status()} ${response.url()}`);
     }
   });
 
   // Navigate to the app
-  await page.goto(`http://localhost:${port}`);
+  await activePage.goto(`http://localhost:${port}`);
 
   // Check the title if specified
   if (inTitle) {
-    const title = await page.title();
+    const title = await activePage.title();
     expect(title).toMatch(new RegExp(inTitle));
     console.log(`✅ Title: ${title}`);
   }
@@ -50,7 +79,7 @@ export async function assertMeteorApp(port, options = {}) {
     const maxAttempts = process.env.CI ? 2 : 1;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        await page.waitForSelector('h1');
+        await activePage.waitForSelector('h1');
         lastErr = null;
         break;
       } catch (err) {
@@ -58,16 +87,16 @@ export async function assertMeteorApp(port, options = {}) {
         if (attempt < maxAttempts) {
           console.log(`⏳ h1 not found (attempt ${attempt}/${maxAttempts}), reloading page...`);
           consoleErrors.length = 0;
-          await page.reload({ waitUntil: 'load' });
+          await activePage.reload({ waitUntil: 'load' });
         }
       }
     }
     if (lastErr) {
       // Capture diagnostic info to help debug rendering failures
-      const scriptTags = await page.evaluate(() =>
+      const scriptTags = await activePage.evaluate(() =>
         [...document.querySelectorAll('script[src]')].map(s => s.src).join('\n')
       );
-      const bodySnippet = await page.evaluate(() => {
+      const bodySnippet = await activePage.evaluate(() => {
         const root = document.querySelector('app-root') || document.body;
         return root?.innerHTML?.substring(0, 500) || '<empty>';
       });
@@ -81,7 +110,7 @@ export async function assertMeteorApp(port, options = {}) {
       }
       throw lastErr;
     }
-    const h1Text = await page.$eval('h1', el => el.textContent);
+    const h1Text = await activePage.$eval('h1', el => el.textContent);
     expect(h1Text).toMatch(new RegExp(inH1));
     console.log(`✅ H1: ${h1Text}`);
   }
@@ -110,11 +139,13 @@ export async function assertMeteorReactApp(port, options = {}) {
  * @returns {Promise<void>}
  */
 export async function assertRspackScriptTag(port, shoudlExist = true) {
+  const activePage = await getPlaywrightPage();
+
   // Navigate to the app
-  await page.goto(`http://localhost:${port}`);
+  await activePage.goto(`http://localhost:${port}`);
 
   // Get all script tags
-  const scriptTags = await page.$$eval('script', scripts => 
+  const scriptTags = await activePage.$$eval('script', scripts => 
     scripts.map(script => script.getAttribute('src'))
   );
 
@@ -196,6 +227,28 @@ export async function assertFileExist(tempDir, filePath, options = {}) {
 }
 
 /**
+ * Helper function to assert that a path is a symbolic link and optionally
+ * points to the expected target.
+ * @param {string} basePath - Base directory path
+ * @param {string} relPath - Relative path from basePath to the symlink
+ * @param {Object} options - Additional options
+ * @param {string} options.target - Expected readlink target
+ * @returns {Promise<void>}
+ */
+export async function assertSymlink(basePath, relPath, options = {}) {
+  const { target } = options;
+  const fullPath = path.join(basePath, relPath);
+  const stat = await fs.lstat(fullPath);
+
+  expect(stat.isSymbolicLink()).toBe(true);
+
+  if (target) {
+    const actualTarget = await fs.readlink(fullPath);
+    expect(actualTarget).toBe(target);
+  }
+}
+
+/**
  * Helper function to assert that a path does NOT exist
  * Retries until the path is gone or the timeout is exceeded
  * @param {string} basePath - Base directory path
@@ -243,6 +296,7 @@ export async function assertPathNotExist(basePath, relPath, options = {}) {
  * @returns {Promise<any>} - A promise that resolves with the evaluation result
  */
 export async function assertConsoleEval(code, expectedResult, options = {}) {
+  const activePage = await getPlaywrightPage();
   const { exactMatch = true, timeout = 5000, checkInterval = 100 } = options;
 
   console.log(`Evaluating code in browser console: ${code}`);
@@ -253,7 +307,7 @@ export async function assertConsoleEval(code, expectedResult, options = {}) {
   const evaluateAndCheck = async () => {
     try {
       // Evaluate the code in the browser context
-      const result = await page.evaluate(code);
+      const result = await activePage.evaluate(code);
 
       if (exactMatch) {
         // Check for exact match
@@ -305,10 +359,18 @@ export async function assertConsoleEval(code, expectedResult, options = {}) {
  * Helper function to assert that an element has the expected CSS styles
  * @param {string} selector - CSS selector string (e.g., 'body', '.my-class') or a string representing a DOM element (e.g., 'document.body')
  * @param {Object} expectedStyles - Expected CSS styles as key-value pairs
- * @param {Object} options - Additional options for assertConsoleEval
+ * @param {Object} options - Additional options
+ * @param {boolean} options.exactMatch - Whether to require exact value matches (default: false)
  * @returns {Promise<Object>} - A promise that resolves with the computed styles
  */
 export async function assertStyles(selector, expectedStyles, options = {}) {
+  const activePage = await getPlaywrightPage();
+  const {
+    exactMatch = false,
+    timeout = 5000,
+    checkInterval = 100,
+  } = options;
+
   // Determine if the selector is a CSS selector or a DOM element reference
   const isCssSelector = selector.startsWith('.') || 
     selector.startsWith('#') ||

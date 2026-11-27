@@ -3,7 +3,7 @@
 
 Package.describe({
   summary: "Wrapper around the mongo npm package",
-  version: "6.16.1",
+  version: "6.16.2",
   documentation: null,
 });
 
@@ -15,4 +15,5 @@ Package.onUse(function (api) {
   api.addFiles("wrapper.js", "server");
   api.export(["NpmModuleMongodb", "NpmModuleMongodbVersion"], "server");
   api.addAssets("index.d.ts", "server");
+  api.addAssets("package-types.json", "server");
 });

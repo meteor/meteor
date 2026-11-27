@@ -40,7 +40,10 @@ jobs:
     runs-on: oss-vm
     container:
       image: meteor/circleci:2025.07.8-android-35-node-22
-      options: --user root
+      # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
+      # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
+      # zombies behind).
+      options: --init --user root
     timeout-minutes: 75
     steps:
       - name: Checkout repository
@@ -83,7 +86,10 @@ jobs:
     runs-on: oss-vm
     container:
       image: meteor/circleci:2025.07.8-android-35-node-22
-      options: --user root
+      # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
+      # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
+      # zombies behind).
+      options: --init --user root
     needs: setup
     timeout-minutes: 45
     steps:
@@ -151,7 +157,10 @@ jobs:
     runs-on: oss-vm
     container:
       image: meteor/circleci:2025.07.8-android-35-node-22
-      options: --user root --cpus 4 --memory 16g --security-opt seccomp=unconfined
+      # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
+      # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
+      # zombies behind).
+      options: --init --user root --cpus 4 --memory 16g --security-opt seccomp=unconfined
     needs: setup
     timeout-minutes: 55
     env:
@@ -217,7 +226,10 @@ jobs:
     runs-on: oss-vm
     container:
       image: meteor/circleci:2025.07.8-android-35-node-22
-      options: --user root
+      # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
+      # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
+      # zombies behind).
+      options: --init --user root
     needs: setup
     timeout-minutes: 55
     env:
@@ -283,7 +295,10 @@ jobs:
     runs-on: oss-vm
     container:
       image: meteor/circleci:2025.07.8-android-35-node-22
-      options: --user root
+      # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
+      # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
+      # zombies behind).
+      options: --init --user root
     needs: setup
     timeout-minutes: 55
     env:
@@ -355,7 +370,10 @@ jobs:
     runs-on: oss-vm
     container:
       image: meteor/circleci:2025.07.8-android-35-node-22
-      options: --user root
+      # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
+      # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
+      # zombies behind).
+      options: --init --user root
     needs: setup
     timeout-minutes: 55
     env:
@@ -420,7 +438,10 @@ jobs:
     runs-on: oss-vm
     container:
       image: meteor/circleci:2025.07.8-android-35-node-22
-      options: --user root
+      # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
+      # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
+      # zombies behind).
+      options: --init --user root
     needs: setup
     timeout-minutes: 55
     env:
@@ -485,7 +506,10 @@ jobs:
     runs-on: oss-vm
     container:
       image: meteor/circleci:2025.07.8-android-35-node-22
-      options: --user root --cpus 4 --memory 16g --security-opt seccomp=unconfined
+      # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
+      # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
+      # zombies behind).
+      options: --init --user root --cpus 4 --memory 16g --security-opt seccomp=unconfined
     needs: setup
     timeout-minutes: 55
     env:
@@ -551,7 +575,10 @@ jobs:
     runs-on: oss-vm
     container:
       image: meteor/circleci:2025.07.8-android-35-node-22
-      options: --user root
+      # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
+      # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
+      # zombies behind).
+      options: --init --user root
     needs: setup
     timeout-minutes: 55
     env:
@@ -616,7 +643,10 @@ jobs:
     runs-on: oss-vm
     container:
       image: meteor/circleci:2025.07.8-android-35-node-22
-      options: --user root
+      # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
+      # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
+      # zombies behind).
+      options: --init --user root
     needs: setup
     timeout-minutes: 55
     env:
@@ -681,7 +711,10 @@ jobs:
     runs-on: oss-vm
     container:
       image: meteor/circleci:2025.07.8-android-35-node-22
-      options: --user root
+      # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
+      # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
+      # zombies behind).
+      options: --init --user root
     needs: setup
     timeout-minutes: 55
     env:
@@ -746,7 +779,10 @@ jobs:
     runs-on: oss-vm
     container:
       image: meteor/circleci:2025.07.8-android-35-node-22
-      options: --user root
+      # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
+      # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
+      # zombies behind).
+      options: --init --user root
     needs: setup
     timeout-minutes: 55
     env:
@@ -811,7 +847,10 @@ jobs:
     runs-on: oss-vm
     container:
       image: meteor/circleci:2025.07.8-android-35-node-22
-      options: --user root
+      # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
+      # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
+      # zombies behind).
+      options: --init --user root
     needs: setup
     timeout-minutes: 55
     env:
@@ -876,7 +915,10 @@ jobs:
     runs-on: oss-vm
     container:
       image: meteor/circleci:2025.07.8-android-35-node-22
-      options: --user root
+      # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
+      # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
+      # zombies behind).
+      options: --init --user root
     needs: setup
     timeout-minutes: 40
     env:

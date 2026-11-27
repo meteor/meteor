@@ -76,7 +76,7 @@ export function createSockJSTransport() {
  * Redirect /websocket to /sockjs/websocket in order to not expose
  * sockjs to clients that want to use raw websockets.
  */
-function redirectWebsocketEndpoint(httpServer, pathPrefix, sockjsPrefix) {
+export function redirectWebsocketEndpoint(httpServer, pathPrefix, sockjsPrefix) {
   // Unfortunately we can't use a connect middleware here since
   // sockjs installs itself prior to all existing listeners
   // (meaning prior to any connect middlewares) so we need to take
@@ -93,12 +93,19 @@ function redirectWebsocketEndpoint(httpServer, pathPrefix, sockjsPrefix) {
       var args = arguments;
 
       // Rewrite /websocket and /websocket/ urls to /sockjs/websocket while
-      // preserving query string.
-      var parsedUrl = new URL(request.url, 'http://localhost');
-      if (parsedUrl.pathname === pathPrefix + '/websocket' ||
-          parsedUrl.pathname === pathPrefix + '/websocket/') {
-        parsedUrl.pathname = sockjsPrefix + '/websocket';
-        request.url = parsedUrl.pathname + parsedUrl.search;
+      // preserving query string. A malformed request URL must not crash the
+      // process, so skip the rewrite when it can't be parsed and let the
+      // downstream listeners handle the request.
+      try {
+        const parsedUrl = new URL(request.url, 'http://localhost');
+        if (parsedUrl.pathname === pathPrefix + '/websocket' ||
+            parsedUrl.pathname === pathPrefix + '/websocket/') {
+          parsedUrl.pathname = sockjsPrefix + '/websocket';
+          request.url = parsedUrl.pathname + parsedUrl.search;
+        }
+      } catch (err) {
+        // Malformed request URL — leave request.url untouched.
+        Meteor._debug('sockjs: could not parse request URL, skipping websocket rewrite', request.url, err);
       }
       oldHttpServerListeners.forEach(function(oldListener) {
         oldListener.apply(httpServer, args);

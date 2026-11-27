@@ -75,6 +75,15 @@ function shouldCompress(req, res) {
     return false;
   }
 
+  if (
+    Meteor.settings.packages?.webapp?.skipCompressionWithContentLength &&
+    res.getHeader('Content-Length')
+  ) {
+    // Leave responses that already declare a Content-Length uncompressed, so the
+    // header survives (compressing switches them to chunked and removes it).
+    return false;
+  }
+
   // fallback to standard filter function
   return compress.filter(req, res);
 }
@@ -437,7 +446,86 @@ WebApp.addRuntimeConfigHook = function(callback) {
   return runtimeConfig.hooks.register(callback);
 };
 
+// Per-arch snapshot of the PUBLIC_SETTINGS that are currently baked into the
+// cached runtime config, so we only re-encode when they actually change.
+const lastPublicSettingsByArch = Object.create(null);
+
+// The encoded runtime config (including PUBLIC_SETTINGS) is generated once at
+// startup and cached per arch. Apps are documented to be able to mutate
+// `Meteor.settings.public` at runtime and have the change picked up by new
+// client connections, so before serving we refresh the cached config whenever
+// the live public settings differ from what was last encoded. See #13489.
+function refreshRuntimeConfigPublicSettings(arch) {
+  const livePublicSettings =
+    (typeof __meteor_runtime_config__ === 'object' &&
+      __meteor_runtime_config__.PUBLIC_SETTINGS) ||
+    {};
+  const serialized = JSON.stringify(livePublicSettings);
+  if (lastPublicSettingsByArch[arch] === serialized) {
+    return;
+  }
+
+  let changed = false;
+  let failed = false;
+
+  const boilerplate = boilerplateByArch[arch];
+  if (boilerplate && boilerplate.baseData &&
+      boilerplate.baseData.meteorRuntimeConfig) {
+    try {
+      const decoded = WebApp.decodeRuntimeConfig(
+        boilerplate.baseData.meteorRuntimeConfig
+      );
+      decoded.PUBLIC_SETTINGS = livePublicSettings;
+      const encoded = WebApp.encodeRuntimeConfig(decoded);
+      boilerplate.baseData = Object.assign({}, boilerplate.baseData, {
+        meteorRuntimeConfig: encoded,
+        meteorRuntimeHash: sha1(encoded),
+      });
+      changed = true;
+    } catch (e) {
+      // Leave the cached config untouched if it cannot be decoded, and keep
+      // the snapshot stale so the refresh is retried on the next request.
+      failed = true;
+      Log.debug(
+        'refreshRuntimeConfigPublicSettings: could not decode boilerplate ' +
+        'runtime config for arch ' + arch + ': ' + e
+      );
+    }
+  }
+
+  const program = WebApp.clientPrograms[arch];
+  if (program && typeof program.meteorRuntimeConfig === 'string') {
+    try {
+      const parsed = JSON.parse(program.meteorRuntimeConfig);
+      parsed.PUBLIC_SETTINGS = livePublicSettings;
+      program.meteorRuntimeConfig = JSON.stringify(parsed);
+      changed = true;
+    } catch (e) {
+      // Leave the cached config untouched if it cannot be parsed, and keep
+      // the snapshot stale so the refresh is retried on the next request.
+      failed = true;
+      Log.debug(
+        'refreshRuntimeConfigPublicSettings: could not parse client program ' +
+        'runtime config for arch ' + arch + ': ' + e
+      );
+    }
+  }
+
+  if (changed) {
+    // Let runtime-config hooks know the config changed for this arch so any
+    // caches they keep are refreshed on this request.
+    runtimeConfig.isUpdatedByArch[arch] = true;
+  }
+  // Only advance the snapshot when the refresh fully succeeded. If a decode or
+  // parse step threw, leaving the snapshot stale ensures the next request
+  // retries instead of short-circuiting on a value that was never applied.
+  if (!failed) {
+    lastPublicSettingsByArch[arch] = serialized;
+  }
+}
+
 async function getBoilerplateAsync(request, arch, response) {
+  refreshRuntimeConfigPublicSettings(arch);
   let boilerplate = boilerplateByArch[arch];
   await runtimeConfig.hooks.forEachAsync(async hook => {
     const meteorRuntimeConfig = await hook({
@@ -646,6 +734,7 @@ WebAppInternals.staticFilesMiddleware = async function(
     path === '/meteor_runtime_config.js' &&
     !WebAppInternals.inlineScriptsAllowed()
   ) {
+    refreshRuntimeConfigPublicSettings(arch);
     serveStaticJs(
       `__meteor_runtime_config__ = ${program.meteorRuntimeConfig};`
     );

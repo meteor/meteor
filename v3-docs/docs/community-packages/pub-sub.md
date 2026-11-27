@@ -71,7 +71,7 @@ The downside by splitting into two is it could result in over-fetching but the d
 
 **Note**: In most cases, you'd likely benefit the most from using `Meteor.publish.once` anywhere you can and using `Meteor.publish.stream` only when you really need it and with a filter than can be shared.
 
-**Note**: If you decide to entirely opt-out of using the traditional `Meteor.publish`, then you'll also want to disable the `oplog` entirely &mdash; add the `disable-oplog` package with `meteor add disable-oplog`.
+**Note**: If you decide to entirely opt-out of using the traditional `Meteor.publish`, then you'll also want to disable the `oplog` entirely &mdash; add the [`disable-oplog`](../packages/disable-oplog.md) package with `meteor add disable-oplog`.
 
 At the moment, this feature is built directly on MongoDB Change Streams. Starting in Meteor 3.5, Change Streams became the default reactivity mechanism for Meteor, validating the performance and reliability improvements over the traditional `oplog`. Utilizing it through `jam:pub-sub` is stable and ready for general use.
 
