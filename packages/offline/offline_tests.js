@@ -461,12 +461,17 @@ Tinytest.addAsync('offline - a subscription made without connection is ready fro
     await Meteor.callAsync('offline_test.clear');
     await until(() => Items.find().count() === 0, 'the documents to be withdrawn');
     Meteor.disconnect();
-    const empty = Meteor.subscribe('offline_test.items', 'nothing held');
+    // No deadline on the server's answer: a new session first publishes again
+    // every subscription the test page holds, the other packages' included.
+    let empty;
+    const answered = new Promise((resolve) => {
+      empty = Meteor.subscribe('offline_test.items', 'nothing held', { onReady: resolve });
+    });
     handles.push(empty);
     await new Promise((resolve) => setTimeout(resolve, 100));
     test.isFalse(empty.ready(), 'waits for the server');
     Meteor.reconnect();
-    await until(() => empty.ready(), 'the subscription to be ready from the server');
+    await answered;
   } finally {
     Meteor.reconnect();
     if (computation) computation.stop();
