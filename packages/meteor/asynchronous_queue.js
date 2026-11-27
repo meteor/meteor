@@ -93,12 +93,14 @@ class AsynchronousQueue {
   }
 
   async _processParallelBatch(batch) {
-    const taskPromises = batch.map(async taskHandle => {
+    const runTask = async taskHandle => {
+      let promise;
+      let tracked = false;
       try {
-        const promise = taskHandle.task();
+        promise = taskHandle.task();
         this._activePromises.add(promise);
+        tracked = true;
         const result = await promise;
-        this._activePromises.delete(promise);
 
         if (taskHandle.resolver) {
           taskHandle.resolver(result);
@@ -109,12 +111,15 @@ class AsynchronousQueue {
         } else {
           Meteor._debug("Exception in queued task", err);
         }
+      } finally {
+        if (tracked) this._activePromises.delete(promise);
       }
-    });
+    };
 
-    // Process in chunks to control concurrency
-    for (let i = 0; i < taskPromises.length; i += this._maxConcurrent) {
-      const chunk = taskPromises.slice(i, i + this._maxConcurrent);
+    // Start only the current chunk; constructing all task promises first
+    // would run every task before the concurrency limit can take effect.
+    for (let i = 0; i < batch.length; i += this._maxConcurrent) {
+      const chunk = batch.slice(i, i + this._maxConcurrent).map(runTask);
       await Promise.all(chunk);
     }
   }
