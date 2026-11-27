@@ -59,6 +59,52 @@ Optional tuning is available via `Meteor.settings`:
 - `waitUntilCaughtUpTimeoutMs`: Upper bound for waiting until the stream catches up to the server's current operation time when coordinating with DDP fences (default: `1000`).
   - If this timeout elapses, the driver stops waiting and lets the fence continue; the change stream will catch up later, so data is not lost, but clients can temporarily miss read-your-writes (a publication may become ready before the client's own writes appear).
 
+## Reducing Delivery Latency
+
+Change Streams deliver majority-committed changes. Journaling can contribute to the delay, together with replication, write concern and disk load. WiredTiger's default journal commit interval is **100 ms**, but that is neither a fixed Change Streams latency floor nor an end-to-end latency bound: writes that include or imply `j: true` can trigger an earlier journal sync. See MongoDB's [journaling process](https://www.mongodb.com/docs/manual/core/journaling/#journaling-process).
+
+For **self-managed MongoDB**, an operator can measure whether reducing the interval helps a particular workload. This is a deployment setting owned by the database administrator; Meteor does not change it at application startup.
+
+### Configure each MongoDB member
+
+The interval is local to each `mongod` process. It is not replicated with the data. Configure it consistently on the data-bearing members of each relevant replica set, including members that may become primary. For a sharded deployment, manage the members of each shard's replica set; this parameter is not available on `mongos`.
+
+To persist the setting across restarts, put it in each member's MongoDB configuration and apply it using your normal deployment procedure:
+
+```yaml
+storage:
+  journal:
+    commitIntervalMs: 10
+```
+
+The value `10` is an example for an experiment, not a recommended production default. MongoDB accepts an integer from `1` to `500` milliseconds. See [`storage.journal.commitIntervalMs`](https://www.mongodb.com/docs/manual/reference/configuration-options/#mongodb-setting-storage.journal.commitIntervalMs).
+
+For a temporary experiment, an administrator with the `setParameter` privilege can connect directly to each relevant `mongod` and run:
+
+```javascript
+db.adminCommand({ setParameter: 1, journalCommitInterval: 10 });
+```
+
+This runtime change lasts only until that process restarts. Changing only the current primary leaves the other members unchanged, and a failover can promote a member with a different interval. Keep runtime experiments, persistent configuration and replacement-member provisioning consistent. See [`setParameter`](https://www.mongodb.com/docs/manual/reference/command/setparameter/).
+
+::: warning Managed MongoDB
+MongoDB Atlas does not support the `setParameter` command. With a managed service, use only the configuration mechanisms supported by your provider. An application environment variable cannot bypass the provider's restrictions or supply the required administrative privilege.
+:::
+
+### Measure the trade-offs
+
+A shorter interval increases journal synchronization frequency and can increase CPU and disk I/O. On an already busy disk it can reduce write throughput or increase tail latency. These costs affect every application sharing the MongoDB process, including workloads using the oplog observer.
+
+The interval also affects the window of writes not yet flushed to the journal. For writes acknowledged without journal synchronization, changing it changes the potential loss window after a crash. Keep write concern and durability requirements explicit; see MongoDB's [journaling configuration](https://www.mongodb.com/docs/manual/tutorial/manage-journaling/).
+
+Before changing production configuration:
+
+1. Record the existing value on every member, MongoDB version, topology, write concern, hardware and workload. Keep these conditions fixed when comparing intervals.
+2. Test under representative concurrency and disk load. Measure write-to-client latency (p50, p95 and p99), write throughput, database CPU, disk latency/IOPS and errors. A single-node result does not establish a multi-node replica set's performance.
+3. Verify the configuration after a controlled restart and failover, and have a rollback procedure that restores the previous value on every affected member.
+
+Keep the default when the measured benefit does not justify the database cost. No interval guarantees a particular delivery latency or reduction in DDP messages.
+
 ## Performance Comparison
 
 - **Change Streams**: The default in Meteor 3.5+. Offloads the work of determining what changed entirely to the MongoDB server. It is extremely efficient for targeted queries but may cause high overhead on the MongoDB cluster if you have broad selectors or highly mutated collections.

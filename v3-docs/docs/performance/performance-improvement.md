@@ -222,6 +222,15 @@ While collection hooks can help in many cases beware of them and make sure that 
 
 Once your user base increases you want to invest into query caching like using Redis, Redis Oplog and other. For more complex queries or when you are retrieving data from multiple collections, then you want to use [aggregation](https://www.mongodb.com/docs/manual/aggregation/) and save their results.
 
+### Reactivity driver tuning
+
+If your app uses reactive publications and you observe high latency between a write and the corresponding DDP update arriving at subscribed clients, measure the observer driver and MongoDB delivery path alongside application execution and network latency.
+
+Two areas to investigate are:
+
+- **Reactivity driver order** — `changeStreams` is the default in Meteor 3.5+, but `oplog` can be the better choice for workloads with very broad publications or hundreds of concurrent subscribers. See [Choosing the Reactivity Driver Order](./change-streams-observer-driver#choosing-the-reactivity-driver-order).
+- **Change-stream delivery latency** — journal synchronization, replication and disk load can affect majority-committed event delivery. For self-managed MongoDB, database administrators can benchmark journal interval tuning through deployment configuration. See [Reducing Delivery Latency](./change-streams-observer-driver#reducing-delivery-latency) for per-member configuration, managed-service restrictions and measurement guidance.
+
 ## Scaling
 
 ### Vertical and horizontal scaling
