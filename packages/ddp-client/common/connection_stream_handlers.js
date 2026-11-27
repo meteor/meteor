@@ -46,6 +46,14 @@ export class ConnectionStreamHandlers {
       this._connection._version = this._connection._versionSuggestion;
     }
 
+    if (msg.msg === 'connected') {
+      const sessionResumed = await this._routeMessage(msg);
+      this._connection._callOnReconnectAndSendAppropriateOutstandingMethods(
+        sessionResumed
+      );
+      return;
+    }
+
     await this._routeMessage(msg);
   }
 
@@ -56,10 +64,11 @@ export class ConnectionStreamHandlers {
    */
   async _routeMessage(msg) {
     switch (msg.msg) {
-      case 'connected':
-        await this._connection._livedata_connected(msg);
+      case 'connected': {
+        const sessionResumed = await this._connection._livedata_connected(msg);
         this._connection.options.onConnected();
-        break;
+        return sessionResumed;
+      }
 
       case 'failed':
         await this._handleFailedMessage(msg);
@@ -130,10 +139,9 @@ export class ConnectionStreamHandlers {
     // Mark non-retry calls as failed and handle outstanding methods
     this._handleOutstandingMethodsOnReset();
 
-    // Now, to minimize setup latency, go ahead and blast out all of
-    // our pending methods ands subscriptions before we've even taken
-    // the necessary RTT to know if we successfully reconnected.
-    this._connection._callOnReconnectAndSendAppropriateOutstandingMethods();
+    // Resend subscriptions now, but wait to resend methods until the
+    // server confirms whether it resumed the previous session. A resumed
+    // session may already have buffered results for those methods.
     this._resendSubscriptions();
 
     // Deliver messages that were passed to _sendQueued while disconnected
@@ -193,6 +201,12 @@ export class ConnectionStreamHandlers {
 
     // Reset all method invokers as unsent
     Object.values(this._connection._methodInvokers).forEach(invoker => {
+      if (
+        (invoker.sentMessage && !invoker.noRetry) ||
+        invoker._serverOwnsInvocation
+      ) {
+        invoker._retryOnReconnect = true;
+      }
       invoker.sentMessage = false;
     });
   }
