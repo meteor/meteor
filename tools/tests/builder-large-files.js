@@ -6,83 +6,140 @@ import Builder from "../isobuild/builder";
 import files from "../fs/files";
 import { define } from "../tool-testing/selftest";
 
-// Exercise the real Buffer-size boundary without allocating a giant Buffer.
-// The input is sparse; copying and Builder bookkeeping use the real filesystem.
-define("builder - large files copy current bytes on rebuild", async () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "meteor-large-file-"));
+const LARGE_SIZE = 2 ** 31;
+
+async function withFixture(realLargeFile, run) {
+  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "meteor-large-file-")));
   const source = path.join(root, "source");
   const input = path.join(source, "payload");
-  const size = 2 ** 31;
   const outputPath = path.join(root, "bundle");
-  const timestamp = new Date("2025-01-01T00:00:00Z");
   let builder;
-  try {
-    fs.mkdirSync(source);
-    fs.writeFileSync(path.join(source, "small"), "ordinary file");
-    const fd = fs.openSync(input, "w");
-    try {
-      fs.ftruncateSync(fd, size);
-      fs.writeSync(fd, Buffer.from("1111"), 0, 4, 0);
-      fs.writeSync(fd, Buffer.from("tail"), 0, 4, size - 4);
-    } finally {
-      fs.closeSync(fd);
-    }
-    fs.utimesSync(input, timestamp, timestamp);
-
-    const copy = async () => {
-      builder = new Builder({
-        outputPath: files.convertToStandardPath(outputPath),
-        previousBuilder: builder,
-        forceInPlaceBuild: true,
-      });
-      await builder.init();
-      await builder.copyDirectory({
-        from: files.convertToStandardPath(source),
-        to: "data",
-        symlink: false,
-      });
-      await builder.complete();
-      return path.join(outputPath, "data", "payload");
-    };
-    const readAt = (filename, position) => {
-      const fd = fs.openSync(filename, "r");
+  fs.mkdirSync(source);
+  const makeFile = (filename, contents) => {
+    files.writeFile(files.convertToStandardPath(filename), contents);
+    if (realLargeFile) {
+      const fd = fs.openSync(filename, "r+");
       try {
-        const bytes = Buffer.alloc(4);
-        assert.strictEqual(fs.readSync(fd, bytes, 0, 4, position), 4);
-        return bytes.toString();
+        fs.ftruncateSync(fd, LARGE_SIZE);
+        fs.writeSync(fd, Buffer.from("tail"), 0, 4, LARGE_SIZE - 4);
       } finally {
         fs.closeSync(fd);
       }
-    };
-
-    const output = await copy();
-    assert.strictEqual(fs.statSync(output).size, size);
-    assert.strictEqual(readAt(output, 0), "1111");
-    assert.strictEqual(readAt(output, size - 4), "tail");
-    assert.strictEqual(fs.readFileSync(path.join(path.dirname(output), "small"), "utf8"),
-      "ordinary file");
-    if (process.platform !== "win32") {
-      assert.strictEqual(fs.statSync(output).mode & 0o777, 0o666 & ~process.umask());
     }
-
-    // Timestamp-preserving replacement can change bytes without changing size
-    // or mtime. Update only the beginning, without allocating a large Buffer.
-    const inputFd = files.open(files.convertToStandardPath(input), "r+");
+  };
+  const readAt = (filename, position = 0) => {
+    const fd = fs.openSync(filename, "r");
     try {
-      files.write(inputFd, Buffer.from("2222"), 0, 4, 0);
+      const bytes = Buffer.alloc(4);
+      assert.strictEqual(fs.readSync(fd, bytes, 0, 4, position), 4);
+      return bytes.toString();
     } finally {
-      files.close(inputFd);
+      fs.closeSync(fd);
     }
-    fs.utimesSync(input, timestamp, timestamp);
-    await copy();
-    assert.strictEqual(fs.statSync(output).size, size);
-    assert.strictEqual(readAt(output, 0), "2222");
-    assert.strictEqual(readAt(output, size - 4), "tail");
+  };
+  const copy = async () => {
+    builder = new Builder({
+      outputPath: files.convertToStandardPath(outputPath),
+      previousBuilder: builder,
+      forceInPlaceBuild: true,
+    });
+    await builder.init();
+    if (!realLargeFile) {
+      const copyFile = builder._copyFile;
+      // Control only the source metadata at Builder's file-copy boundary.
+      // The copy, permissions, rename and output bookkeeping remain real.
+      builder._copyFile = (from, to, stat, ...args) => copyFile.call(builder,
+        from, to, to === "data/payload" ? { ...stat, size: LARGE_SIZE } : stat,
+        ...args);
+    }
+    await builder.copyDirectory({
+      from: files.convertToStandardPath(source),
+      to: "data",
+      symlink: false,
+    });
+    await builder.complete();
+    return path.join(outputPath, "data", "payload");
+  };
+  try {
+    await run({ root, source, input, makeFile, readAt, copy, realLargeFile });
   } finally {
     if (builder) await builder.abort();
     fs.rmSync(root, { recursive: true, force: true });
   }
-});
+}
+
+async function currentBytes({ source, input, makeFile, readAt, copy, realLargeFile }) {
+  fs.writeFileSync(path.join(source, "small"), "ordinary file");
+  makeFile(input, "1111");
+  const timestamp = new Date("2025-01-01T00:00:00Z");
+  fs.utimesSync(input, timestamp, timestamp);
+  const output = await copy();
+  assert.strictEqual(fs.statSync(output).size, realLargeFile ? LARGE_SIZE : 4);
+  assert.strictEqual(readAt(output), "1111");
+  assert.strictEqual(fs.readFileSync(path.join(path.dirname(output), "small"), "utf8"),
+    "ordinary file");
+  const reader = process.platform === "win32" ? null : fs.openSync(output, "r");
+  try {
+    const fd = fs.openSync(input, "r+");
+    try {
+      fs.writeSync(fd, Buffer.from("2222"), 0, 4, 0);
+    } finally {
+      fs.closeSync(fd);
+    }
+    fs.utimesSync(input, timestamp, timestamp);
+    await copy();
+    assert.strictEqual(readAt(output), "2222");
+    if (realLargeFile) assert.strictEqual(readAt(output, LARGE_SIZE - 4), "tail");
+    if (reader !== null) {
+      const oldBytes = Buffer.alloc(4);
+      assert.strictEqual(fs.readSync(reader, oldBytes, 0, 4, 0), 4);
+      assert.strictEqual(oldBytes.toString(), "1111");
+    }
+  } finally {
+    if (reader !== null) fs.closeSync(reader);
+  }
+}
+
+async function externalTarget({ root, input, makeFile, readAt, copy, realLargeFile }) {
+  const external = path.join(root, "external");
+  makeFile(external, "3333");
+  files.symlink(files.convertToStandardPath(external), files.convertToStandardPath(input));
+  const output = await copy();
+  assert.strictEqual(fs.lstatSync(output).isSymbolicLink(), false);
+  assert.strictEqual(fs.statSync(output).size, realLargeFile ? LARGE_SIZE : 4);
+  assert.strictEqual(readAt(output), "3333");
+  if (realLargeFile) assert.strictEqual(readAt(output, LARGE_SIZE - 4), "tail");
+}
+
+async function replaceSymlink({ source, input, makeFile, readAt, copy }) {
+  const keeper = path.join(source, "keeper");
+  files.writeFile(files.convertToStandardPath(keeper), "safe");
+  files.symlink("keeper", files.convertToStandardPath(input));
+  const output = await copy();
+  assert.strictEqual(fs.lstatSync(output).isSymbolicLink(), true);
+  files.unlink(files.convertToStandardPath(input));
+  makeFile(input, "4444");
+  await copy();
+  assert.strictEqual(fs.lstatSync(output).isSymbolicLink(), false);
+  assert.strictEqual(readAt(output), "4444");
+  assert.strictEqual(readAt(path.join(path.dirname(output), "keeper")), "safe");
+  assert.strictEqual(readAt(keeper), "safe");
+}
+
+for (const [name, scenario] of [
+  ["current bytes and existing readers on rebuild", currentBytes],
+  ["external file targets outside copied roots", externalTarget],
+  ["regular files replacing a prior symlink", replaceSymlink],
+]) {
+  define(`builder - large copies preserve ${name}`, async () => {
+    await withFixture(false, scenario);
+  });
+  // Opt in with --slow to exercise Node's actual single-read limit. Routine
+  // CI can cover metadata/rebuild behavior without multi-gigabyte output files.
+  define(`builder - real 2GiB copies preserve ${name}`, ["slow"], async () => {
+    await withFixture(true, scenario);
+  });
+}
 
 if (process.platform !== "win32") {
   define("files - copyFile honors umask and source executable bit", async () => {
@@ -96,8 +153,7 @@ if (process.platform !== "win32") {
         for (const sourceMode of [0o644, 0o755]) {
           fs.chmodSync(input, sourceMode);
           const output = path.join(root, `copy-${mask}-${sourceMode}`);
-          files.copyFile(files.convertToStandardPath(input),
-            files.convertToStandardPath(output));
+          files.copyFile(files.convertToStandardPath(input), files.convertToStandardPath(output));
           const expected = (sourceMode & 0o100 ? 0o777 : 0o666) & ~mask;
           assert.strictEqual(fs.statSync(output).mode & 0o777, expected);
           assert.strictEqual(fs.readFileSync(output, "utf8"), "content");
