@@ -20,7 +20,8 @@ jobs:
     uses: ./.github/workflows/run-linux-check-in-docker.yml
     with:
       image: node:26-bookworm
+      npm-lockfile: package-lock.json
       command: |
-        npm ci
+        npm ci --prefer-offline
         npx oxfmt --ignore-path .fmtignore --check .
         npm run lint
