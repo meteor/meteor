@@ -895,24 +895,14 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           // into a Buffer, so hashing (optimisticHashOrNull) and reading
           // (optimisticReadFile) below would throw ERR_FS_FILE_TOO_LARGE and
           // abort the whole build. Copy those directly with files.copyFile
-          // (fs.copyFileSync streams, with no such limit). Since we can't hash
-          // the contents, key incremental rebuilds off size + mtime.
+          // (fs.copyFileSync has no such limit). Recopy on rebuild: size and
+          // mtime can remain unchanged after a timestamp-preserving replacement,
+          // and hashing before copying would require another full-file read.
           if (fileStatus.size > MAX_READABLE_FILE_SIZE) {
-            const largeFileKey = `size:${fileStatus.size}:mtime:${
-                fileStatus.mtimeMs ||
-                (fileStatus.mtime && fileStatus.mtime.getTime()) || 0
-            }`;
-
-            if (this.previousWrittenHashes[thisRelTo] !== largeFileKey) {
-              // files.copyFile handles mkdir, the streaming copy and the same
-              // executable-bit mode logic used below.
-              files.copyFile(
-                  thisAbsFrom,
-                  files.pathResolve(this.buildPath, thisRelTo),
-              );
-            }
-
-            this.writtenHashes[thisRelTo] = largeFileKey;
+            files.copyFile(
+                thisAbsFrom,
+                files.pathResolve(this.buildPath, thisRelTo),
+            );
             this.usedAsFile[thisRelTo] = true;
             continue;
           }
