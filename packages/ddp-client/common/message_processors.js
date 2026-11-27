@@ -45,8 +45,17 @@ export class MessageProcessors {
       // Successful reconnection -- pick up where we left off.
       // Don't reset stores since we're continuing the same session.
       self._resetStores = false;
+      // The store reset below delivers the callbacks of methods that failed on
+      // reset. A resumed session skips it, so deliver them here.
+      Object.keys(self._methodsFailedOnReset).forEach(id => {
+        const invoker = self._methodInvokers[id];
+        if (invoker) invoker.dataVisible();
+      });
       return;
     }
+
+    // A new session sends no messages for methods of the previous session.
+    self._methodsFailedOnReset = Object.create(null);
 
     // Server doesn't have our data anymore. Re-sync a new session.
     // Reset the received count since we're starting a new session.

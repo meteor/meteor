@@ -169,20 +169,23 @@ export class ConnectionStreamHandlers {
     const currentMethodBlock = blocks[0].methods;
     blocks[0].methods = currentMethodBlock.filter(
       methodInvoker => {
-        // Methods with 'noRetry' option set are not allowed to re-send after
-        // recovering dropped connection.
-        if (methodInvoker.sentMessage && methodInvoker.noRetry) {
-          methodInvoker.receiveResult(
-            new Meteor.Error(
-              'invocation-failed',
-              'Method invocation might have failed due to dropped connection. ' +
-              'Failing because `noRetry` option was passed to Meteor.apply.'
-            )
-          );
+        // Unsent methods are always kept. A sent method is re-sent only if it
+        // still has retries left ('noRetry' allows none, 'maxRetries' caps them).
+        if (!methodInvoker.sentMessage || methodInvoker.consumeRetry()) {
+          return true;
         }
 
-        // Only keep a method if it wasn't sent or it's allowed to retry.
-        return !(methodInvoker.sentMessage && methodInvoker.noRetry);
+        methodInvoker.receiveResult(
+          new Meteor.Error(
+            'invocation-failed',
+            'Method invocation might have failed due to dropped connection. ' +
+            (methodInvoker.noRetry
+              ? 'Failing because `noRetry` option was passed to Meteor.apply.'
+              : 'Failing because the `maxRetries` limit was reached.')
+          )
+        );
+        this._connection._methodsFailedOnReset[methodInvoker.methodId] = true;
+        return false;
       }
     );
 
