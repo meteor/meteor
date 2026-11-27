@@ -19,14 +19,59 @@ var REGEX_URL_WITH_SHA = /^https?:\/\/.*[0-9a-f]{40}/;
 var REGEX_NPM_URL_PROTOCOL = /^(git|git\+ssh|git\+http|git\+https|https|http)?:\/\//;
 var REGEX_RELEASE_VERSION = /^(\d{1,4}(?:\.\d{1,4})*)(?:-([-A-Za-z.]{1,15})(\d{0,4}))?$/;
 
-// Parses <protocol>://<host>:<port> into an object { protocol: *, host:
-// *, port: * }. The input can also be of the form <host>:<port> or just
-// <port>. We're not simply using 'url.parse' because we want '3000' to
-// parse as {host: undefined, protocol: undefined, port: '3000'}, whereas
-// 'url.parse' would give us {protocol:' 3000', host: undefined, port:
-// undefined} or something like that.
-//
-// 'defaults' is an optional object with 'hostname', 'port', and 'protocol' keys.
+var SPECIAL_URL_SCHEMES = ['ftp', 'file', 'http', 'https', 'ws', 'wss'];
+
+/**
+ * Returns the port written in the authority of a URL that has a scheme.
+ *
+ * The WHATWG URL parser drops a port equal to the protocol's default (e.g.
+ * "http://localhost:80"), so the port is read from the input to tell an
+ * explicit default port apart from an omitted one. The authority is located
+ * the way the WHATWG parser locates it: surrounding spaces and control
+ * characters are trimmed and tabs/newlines removed, and for special schemes
+ * (http, https, ws, ...) any run of "/" or "\" after the scheme is skipped and
+ * "\" also ends the authority.
+ *
+ * @param {string} urlWithScheme A URL that starts with a scheme.
+ * @returns {string|undefined} The explicit port, or undefined if none was written.
+ */
+function explicitPort(urlWithScheme) {
+  var input = urlWithScheme
+    .replace(/^[\u0000-\u0020]+|[\u0000-\u0020]+$/g, '')
+    .replace(/[\t\n\r]/g, '');
+  var schemeEnd = input.indexOf(':');
+  var scheme = input.slice(0, schemeEnd).toLowerCase();
+  var rest = input.slice(schemeEnd + 1);
+  var authority;
+  if (SPECIAL_URL_SCHEMES.indexOf(scheme) !== -1) {
+    authority = rest.replace(/^[\/\\]*/, '').split(/[\/\\?#]/)[0];
+  } else if (rest.startsWith('//')) {
+    authority = rest.slice(2).split(/[\/?#]/)[0];
+  } else {
+    return undefined;
+  }
+  var host = authority.slice(authority.lastIndexOf('@') + 1);
+  var match = host.match(/^(?:\[[^\]]*\]|[^:]*):(\d+)$/);
+  return match ? String(parseInt(match[1], 10)) : undefined;
+}
+
+/**
+ * Parses <protocol>://<host>:<port> into an object { protocol: *, host:
+ * *, port: * }. The input can also be of the form <host>:<port> or just
+ * <port>. We're not simply using 'url.parse' because we want '3000' to
+ * parse as {host: undefined, protocol: undefined, port: '3000'}, whereas
+ * 'url.parse' would give us {protocol:' 3000', host: undefined, port:
+ * undefined} or something like that.
+ *
+ * A port written in the input is kept even when it is the protocol's default
+ * (e.g. "localhost:80"); the default port is used only when none is written.
+ *
+ * @param {string} str The URL, <host>:<port>, or port to parse.
+ * @param {{hostname?: string, port?: string, protocol?: string}} [defaults]
+ *   Values used for the parts the input leaves out.
+ * @returns {{protocol: (string|undefined), hostname: (string|undefined),
+ *   port: (string|undefined), pathname?: string}} The parsed parts.
+ */
 exports.parseUrl = function (str, defaults) {
   // XXX factor this out into a {type: host/port}?
 
@@ -68,7 +113,7 @@ exports.parseUrl = function (str, defaults) {
   var ret = {
     protocol: hasScheme ? parsedProtocol : defaultProtocol,
     hostname: hostname,
-    port: parsed.port || defaultPort
+    port: parsed.port || explicitPort(str) || defaultPort
   };
   if (parsed.pathname !== '/' && parsed.pathname) {
     ret.pathname = parsed.pathname;
