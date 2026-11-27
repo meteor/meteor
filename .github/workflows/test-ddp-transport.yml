@@ -14,7 +14,10 @@ jobs:
         transport:
           - 'sockjs'
           - 'uws'
-    runs-on: ${{ github.event.pull_request.head.repo.full_name == github.repository && 'oss-vm' || 'ubuntu-latest' }}
+    runs-on: >-
+      ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+          && (github.repository == 'meteor/meteor' || github.event.repository.private)
+          && (vars.METEOR_CI_LINUX_RUNNER || 'oss-vm') || 'ubuntu-latest' }}
     defaults:
       run:
         working-directory: .ci-ddp
@@ -43,12 +46,18 @@ jobs:
         with:
           node-version: 26.x
 
+      - name: Use job-local npm and test directories
+        run: |
+          mkdir -p "$RUNNER_TEMP/meteor-tests"
+          echo "npm_config_cache=$RUNNER_TEMP/meteor-npm" >> "$GITHUB_ENV"
+          echo "TMPDIR=$RUNNER_TEMP/meteor-tests" >> "$GITHUB_ENV"
+
       - name: Restore caches
         id: cache
         uses: actions/cache/restore@v4
         with:
           path: &cache-paths |
-            ~/.npm
+            ${{ runner.temp }}/meteor-npm/_cacache
             .ci-ddp/.meteor
             .ci-ddp/.babel-cache
             .ci-ddp/dev_bundle

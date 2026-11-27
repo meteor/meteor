@@ -20,7 +20,8 @@ export METEOR_HOME="$(pwd)"
 # guarantee that a browser is available. Pin a Node 26-compatible version and
 # run its awaited browser installer explicitly.
 if ! ./dev_bundle/bin/node -e "process.exit(require('./dev_bundle/lib/node_modules/puppeteer/package.json').version === '25.9.0' ? 0 : 1)" 2>/dev/null; then
-  ./meteor npm install -g puppeteer@25.9.0
+  # Only the installer below should download Chrome, inside the job's cache and lock.
+  PUPPETEER_SKIP_DOWNLOAD=true ./meteor npm install -g puppeteer@25.9.0
 fi
 
 PUPPETEER_CACHE_ROOT="${TMPDIR:-/tmp}"

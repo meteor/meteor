@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   type-coverage:
-    uses: ./.github/workflows/linux-check.yml
+    uses: ./.github/workflows/run-linux-check-in-docker.yml
     with:
       image: node:26-bookworm
       command: |

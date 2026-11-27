@@ -13,6 +13,8 @@ on:
       - 'npm-packages/meteor-rspack/**'
       - 'package.json'
       - '.github/workflows/unit-tests.yml'
+      - '.github/workflows/cleanup-runners.yml'
+      - '.github/scripts/run-self-hosted-runner-cleanup.js'
   push:
     branches:
       - devel
@@ -27,9 +29,10 @@ permissions:
 jobs:
   test:
     name: Unit Tests
-    uses: ./.github/workflows/linux-check.yml
+    uses: ./.github/workflows/run-linux-check-in-docker.yml
     with:
       image: node:26-bookworm
       command: |
+        npm run test:self-hosted-runner-cleanup
         npm run install:unit
         npm run test:unit

@@ -12,6 +12,9 @@ on:
       - "scripts/ci/build-test-matrix.test.js"
       - "scripts/ci/test-tools-cache-keys.test.js"
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -44,7 +47,10 @@ jobs:
   # source-file matrix used by the parallel test jobs.
   setup:
     name: Setup
-    runs-on: oss-vm
+    runs-on: &linux-runner >-
+      ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+          && (github.repository == 'meteor/meteor' || github.event.repository.private)
+          && (vars.METEOR_CI_LINUX_RUNNER || 'oss-vm') || 'ubuntu-latest' }}
     container:
       image: meteor/circleci:2026.07.28-android-36-node-24
       # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
@@ -59,13 +65,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
+          persist-credentials: false
 
       - name: Restore dev bundle cache
         id: dev-bundle-cache
         uses: actions/cache@v4
         with:
           path: |
-            ~/.npm
+            ~/.npm/_cacache
             .meteor
             .babel-cache
             dev_bundle
@@ -115,7 +122,7 @@ jobs:
   # (excluded from the matrix) and any custom-warehouse tests.
   isolated-tests:
     name: Isolated Tests
-    runs-on: oss-vm
+    runs-on: *linux-runner
     container:
       image: meteor/circleci:2026.07.28-android-36-node-24
       # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
@@ -129,12 +136,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
+          persist-credentials: false
 
       - name: Restore dev bundle cache
         uses: actions/cache/restore@v4
         with:
           path: |
-            ~/.npm
+            ~/.npm/_cacache
             .meteor
             .babel-cache
             dev_bundle
@@ -191,7 +199,7 @@ jobs:
   # shared setup while allowing files to run independently across workers.
   test:
     name: ${{ matrix.name }}
-    runs-on: oss-vm
+    runs-on: *linux-runner
     container:
       image: meteor/circleci:2026.07.28-android-36-node-24
       # A quota caps CPU time and lets Docker start the job on smaller runners.
@@ -209,6 +217,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
+          persist-credentials: false
 
       - name: Add Gradle to PATH
         # Gradle is pre-installed in the container and required by Cordova tests.
@@ -218,7 +227,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: |
-            ~/.npm
+            ~/.npm/_cacache
             .meteor
             .babel-cache
             dev_bundle

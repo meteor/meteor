@@ -21,7 +21,7 @@ permissions:
 jobs:
   actionlint:
     name: actionlint
-    uses: ./.github/workflows/linux-check.yml
+    uses: ./.github/workflows/run-linux-check-in-docker.yml
     with:
       image: node:24-bookworm
       command: |

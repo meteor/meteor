@@ -23,9 +23,8 @@ export default async function runSelfHostedRunnerCleanup({
   );
   const tempFile = path.join(tempDir, path.basename(scriptPath));
 
-  fs.writeFileSync(tempFile, Buffer.from(data.content, "base64"));
-
   try {
+    fs.writeFileSync(tempFile, Buffer.from(data.content, "base64"));
     const requireFromTempFile = createRequire(tempFile);
     const cleanup = requireFromTempFile(tempFile);
     await cleanup();

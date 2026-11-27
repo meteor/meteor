@@ -19,6 +19,10 @@ on:
       - "tools/fs/safe-watcher.ts"
       - "tools/static-assets/skel-**"
       - ".github/workflows/e2e-tests.yml"
+      - ".github/actions/prepare-e2e/**"
+
+permissions:
+  contents: read
 
 concurrency:
   group: meteor-e2e-tests-${{ github.ref }}
@@ -26,9 +30,6 @@ concurrency:
 
 env:
   TOOL_NODE_FLAGS: "--max_old_space_size=12288"
-  # Generated apps run Playwright in child processes whose HOME can differ
-  # from the Actions shell. Keep all browser installs in one explicit path.
-  PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.cache/ms-playwright
   # Force "localhost" to resolve to 127.0.0.1; runner prefers ::1, which
   # breaks local proxies to IPv4-only dev servers (ECONNREFUSED).
   NODE_OPTIONS: "--max_old_space_size=16384 --dns-result-order=ipv4first"
@@ -42,17 +43,31 @@ env:
 jobs:
   groups:
     name: E2E group audit
-    runs-on: oss-vm
+    runs-on: &linux-runner >-
+      ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+          && (github.repository == 'meteor/meteor' || github.event.repository.private)
+          && (vars.METEOR_CI_LINUX_RUNNER || 'oss-vm') || 'ubuntu-latest' }}
     timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: ci-e2e-audit
     outputs:
       matrix: ${{ steps.groups.outputs.matrix }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          path: ci-e2e-audit
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: tools/e2e-tests/package-lock.json
+      - name: Use a job-local npm cache
+        run: echo "npm_config_cache=$RUNNER_TEMP/meteor-audit-npm" >> "$GITHUB_ENV"
+      - name: Cache audit dependency downloads
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/meteor-audit-npm/_cacache
+          key: e2e-audit-npm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('ci-e2e-audit/tools/e2e-tests/package-lock.json') }}
       - name: Install discovery dependencies
         run: npm ci --prefix tools/e2e-tests
       - name: Audit all E2E groups
@@ -61,17 +76,26 @@ jobs:
         id: groups
         run: echo "matrix=$(node tools/e2e-tests/scripts/list-test-groups.js --json)" >> "$GITHUB_OUTPUT"
 
+      - name: Remove audit checkout
+        if: always()
+        working-directory: .
+        run: rm -rf -- ci-e2e-audit
+
   test:
     needs: groups
     name: ${{ matrix.category }}
-    runs-on: oss-vm
+    runs-on: *linux-runner
     # Budget both longer Regressions attempts and environment preparation.
     timeout-minutes: ${{ matrix.group == 'regressions' && 110 || 60 }}
     env:
+      E2E_GROUP: ${{ matrix.group }}
       # SWC's native addon cache rejects parents owned by another user.
       # Actions mounts the host-owned /github/home into this root container.
       # Keep materialized addons in a private namespace on its own filesystem.
       SWC_NATIVE_BINDING_CACHE: /tmp/meteor-swc-native
+    defaults:
+      run:
+        working-directory: ci-e2e
     container:
       image: node:22-bookworm
       # --init runs tini as PID 1 so orphaned processes get reaped. Without it
@@ -92,6 +116,7 @@ jobs:
 
     steps:
       - name: Install Docker CLI
+        working-directory: .
         run: |
           # Install a current docker CLI from Docker's official repo. Debian
           # bookworm's `docker.io` is 20.10 (API 1.41), which the self-hosted
@@ -114,52 +139,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
         with:
+          path: ci-e2e
           submodules: recursive
+          persist-credentials: false
 
-      - name: Cache dependencies
-        id: deps-cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            /root/.npm
-            ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
-            dev_bundle
-            .babel-cache
-            .meteor
-            node_modules
-            tools/e2e-tests/node_modules
-          key: e2e-${{ runner.os }}-${{ hashFiles('package-lock.json', 'meteor', 'tools/e2e-tests/package-lock.json') }}
-          restore-keys: |
-            e2e-${{ runner.os }}-
-
-      - name: Install deps
-        run: npm install
-
-      - name: Install test deps
-        # This installs the browsers and system dependencies using the exact
-        # Playwright version declared by tools/e2e-tests/package.json.
-        run: npm run install:e2e
-
-      - name: Set NPM_LINK_RSPACK=false for release branches
-        shell: bash
-        env:
-          BRANCH: ${{ github.head_ref || github.ref_name }}
-        run: |
-          echo "Current branch: $BRANCH"
-          if [[ "$BRANCH" == release-* ]]; then
-            echo "NPM_LINK_RSPACK=false" >> $GITHUB_ENV
-            echo "::warning::NPM_LINK_RSPACK=false on release branch. E2E tests will install @meteorjs/rspack from npm — make sure the latest version is published or tests may fail."
-          fi
-
-      - name: Prepare Meteor
-        if: steps.deps-cache.outputs.cache-hit != 'true'
-        run: ./meteor --get-ready --allow-superuser
+      - name: Prepare E2E dependencies
+        id: prepare
+        uses: ./ci-e2e/.github/actions/prepare-e2e
 
       - name: Run tests for ${{ matrix.category }}
         id: test-run
         continue-on-error: true
         timeout-minutes: ${{ matrix.group == 'regressions' && 40 || 20 }}
-        run: METEOR_ALLOW_SUPERUSER=1 npm run test:e2e:group -- "${{ matrix.group }}"
+        run: METEOR_ALLOW_SUPERUSER=1 npm run test:e2e:group -- "$E2E_GROUP"
 
       - name: Clean up before retry
         if: steps.test-run.outcome == 'failure'
@@ -181,4 +173,17 @@ jobs:
         timeout-minutes: ${{ matrix.group == 'regressions' && 45 || 25 }}
         run: |
           echo "::warning::First attempt failed, retrying..."
-          METEOR_ALLOW_SUPERUSER=1 npm run test:e2e:group -- "${{ matrix.group }}"
+          METEOR_ALLOW_SUPERUSER=1 npm run test:e2e:group -- "$E2E_GROUP"
+
+      # Save only successful runs, while the checkout and browser cache still exist.
+      - name: Save E2E dependencies
+        if: success() && steps.prepare.outputs.save-key != ''
+        uses: actions/cache/save@v4
+        with:
+          key: ${{ steps.prepare.outputs.save-key }}
+          path: ${{ steps.prepare.outputs.cache-paths }}
+
+      - name: Remove E2E checkout
+        if: always()
+        working-directory: .
+        run: rm -rf -- ci-e2e

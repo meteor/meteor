@@ -1,5 +1,13 @@
-name: Linux check
+name: Run a Linux check in Docker
 
+# The caller supplies a Docker image and a command, for example npm run test:unit.
+# This workflow selects the Linux runner and runs that command as a single job.
+# The E2E suites define their own job containers for browser setup and retries.
+#
+# The oss-vm machines reuse their workspaces. Copying a fresh checkout into the
+# container keeps node_modules and build output on its disposable filesystem.
+# Cleanup removes the container, the host checkout and any temporary npm cache
+# archive. Callers can reuse npm downloads through the Actions cache.
 on:
   workflow_call:
     inputs:
@@ -24,27 +32,26 @@ permissions:
 
 jobs:
   check:
-    # Keep fork PRs on disposable GitHub-hosted runners.
-    runs-on: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-latest' || 'oss-vm' }}
+    # Contributor forks have no access to Meteor's runners. Private repositories
+    # can select their own pool without changing the workflow when syncing branches.
+    runs-on: >-
+      ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+          && (github.repository == 'meteor/meteor' || github.event.repository.private)
+          && (vars.METEOR_CI_LINUX_RUNNER || 'oss-vm') || 'ubuntu-latest' }}
     timeout-minutes: ${{ inputs.timeout-minutes }}
     defaults:
       run:
         shell: bash
     steps:
-      - name: Allocate a fresh checkout
-        id: source
-        env:
-          LOCKFILE: ${{ inputs.npm-lockfile }}
+      - name: Prepare the check directory
         run: |
-          source_dir=$(mktemp -d "$GITHUB_WORKSPACE/.ci-source-XXXXXXXX")
-          echo "path=${source_dir##*/}" >> "$GITHUB_OUTPUT"
-          if [ -n "$LOCKFILE" ]; then
-            rm -f -- .ci-npm-downloads.tar
-          fi
+          # Reclaim this runner's previous checkout if it disconnected before cleanup.
+          rm -rf -- .ci-linux-check
+          mkdir .ci-linux-check
 
       - uses: actions/checkout@v6
         with:
-          path: ${{ steps.source.outputs.path }}
+          path: .ci-linux-check/source
           persist-credentials: false
 
       - name: Restore npm downloads
@@ -52,8 +59,8 @@ jobs:
         if: inputs.npm-lockfile != ''
         uses: actions/cache/restore@v5
         with:
-          path: .ci-npm-downloads.tar
-          key: npm-check-${{ inputs.image }}-${{ hashFiles(format('{0}/{1}', steps.source.outputs.path, inputs.npm-lockfile)) }}
+          path: .ci-linux-check/npm-downloads.tar
+          key: npm-check-${{ inputs.image }}-${{ hashFiles(format('.ci-linux-check/source/{0}', inputs.npm-lockfile)) }}
 
       - name: Start check container
         id: container
@@ -62,26 +69,24 @@ jobs:
           TIMEOUT: ${{ inputs.timeout-minutes }}
         run: |
           # The daemon also removes the container if a runner disappears and the job times out.
-          id=$(docker create --rm --init --user node --cap-drop=ALL --security-opt=no-new-privileges \
+          id=$(docker run --detach --rm --init --user node --cap-drop=ALL --security-opt=no-new-privileges \
             --env CI=true --env GITHUB_ACTIONS --env GITHUB_SHA --env GITHUB_REF --env GITHUB_REPOSITORY \
             --env HOME=/home/node --env GITHUB_WORKSPACE=/home/node/source --env GITHUB_STEP_SUMMARY=/tmp/step-summary \
             "$IMAGE" sleep "${TIMEOUT}m")
           echo "id=$id" >> "$GITHUB_OUTPUT"
-          docker start "$id"
 
       - name: Copy checkout into container
         env:
-          SOURCE: ${{ steps.source.outputs.path }}
           CONTAINER: ${{ steps.container.outputs.id }}
         run: |
           docker exec "$CONTAINER" mkdir -p /home/node/source /home/node/.npm
-          tar -C "$GITHUB_WORKSPACE/$SOURCE" -cf - . | docker exec -i "$CONTAINER" tar -C /home/node/source -xf -
+          tar -C .ci-linux-check/source -cf - . | docker exec -i "$CONTAINER" tar -C /home/node/source -xf -
 
       - name: Load cached downloads
         if: steps.cache.outputs.cache-hit == 'true'
         env:
           CONTAINER: ${{ steps.container.outputs.id }}
-        run: docker exec -i "$CONTAINER" tar -C /home/node/.npm -xf - < .ci-npm-downloads.tar
+        run: docker exec -i "$CONTAINER" tar -C /home/node/.npm -xf - < .ci-linux-check/npm-downloads.tar
 
       - name: Run check
         env:
@@ -98,13 +103,13 @@ jobs:
         if: inputs.npm-lockfile != '' && steps.cache.outputs.cache-hit != 'true'
         env:
           CONTAINER: ${{ steps.container.outputs.id }}
-        run: docker exec "$CONTAINER" tar -C /home/node/.npm -cf - _cacache > .ci-npm-downloads.tar
+        run: docker exec "$CONTAINER" tar -C /home/node/.npm -cf - _cacache > .ci-linux-check/npm-downloads.tar
 
       - name: Save npm downloads
         if: inputs.npm-lockfile != '' && steps.cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v5
         with:
-          path: .ci-npm-downloads.tar
+          path: .ci-linux-check/npm-downloads.tar
           key: ${{ steps.cache.outputs.cache-primary-key }}
 
       - name: Remove check container
@@ -117,13 +122,6 @@ jobs:
             docker rm --force --volumes "$CONTAINER"
           fi
 
-      - name: Remove temporary checkout
-        if: always() && steps.source.outputs.path != ''
-        env:
-          SOURCE: ${{ steps.source.outputs.path }}
-          LOCKFILE: ${{ inputs.npm-lockfile }}
-        run: |
-          rm -rf -- "$GITHUB_WORKSPACE/$SOURCE"
-          if [ -n "$LOCKFILE" ]; then
-            rm -f -- .ci-npm-downloads.tar
-          fi
+      - name: Remove the check directory
+        if: always()
+        run: rm -rf -- .ci-linux-check

@@ -4,12 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       runner_label:
-        description: 'The runner label to run the cleanup on (e.g., oss-vm)'
-        required: true
-        default: 'oss-vm'
+        description: 'Optional extra label for one machine in the configured Linux pool. Leave blank for any available worker.'
+        required: false
         type: string
       min_free_gb:
-        description: 'Minimum free disk space in GiB. If free space is below this, Docker prune will run.'
+        description: 'Required free GiB on the workspace and Docker filesystems after cleanup. Use 0 for workspace cleanup only.'
         required: true
         default: '20'
         type: string
@@ -19,8 +18,14 @@ permissions:
 
 jobs:
   cleanup:
-    name: Cleanup (${{ inputs.runner_label }})
-    runs-on: [self-hosted, linux, "${{ inputs.runner_label }}"]
+    name: Clean runner workspace and Docker storage
+    if: github.ref_type == 'branch' && github.ref_name == github.event.repository.default_branch && github.ref_protected
+    # Labels are cumulative. A machine-specific label must still match the repository's pool.
+    runs-on:
+      - self-hosted
+      - linux
+      - ${{ vars.METEOR_CI_LINUX_RUNNER || 'oss-vm' }}
+      - ${{ inputs.runner_label || 'self-hosted' }}
     steps:
       - name: Run runner cleanup
         uses: actions/github-script@v9

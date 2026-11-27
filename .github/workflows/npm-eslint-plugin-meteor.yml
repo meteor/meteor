@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   test:
-    uses: ./.github/workflows/linux-check.yml
+    uses: ./.github/workflows/run-linux-check-in-docker.yml
     with:
       image: node:26-bookworm
       directory: npm-packages/eslint-plugin-meteor
