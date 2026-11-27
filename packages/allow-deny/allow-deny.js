@@ -35,7 +35,7 @@ const hasOwn = Object.prototype.hasOwnProperty;
 // (so don't include side effects).
 
 AllowDeny = {
-  CollectionPrototype: {}
+  CollectionPrototype: {},
 };
 
 // In the `mongo` package, we will extend Mongo.Collection.prototype with these
@@ -53,8 +53,8 @@ const CollectionPrototype = AllowDeny.CollectionPrototype;
  * @param {String[]} options.fetch Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `update` and `remove` functions.
  * @param {Function} options.transform Overrides `transform` on the  [`Collection`](#collections).  Pass `null` to disable transformation.
  */
-CollectionPrototype.allow = function(options) {
-  addValidator(this, 'allow', options);
+CollectionPrototype.allow = function (options) {
+  addValidator(this, "allow", options);
 };
 
 /**
@@ -68,11 +68,11 @@ CollectionPrototype.allow = function(options) {
  * @param {String[]} options.fetch Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `update` and `remove` functions.
  * @param {Function} options.transform Overrides `transform` on the  [`Collection`](#collections).  Pass `null` to disable transformation.
  */
-CollectionPrototype.deny = function(options) {
-  addValidator(this, 'deny', options);
+CollectionPrototype.deny = function (options) {
+  addValidator(this, "deny", options);
 };
 
-CollectionPrototype._defineMutationMethods = function(options) {
+CollectionPrototype._defineMutationMethods = function (options) {
   const self = this;
   options = options || {};
 
@@ -87,56 +87,58 @@ CollectionPrototype._defineMutationMethods = function(options) {
   self._insecure = undefined;
 
   self._validators = {
-    insert: {allow: [], deny: []},
-    update: {allow: [], deny: []},
-    remove: {allow: [], deny: []},
-    insertAsync: {allow: [], deny: []},
-    updateAsync: {allow: [], deny: []},
-    removeAsync: {allow: [], deny: []},
-    upsertAsync: {allow: [], deny: []}, // dummy arrays; can't set these!
+    insert: { allow: [], deny: [] },
+    update: { allow: [], deny: [] },
+    remove: { allow: [], deny: [] },
+    insertAsync: { allow: [], deny: [] },
+    updateAsync: { allow: [], deny: [] },
+    removeAsync: { allow: [], deny: [] },
+    upsertAsync: { allow: [], deny: [] }, // dummy arrays; can't set these!
     fetch: [],
-    fetchAllFields: false
+    fetchAllFields: false,
   };
 
-  if (!self._name)
-    return; // anonymous collection
+  if (!self._name) return; // anonymous collection
 
   // XXX Think about method namespacing. Maybe methods should be
   // "Meteor:Mongo:insertAsync/NAME"?
-  self._prefix = '/' + self._name + '/';
+  self._prefix = "/" + self._name + "/";
 
   // Mutation Methods
   // Minimongo on the server gets no stubs; instead, by default
   // it wait()s until its result is ready, yielding.
   // This matches the behavior of macromongo on the server better.
   // XXX see #MeteorServerNull
-  if (self._connection && (self._connection === Meteor.server || Meteor.isClient)) {
+  if (
+    self._connection &&
+    (self._connection === Meteor.server || Meteor.isClient)
+  ) {
     const m = {};
 
     [
-      'insertAsync',
-      'updateAsync',
-      'removeAsync',
-      'insert',
-      'update',
-      'remove',
-    ].forEach(method => {
+      "insertAsync",
+      "updateAsync",
+      "removeAsync",
+      "insert",
+      "update",
+      "remove",
+    ].forEach((method) => {
       const methodName = self._prefix + method;
 
       if (options.useExisting) {
         const handlerPropName = Meteor.isClient
-          ? '_methodHandlers'
-          : 'method_handlers';
+          ? "_methodHandlers"
+          : "method_handlers";
         // Do not try to create additional methods if this has already been called.
         // (Otherwise the .methods() call below will throw an error.)
         if (
           self._connection[handlerPropName] &&
-          typeof self._connection[handlerPropName][methodName] === 'function'
+          typeof self._connection[handlerPropName][methodName] === "function"
         )
           return;
       }
 
-      const isInsert = name => name.includes('insert');
+      const isInsert = (name) => name.includes("insert");
 
       m[methodName] = function (/* ... */) {
         // All the methods do their own validation, instead of using check().
@@ -155,7 +157,7 @@ CollectionPrototype._defineMutationMethods = function(options) {
           // between arbitrary client-specified _id fields and merely
           // client-controlled-via-randomSeed fields.
           let generatedId = null;
-          if (isInsert(method) && !hasOwn.call(args[0], '_id')) {
+          if (isInsert(method) && !hasOwn.call(args[0], "_id")) {
             generatedId = self._makeNewID();
           }
 
@@ -174,20 +176,23 @@ CollectionPrototype._defineMutationMethods = function(options) {
           // single-ID selectors.
           if (!isInsert(method)) throwIfSelectorIsNotId(args[0], method);
 
-          const syncMethodName = method.replace('Async', '');
-          const syncValidatedMethodName = '_validated' + method.charAt(0).toUpperCase() + syncMethodName.slice(1);
+          const syncMethodName = method.replace("Async", "");
+          const syncValidatedMethodName =
+            "_validated" +
+            method.charAt(0).toUpperCase() +
+            syncMethodName.slice(1);
           // it forces to use async validated behavior
-          const validatedMethodName = syncValidatedMethodName + 'Async';
+          const validatedMethodName = syncValidatedMethodName + "Async";
 
           if (self._restricted) {
             // short circuit if there is no way it will pass.
             if (self._validators[syncMethodName].allow.length === 0) {
               throw new Meteor.Error(
                 403,
-                'Access denied. No allow validators set on restricted ' +
+                "Access denied. No allow validators set on restricted " +
                   "collection for method '" +
                   method +
-                  "'."
+                  "'.",
               );
             }
 
@@ -205,7 +210,6 @@ CollectionPrototype._defineMutationMethods = function(options) {
               remove: "removeAsync",
             };
 
-
             // In insecure mode, allow any mutation (with a simple selector).
             // XXX This is kind of bogus.  Instead of blindly passing whatever
             //     we get from the network to this function, we should actually
@@ -217,20 +221,23 @@ CollectionPrototype._defineMutationMethods = function(options) {
             //     invoke it. Bam, broken DDP connection.  Probably should just
             //     take this whole method and write it three times, invoking
             //     helpers for the common code.
-            return self._collection[syncMethodsMapper[method] || method].apply(self._collection, args);
+            return self._collection[syncMethodsMapper[method] || method].apply(
+              self._collection,
+              args,
+            );
           } else {
             // In secure mode, if we haven't called allow or deny, then nothing
             // is permitted.
-            throw new Meteor.Error(403, 'Access denied');
+            throw new Meteor.Error(403, "Access denied");
           }
         } catch (e) {
           if (
-            e.name === 'MongoError' ||
+            e.name === "MongoError" ||
             // for old versions of MongoDB (probably not necessary but it's here just in case)
-            e.name === 'BulkWriteError' ||
+            e.name === "BulkWriteError" ||
             // for newer versions of MongoDB (https://docs.mongodb.com/drivers/node/current/whats-new/#bulkwriteerror---mongobulkwriteerror)
-            e.name === 'MongoBulkWriteError' ||
-            e.name === 'MinimongoError'
+            e.name === "MongoBulkWriteError" ||
+            e.name === "MinimongoError"
           ) {
             throw new Meteor.Error(409, e.toString());
           } else {
@@ -250,7 +257,8 @@ CollectionPrototype._updateFetch = function (fields) {
   if (!self._validators.fetchAllFields) {
     if (fields) {
       const union = Object.create(null);
-      const add = names => names && names.forEach(name => union[name] = 1);
+      const add = (names) =>
+        names && names.forEach((name) => (union[name] = 1));
       add(self._validators.fetch);
       add(fields);
       self._validators.fetch = Object.keys(union);
@@ -264,8 +272,7 @@ CollectionPrototype._updateFetch = function (fields) {
 
 CollectionPrototype._isInsecure = function () {
   const self = this;
-  if (self._insecure === undefined)
-    return !!Package.insecure;
+  if (self._insecure === undefined) return !!Package.insecure;
   return self._insecure;
 };
 
@@ -280,37 +287,49 @@ async function asyncSome(array, predicate) {
 
 async function asyncEvery(array, predicate) {
   for (let item of array) {
-    if (!await predicate(item)) {
+    if (!(await predicate(item))) {
       return false;
     }
   }
   return true;
 }
 
-CollectionPrototype._validatedInsertAsync = async function(userId, doc,
-                                                           generatedId) {
+CollectionPrototype._validatedInsertAsync = async function (
+  userId,
+  doc,
+  generatedId,
+) {
   const self = this;
   // call user validators.
   // Any deny returns true means denied.
-  if (await asyncSome(self._validators.insert.deny, async (validator) => {
-    const result = validator(userId, docToValidate(validator, doc, generatedId));
-    return Meteor._isPromise(result) ? await result : result;
-  })) {
+  if (
+    await asyncSome(self._validators.insert.deny, async (validator) => {
+      const result = validator(
+        userId,
+        docToValidate(validator, doc, generatedId),
+      );
+      return Meteor._isPromise(result) ? await result : result;
+    })
+  ) {
     throw new Meteor.Error(403, "Access denied");
   }
   // Any allow returns true means proceed. Throw error if they all fail.
 
-  if (await asyncEvery(self._validators.insert.allow, async (validator) => {
-    const result = validator(userId, docToValidate(validator, doc, generatedId));
-    return !(Meteor._isPromise(result) ? await result : result);
-  })) {
+  if (
+    await asyncEvery(self._validators.insert.allow, async (validator) => {
+      const result = validator(
+        userId,
+        docToValidate(validator, doc, generatedId),
+      );
+      return !(Meteor._isPromise(result) ? await result : result);
+    })
+  ) {
     throw new Meteor.Error(403, "Access denied");
   }
 
   // If we generated an ID above, insertAsync it now: after the validation, but
   // before actually inserting.
-  if (generatedId !== null)
-    doc._id = generatedId;
+  if (generatedId !== null) doc._id = generatedId;
 
   return self._collection.insertAsync.call(self._collection, doc);
 };
@@ -319,8 +338,12 @@ CollectionPrototype._validatedInsertAsync = async function(userId, doc,
 // control rules set by calls to `allow/deny` are satisfied. If all
 // pass, rewrite the mongo operation to use $in to set the list of
 // document ids to change ##ValidatedChange
-CollectionPrototype._validatedUpdateAsync = async function(
-    userId, selector, mutator, options) {
+CollectionPrototype._validatedUpdateAsync = async function (
+  userId,
+  selector,
+  mutator,
+  options,
+) {
   const self = this;
 
   check(mutator, Object);
@@ -333,12 +356,15 @@ CollectionPrototype._validatedUpdateAsync = async function(
   // We don't support upserts because they don't fit nicely into allow/deny
   // rules.
   if (options.upsert)
-    throw new Meteor.Error(403, "Access denied. Upserts not " +
-                           "allowed in a restricted collection.");
+    throw new Meteor.Error(
+      403,
+      "Access denied. Upserts not " + "allowed in a restricted collection.",
+    );
 
-  const noReplaceError = "Access denied. In a restricted collection you can only" +
-        " update documents, not replace them. Use a Mongo update operator, such " +
-        "as '$set'.";
+  const noReplaceError =
+    "Access denied. In a restricted collection you can only" +
+    " update documents, not replace them. Use a Mongo update operator, such " +
+    "as '$set'.";
 
   const mutatorKeys = Object.keys(mutator);
 
@@ -350,17 +376,21 @@ CollectionPrototype._validatedUpdateAsync = async function(
   }
   mutatorKeys.forEach((op) => {
     const params = mutator[op];
-    if (op.charAt(0) !== '$') {
+    if (op.charAt(0) !== "$") {
       throw new Meteor.Error(403, noReplaceError);
     } else if (!hasOwn.call(ALLOWED_UPDATE_OPERATIONS, op)) {
       throw new Meteor.Error(
-        403, "Access denied. Operator " + op + " not allowed in a restricted collection.");
+        403,
+        "Access denied. Operator " +
+          op +
+          " not allowed in a restricted collection.",
+      );
     } else {
       Object.keys(params).forEach((field) => {
         // treat dotted fields as if they are replacing their
         // top-level part
-        if (field.indexOf('.') !== -1)
-          field = field.substring(0, field.indexOf('.'));
+        if (field.indexOf(".") !== -1)
+          field = field.substring(0, field.indexOf("."));
 
         // record the field we are trying to change
         modifiedFields[field] = true;
@@ -370,7 +400,7 @@ CollectionPrototype._validatedUpdateAsync = async function(
 
   const fields = Object.keys(modifiedFields);
 
-  const findOptions = {transform: null};
+  const findOptions = { transform: null };
   if (!self._validators.fetchAllFields) {
     findOptions.fields = {};
     self._validators.fetch.forEach((fieldName) => {
@@ -379,31 +409,30 @@ CollectionPrototype._validatedUpdateAsync = async function(
   }
 
   const doc = await self._collection.findOneAsync(selector, findOptions);
-  if (!doc)  // none satisfied!
+  if (!doc)
+    // none satisfied!
     return 0;
 
   // call user validators.
   // Any deny returns true means denied.
-  if (await asyncSome(self._validators.update.deny, async (validator) => {
-    const factoriedDoc = transformDoc(validator, doc);
-    const result = validator(userId,
-      factoriedDoc,
-      fields,
-      mutator);
-    return Meteor._isPromise(result) ? await result : result;
-  })) {
+  if (
+    await asyncSome(self._validators.update.deny, async (validator) => {
+      const factoriedDoc = transformDoc(validator, doc);
+      const result = validator(userId, factoriedDoc, fields, mutator);
+      return Meteor._isPromise(result) ? await result : result;
+    })
+  ) {
     throw new Meteor.Error(403, "Access denied");
   }
 
   // Any allow returns true means proceed. Throw error if they all fail.
-  if (await asyncEvery(self._validators.update.allow, async (validator) => {
-    const factoriedDoc = transformDoc(validator, doc);
-    const result = validator(userId,
-      factoriedDoc,
-      fields,
-      mutator);
-    return !(Meteor._isPromise(result) ? await result : result);
-  })) {
+  if (
+    await asyncEvery(self._validators.update.allow, async (validator) => {
+      const factoriedDoc = transformDoc(validator, doc);
+      const result = validator(userId, factoriedDoc, fields, mutator);
+      return !(Meteor._isPromise(result) ? await result : result);
+    })
+  ) {
     throw new Meteor.Error(403, "Access denied");
   }
 
@@ -415,7 +444,11 @@ CollectionPrototype._validatedUpdateAsync = async function(
   // don't have to any more.
 
   return self._collection.updateAsync.call(
-    self._collection, selector, mutator, options);
+    self._collection,
+    selector,
+    mutator,
+    options,
+  );
 };
 
 // Only allow these operations in validated updates. Specifically
@@ -425,16 +458,24 @@ CollectionPrototype._validatedUpdateAsync = async function(
 // field. For now this contains all update operations except '$rename'.
 // http://docs.mongodb.org/manual/reference/operators/#update
 const ALLOWED_UPDATE_OPERATIONS = {
-  $inc:1, $set:1, $unset:1, $addToSet:1, $pop:1, $pullAll:1, $pull:1,
-  $pushAll:1, $push:1, $bit:1
+  $inc: 1,
+  $set: 1,
+  $unset: 1,
+  $addToSet: 1,
+  $pop: 1,
+  $pullAll: 1,
+  $pull: 1,
+  $pushAll: 1,
+  $push: 1,
+  $bit: 1,
 };
 
 // Simulate a mongo `remove` operation while validating access control
 // rules. See #ValidatedChange
-CollectionPrototype._validatedRemoveAsync = async function(userId, selector) {
+CollectionPrototype._validatedRemoveAsync = async function (userId, selector) {
   const self = this;
 
-  const findOptions = {transform: null};
+  const findOptions = { transform: null };
   if (!self._validators.fetchAllFields) {
     findOptions.fields = {};
     self._validators.fetch.forEach((fieldName) => {
@@ -443,22 +484,25 @@ CollectionPrototype._validatedRemoveAsync = async function(userId, selector) {
   }
 
   const doc = await self._collection.findOneAsync(selector, findOptions);
-  if (!doc)
-    return 0;
+  if (!doc) return 0;
 
   // call user validators.
   // Any deny returns true means denied.
-  if (await asyncSome(self._validators.remove.deny, async (validator) => {
-    const result = validator(userId, transformDoc(validator, doc));
-    return Meteor._isPromise(result) ? await result : result;
-  })) {
+  if (
+    await asyncSome(self._validators.remove.deny, async (validator) => {
+      const result = validator(userId, transformDoc(validator, doc));
+      return Meteor._isPromise(result) ? await result : result;
+    })
+  ) {
     throw new Meteor.Error(403, "Access denied");
   }
   // Any allow returns true means proceed. Throw error if they all fail.
-  if (await asyncEvery(self._validators.remove.allow, async (validator) => {
-    const result = validator(userId, transformDoc(validator, doc));
-    return !(Meteor._isPromise(result) ? await result : result);
-  })) {
+  if (
+    await asyncEvery(self._validators.remove.allow, async (validator) => {
+      const result = validator(userId, transformDoc(validator, doc));
+      return !(Meteor._isPromise(result) ? await result : result);
+    })
+  ) {
     throw new Meteor.Error(403, "Access denied");
   }
 
@@ -470,8 +514,11 @@ CollectionPrototype._validatedRemoveAsync = async function(userId, selector) {
   return self._collection.removeAsync.call(self._collection, selector);
 };
 
-CollectionPrototype._callMutatorMethodAsync = function _callMutatorMethodAsync(name, args, options = {}) {
-
+CollectionPrototype._callMutatorMethodAsync = function _callMutatorMethodAsync(
+  name,
+  args,
+  options = {},
+) {
   // For two out of three mutator methods, the first argument is a selector
   const firstArgIsSelector = name === "updateAsync" || name === "removeAsync";
   if (firstArgIsSelector && !alreadyInSimulation()) {
@@ -483,14 +530,19 @@ CollectionPrototype._callMutatorMethodAsync = function _callMutatorMethodAsync(n
 
   const mutatorMethodName = this._prefix + name;
   return this._connection.applyAsync(mutatorMethodName, args, {
-    returnStubValue: this.resolverType === 'stub' || this.resolverType == null,
+    returnStubValue: this.resolverType === "stub" || this.resolverType == null,
     // StubStream is only used for testing where you don't care about the server
-    returnServerResultPromise: !this._connection._stream._isStub && this.resolverType !== 'stub',
+    returnServerResultPromise:
+      !this._connection._stream._isStub && this.resolverType !== "stub",
     ...options,
   });
-}
+};
 
-CollectionPrototype._callMutatorMethod = function _callMutatorMethod(name, args, callback) {
+CollectionPrototype._callMutatorMethod = function _callMutatorMethod(
+  name,
+  args,
+  callback,
+) {
   if (Meteor.isClient && !callback && !alreadyInSimulation()) {
     // Client can't block, so it can't report errors by exception,
     // only by callback. If they forget the callback, give them a
@@ -501,8 +553,7 @@ CollectionPrototype._callMutatorMethod = function _callMutatorMethod(name, args,
     // want to return the results from the local collection immediately and
     // not force a callback.
     callback = function (err) {
-      if (err)
-        Meteor._debug(name + " failed", err);
+      if (err) Meteor._debug(name + " failed", err);
     };
   }
 
@@ -517,12 +568,15 @@ CollectionPrototype._callMutatorMethod = function _callMutatorMethod(name, args,
 
   const mutatorMethodName = this._prefix + name;
   return this._connection.apply(
-    mutatorMethodName, args, { returnStubValue: true }, callback);
-}
+    mutatorMethodName,
+    args,
+    { returnStubValue: true },
+    callback,
+  );
+};
 
 function transformDoc(validator, doc) {
-  if (validator.transform)
-    return validator.transform(doc);
+  if (validator.transform) return validator.transform(doc);
   return doc;
 }
 
@@ -545,33 +599,37 @@ function docToValidate(validator, doc, generatedId) {
 
 function addValidator(collection, allowOrDeny, options) {
   // validate keys
-  const validKeysRegEx = /^(?:insertAsync|updateAsync|removeAsync|insert|update|remove|fetch|transform)$/;
+  const validKeysRegEx =
+    /^(?:insertAsync|updateAsync|removeAsync|insert|update|remove|fetch|transform)$/;
   Object.keys(options).forEach((key) => {
     if (!validKeysRegEx.test(key))
       throw new Error(allowOrDeny + ": Invalid key: " + key);
 
     // TODO deprecated async config on future versions
-    const isAsyncKey = key.includes('Async');
+    const isAsyncKey = key.includes("Async");
     if (isAsyncKey) {
-      const syncKey = key.replace('Async', '');
-      Meteor.deprecate(allowOrDeny + `: The "${key}" key is deprecated. Use "${syncKey}" instead.`);
+      const syncKey = key.replace("Async", "");
+      Meteor.deprecate(
+        `${allowOrDeny}: "${key}" is deprecated and will be removed in a future release. ` +
+          `Use "${syncKey}" instead.`,
+      );
     }
   });
 
   collection._restricted = true;
 
   [
-    'insertAsync',
-    'updateAsync',
-    'removeAsync',
-    'insert',
-    'update',
-    'remove',
-  ].forEach(name => {
+    "insertAsync",
+    "updateAsync",
+    "removeAsync",
+    "insert",
+    "update",
+    "remove",
+  ].forEach((name) => {
     if (hasOwn.call(options, name)) {
       if (!(options[name] instanceof Function)) {
         throw new Error(
-          allowOrDeny + ': Value for `' + name + '` must be a function'
+          allowOrDeny + ": Value for `" + name + "` must be a function",
         );
       }
 
@@ -582,12 +640,14 @@ function addValidator(collection, allowOrDeny, options) {
         options[name].transform = collection._transform; // already wrapped
       } else {
         options[name].transform = LocalCollection.wrapTransform(
-          options.transform
+          options.transform,
         );
       }
-      const isAsyncName = name.includes('Async');
-      const validatorSyncName = isAsyncName ? name.replace('Async', '') : name;
-      collection._validators[validatorSyncName][allowOrDeny].push(options[name]);
+      const isAsyncName = name.includes("Async");
+      const validatorSyncName = isAsyncName ? name.replace("Async", "") : name;
+      collection._validators[validatorSyncName][allowOrDeny].push(
+        options[name],
+      );
     }
   });
 
@@ -605,10 +665,13 @@ function addValidator(collection, allowOrDeny, options) {
 function throwIfSelectorIsNotId(selector, methodName) {
   if (!LocalCollection._selectorIsIdPerhapsAsObject(selector)) {
     throw new Meteor.Error(
-      403, "Not permitted. Untrusted code may only " + methodName +
-        " documents by ID.");
+      403,
+      "Not permitted. Untrusted code may only " +
+        methodName +
+        " documents by ID.",
+    );
   }
-};
+}
 
 // Determine if we are in a DDP method simulation
 function alreadyInSimulation() {
