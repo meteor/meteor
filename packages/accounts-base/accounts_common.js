@@ -4,6 +4,7 @@ import { Meteor } from 'meteor/meteor';
 const VALID_CONFIG_KEYS = [
   'sendVerificationEmail',
   'forbidClientAccountCreation',
+  'allowClientServiceConfiguration',
   'restrictCreationByEmailDomain',
   'loginExpiration',
   'loginExpirationInDays',
@@ -12,6 +13,8 @@ const VALID_CONFIG_KEYS = [
   'passwordResetTokenExpiration',
   'passwordEnrollTokenExpirationInDays',
   'passwordEnrollTokenExpiration',
+  'emailVerificationTokenExpirationInDays',
+  'emailVerificationTokenExpiration',
   'ambiguousErrorMessages',
   'bcryptRounds',
   'argon2Enabled',
@@ -214,6 +217,7 @@ export class AccountsCommon {
    * @param {Object} options
    * @param {Boolean} options.sendVerificationEmail New users with an email address will receive an address verification email.
    * @param {Boolean} options.forbidClientAccountCreation Calls to [`createUser`](#accounts_createuser) from the client will be rejected. In addition, if you are using [accounts-ui](#accountsui), the "Create account" link will not be available. **Important**: This option must be set on both the client and server to take full effect. If only set on the server, account creation will be blocked but the UI will still show the "Create account" link.
+   * @param {Boolean} options.allowClientServiceConfiguration Allow clients to call the `configureLoginService` method, which the [accounts-ui](#accountsui) configuration dialog uses to save the first configuration of an OAuth service. Defaults to `true` in development and `false` in production, so that visitors of a deployed app cannot configure a service before you do. Configure services on the server or in `Meteor.settings` instead. This option only has an effect on the server.
    * @param {String | Function} options.restrictCreationByEmailDomain If set to a string, only allows new users if the domain part of their email address matches the string. If set to a function, only allows new users if the function returns true.  The function is passed the full email address of the proposed new user.  Works with password-based sign-in and external services that expose email addresses (Google, Facebook, GitHub). All existing users still can log in after enabling this option. Example: `Accounts.config({ restrictCreationByEmailDomain: 'school.edu' })`.
    * @param {Number} options.loginExpiration The number of milliseconds from when a user logs in until their token expires and they are logged out, for a more granular control. If `loginExpirationInDays` is set, it takes precedent.
    * @param {Number} options.loginExpirationInDays The number of days from when a user logs in until their token expires and they are logged out. Defaults to 90. Set to `null` to disable login expiration.
@@ -222,6 +226,8 @@ export class AccountsCommon {
    * @param {Number} options.passwordResetTokenExpiration The number of milliseconds from when a link to reset password is sent until token expires and user can't reset password with the link anymore. If `passwordResetTokenExpirationInDays` is set, it takes precedent.
    * @param {Number} options.passwordEnrollTokenExpirationInDays The number of days from when a link to set initial password is sent until token expires and user can't set password with the link anymore. Defaults to 30.
    * @param {Number} options.passwordEnrollTokenExpiration The number of milliseconds from when a link to set initial password is sent until token expires and user can't set password with the link anymore. If `passwordEnrollTokenExpirationInDays` is set, it takes precedent.
+   * @param {Number} options.emailVerificationTokenExpirationInDays The number of days from when a link to verify an email address is sent until token expires and user can't verify the address or log in with the link anymore. Defaults to 3.
+   * @param {Number} options.emailVerificationTokenExpiration The number of milliseconds from when a link to verify an email address is sent until token expires and user can't verify the address or log in with the link anymore. If set, it takes precedence over `emailVerificationTokenExpirationInDays`.
    * @param {Boolean} options.ambiguousErrorMessages Return ambiguous error messages from login failures to prevent user enumeration. Defaults to `true`.
    * @param {Number} options.bcryptRounds Allows override of number of bcrypt rounds (aka work factor) used to store passwords. The default is 10.
    * @param {Boolean} options.argon2Enabled Enable argon2 algorithm usage in replacement for bcrypt. The default is `false`.
@@ -439,6 +445,14 @@ export class AccountsCommon {
     );
   }
 
+  _getEmailVerificationTokenLifetimeMs() {
+    return (
+      this._options.emailVerificationTokenExpiration ||
+      (this._options.emailVerificationTokenExpirationInDays ||
+        DEFAULT_EMAIL_VERIFICATION_TOKEN_EXPIRATION_DAYS) * 86400000
+    );
+  }
+
   _tokenExpiration(when) {
     // We pass when through the Date constructor for backwards compatibility;
     // `when` used to be a number.
@@ -492,6 +506,8 @@ const DEFAULT_LOGIN_EXPIRATION_DAYS = 90;
 const DEFAULT_PASSWORD_RESET_TOKEN_EXPIRATION_DAYS = 3;
 // how long (in days) until enrol password token expires
 const DEFAULT_PASSWORD_ENROLL_TOKEN_EXPIRATION_DAYS = 30;
+// how long (in days) until email verification token expires
+const DEFAULT_EMAIL_VERIFICATION_TOKEN_EXPIRATION_DAYS = 3;
 // Clients don't try to auto-login with a token that is going to expire within
 // .1 * DEFAULT_LOGIN_EXPIRATION_DAYS, capped at MIN_TOKEN_LIFETIME_CAP_SECS.
 // Tries to avoid abrupt disconnects from expiring tokens.

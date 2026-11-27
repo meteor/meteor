@@ -18,7 +18,7 @@ var packageJson = {
     "node-gyp-build": "4.8.4",
     "@mapbox/node-pre-gyp": "2.0.3",
     typescript: "5.9.3",
-    "@meteorjs/babel": "7.20.2-rc.1",
+    "@meteorjs/babel": "7.20.2",
     // Keep the versions of these packages consistent with the versions
     // found in dev-bundle-server-package.js.
     "@meteorjs/reify": "0.25.4",
@@ -37,7 +37,7 @@ var packageJson = {
     "graceful-fs": "4.2.11",
     fstream: "https://github.com/meteor/fstream/tarball/cf4ea6c175355cec7bee38311e170d08c4078a5d",
     tar: "6.1.11",
-    'tar-fs': "2.1.1",
+    'tar-fs': "2.1.5",
     // Fork of kexec@3.0.0 with my Node.js 12 compatibility PR
     // https://github.com/jprichardson/node-kexec/pull/37 applied.
     // TODO: We should replace this with: https://github.com/jprichardson/node-kexec/pull/38

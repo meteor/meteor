@@ -1,9 +1,10 @@
 /**
-* Mark issues as idle after a period of inactivity
+* Mark issues as stale after a period of inactivity
 * and post reminders after a shorter period of inactivity.
 *
 * 1. Issues with no human activity for 60 days get a reminder comment.
-* 2. Issues with no human activity for 90 days get labeled as "idle" and get a comment.
+* 2. Issues with no human activity for 90 days get labeled as "status: stale" and get a comment.
+* 3. Stale issues with human activity in the last 90 days lose the label.
 *
 * Human activity is defined as any comment from a non-bot user.
 *
@@ -19,12 +20,14 @@ module.exports = async ({ github, context }) => {
 
   const BOT_LOGIN = 'github-actions[bot]';
   const REMINDER_PHRASE = 'Is this issue still relevant?';
+  const STALE_LABEL = 'status: stale';
+  const IN_PROGRESS_LABEL = 'status: in-progress';
 
   const COMMENT_60_TEMPLATE = (login) =>
-    `👋 @${login} This issue has been open with no human activity for ${daysToComment} days. Is this issue still relevant? If there is no human response or activity within the next ${daysToLabel - daysToComment} days, this issue will be labeled as \`idle\`.`;
+    `👋 @${login} This issue has been open with no human activity for ${daysToComment} days. Is this issue still relevant? If there is no human response or activity within the next ${daysToLabel - daysToComment} days, this issue will be labeled as \`${STALE_LABEL}\`.`;
 
   const COMMENT_90_TEXT =
-    'This issue has been automatically labeled as `idle` due to 90 days of inactivity (no human interaction). If this is still relevant or if someone is working on it, please comment or add `in-development` label.';
+    `This issue has been automatically labeled as \`${STALE_LABEL}\` due to 90 days of inactivity (no human interaction). If this is still relevant or if someone is working on it, please comment or add \`${IN_PROGRESS_LABEL}\` label.`;
 
   // Fetch all open issues
   async function fetchAllIssues() {
@@ -96,6 +99,7 @@ module.exports = async ({ github, context }) => {
   let processed = 0;
   let commented = 0;
   let labeled = 0;
+  let unlabeled = 0;
   let skippedPR = 0;
 
   for (const issue of issues) {
@@ -106,7 +110,9 @@ module.exports = async ({ github, context }) => {
       continue;
     }
 
-    if (issue.labels.some((l) => l.name === 'idle' || l.name === 'in-development')) {
+    const isStale = issue.labels.some((l) => l.name === STALE_LABEL);
+    const inProgress = issue.labels.some((l) => l.name === IN_PROGRESS_LABEL);
+    if (inProgress && !isStale) {
       continue;
     }
 
@@ -120,6 +126,22 @@ module.exports = async ({ github, context }) => {
     const { lastHumanActivity, hasReminderAfterLastHuman } = analysis;
     const inactivityMs = now.getTime() - lastHumanActivity.getTime();
 
+    // Stale issues: drop the label once a human commented or someone works on it, nothing else
+    if (isStale) {
+      if (inProgress || inactivityMs < idleTimeLabel) {
+        try {
+          await github.rest.issues.removeLabel({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: issue.number,
+            name: STALE_LABEL
+          });
+          unlabeled++;
+        } catch {}
+      }
+      continue;
+    }
+
     // 90+ days => label + comment
     if (inactivityMs >= idleTimeLabel) {
       try {
@@ -127,7 +149,7 @@ module.exports = async ({ github, context }) => {
           owner: context.repo.owner,
           repo: context.repo.repo,
           issue_number: issue.number,
-          labels: ['idle']
+          labels: [STALE_LABEL]
         });
         await github.rest.issues.createComment({
           owner: context.repo.owner,
@@ -145,7 +167,7 @@ module.exports = async ({ github, context }) => {
             owner: context.repo.owner,
             repo: context.repo.repo,
             issue_number: issue.number,
-            labels: ['idle']
+            labels: [STALE_LABEL]
           });
           await github.rest.issues.createComment({
             owner: context.repo.owner,
@@ -192,7 +214,7 @@ module.exports = async ({ github, context }) => {
   // Log summary for CI
   console.log(
     JSON.stringify(
-      { processed, commented, labeled, skippedPR },
+      { processed, commented, labeled, unlabeled, skippedPR },
       null,
       2
     )
