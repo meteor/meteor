@@ -40,8 +40,13 @@ The package will take care of the rest.
 > You can force this by switching protocol like `smtp` to the name of the service.
 > Though you should only use this as a stop-gap measure and instead set the settings properly.
 
-If neither option is set, `Email.send` outputs the message to standard output
-instead.
+If neither option is set, the behavior depends on the environment. In
+development, `Email.sendAsync` writes the message to standard output instead of
+sending it. In production, `Email.sendAsync` rejects with an error asking you to
+provide the mail URL through `MAIL_URL` or your settings.
+
+`Email.customTransport` is checked before that error, so when you define it your
+own transport receives the message in both environments.
 
 > Package setting is only available since Email v2.2
 
