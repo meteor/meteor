@@ -93,6 +93,15 @@ Accounts.onLogin(async attempt => {
   }
 });
 
+// The mark belongs to the attempt that presented the code. If a validator
+// rejects it, a later login on the same connection must not inherit it.
+Accounts.onLoginFailure(attempt => {
+  const userId = attempt?.user?._id;
+  if (userId) {
+    pendingVerified.delete(verifiedMarkKey(userId, attempt.connection));
+  }
+});
+
 /**
  * @summary Whether the app opted into the new login result (`{ userId, error }`).
  * Until then, a missing or wrong code is thrown, as in 3.1.0.

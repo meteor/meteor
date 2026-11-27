@@ -1,10 +1,31 @@
 import { Accounts } from 'meteor/accounts-base';
 import { Match } from 'meteor/check';
+import { DDP } from 'meteor/ddp-client';
+import { DDPCommon } from 'meteor/ddp-common';
 import * as OTPAuth from 'otpauth';
 import { Random } from 'meteor/random';
 import crypto from 'crypto';
 
 const findUserById = id => Meteor.users.findOneAsync(id);
+
+const ageEmailCode = (userId, ms) =>
+  Meteor.users.updateAsync(userId, {
+    $set: { 'services.twoFactorAuthentication.emailCode.createdAt': new Date(Date.now() - ms) },
+  });
+
+const callFromConnection = (name, ...args) => {
+  const method = Meteor.server.method_handlers[name];
+  const invocation = new DDPCommon.MethodInvocation({
+    isSimulation: false,
+    setUserId: () => {},
+    unblock: () => {},
+    connection: { id: Random.id(), close() {}, onClose() {} },
+    randomSeed: Random.id(),
+  });
+  return DDP._CurrentMethodInvocation.withValue(invocation, () =>
+    method.apply(invocation, args)
+  );
+};
 
 const createUser = async (extra = {}) =>
   Accounts.insertUserDoc(
@@ -194,16 +215,21 @@ Tinytest.addAsync('account - 2fa - email code is single use, expires, and locks 
     });
     test.equal(replay.error, 'invalid-2fa-code');
 
+    const tooSoon = await Accounts._enforce2faOnLogin({
+      user: await findUserById(userId),
+      context: { loginMethod: 'password' },
+    });
+    test.isFalse(tooSoon.details.emailSent);
+    test.isTrue(tooSoon.details.retryAfterMs > 0);
+
+    await ageEmailCode(userId, 2 * 60 * 1000);
     await Accounts._enforce2faOnLogin({
       user: await findUserById(userId),
       context: { loginMethod: 'password' },
     });
     const secondCode = Accounts._2faTestState.lastEmailCode;
-    await Meteor.users.updateAsync(userId, {
-      $set: {
-        'services.twoFactorAuthentication.emailCode.createdAt': new Date(Date.now() - 11 * 60 * 1000),
-      },
-    });
+    test.notEqual(secondCode, code);
+    await ageEmailCode(userId, 11 * 60 * 1000);
     const expired = await Accounts._enforce2faOnLogin({
       user: await findUserById(userId),
       code: secondCode,
@@ -233,6 +259,35 @@ Tinytest.addAsync('account - 2fa - email code is single use, expires, and locks 
     });
     test.isFalse(resent.details.emailSent);
     test.isTrue(resent.details.retryAfterMs > 0);
+  } finally {
+    restorePolicy();
+    await Accounts.users.removeAsync(userId);
+  }
+});
+
+Tinytest.addAsync('account - 2fa - the resend cooldown holds when the code expires first', async test => {
+  const userId = await createUser();
+  try {
+    Accounts.configure2fa({
+      email: { enabled: true, expirationMs: 1000, resendCooldownMs: 60 * 1000 },
+    });
+    const first = await Accounts._issue2faEmailCode(await findUserById(userId));
+    test.isTrue(first.sent);
+    const code = Accounts._2faTestState.lastEmailCode;
+    await ageEmailCode(userId, 5 * 1000);
+
+    const resent = await Accounts._issue2faEmailCode(await findUserById(userId));
+    test.isFalse(resent.sent);
+    test.isTrue(resent.retryAfterMs > 0);
+
+    const expired = await Accounts._enforce2faOnLogin({
+      user: await findUserById(userId),
+      code,
+      context: { loginMethod: 'password' },
+    });
+    test.equal(expired.error, 'invalid-2fa-code');
+    const afterExpiry = await Accounts._issue2faEmailCode(await findUserById(userId));
+    test.isFalse(afterExpiry.sent);
   } finally {
     restorePolicy();
     await Accounts.users.removeAsync(userId);
@@ -302,6 +357,76 @@ Tinytest.addAsync('account - 2fa - on2faVerified runs only after the login is ac
     stop.stop();
     restorePolicy();
     await Accounts.users.removeAsync(userId);
+  }
+});
+
+Tinytest.addAsync('account - 2fa - a rejected login clears the verification mark', async test => {
+  const userId = await createUser();
+  let seen = 0;
+  const stop = Accounts.on2faVerified(() => {
+    seen += 1;
+  });
+  try {
+    Accounts.configure2fa({ email: { enabled: true } });
+    await Accounts._enforce2faOnLogin({
+      user: await findUserById(userId),
+      context: { loginMethod: 'password' },
+    });
+    const accepted = await Accounts._enforce2faOnLogin({
+      user: await findUserById(userId),
+      code: Accounts._2faTestState.lastEmailCode,
+      context: { loginMethod: 'password', connection: { id: 'conn' } },
+    });
+    test.isUndefined(accepted);
+
+    const user = await findUserById(userId);
+    await Accounts._failedLogin({ id: 'conn' }, {
+      type: 'password',
+      allowed: false,
+      user,
+      error: new Meteor.Error(403, 'refused by a validator'),
+    });
+    await Accounts._successfulLogin({ id: 'conn' }, {
+      type: 'password',
+      allowed: true,
+      user,
+    });
+    test.equal(seen, 0);
+  } finally {
+    stop.stop();
+    restorePolicy();
+    await Accounts.users.removeAsync(userId);
+  }
+});
+
+Tinytest.addAsync('account - 2fa - a link that verifies the address does not open a session', async test => {
+  const flows = {
+    resetPassword: async (userId, address) => {
+      const { token } = await Accounts.generateResetToken(userId, address, 'resetPassword');
+      return callFromConnection('resetPassword', token, 'new-password-123');
+    },
+    verifyEmail: async (userId, address) => {
+      const { token } = await Accounts.generateVerificationToken(userId, address);
+      return callFromConnection('verifyEmail', token);
+    },
+  };
+  for (const [name, run] of Object.entries(flows)) {
+    const address = `${Random.id()}@meteorapp.com`;
+    const userId = await createUser({ emails: [{ address, verified: false }] });
+    try {
+      Accounts.configure2fa({ email: { enabled: true } });
+      try {
+        await run(userId, address);
+        test.fail(`${name} should not open a session`);
+      } catch (error) {
+        test.equal(error.error, '2fa-enabled', name);
+      }
+      const user = await findUserById(userId);
+      test.isTrue(user.emails[0].verified, name);
+    } finally {
+      restorePolicy();
+      await Accounts.users.removeAsync(userId);
+    }
   }
 });
 

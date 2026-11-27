@@ -345,7 +345,10 @@ const enforceSecondFactor = async (user, code, method, context) => {
   return undefined;
 };
 
-const secondFactorBlocksSession = async (user, connection, loginMethod) => {
+// Reads the user again: the caller has just verified an address, and the
+// second-factor decision must see it as verified.
+const secondFactorBlocksSession = async (userId, connection, loginMethod) => {
+  const user = await getUserById(userId, { fields: { services: 1, emails: 1 } });
   if (Accounts._is2faRequired) {
     const decision = await Accounts._is2faRequired(user, {
       loginMethod,
@@ -924,7 +927,7 @@ Meteor.methods(
             await Accounts._clearAllLoginTokens(user._id);
 
             if (await secondFactorBlocksSession(
-              user,
+              user._id,
               this.connection,
               isEnroll ? 'enrollAccount' : 'resetPassword'
             )) {
@@ -1057,7 +1060,7 @@ Meteor.methods(
             };
           }
 
-          if (await secondFactorBlocksSession(user, this.connection, 'verifyEmail')) {
+          if (await secondFactorBlocksSession(user._id, this.connection, 'verifyEmail')) {
             return {
               userId: user._id,
               error: Accounts._handleError(

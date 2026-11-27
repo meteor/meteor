@@ -477,7 +477,9 @@ Accounts.config({
   loginTokenExpirationHours: 1, // how long a TOTP window stays valid (default: 1 hour)
   tokenSequenceLength: 6, // TOTP code length (default: 6)
   // Server only. Omit it to require a second factor only for users who have one.
-  // require2fa: async (userId, context) => context.clientContext?.trusted !== 'yes',
+  // isTrustedDevice is your own server-side check of a token your app issued.
+  // require2fa: async (userId, context) =>
+  //   !(await isTrustedDevice(userId, context.clientContext?.trustedDeviceToken)),
 });
 ```
 

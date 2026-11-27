@@ -101,10 +101,8 @@ Accounts._issue2faEmailCode = async user => {
   const now = Date.now();
   if (current?.createdAt instanceof Date) {
     const age = now - current.createdAt.getTime();
-    // A spent code keeps createdAt. The cooldown still applies after the attempts are used up.
-    const exhausted = !current.hash || current.attempts >= emailConfig.maxAttempts;
-    const stillValid = !exhausted && age < emailConfig.expirationMs;
-    if (age < emailConfig.resendCooldownMs && (stillValid || exhausted)) {
+    // Used, expired and exhausted codes keep createdAt, so the cooldown always applies.
+    if (age < emailConfig.resendCooldownMs) {
       return {
         sent: false,
         retryAfterMs: emailConfig.resendCooldownMs - age,
@@ -124,13 +122,6 @@ Accounts._issue2faEmailCode = async user => {
         {
           'services.twoFactorAuthentication.emailCode.createdAt': {
             $lte: new Date(issuedAt.getTime() - emailConfig.resendCooldownMs),
-          },
-        },
-        {
-          'services.twoFactorAuthentication.emailCode.hash': { $exists: true },
-          'services.twoFactorAuthentication.emailCode.attempts': { $lt: emailConfig.maxAttempts },
-          'services.twoFactorAuthentication.emailCode.createdAt': {
-            $lte: new Date(issuedAt.getTime() - emailConfig.expirationMs),
           },
         },
       ],
@@ -193,6 +184,13 @@ Accounts._issue2faEmailCode = async user => {
 
 const MAX_2FA_CODE_LENGTH = 16;
 
+// createdAt stays, so the resend cooldown counts from the last email sent.
+const SPENT_CODE_FIELDS = {
+  'services.twoFactorAuthentication.emailCode.hash': 1,
+  'services.twoFactorAuthentication.emailCode.attempts': 1,
+  'services.twoFactorAuthentication.emailCode.email': 1,
+};
+
 const codesMatch = (userId, code, hash) => {
   if (typeof code !== 'string' || code.length > MAX_2FA_CODE_LENGTH || typeof hash !== 'string') {
     return false;
@@ -207,7 +205,7 @@ const codesMatch = (userId, code, hash) => {
 };
 
 /**
- * Check a pending email code and delete it on success.
+ * Check a pending email code and consume it on success.
  * A wrong code consumes one attempt.
  * @returns {Promise<boolean>}
  */
@@ -225,7 +223,7 @@ Accounts._verify2faEmailCode = async (user, code) => {
         _id: user._id,
         'services.twoFactorAuthentication.emailCode.hash': record.hash,
       },
-      { $unset: { 'services.twoFactorAuthentication.emailCode': 1 } }
+      { $unset: SPENT_CODE_FIELDS }
     );
     return false;
   }
@@ -268,7 +266,7 @@ Accounts._verify2faEmailCode = async (user, code) => {
       _id: user._id,
       'services.twoFactorAuthentication.emailCode.hash': record.hash,
     },
-    { $unset: { 'services.twoFactorAuthentication.emailCode': 1 } }
+    { $unset: SPENT_CODE_FIELDS }
   );
   return consumed > 0;
 };
