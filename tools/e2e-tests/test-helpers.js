@@ -212,6 +212,8 @@ export function testMeteorBundler(options) {
  * @param {string|RegExp|Array<string|RegExp>} options.failOnOutput - Output pattern(s) that should fail startup waits immediately
  * @param {boolean} options.skipClient - Whether to skip client-specific assertions (default: false)
  * @param {boolean} options.skipTestClient - Whether to skip client-side tests (default: false)
+ * @param {string[]} options.additionalMutableFilePaths - Extra fixture files
+ * changed by custom assertions and restored after each test
  * @param {string[]} options.checkBundleFilePaths - Array of file paths to check for existence in the bundle
  * @param {Function} options.beforeAllBehavior - Additional behavior to run in beforeAll
  * @param {Function} options.afterAllBehavior - Additional behavior to run in afterAll
@@ -283,8 +285,14 @@ export function testMeteorRspackBundler(options) {
     skipClient = false,
     // Whether to skip client-side tests
     skipTestClient = false,
+    // Extra fixture files that custom assertions mutate during a test
+    additionalMutableFilePaths = [],
     // Skip isDevelopment/isProduction/isRun/isTest/isBuild verbose output checks
     skipEnvCheck = false,
+    // URL path where the app is served, for example '/live/'.
+    urlPathPrefix = '',
+    // Require built-bundle execution, including its MongoDB prerequisite.
+    runBuiltBundle = false,
   } = options;
   const devServerPortStr = String(devServerPort);
 
@@ -304,6 +312,7 @@ export function testMeteorRspackBundler(options) {
       filePaths.test,
       filePaths.testClient,
       filePaths.testServer,
+      ...additionalMutableFilePaths,
     ].filter(Boolean);
 
     beforeAll(async () => {
@@ -367,6 +376,7 @@ export function testMeteorRspackBundler(options) {
         mongoWatchdog,
         failOnOutput,
         env: { ...env, ...(env.meteorRun || {}) },
+        waitOnPath: urlPathPrefix,
       });
       meteorProcess = result.meteorProcess;
 
@@ -450,6 +460,7 @@ export function testMeteorRspackBundler(options) {
         mongoWatchdog,
         failOnOutput,
         env: { ...env, ...(env.meteorRun || {}) },
+        waitOnPath: urlPathPrefix,
       });
       meteorProcess = result.meteorProcess;
 
@@ -457,6 +468,17 @@ export function testMeteorRspackBundler(options) {
       await wait(WAIT_ON);
 
       // Assert that the app files exists
+      const webSocketUrls = [];
+      const browserMessages = [];
+      const recordWebSocket = socket => webSocketUrls.push(socket.url());
+      const recordBrowserMessage = message => browserMessages.push(message.text());
+      const recordPageError = error => browserMessages.push(error.message);
+      if (customAssertions && customAssertions.afterRun) {
+        page.on('websocket', recordWebSocket);
+        page.on('console', recordBrowserMessage);
+        page.on('pageerror', recordPageError);
+      }
+
       if (!skipClient) {
         await assertFileExist(appDir, `${buildDir}/main-dev/client-entry.js`);
         await assertFileExist(appDir, `${buildDir}/main-dev/client-rspack.js`);
@@ -471,10 +493,15 @@ export function testMeteorRspackBundler(options) {
 
       if (!skipClient) {
         // Assert that the Meteor app is running correctly
-        await assertMeteorReactApp(port, { title: appName });
+        await assertMeteorReactApp(port, {
+          title: appName,
+          pathPrefix: urlPathPrefix,
+        });
 
         // Assert that the app is using Rspack
-        await assertRspackScriptTag(port, true);
+        await assertRspackScriptTag(port, true, {
+          pathPrefix: urlPathPrefix,
+        });
 
         // Assert that the body has the expected CSS styles
         await assertBodyStyles({
@@ -485,7 +512,20 @@ export function testMeteorRspackBundler(options) {
 
       // Run custom assertions if provided
       if (customAssertions && customAssertions.afterRun) {
-        await customAssertions.afterRun({ tempDir, port, meteorProcess, result });
+        try {
+          await customAssertions.afterRun({
+            tempDir,
+            port,
+            meteorProcess,
+            result,
+            webSocketUrls,
+            browserMessages,
+          });
+        } finally {
+          page.removeListener('websocket', recordWebSocket);
+          page.removeListener('console', recordBrowserMessage);
+          page.removeListener('pageerror', recordPageError);
+        }
       }
 
       // Update the client code
@@ -557,6 +597,7 @@ export function testMeteorRspackBundler(options) {
         mongoWatchdog,
         failOnOutput,
         env: { ...env, ...(env.meteorRunProduction || {}) },
+        waitOnPath: urlPathPrefix,
       });
       meteorProcess = result.meteorProcess;
 
@@ -581,10 +622,15 @@ export function testMeteorRspackBundler(options) {
 
       if (!skipClient) {
         // Assert that the Meteor app is running correctly
-        await assertMeteorReactApp(port, { title: appName });
+        await assertMeteorReactApp(port, {
+          title: appName,
+          pathPrefix: urlPathPrefix,
+        });
 
         // Assert that the app is using Rspack
-        await assertRspackScriptTag(port, false);
+        await assertRspackScriptTag(port, false, {
+          pathPrefix: urlPathPrefix,
+        });
 
         // Assert that the body has the expected CSS styles
         await assertBodyStyles({
@@ -930,16 +976,24 @@ export function testMeteorRspackBundler(options) {
 
         // Run custom assertions if provided
         if (customAssertions && customAssertions.afterBuild) {
-          await customAssertions.afterBuild({ tempDir, buildOutputDir, result, fileCheckResults });
+          await customAssertions.afterBuild({
+            tempDir,
+            buildOutputDir,
+            result,
+            fileCheckResults,
+          });
         }
 
         // Boot the built bundle to verify it actually runs, not just that the
         // expected files exist. Needs a MongoDB; startMongo reuses the dev
         // bundle's mongod and skips gracefully when neither it nor MONGO_URL
         // is available.
-        if (testBuiltApp) {
+        if (testBuiltApp || runBuiltBundle) {
           const mongo = await startMongo();
           if (!mongo) {
+            if (runBuiltBundle) {
+              throw new Error('Built-bundle regression requires MongoDB. Set MONGO_URL or provide the dev bundle mongod.');
+            }
             console.warn('Skipping built-app boot check: no bundled mongod and no MONGO_URL set.');
           } else {
             let builtApp;
@@ -948,6 +1002,7 @@ export function testMeteorRspackBundler(options) {
                 port,
                 mongoUrl: mongo.mongoUrl,
                 skipNpmInstall: true, // npm install already ran above
+                captureOutput: runBuiltBundle,
                 env: env.builtApp,
               });
               console.log('Built app booted and is serving HTTP.');
@@ -965,6 +1020,7 @@ export function testMeteorRspackBundler(options) {
               if (customAssertions && customAssertions.afterRunBuiltApp) {
                 await customAssertions.afterRunBuiltApp({
                   tempDir, buildOutputDir, port, mongoUrl: mongo.mongoUrl,
+                  outputLines: builtApp.outputLines,
                 });
               }
             } finally {

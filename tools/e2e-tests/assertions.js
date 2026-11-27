@@ -104,9 +104,9 @@ export async function assertRspackWorkspaceInstall({
  */
 export async function waitForRspackBundle(
   port,
-  { attempts = 10, intervalMs = 500 } = {},
+  { attempts = 10, intervalMs = 500, pathPrefix = '' } = {},
 ) {
-  const url = `http://localhost:${port}/__rspack__/client-rspack.js`;
+  const url = `http://localhost:${port}${pathPrefix.replace(/\/$/, '')}/__rspack__/client-rspack.js`;
   const diagnostics = [];
   const probe = () =>
     new Promise((resolve) => {
@@ -162,7 +162,11 @@ export async function assertMeteorApp(port, options = {}) {
   const activePage = await getPlaywrightPage();
 
   // Extract options with default values
-  const { title: inTitle, h1: inH1 = "Welcome to Meteor!" } = options;
+  const {
+    title: inTitle,
+    h1: inH1 = "Welcome to Meteor!",
+    pathPrefix = '',
+  } = options;
 
   // Collect browser errors and failed HTTP responses to diagnose failures
   const consoleErrors = [];
@@ -180,10 +184,10 @@ export async function assertMeteorApp(port, options = {}) {
   // Gate on the Rspack dev bundle actually being reachable through Meteor's
   // proxy before we load the page. Cheap in production (one 404) and avoids
   // the 60s Playwright timeout when the proxy is 504ing.
-  await waitForRspackBundle(port);
+  await waitForRspackBundle(port, { pathPrefix });
 
   // Navigate to the app
-  await activePage.goto(`http://localhost:${port}`);
+  await activePage.goto(`http://localhost:${port}${pathPrefix}`);
 
   // Check the title if specified
   if (inTitle) {
@@ -260,14 +264,14 @@ export async function assertMeteorReactApp(port, options = {}) {
  * @param {number} port - Port where the app is running
  * @returns {Promise<void>}
  */
-export async function assertRspackScriptTag(port, shoudlExist = true) {
+export async function assertRspackScriptTag(port, shoudlExist = true, options = {}) {
   const activePage = await getPlaywrightPage();
 
   // Navigate to the app
-  await activePage.goto(`http://localhost:${port}`);
+  await activePage.goto(`http://localhost:${port}${options.pathPrefix || ''}`);
 
   // Get all script tags
-  const scriptTags = await activePage.$$eval('script', scripts => 
+  const scriptTags = await activePage.$$eval('script', scripts =>
     scripts.map(script => script.getAttribute('src'))
   );
 
@@ -544,6 +548,67 @@ export async function assertStyles(selector, expectedStyles, options = {}) {
 export async function assertBodyStyles(expectedStyles, options = {}) {
   // Use assertStyles with document.body as the selector
   return assertStyles('document.body', expectedStyles, options);
+}
+
+/**
+ * Assert which stylesheet markers were emitted by Meteor's CSS compiler.
+ * Runtime style assertions prove that all expected styles load. This helper
+ * separately proves that Rspack-owned files were not compiled a second time
+ * into Meteor's merged stylesheet.
+ *
+ * @param {string} appDir - Meteor application directory
+ * @param {Object} expected - Expected marker ownership
+ * @param {string[]} expected.meteorOwned - Markers that must be in Meteor CSS
+ * @param {string[]} expected.rspackOwned - Markers that must not be in Meteor CSS
+ * @param {string[]} expected.ignored - Ignored markers that must not be in Meteor CSS
+ * @param {Object} options - Additional options
+ * @param {string} options.localDir - Meteor local directory relative to appDir
+ * @returns {Promise<void>}
+ */
+export async function assertMeteorStylesheetOwnership(
+  appDir,
+  expected,
+  options = {}
+) {
+  const { localDir = '.meteor/local' } = options;
+  const programsDir = path.join(appDir, localDir, 'build', 'programs');
+  const mergedStylesheets = [];
+
+  if (await fs.pathExists(programsDir)) {
+    const programNames = await fs.readdir(programsDir);
+    for (const programName of programNames) {
+      if (!programName.startsWith('web.browser')) continue;
+      const programDir = path.join(programsDir, programName);
+      const programJsonPath = path.join(programDir, 'program.json');
+      if (!(await fs.pathExists(programJsonPath))) continue;
+
+      const program = await fs.readJson(programJsonPath);
+      for (const resource of program.manifest || []) {
+        if (resource.type !== 'css' || !resource.path) continue;
+        const stylesheetPath = path.resolve(programDir, resource.path);
+        if (
+          !stylesheetPath.startsWith(`${path.resolve(programDir)}${path.sep}`) ||
+          !(await fs.pathExists(stylesheetPath))
+        ) {
+          continue;
+        }
+        mergedStylesheets.push(await fs.readFile(stylesheetPath, 'utf8'));
+      }
+    }
+  }
+
+  expect(mergedStylesheets.length).toBeGreaterThan(0);
+  const meteorCss = mergedStylesheets.join('\n');
+
+  for (const marker of expected.meteorOwned || []) {
+    expect(meteorCss).toContain(marker);
+  }
+  for (const marker of [
+    ...(expected.rspackOwned || []),
+    ...(expected.ignored || []),
+  ]) {
+    expect(meteorCss).not.toContain(marker);
+  }
 }
 
 /**

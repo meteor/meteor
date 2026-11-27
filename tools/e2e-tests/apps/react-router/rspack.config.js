@@ -12,6 +12,9 @@ const { defineConfig } = require('@meteorjs/rspack');
  */
 module.exports = defineConfig(Meteor => {
   return {
+    ...(Meteor.isServer
+      ? Meteor.compileWithRspack(['rspack-native-false-positive'])
+      : {}),
     resolve: {
       alias: {
         '@helper/alias': '/imports/helpers/alias.js',

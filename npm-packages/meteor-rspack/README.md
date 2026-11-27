@@ -9,12 +9,13 @@ When Meteor runs with the Rspack bundler enabled, this package is what generates
 - **Dual client/server builds** with the correct targets, externals, and output paths
 - **SWC-based transpilation** for JS/TS/JSX/TSX with automatic framework detection
 - **React Fast Refresh** in development when React is enabled
-- **Blaze template handling** via ignore-loader when Blaze is enabled
+- **Recursive Blaze template handling** through Meteor's HTML compiler when Blaze is enabled
 - **Persistent filesystem caching** for fast rebuilds
 - **Asset externals and HTML generation** through custom Rspack plugins
 - **A `defineConfig` helper** that accepts a factory function receiving Meteor environment flags and build utilities
 - **Customizable config** via `rspack.config.js` in your project root, with safe merging that warns if you try to override reserved settings
-- **Automatic CSS delegation** when rspack is configured with CSS, Less, or SCSS loaders, Meteor automatically detects the handled extensions after the first compilation and stops processing those files itself in the entry folder context. No `.meteorignore` entries needed.
+- **Exact CSS delegation** for entry-folder stylesheets that Rspack actually compiles, while unimported nested styles remain available to Meteor and `.meteorignore` exclusions keep their precedence
+- **Configurable native addon externalization** for installed server dependencies with native binaries or common native runtime loaders, including `Meteor.compileWithRspack` and `Meteor.configureNativeAddonExternalization` escape hatches for false-positive detection
 
 ## Installation
 

@@ -9,12 +9,18 @@ const { getMeteorAppSwcConfig } = require('./lib/swc.js');
 const HtmlRspackPlugin = require('./plugins/HtmlRspackPlugin.js');
 const { RequireExternalsPlugin } = require('./plugins/RequireExtenalsPlugin.js');
 const { AssetExternalsPlugin } = require('./plugins/AssetExternalsPlugin.js');
-const { MeteorRspackOutputPlugin, extractDelegatedExtensions } = require('./plugins/MeteorRspackOutputPlugin.js');
+const {
+  MeteorRspackOutputPlugin,
+  extractDelegatedExtensions,
+  extractDelegatedFiles,
+} = require('./plugins/MeteorRspackOutputPlugin.js');
 const { generateEagerTestFile } = require("./lib/test.js");
 const { getMeteorIgnoreEntries, createIgnoreGlobConfig } = require("./lib/ignore");
 const {
   compileWithMeteor,
   compileWithRspack,
+  configureNativeAddonExternalization,
+  consumeNativeAddonExternalizationConfig,
   setCache,
   splitVendorChunk,
   extendSwcConfig,
@@ -29,6 +35,8 @@ const {
 const { loadUserAndOverrideConfig } = require('./lib/meteorRspackConfigHelpers.js');
 const { prepareMeteorRspackConfig } = require("./lib/meteorRspackConfigFactory");
 const { extractLocalDependencies } = require('./lib/localDependenciesHelpers.js');
+const { createNativeAddonExternals } = require('./lib/nativeAddonExternals.js');
+
 const { createTestClientNodePolyfillConfig } = require("./lib/testClientNodePolyfills.js");
 const { createOutputTracker } = require('./lib/compilationOutput.js');
 const { keepOutsideContexts } = require('./lib/clean.js');
@@ -179,12 +187,20 @@ function createRemoteDevServerConfig() {
   if (rootUrl) {
     try {
       const url = new URL(rootUrl);
+      // When ROOT_URL carries a path prefix (e.g. http://localhost:3000/live/),
+      // the HMR websocket must connect through the app origin so it reaches
+      // the /ws proxy Meteor mounts behind the prefix; connecting straight to
+      // the dev server would use the wrong path. See meteor/meteor#14523.
+      const pathPrefix = url.pathname.replace(/\/+$/, '');
+      const webSocketPathname = pathPrefix
+        ? { pathname: `${pathPrefix}/ws` }
+        : {};
       // Detect if it's remote (not localhost or 127.x)
       const isLocal =
         url.hostname.includes('localhost') ||
         url.hostname.startsWith('127.') ||
         url.hostname.endsWith('.local');
-      if (!isLocal) {
+      if (!isLocal || pathPrefix) {
         hostname = url.hostname;
         protocol = url.protocol === 'https:' ? 'wss' : 'ws';
         port = url.port ? Number(url.port) : (url.protocol === 'https:' ? 443 : 80);
@@ -195,6 +211,7 @@ function createRemoteDevServerConfig() {
               hostname,
               port,
               protocol,
+              ...webSocketPathname,
             },
           },
         };
@@ -334,6 +351,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     compileWithRspack(deps, {
       options: mergeSplitOverlap(Meteor.swcConfigOptions, options),
     });
+  Meteor.configureNativeAddonExternalization = (options = {}) =>
+    configureNativeAddonExternalization(options);
   Meteor.setCache = (enabled) =>
     setCache(!!enabled, enabled === "memory" ? undefined : cacheStrategy);
   Meteor.splitVendorChunk = () => splitVendorChunk();
@@ -464,7 +483,6 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   const externals = [
     /^meteor\/.*/,
     ...(isReactEnabled ? [/^react$/, /^react-dom$/] : []),
-    ...(isServer ? [/^bcrypt$/] : []),
   ];
   const fallback = {
     ...(isClient && makeWebNodeBuiltinsAlias()),
@@ -896,6 +914,25 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       argv
     ));
   }
+
+  const nativeAddonExternalization =
+    consumeNativeAddonExternalizationConfig(
+      nextUserConfig,
+      nextOverrideConfig
+    );
+  if (isServer && nativeAddonExternalization.enabled) {
+    externals.push(
+      createNativeAddonExternals({
+        forceBundle: nativeAddonExternalization.forceBundle,
+        onExternalized: (pkgName) => {
+          if (isVerbose) {
+            console.log(`[i] Externalized native addon package: ${pkgName}`);
+          }
+        },
+      })
+    );
+  }
+
   let statsOverrided = false;
   let config = isClient ? clientConfig : serverConfig;
   if (nextUserConfig) {
@@ -998,6 +1035,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         isRebuild,
         ...(!isRebuild && compiler && {
           delegatedExtensions: extractDelegatedExtensions(stats, compiler),
+          delegatedFiles: extractDelegatedFiles(stats, compiler),
         }),
       };
     },

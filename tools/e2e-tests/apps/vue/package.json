@@ -33,11 +33,11 @@
   "meteor": {
     "modern": true,
     "mainModule": {
-      "client": "client/main.js",
+      "client": "client/browser/entry/main.js",
       "server": "server/main.js"
     },
     "modules": [
-      "client/meteor.css"
+      "client/browser/entry/meteor.css"
     ],
     "testModule": "tests/main.js"
   }
