@@ -12,6 +12,7 @@ import * as db from './db.js';
 let allowed = new Set();
 let emit = () => {};
 let replaying = null; // id of the record being re-issued by replay()
+let lastQueuedAt = 0;
 
 export function configure(methods, onEvent) {
   allowed = new Set(methods);
@@ -25,13 +26,17 @@ function inSimulation() {
   return !!(invocation && invocation.isSimulation);
 }
 
+// A re-issued call keeps its record whatever the list says now: a Method the
+// app no longer lists is still answered once, then forgotten.
+const recorded = (name) => (allowed.has(name) || replaying !== null) && !inSimulation();
+
 const recordedApply = (apply) =>
   function (name, args, options, callback) {
     if (typeof options === 'function') {
       callback = options;
       options = {};
     }
-    if (!allowed.has(name) || inSimulation()) return apply.call(this, name, args, options, callback);
+    if (!recorded(name)) return apply.call(this, name, args, options, callback);
     const record = track(name, args);
     try {
       return apply.call(this, name, args, recording(record, options), callback);
@@ -48,7 +53,7 @@ const recordedApplyAsync = (applyAsync) =>
       callback = options;
       options = {};
     }
-    if (!allowed.has(name) || inSimulation()) return applyAsync.call(this, name, args, options, callback);
+    if (!recorded(name)) return applyAsync.call(this, name, args, options, callback);
     const record = track(name, args);
     const promise = applyAsync.call(this, name, args, recording(record, options), callback);
     if (options && options.throwStubExceptions) {
@@ -86,7 +91,9 @@ function recording(record, options = {}) {
 function track(name, args) {
   if (replaying) return { id: replaying, name, stored: Promise.resolve() };
   const id = Random.id();
-  const record = { id, name, args: EJSON.stringify(args), queuedAt: Date.now(), status: 'pending' };
+  // Strictly increasing: calls made in the same millisecond replay in order.
+  lastQueuedAt = Math.max(Date.now(), lastQueuedAt + 1);
+  const record = { id, name, args: EJSON.stringify(args), queuedAt: lastQueuedAt, status: 'pending' };
   const stored = db.put('calls', record).catch(db.warn);
   emit('method.queued', { id, name });
   return { id, name, stored };

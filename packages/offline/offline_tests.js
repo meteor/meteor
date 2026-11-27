@@ -152,6 +152,49 @@ Tinytest.addAsync('offline - recorded calls are replayed in order, one stub at a
   test.equal(await Meteor.callAsync('offline_test.executions', second), 1);
 });
 
+Tinytest.addAsync('offline - calls made in the same millisecond are recorded in the order they were made', async function (test) {
+  await started();
+  const ids = Array.from({ length: 50 }, () => Random.id());
+  let answered;
+  Meteor.disconnect();
+  try {
+    answered = ids.map(
+      (id) =>
+        new Promise((resolve, reject) =>
+          Meteor.apply('offline_test.ping', [id], (error) => (error ? reject(error) : resolve())),
+        ),
+    );
+    await until(async () => (await Offline.pending()).length === ids.length, 'the records to be written');
+    test.equal((await Offline.pending()).map((record) => record.args[0]), ids);
+  } finally {
+    Meteor.reconnect();
+  }
+  await Promise.all(answered);
+  await until(async () => (await Offline.pending()).length === 0, 'the records to be cleared');
+});
+
+Tinytest.addAsync('offline - a recorded call of a Method no longer listed is re-issued once, then forgotten', async function (test) {
+  await started();
+  const _id = Random.id();
+  const id = Random.id();
+  // Left behind by a version of the app that listed this Method.
+  await db.put('calls', {
+    id,
+    name: 'offline_test.nested',
+    args: JSON.stringify([{ _id, value: 'no longer listed' }]),
+    queuedAt: Date.now(),
+    status: 'pending',
+  });
+  try {
+    test.equal(await replay(), 1);
+    await until(async () => (await Offline.pending()).length === 0, 'the replayed call to be answered');
+    test.equal(await replay(), 0, 'nothing left for the next start');
+  } finally {
+    await db.remove('calls', id);
+  }
+  test.equal(await Meteor.callAsync('offline_test.executions', _id), 1);
+});
+
 Tinytest.addAsync('offline - a listed Method called from a stub is not recorded', async function (test) {
   await started();
   const events = [];

@@ -22,7 +22,7 @@ export namespace Offline {
     name: string;
     /** Parsed back from the EJSON copy. */
     args: unknown[];
-    /** Milliseconds since the Unix epoch. */
+    /** Milliseconds since the Unix epoch, strictly increasing: calls made in the same millisecond keep their order. */
     queuedAt: number;
     status: "pending" | "failed";
     /** Only on failed calls. */
