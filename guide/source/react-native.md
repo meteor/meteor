@@ -17,22 +17,33 @@ For most projects, since your native app will display the same data and call the
 
 The only time you will need to make changes to your Meteor codebase is to enable certain features that are unique to your native app. For example, if you want to add push notifications to your native app, you will need to create a method on your Meteor app to store the native push tokens for a user.
 
-There are two routes for getting started with React Native. You can use "Vanilla" React Native, or you can use [Expo](https://expo.io/). Expo is a set of tools built around React Native. You can even try out React Native from your web browser using [Expo Snack](https://snack.expo.io/). You don't even need to install XCode or Android Studio to start using Expo.
+There are two ways to get started with React Native: using React Native CLI and Expo. 
 
-Here are the downsides to using Expo:
-- You cannot add Native Modules that use Native Code (Java, Swift, etc)
-- You cannot use packages that require linking (these are npm modules that include native code, and allow you to acess native features like the camera, push notifications, fingerprint authentication, etc). \
-- Apps that use Expo are much larger then pure React Native apps
+<h3 id="workflow-native">Use React Native CLI</h3>
 
-Expo does provide some native features ([click here for the full list](https://docs.expo.io/versions/latest/)), but if there is a feature missing that you need, you'll likely need to use an npm package or your own custom native code.
+The React Native guide to get started describes this workflow as following:
 
-You can "eject" your app from Expo to take advantage of Vanilla React Native features, but ejection cannot be undone easily.
+> If you are already familiar with mobile development, you may want to use React Native CLI. It requires Xcode or Android Studio to get started. If you already have one of these tools installed, you should be able to get up and running within a few minutes. If they are not installed, you should expect to spend about an hour installing and configuring them.
 
-The React Native documentation lets you choose between the Expo ("Expo CLI") and Vanilla React Native ("React Native CLI") setup instructions. You can read through the installation instructions and decide which option makes more sense for you.
+Here is the link to the React Native getting started documentation: https://reactnative.dev/docs/environment-setup?guide=native
 
-Here is the link to the React Native getting started documentation: https://reactnative.dev/docs/environment-setup
+<h3 id="workflow-expo">Use Expo</h3>
 
-Once you have your environment setup and have your app running on your device or in the emulator, you can proceed to the next step of the guide: "Meteor React Native Installation"
+The React Native guide to get started describes this workflow as following:
+
+> If you are new to mobile development, the easiest way to get started is with Expo Go.
+
+Expo is an [open-source framework](https://github.com/expo/expo) for apps that run natively on Android, iOS, and the web. The `expo` npm package enables a suite of incredible features for React Native apps. The `expo` package can be installed in nearly any React Native project. See [what Expo offers](https://docs.expo.dev/core-concepts/) for more information or see [why does Expo have its own SDK](https://docs.expo.dev/faq/#why-does-expo-have-its-own-sdk).
+
+If you intend to create a new project using Expo, we suggest to read the [Expo getting started guide](https://docs.expo.dev/get-started/create-a-project/). Beyond that, there are some good resources to get started with Expo:
+
+- [Development builds](https://docs.expo.dev/workflow/overview/)
+- [Continuous Native Generation](https://docs.expo.dev/workflow/overview/#continuous-native-generation-cng)
+- Native modules that use Native Code (either in form of third party libraries from React Native ecosystem or using Kotlin and Swift) is now possible to add. One can simply install most libraries `npm i ...` or if they want to create a native module, they can use [Expo Modules API](https://docs.expo.dev/workflow/customizing/#create-reusable-native-modules).
+- [Making manual changes is also possible using Prebuild](https://docs.expo.dev/workflow/customizing/#manual-changes-to-the-native-project-files)
+- [Core development loop](https://docs.expo.dev/workflow/overview/#the-core-development-loop).
+
+Once you have your environment setup and have your app running on your device or in the emulator (Android) or simulator (iOS/MacOS), you can proceed to the next step of the guide: "Meteor React Native Installation"
 
 <h2 id="installation">Meteor React Native Installation</h2>
 
@@ -43,7 +54,7 @@ npm install --save @meteorrn/core
 ````
 
 You also need to confirm you have the package's peer dependencies installed:
-- Confirm you have `@react-native-community/netinfo` installed
+- Confirm you have `@react-native-community/netinfo` installed (optional, beginning with `@meteorrn/core@2.8.0)
 - Confirm you have `@react-native-async-storage/async-storage@>=1.8.1` installed. If you are using Expo, or otherwise cannot use `@react-native-async-storage/async-storage`, please see [these instructions](https://github.com/TheRealNate/meteor-react-native#custom-storage-adapter).
 
 The `@meteorrn/core` package enables your React Native app to establish a DDP connection with your Meteor server so it can receive data from publications and call server methods. It also provides access to core Meteor client methods like `Accounts.createUser` and `Meteor.loginWithPasword`, and allows you to display data in your app with the `withTracker` method.
