@@ -269,7 +269,10 @@ export class Sunburst {
       this.updateBreadcrumbs(sequenceArray);
 
       // Fade all the segments.
-      d3.selectAll("path")
+      // Scope the fade to paths owned by this visualizer only, so
+      // application SVG paths in the same document are never touched.
+      this.elements.chart
+        .selectAll("path")
         .style("opacity", 0.3);
 
       // Then highlight only those that are an ancestor of the current segment.
@@ -287,11 +290,16 @@ export class Sunburst {
       self.elements.trail
         .style("visibility", "hidden");
 
-      // Deactivate all segments during transition.
-      d3.selectAll("path").on("mouseover", null);
+      // Deactivate all segments of this visualizer during transition.
+      // Scoped to this instance's chart so unrelated paths keep their
+      // mouseover handlers.
+      self.elements.chart
+        .selectAll("path")
+        .on("mouseover", null);
 
       // Transition each segment to full opacity and then reactivate it.
-      d3.selectAll("path")
+      self.elements.chart
+        .selectAll("path")
         .transition()
         .duration(1000)
         .style("opacity", 1)
