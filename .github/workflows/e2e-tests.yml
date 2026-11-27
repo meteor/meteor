@@ -43,9 +43,9 @@ env:
 jobs:
   groups:
     name: E2E group audit
-    runs-on: &linux-runner >-
+    # Publish the matrix as soon as discovery finishes, even when Meteor's pool is busy.
+    runs-on: >-
       ${{ github.repository == 'meteor/meteor' && !github.event.repository.private
-          && (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository)
           && 'ubuntu-latest'
           || fromJSON(format('["self-hosted","linux",{0}]', toJSON(
                (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository)
@@ -88,7 +88,14 @@ jobs:
   test:
     needs: groups
     name: ${{ matrix.category }}
-    runs-on: *linux-runner
+    runs-on: >-
+      ${{ github.repository == 'meteor/meteor' && !github.event.repository.private
+          && (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository)
+          && 'ubuntu-latest'
+          || fromJSON(format('["self-hosted","linux",{0}]', toJSON(
+               (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository)
+               && (vars.METEOR_CI_FORK_LINUX_RUNNER || 'meteor-fork-ci')
+               || vars.METEOR_CI_LINUX_RUNNER || 'oss-vm'))) }}
     # Budget both longer Regressions attempts and environment preparation.
     timeout-minutes: ${{ matrix.group == 'regressions' && 110 || 60 }}
     env:

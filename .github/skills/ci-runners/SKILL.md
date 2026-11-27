@@ -19,8 +19,8 @@ For a new lightweight job, follow the [unit test caller](../../workflows/unit-te
 
 | Where the Linux check runs | Runner |
 | --- | --- |
-| Public `meteor/meteor`, small checks such as unit tests and workflow lint | Standard GitHub-hosted Ubuntu. This is the reusable workflow's default. |
-| Public `meteor/meteor`, trusted code style, type coverage, E2E, CLI, package or DDP tests | The repository's self-hosted Linux pool. For reusable workflow callers, set `self-hosted-in-public: true` to select it. |
+| Public `meteor/meteor`, small checks such as unit tests, workflow lint and E2E group discovery | Standard GitHub-hosted Ubuntu. This is the reusable workflow's default. |
+| Public `meteor/meteor`, trusted code style, type coverage, E2E browser tests, CLI, package or DDP tests | The repository's self-hosted Linux pool. For reusable workflow callers, set `self-hosted-in-public: true` to select it. |
 | PR from another repository into public `meteor/meteor` | Standard GitHub-hosted Ubuntu for checks that execute the contributor's code. |
 | Own pushes and same-repository PRs in a synchronized fork | Self-hosted Linux with the label in `METEOR_CI_LINUX_RUNNER`, default `oss-vm`. |
 | PR from another repository into a synchronized fork | Disposable self-hosted Linux runners in an isolated pool with the label in `METEOR_CI_FORK_LINUX_RUNNER`, default `meteor-fork-ci`. The job waits until a matching runner is available. |

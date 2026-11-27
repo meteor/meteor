@@ -86,9 +86,10 @@ describe('CLI / E2E test group fallback /', () => {
     ).toBe(true);
   });
 
-  test('every group belongs to exactly one workflow matrix', () => {
+  test('queues regressions first and assigns every group to exactly one workflow matrix', () => {
     const modern = getTestGroupMatrix().include;
     const accounts = getTestGroupMatrix('accounts').include;
+    expect(modern[0].group).toBe('regressions');
     expect(accounts).toEqual([{ category: 'Accounts', group: 'accounts' }]);
     const names = [...modern, ...accounts].map(({ group }) => group);
     expect(names.sort()).toEqual(Object.keys(TEST_GROUPS).sort());
