@@ -61,32 +61,49 @@ Optional tuning is available via `Meteor.settings`:
 
 ## Reducing Delivery Latency
 
-Change Streams gate delivery on **majority commit**, which in turn waits for the WiredTiger journal flush. MongoDB's default `journalCommitInterval` is **100 ms**, so an isolated change-stream event can take up to ~100 ms to reach your Meteor server, even on localhost. The oplog driver does not gate on majority commit, so this floor does not apply to it.
+Change Streams deliver majority-committed changes. Journaling can contribute to the delay, together with replication, write concern and disk load. WiredTiger's default journal commit interval is **100 ms**, but that is neither a fixed Change Streams latency floor nor an end-to-end latency bound: writes that include or imply `j: true` can trigger an earlier journal sync. See MongoDB's [journaling process](https://www.mongodb.com/docs/manual/core/journaling/#journaling-process).
 
-You can lower the journal interval at startup via the opt-in env var:
+For **self-managed MongoDB**, an operator can measure whether reducing the interval helps a particular workload. This is a deployment setting owned by the database administrator; Meteor does not change it at application startup.
 
-```bash
-METEOR_MONGO_JOURNAL_COMMIT_INTERVAL_MS=1 meteor run
+### Configure each MongoDB member
+
+The interval is local to each `mongod` process. It is not replicated with the data. Configure it consistently on the data-bearing members of each relevant replica set, including members that may become primary. For a sharded deployment, manage the members of each shard's replica set; this parameter is not available on `mongos`.
+
+To persist the setting across restarts, put it in each member's MongoDB configuration and apply it using your normal deployment procedure:
+
+```yaml
+storage:
+  journal:
+    commitIntervalMs: 10
 ```
 
-This calls `setParameter` on the connected MongoDB to shrink the interval from 100 ms to the value you provide. Internal benchmarks (Meteor 3.5, single-node replica set, 600 concurrent DDP subscribers on a `find({})` publication) show:
+The value `10` is an example for an experiment, not a recommended production default. MongoDB accepts an integer from `1` to `500` milliseconds. See [`storage.journal.commitIntervalMs`](https://www.mongodb.com/docs/manual/reference/configuration-options/#mongodb-setting-storage.journal.commitIntervalMs).
 
-| `journalCommitInterval` | Change-stream delivery (p50) | DDP `added` messages | DB CPU |
-|---|---|---|---|
-| 100 ms (default) | ~106 ms | baseline | baseline |
-| 10 ms | ~13 ms | -68% | +85% |
-| 1 ms | ~6 ms | -70% | +110% |
+For a temporary experiment, an administrator with the `setParameter` privilege can connect directly to each relevant `mongod` and run:
 
-Trade-offs:
+```javascript
+db.adminCommand({ setParameter: 1, journalCommitInterval: 10 });
+```
 
-- **Lower interval → lower latency.** Setting `1` drops cs delivery p50 by ~94%, which in turn shrinks the multiplexer's resident document cache (because subscriptions complete faster), reducing total DDP fanout messages by ~70%.
-- **Lower interval → higher DB CPU.** The mongod process performs `fsync` more frequently. The cost is mostly on the DB side, not on the Meteor app.
-- **No effect on the oplog driver.** If you're forcing `oplog` ahead of `changeStreams`, this env var changes nothing for your workload.
-- **No effect on data durability.** `journalCommitInterval` only changes how often the journal is flushed to disk; writes are still durable once flushed.
+This runtime change lasts only until that process restarts. Changing only the current primary leaves the other members unchanged, and a failover can promote a member with a different interval. Keep runtime experiments, persistent configuration and replacement-member provisioning consistent. See [`setParameter`](https://www.mongodb.com/docs/manual/reference/command/setparameter/).
 
-::: warning
-This is a server-wide MongoDB setting applied at app startup. If multiple Meteor apps share the same MongoDB instance, the **last connector wins** and the change persists until mongod restarts. Do not enable in production without measuring DB CPU impact on your specific workload — the gain is most visible when change-stream delivery latency is on your critical path (e.g. reactive UIs with hundreds of concurrent subscribers to broad publications).
+::: warning Managed MongoDB
+MongoDB Atlas does not support the `setParameter` command. With a managed service, use only the configuration mechanisms supported by your provider. An application environment variable cannot bypass the provider's restrictions or supply the required administrative privilege.
 :::
+
+### Measure the trade-offs
+
+A shorter interval increases journal synchronization frequency and can increase CPU and disk I/O. On an already busy disk it can reduce write throughput or increase tail latency. These costs affect every application sharing the MongoDB process, including workloads using the oplog observer.
+
+The interval also affects the window of writes not yet flushed to the journal. For writes acknowledged without journal synchronization, changing it changes the potential loss window after a crash. Keep write concern and durability requirements explicit; see MongoDB's [journaling configuration](https://www.mongodb.com/docs/manual/tutorial/manage-journaling/).
+
+Before changing production configuration:
+
+1. Record the existing value on every member, MongoDB version, topology, write concern, hardware and workload. Keep these conditions fixed when comparing intervals.
+2. Test under representative concurrency and disk load. Measure write-to-client latency (p50, p95 and p99), write throughput, database CPU, disk latency/IOPS and errors. A single-node result does not establish a multi-node replica set's performance.
+3. Verify the configuration after a controlled restart and failover, and have a rollback procedure that restores the previous value on every affected member.
+
+Keep the default when the measured benefit does not justify the database cost. No interval guarantees a particular delivery latency or reduction in DDP messages.
 
 ## Performance Comparison
 
