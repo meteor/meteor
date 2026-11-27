@@ -139,6 +139,7 @@ Package.onTest(function (api) {
   api.addFiles("tests/replication_fields_tests.js", "client");
   api.addFiles("tests/replication_pubsub_tests.js", ["client", "server"]);
   api.addFiles("tests/collection_async_tests.js", ["client", "server"]);
+  api.addFiles("tests/asynchronous_cursor_tests.js", "server");
   api.addFiles("tests/observe_changes_tests.js", ["client", "server"]);
   api.addFiles("tests/collection_extensions_tests.js", ["client", "server"]);
   api.addFiles("tests/oplog_tests.js", "server");
