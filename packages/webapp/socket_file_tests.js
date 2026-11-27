@@ -4,6 +4,7 @@ import { createServer as createServerHttp } from 'http';
 import {
   removeExistingSocketFile,
   registerSocketFileCleanup,
+  getWorkerSocketPath,
 } from './socket_file.js';
 import { EventEmitter } from 'events';
 import { tmpdir, userInfo, platform } from 'os';
@@ -164,6 +165,75 @@ Tinytest.add(
       removeTestSocketFile(testSocketFile);
       removeTestSocketFile(testSocketFile2);
     }
+  }
+);
+
+const fakeWorkerCluster = ({ id = 3, name } = {}) => ({
+  isWorker: true,
+  worker: { id, process: { env: name ? { name } : {} } },
+});
+
+Tinytest.add('socket file - worker suffix uses the cluster worker id', test => {
+  test.equal(
+    getWorkerSocketPath('/tmp/meteor.sock', {
+      env: {},
+      loadCluster: () => fakeWorkerCluster(),
+    }),
+    '/tmp/meteor.sock.3.sock'
+  );
+});
+
+Tinytest.add('socket file - worker suffix prefers the worker name', test => {
+  test.equal(
+    getWorkerSocketPath('/tmp/meteor.sock', {
+      env: {},
+      loadCluster: () => fakeWorkerCluster({ name: 'worker1' }),
+    }),
+    '/tmp/meteor.sock.worker1.sock'
+  );
+});
+
+Tinytest.add('socket file - no worker suffix outside a cluster worker', test => {
+  test.equal(
+    getWorkerSocketPath('/tmp/meteor.sock', {
+      env: {},
+      loadCluster: () => ({ isWorker: false }),
+    }),
+    '/tmp/meteor.sock'
+  );
+  test.equal(
+    getWorkerSocketPath('/tmp/meteor.sock', {
+      env: {},
+      loadCluster: () => { throw new Error('cluster unavailable'); },
+    }),
+    '/tmp/meteor.sock'
+  );
+});
+
+Tinytest.add(
+  'socket file - UNIX_SOCKET_NO_WORKER_SUFFIX keeps the path as given',
+  test => {
+    let clusterLoaded = false;
+    test.equal(
+      getWorkerSocketPath('/tmp/meteor.worker1.sock', {
+        env: { UNIX_SOCKET_NO_WORKER_SUFFIX: '1' },
+        loadCluster: () => {
+          clusterLoaded = true;
+          return fakeWorkerCluster();
+        },
+      }),
+      '/tmp/meteor.worker1.sock'
+    );
+    test.isFalse(clusterLoaded);
+
+    // An empty value leaves the default suffix behaviour in place.
+    test.equal(
+      getWorkerSocketPath('/tmp/meteor.sock', {
+        env: { UNIX_SOCKET_NO_WORKER_SUFFIX: '' },
+        loadCluster: () => fakeWorkerCluster(),
+      }),
+      '/tmp/meteor.sock.3.sock'
+    );
   }
 );
 
