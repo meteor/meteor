@@ -17,7 +17,7 @@ const newTwoFactorSecret = () =>
 
 const assertLoginRequires2fa = async (
   test,
-  { userId, selector, token, secret }
+  { userId, selector, token, secret, codeTimestamp = Date.now() }
 ) => {
   await test.throwsAsync(
     () => loginWithToken({ selector, token }),
@@ -32,7 +32,7 @@ const assertLoginRequires2fa = async (
   );
   test.isTrue(!!(await Meteor.users.findOneAsync(userId)).services.passwordless);
 
-  const { token: code } = Accounts._generate2faToken(secret);
+  const { token: code } = Accounts._generate2faToken(secret, codeTimestamp);
   const login = await loginWithToken({ selector, token, code });
   test.equal(login.id, userId);
 };
@@ -112,6 +112,8 @@ Tinytest.addAsync(
         secret,
         selector: { id: userId },
         token: userToken,
+        // The first login used the current step, which replay protection now rejects.
+        codeTimestamp: Date.now() + 30 * 1000,
       });
     } finally {
       await Meteor.users.removeAsync(userId);
