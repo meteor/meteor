@@ -68,7 +68,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y g++-12 libnss3
+          sudo apt-get install -y g++-12 libnss3 unzip
 
       - name: Install npm dependencies
         run: npm install

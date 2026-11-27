@@ -21,6 +21,9 @@ jobs:
       ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
           && (github.repository == 'meteor/meteor' || github.event.repository.private)
           && (vars.METEOR_CI_LINUX_RUNNER || 'oss-vm') || 'ubuntu-latest' }}
+    defaults:
+      run:
+        working-directory: .ci-packages
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.reactivity_order }}
       cancel-in-progress: true
@@ -41,6 +44,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          # Container jobs can leave root-owned files in the shared workspace.
+          path: .ci-packages
           submodules: recursive
           persist-credentials: false
 
@@ -56,16 +61,25 @@ jobs:
           echo "TMPDIR=$RUNNER_TEMP/meteor-tests" >> "$GITHUB_ENV"
 
       - name: Restore caches
-        uses: actions/cache@v4
+        id: cache
+        uses: actions/cache/restore@v4
         with:
-          path: |
+          path: &cache-paths |
             ${{ runner.temp }}/meteor-npm/_cacache
-            .meteor
-            .babel-cache
-            dev_bundle
-          key: ${{ runner.os }}-node-26-meteor-${{ hashFiles('meteor', '**/package-lock.json') }}
+            .ci-packages/.meteor
+            .ci-packages/.babel-cache
+            .ci-packages/dev_bundle
+          key: ${{ runner.os }}-node-26-meteor-${{ hashFiles('.ci-packages/meteor', '.ci-packages/**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-26-meteor-
+
+      - name: Ensure unzip is available for Puppeteer
+        run: |
+          if ! command -v unzip >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y unzip
+          fi
+
       - name: Run test-in-console suite
         run: |
           export TEST_PACKAGES_EXCLUDE="stylus"
@@ -76,3 +90,15 @@ jobs:
           export TIMEOUT_SCALE_FACTOR="20"
           export METEOR_HEADLESS="true"
           ./packages/test-in-console/run.sh
+
+      - name: Save caches
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: *cache-paths
+          key: ${{ steps.cache.outputs.cache-primary-key }}
+
+      - name: Remove package test checkout
+        if: always()
+        working-directory: ${{ github.workspace }}
+        run: rm -rf -- .ci-packages
