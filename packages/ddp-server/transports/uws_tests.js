@@ -1,6 +1,7 @@
 import {
   createProxyAddressTracker,
   decodeUwsAddress,
+  backpressureOptions,
 } from './uws.js';
 
 const uws = Npm.require('uWebSockets.js');
@@ -285,5 +286,99 @@ Tinytest.addAsync(
         onComplete();
       });
     });
+  }
+);
+
+// Sends `count` frames of about 1 KiB in one tick, the way a subscription
+// sends its initial result, and reports what the client saw.
+function sendBurst(options, count) {
+  const host = '127.0.0.1';
+  const app = uws.App();
+  const body = 'x'.repeat(1000);
+
+  app.ws('/*', {
+    ...options,
+    open(socket) {
+      for (let i = 0; i < count; i++) {
+        socket.send(String(i).padStart(10, '0') + body);
+      }
+    },
+  });
+
+  return new Promise(resolve => {
+    app.listen(host, 0, uws.LIBUS_LISTEN_EXCLUSIVE_PORT, function (token) {
+      if (!token) {
+        resolve(null);
+        return;
+      }
+
+      const port = uws.us_socket_local_port(token);
+      const socket = new WebSocket('ws://' + host + ':' + port);
+      let received = 0;
+      let closeCode = null;
+      let finished = false;
+
+      // Closing the client fires 'close' again, and closing a uWS listen
+      // socket twice crashes the process.
+      function finish() {
+        if (finished) return;
+        finished = true;
+        Meteor.clearTimeout(timer);
+        try { socket.close(); } catch (e) { /* ignore */ }
+        try { uws.us_listen_socket_close(token); } catch (e) { /* ignore */ }
+        resolve({ received, closeCode });
+      }
+
+      const timer = Meteor.setTimeout(finish, 20000);
+      socket.addEventListener('message', function () {
+        if (++received === count) finish();
+      });
+      socket.addEventListener('close', function (event) {
+        closeCode = event.code;
+        finish();
+      });
+      socket.addEventListener('error', function () { /* asserted through closeCode */ });
+    });
+  });
+}
+
+Tinytest.addAsync(
+  'ddp-server/uws - default settings deliver a burst larger than 16 MiB',
+  async function (test) {
+    // Twice the old 16 MiB limit, so that the few MiB the kernel absorbs
+    // cannot hide a drop.
+    const count = 32 * 1024;
+    const result = await sendBurst(backpressureOptions({}), count);
+
+    test.isNotNull(result, 'could not listen for the burst');
+    test.equal(result.received, count, 'every frame must reach the client');
+    test.isNull(result.closeCode, 'the socket must stay open');
+  }
+);
+
+Tinytest.addAsync(
+  'ddp-server/uws - a configured maxBackpressure closes the socket and logs once',
+  async function (test) {
+    const originalDebug = Meteor._debug;
+    const logs = [];
+    Meteor._debug = (...args) => {
+      const line = args.join(' ');
+      if (line.startsWith('uws:')) logs.push(line);
+    };
+    // The kernel absorbs a few MiB before uWS starts buffering, so the burst
+    // must be much larger than the limit to reach it.
+    const count = 16 * 1024;
+    let result;
+    try {
+      result = await sendBurst(backpressureOptions({ maxBackpressure: 64 }), count);
+    } finally {
+      Meteor._debug = originalDebug;
+    }
+
+    test.isNotNull(result, 'could not listen for the burst');
+    test.isTrue(result.received < count, 'the burst must exceed the limit');
+    test.isNotNull(result.closeCode, 'the socket must close instead of dropping frames');
+    test.equal(logs.length, 1, 'the close must be logged once');
+    test.isTrue(/maxBackpressure/.test(logs[0]), 'the log must name the setting');
   }
 );
