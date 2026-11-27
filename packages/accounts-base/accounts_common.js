@@ -318,10 +318,10 @@ export class AccountsCommon {
     for (const key of VALID_CONFIG_KEYS) {
       if (key in options) {
         if (key in this._options) {
-        // require2fa is a policy the app (and the tests) may replace.
-        if (key !== 'collection' && Meteor.isTest && key !== 'clientStorage' && key !== 'require2fa') {
-          throw new Meteor.Error(`Can't set \`${key}\` more than once`);
-        }
+          // require2fa is a policy the app (and the tests) may replace.
+          if (key !== 'collection' && (Meteor.isTest && key !== 'clientStorage' && key !== 'require2fa')) {
+            throw new Meteor.Error(`Can't set \`${key}\` more than once`);
+          }
         }
         this._options[key] = options[key];
       }
