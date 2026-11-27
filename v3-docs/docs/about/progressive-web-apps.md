@@ -21,7 +21,7 @@ Open `http://localhost:3000`. `localhost` is a secure context, so everything bel
 
 - The page links `manifest.webmanifest` and registers the service worker from `Meteor.startup`.
 - Chromium-based browsers show an install icon in the address bar and fire `beforeinstallprompt`, which the skeleton turns into an **Install app** button under the heading.
-- In DevTools, **Application → Manifest** lists the app without errors and **Application → Service workers** shows the worker as activated. Lighthouse's installability audit passes.
+- In DevTools, **Application → Manifest** lists the app without errors and **Application → Service workers** shows the worker as activated.
 
 A phone or any other device needs HTTPS before the browser offers installation. See [Testing on a phone](#testing-on-a-phone).
 
@@ -136,7 +136,7 @@ Android launchers crop icons into their own shape. The maskable icon keeps its a
 
 Chromium-based browsers fire `beforeinstallprompt` once the app meets the installability criteria. `client/main.js` stores the event in a `ReactiveVar`, the `installPrompt` template shows the button while an event is available, and a click calls `event.prompt()`. The `appinstalled` event hides the button again.
 
-Safari and Firefox do not fire the event. They offer installation from their own menus (Add to Home Screen on iOS, Add to Dock on macOS), and the button never appears there. The app itself can tell it runs installed with `window.matchMedia('(display-mode: standalone)').matches`.
+Safari and Firefox do not fire the event, so the button never appears there. Safari installs from its own menus: Add to Home Screen on iOS, Add to Dock on macOS. Firefox installs web apps from its menu on Android and, since version 143, from the address bar on Windows, but not on macOS or Linux. The app itself can tell it runs installed with `window.matchMedia('(display-mode: standalone)').matches`.
 
 ## Path-prefixed ROOT_URL
 
@@ -162,7 +162,14 @@ Open the `https://` URL the tunnel prints on the phone, then use the browser's i
 
 ### Testing the offline shell
 
-Stop the Meteor server, then reload the installed app: the page comes out of the worker's cache. The DevTools **Offline** checkbox is not enough on its own, because an open DDP WebSocket stays open; call `Meteor.disconnect()` in the console to test the disconnected state of your UI, and `Meteor.reconnect()` to come back.
+The development worker sends navigations to the network and never caches the page (see [Development and production](#development-and-production)), so test the offline shell on a production build:
+
+1. Run `meteor run --production`, which registers `/sw.js` instead of `/sw.js?dev=1`.
+2. Open the app and wait until **Application → Service workers** shows the worker as activated.
+3. Reload the page while the server runs. The first load happened before the worker was installed, so only this reload stores the page and its bundle in the cache.
+4. Stop the Meteor server and reload: the page comes out of the worker's cache.
+
+The DevTools **Offline** checkbox is not enough on its own, because an open DDP WebSocket stays open; call `Meteor.disconnect()` in the console to test the disconnected state of your UI, and `Meteor.reconnect()` to come back.
 
 ## Offline data
 
