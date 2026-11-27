@@ -1,4 +1,4 @@
-import { normalizeModernConfig, setMeteorConfig, setProjectPlatforms } from "./tool-env/meteor-config";
+import { normalizeModernConfig, setMeteorConfig, setProjectPlatforms, setProjectIsopackCache } from "./tool-env/meteor-config";
 import {
   generateTypes,
   removeLegacyGeneratedTypes,
@@ -310,6 +310,7 @@ Object.assign(ProjectContext.prototype, {
     }
     // Initialized by _buildLocalPackages.
     self.isopackCache = null;
+    setProjectIsopackCache(null);
 
     self._completedStage = STAGE.INITIAL;
 
@@ -1046,6 +1047,8 @@ Object.assign(ProjectContext.prototype, {
       lintLocalPackages: self.lintAppAndLocalPackages,
       lintPackageWithSourceRoot: self._lintPackageWithSourceRoot
     });
+
+    setProjectIsopackCache(self.isopackCache);
 
     if (self._forceRebuildPackages) {
       await self.isopackCache.wipeCachedPackages(

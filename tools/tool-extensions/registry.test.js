@@ -144,31 +144,6 @@ describe('tool extension registry', () => {
 });
 
 describe('project tool extension registry', () => {
-  test('loads tool extensions from built isopacks', async () => {
-    const projectContext = {
-      packageMap: {
-        async eachPackage(iterator) {
-          await iterator('capacitor', { kind: 'local' });
-        },
-      },
-      isopackCache: {
-        getIsopack(name) {
-          expect(name).toBe('capacitor');
-          return {
-            toolExtensions: [capacitorExtension],
-          };
-        },
-      },
-    };
-
-    const registry = await createRegistryForProject(projectContext);
-
-    expect(registry.resolvePlatform('android')).toMatchObject({
-      platform: { provider: 'capacitor' },
-      isFallback: false,
-    });
-  });
-
   test('loads tool extensions from package sources before isopacks exist', async () => {
     const projectContext = {
       packageMap: {

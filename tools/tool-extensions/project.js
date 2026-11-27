@@ -12,15 +12,11 @@ export async function createRegistryForProject(projectContext, {
     extensions.push(createCordovaFallbackExtension());
   }
 
-  if (projectContext?.packageMap) {
+  if (projectContext?.isopackCache) {
+    extensions.push(...projectContext.isopackCache.getToolExtensions());
+  } else if (projectContext?.packageMap) {
     await projectContext.packageMap.eachPackage(async (packageName, info = {}) => {
-      const packageSourceExtensions = info.packageSource?.toolExtensions || [];
-      const isopack = packageSourceExtensions.length
-        ? null
-        : projectContext.isopackCache?.getIsopack(packageName);
-      for (const extension of packageSourceExtensions.length
-        ? packageSourceExtensions
-        : isopack?.toolExtensions || []) {
+      for (const extension of info.packageSource?.toolExtensions || []) {
         extensions.push({
           ...extension,
           packageName,

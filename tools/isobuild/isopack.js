@@ -2,6 +2,7 @@ import {
   getCurrentBuildOutputContext,
   getMeteorConfig,
   getProjectPlatforms,
+  getProjectToolExtensions,
   onBuildOutputReady,
 } from "../tool-env/meteor-config";
 
@@ -553,6 +554,7 @@ Object.assign(Isopack.prototype, {
 
       // Project platforms from .meteor/platforms (set during prepareProjectForBuild)
       getPlatforms: getProjectPlatforms,
+      getToolExtensions: getProjectToolExtensions,
 
       // Generic build output context for build plugins that need to react
       // after an app bundle has been written.

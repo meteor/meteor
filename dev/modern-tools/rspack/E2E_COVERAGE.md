@@ -413,7 +413,9 @@ React app using both Rspack and Capacitor, with web-only native lifecycle covera
 
 The Capacitor suite also reuses the Blaze fixture to check helpers and click
 handlers during bundled native development, followed by a plain web run with
-generated native HTML present. A livereload case selects the mobile client without
+generated native HTML present. Its Rspack client rebuild picks up edits under
+`imports/ios/` while ignoring edits to generated assets under the app-root `ios/`.
+A livereload case selects the mobile client without
 the optional HMR packages,
 edits a Blaze template, and checks the updated content and working click handler
 without manually reloading. Concurrent client and server edits then update the

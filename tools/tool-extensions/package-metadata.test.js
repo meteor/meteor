@@ -1,5 +1,8 @@
 jest.mock('../fs/files', () => ({
   inCheckout: jest.fn(() => true),
+  pathJoin: require('node:path').join,
+  exists: require('node:fs').existsSync,
+  readFile: require('node:fs').readFileSync,
 }));
 jest.mock('../utils/buildmessage.js', () => ({
   error: jest.fn(),
@@ -11,6 +14,7 @@ jest.mock('../tool-env/meteor-config', () => ({
   getMeteorConfig: jest.fn(),
   getProjectPlatforms: jest.fn(),
 }));
+jest.mock('../isobuild/meteor-npm.js', () => ({}));
 jest.mock('../isobuild/compiler.js', () => ({
   BUILT_BY: 'test',
   isIsobuildFeaturePackage: jest.fn(() => false),
@@ -73,6 +77,12 @@ jest.mock('../runners/run-log', () => ({
   runLogInstance: {},
 }));
 
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const { PackageMap } = require('../packaging/package-map.js');
+const { IsopackCache } = require('../isobuild/isopack-cache.js');
+const { createRegistryForProject } = require('./project.js');
 const { PackageNamespace } = require('../isobuild/package-namespace.js');
 const { Isopack } = require('../isobuild/isopack.js');
 
@@ -123,6 +133,44 @@ describe('Package.registerToolExtension', () => {
 });
 
 describe('Isopack tool extension metadata', () => {
+  test('discovers local and installed providers before isopacks load', async () => {
+    const local = {
+      id: 'test:local',
+      apiVersion: '1.0',
+      platforms: [{ name: 'local', provider: 'local', nativeProjectDir: 'local-app' }],
+    };
+    const installed = {
+      id: 'test:installed',
+      apiVersion: '1.0',
+      platforms: [{ name: 'android', provider: 'installed', nativeProjectDir: 'android' }],
+    };
+    const packageMap = new PackageMap({ local: '1.0.0', installed: '2.0.0' }, {
+      localCatalog: {
+        getPackageSource: name => name === 'local' ? { toolExtensions: [local] } : null,
+      },
+    });
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'tool-extensions-'));
+    try {
+      const packagePath = (name, version) => path.join(root, name, version);
+      const dir = packagePath('installed', '2.0.0');
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, 'isopack.json'), JSON.stringify({
+        'isopack-2': { toolExtensions: [installed] },
+      }));
+      const isopackCache = new IsopackCache({ packageMap, tropohouse: { packagePath } });
+      const registry = await createRegistryForProject({ packageMap, isopackCache });
+      expect(registry.resolvePlatform('local')).toMatchObject({
+        extension: { packageName: 'local' }, platform: { nativeProjectDir: 'local-app' },
+      });
+      expect(registry.resolvePlatform('android')).toMatchObject({
+        extension: { packageName: 'installed' }, platform: { nativeProjectDir: 'android' },
+        isFallback: false,
+      });
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test('starts with empty tool extension metadata', () => {
     const isopack = new Isopack();
 

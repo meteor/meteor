@@ -441,7 +441,6 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   // Additional ignore entries
   const additionalEntries = [
     "**/.meteor/local/**",
-    path.join(projectDir, "dist", "**").replace(/\\/g, "/"),
     ...(isTest && isTestEager
       ? [`**/${buildContext}/**`, "**/.meteor/local/**", "node_modules/**"]
       : []),
@@ -451,6 +450,11 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   const watchOptions = {
     ignored: [
       ...createIgnoreGlobConfig([...meteorIgnoreEntries, ...additionalEntries]),
+      ...['dist', ...JSON.parse(process.env.RSPACK_NATIVE_PROJECT_DIRS || '[]')].map(dir =>
+        // Watchpack treats strings as globs, even the literal app directory.
+        path.resolve(projectDir, dir).split(path.sep).join('/')
+          .replace(/[?*{}[\]]/g, char => '\\x' + char.charCodeAt(0).toString(16))
+      ),
     ],
   };
 

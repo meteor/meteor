@@ -160,6 +160,25 @@ export class IsopackCache {
     return self._isopacks[name];
   }
 
+  getToolExtensions() {
+    if (!this._toolExtensions) {
+      const extensions = [];
+      for (const [packageName, info] of this._packageMap.entries()) {
+        // A local package can initialize build plugins before all the other
+        // isopacks have loaded. Read only the installed metadata in that case.
+        const metadata = info.packageSource || this._isopacks[packageName] ||
+          isopackModule.Isopack.readMetadataFromDirectory(
+            this._tropohouse.packagePath(packageName, info.version)
+          ).metadata;
+        for (const extension of metadata?.toolExtensions || []) {
+          extensions.push({ ...extension, packageName });
+        }
+      }
+      this._toolExtensions = extensions;
+    }
+    return this._toolExtensions;
+  }
+
   async eachBuiltIsopack(iterator) {
     var self = this;
     for (const [packageName, isopack] of Object.entries(self._isopacks)) {

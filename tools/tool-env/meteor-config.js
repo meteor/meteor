@@ -105,6 +105,16 @@ export function setProjectPlatforms(platforms) {
   projectPlatforms = Array.isArray(platforms) ? platforms : [];
 }
 
+let projectIsopackCache;
+
+export function setProjectIsopackCache(cache) {
+  projectIsopackCache = cache;
+}
+
+export function getProjectToolExtensions() {
+  return projectIsopackCache?.getToolExtensions() || [];
+}
+
 let currentBuildOutputContext = null;
 let buildOutputReadyCallbacks = [];
 

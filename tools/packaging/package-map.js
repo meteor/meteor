@@ -44,18 +44,14 @@ exports.PackageMap = function (versions, options) {
 };
 
 Object.assign(exports.PackageMap.prototype, {
+  *entries() {
+    for (const [packageName, info] of Object.entries(this._map)) {
+      yield [packageName, _.clone(info)];
+    }
+  },
   eachPackage: async function (iterator) {
-    var self = this;
-
-    for (const [packageName, info] of Object.entries(self._map)) {
-      // For reasons that are super unclear, if this `_.clone` is inlined into
-      // the `iterator` call, the value produced can mysteriously turn into
-      // undefined on the way into `iterator`. Presumably some sort of memory
-      // corruption, maybe Fiber-related?  Trying to minimize has been an
-      // exercise in nondeterminism. But this does seem to be a sure-fire way to
-      // fix it, for now. Who knows why, and who knows when it will recur again.
-      var infoClone = _.clone(info);
-      await iterator(packageName, infoClone);
+    for (const [packageName, info] of this.entries()) {
+      await iterator(packageName, info);
     }
   },
   getInfo: function (packageName) {

@@ -1090,13 +1090,31 @@ describe('Capacitor App Web Lifecycle / Blaze', () => {
   });
 
   test('plain web development ignores native projects and generated webDirs after native generation', async () => {
-    const generatedHtml = await fs.readFile(path.join(appDir, '_build/native-dev/index.html'), 'utf8');
+    const generatedHtml = '<!doctype html><html><body>Generated native app</body></html>';
     await fs.outputFile(path.join(appDir, 'ios/App/App/public/index.html'), generatedHtml);
+    await fs.outputFile(path.join(appDir, '_build/native-dev/index.html'), generatedHtml);
     await fs.outputFile(path.join(appDir, '_build/native-prod/index.html'), generatedHtml);
-    const result = await runMeteorApp(appDir, port, { env: env() });
-    meteorProcess = result.meteorProcess;
-    await assertBlazeInteraction();
-    expectOutputNotContains(result.outputLines, /Capacitor: (?:syncing|launching|added)/);
+    const nativeFile = 'ios/App/App/public/watch-probe.json';
+    const sourceFile = 'imports/ios/watch-probe.json';
+    const probes = await snapshotFiles(appDir, [nativeFile, sourceFile]);
+    try {
+      await fs.outputJson(path.join(appDir, nativeFile), 'native-before');
+      await fs.outputJson(path.join(appDir, sourceFile), 'source-before');
+      await fs.appendFile(path.join(appDir, 'client/main.js'),
+        `\nwindow.watchProbe = [require('../${nativeFile}'), require('../${sourceFile}')];\n`);
+      const result = await runMeteorApp(appDir, port, { env: env() });
+      meteorProcess = result.meteorProcess;
+      await assertBlazeInteraction();
+      expectOutputNotContains(result.outputLines, /Capacitor: (?:syncing|launching|added)/);
+      expect(await page.evaluate(() => window.watchProbe)).toEqual(['native-before', 'source-before']);
+
+      await fs.writeJson(path.join(appDir, nativeFile), 'native-after');
+      await fs.writeJson(path.join(appDir, sourceFile), 'source-after');
+      await page.waitForFunction(() => window.watchProbe?.[1] === 'source-after');
+      expect(await page.evaluate(() => window.watchProbe[0])).toBe('native-before');
+    } finally {
+      await restoreFiles(probes);
+    }
   });
 
   test('livereload updates a Blaze template and server in the running mobile client', async () => {
