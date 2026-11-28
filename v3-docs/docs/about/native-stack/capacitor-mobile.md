@@ -616,6 +616,37 @@ METEOR_CAPACITOR_SKIP_NATIVE_RUN=1 meteor run android
 You can pass other Capacitor run options with `METEOR_CAPACITOR_*` environment
 variables, such as `METEOR_CAPACITOR_FLAVOR` or `METEOR_CAPACITOR_TARGET_NAME`.
 
+### Debug the WebView
+
+If the app stays on its startup screen, keep `meteor run` running and inspect
+the WebView's Console and Network panels. These steps work in bundled and
+livereload modes.
+
+- On **iOS**, enable developer features in Safari on your Mac. In Safari's
+  **Develop** menu, select the simulator or connected device, then the page
+  under your app's name. For a physical device, also enable **Web Inspector**
+  in the device's Safari settings under **Advanced**. Capacitor enables
+  `WKWebView.isInspectable` in native Debug builds on iOS 16.4 and later.
+  If the app overrides this default, check `ios.webContentsDebuggingEnabled`
+  in `capacitor.config.*` and sync and rebuild after changing it.
+  [Inspecting iOS and iPadOS](https://developer.apple.com/documentation/safari-developer-tools/inspecting-ios)
+- On **Android**, open `chrome://inspect/#devices` in desktop Chrome, find the
+  running app on the emulator or USB-connected device, and select **inspect**.
+  [Remote debugging WebViews](https://developer.chrome.com/docs/devtools/remote-debugging/webviews)
+
+To capture `console.error` from the start of an iOS Simulator launch, run the
+following in a second terminal after `meteor run ios` has installed the app.
+Replace the example with the installed app's bundle identifier. The command
+relaunches the app and attaches the terminal to its output. Capacitor writes
+WebView console messages there when native logging is enabled (the Debug default).
+
+```bash
+xcrun simctl launch --terminate-running-process --console-pty booted com.example.myapp
+```
+
+If several simulators are booted, use the target simulator's UUID in place of
+`booted`.
+
 ## Hot Code Push
 
 Hot Code Push is enabled by default for Capacitor bundled mode.
