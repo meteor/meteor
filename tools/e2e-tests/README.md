@@ -5,6 +5,9 @@ integrations, CLI behavior, and Accounts against real apps and Chromium.
 Test dependencies stay in this directory so they cannot change the dependencies
 used to build and ship the Meteor tool.
 
+The Capacitor group's Android App Bundle checks use JDK 21 on `PATH` to create
+and verify disposable signed archives. They run without an Android SDK or emulator.
+
 ## Run from the repository root
 
 ```sh

@@ -1,0 +1,30 @@
+body {
+  margin: 0;
+  background: #0f172a;
+  color: #f8fafc;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.native-shell {
+  min-height: 100vh;
+  padding: 28px;
+}
+
+.native-shell h1 {
+  margin: 0 0 20px;
+  font-size: 28px;
+}
+
+.native-shell p {
+  margin: 10px 0;
+  font-size: 18px;
+}
+
+.style-probe {
+  display: inline-block;
+  margin-top: 18px;
+  padding: 12px;
+  background: rgb(14, 165, 233);
+  color: rgb(255, 255, 255);
+  border-radius: 8px;
+}

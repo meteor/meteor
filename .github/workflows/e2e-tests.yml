@@ -134,6 +134,13 @@ jobs:
       - name: Install deps
         run: npm install
 
+      - name: Set up the JDK for App Bundle signature checks
+        if: matrix.group == 'capacitor'
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
       - name: Install test deps
         # This installs the browsers and system dependencies using the exact
         # Playwright version declared by tools/e2e-tests/package.json.

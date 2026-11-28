@@ -454,14 +454,15 @@ tarball. See 'meteor help build' for more information.
 Build this project for all platforms.
 Usage: meteor build <output path> [--debug] [--directory] [--server-only]
           [--mobile-settings settings.json] [--server http://example.com:3000]
+          [--platforms android,ios] [--packageType apk|bundle]
 
 Package this project up for deployment. The command outputs a directory with
 builds for all platforms in this project.
 
-If you have added mobile platforms to your project with the
-'meteor add-platform' command, then the output directory will contain
-subdirectories named 'android' (with the AAB/APK bundle and Android project
-source) and/or 'ios' (with the Xcode project source).
+Mobile output is written to 'android' and/or 'ios' subdirectories. Cordova
+builds include the Android AAB/APK and native project source, or the iOS Xcode
+project source. Apps with the 'capacitor' package use Capacitor to produce
+Android AAB/APK or iOS IPA files. Capacitor release builds require signing setup.
 
 Pass `--server-only` to skip building mobile apps, but still build the
 'web.cordova' client target so the server can support hot code push
@@ -473,8 +474,7 @@ to run the application server. (See README in the tarball for details.)
 Options:
   --debug             Build in debug mode (don't minify, etc).
   --directory         Output a directory (rather than a tarball) for the
-                      application server bundle. If the output location exists,
-                      it will be recursively deleted first.
+                      application server bundle.
   --server-only       Skip building mobile apps even if mobile platforms have
                       been added.
   --mobile-settings   Set optional data for the initial value of Meteor.settings
@@ -482,7 +482,9 @@ Options:
                       Meteor.settings can be set later by the server as part of
                       hot code push.
   --server            Location where mobile builds connect to the Meteor server.
-                      Defaults to localhost:3000. Can include a URL scheme
+                      Pass this option for Cordova. Capacitor also accepts
+                      MOBILE_ROOT_URL or ROOT_URL when this option is omitted.
+                      Can include a URL scheme
                       (for example, --server=https://example.com:443).
   --architecture      Builds the server for a different architecture than your
                       developer machine's architecture. Valid architectures
@@ -499,8 +501,13 @@ Options:
                       downgraded to versions that are potentially incompatible
                       with the current versions, if required to satisfy all
                       package version constraints.
-  --platforms         Builds only the specified platforms (when available).
-  --packageType       Choose between apk/bundle for android builds. (Defaults to bundle)
+  --platforms         Build only the listed platforms. Separate names with commas
+                      (for example, --platforms=android,ios). Defaults to the
+                      platforms configured in the project.
+  --packageType       Choose apk or bundle for Android builds. Defaults to bundle;
+                      Capacitor uses its configured releaseType when omitted.
+  --headless          Use plain build progress output for CI.
+  --verbose, -v       Print detailed build output.
 
 
 

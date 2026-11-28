@@ -1,4 +1,13 @@
-import { getMeteorConfig } from "../tool-env/meteor-config";
+import {
+  getCurrentBuildOutputContext,
+  getMeteorConfig,
+  getProjectPlatforms,
+  getProjectToolExtensions,
+  onBuildOutputReady,
+} from "../tool-env/meteor-config";
+
+const { findProjectConfig, readProjectConfig, readPlatformPath } = require('../tool-extensions/project-config.cjs');
+const { resolveNativeProjectDirs } = require('../tool-extensions/native-project-dirs');
 
 var compiler = require('./compiler.js');
 var archinfo = require('../utils/archinfo');
@@ -54,6 +63,7 @@ var Isopack = function () {
   // These have the same meaning as in PackageSource.
   self.name = null;
   self.metadata = {};
+  self.toolExtensions = [];
   self.version = null;
   self.isTest = false;
   self.debugOnly = false;
@@ -278,6 +288,7 @@ Object.assign(Isopack.prototype, {
     var self = this;
     self.name = options.name;
     self.metadata = options.metadata;
+    self.toolExtensions = options.toolExtensions || [];
     self.version = options.version;
     self.isTest = options.isTest;
     self.plugins = options.plugins;
@@ -543,6 +554,27 @@ Object.assign(Isopack.prototype, {
 
       // Share the meteorConfig object as part of plugin API
       getMeteorConfig: getMeteorConfig,
+
+      // Project platforms from .meteor/platforms (set during prepareProjectForBuild)
+      getPlatforms: getProjectPlatforms,
+      getToolExtensions: getProjectToolExtensions,
+      projectConfig: { findProjectConfig, readProjectConfig, readPlatformPath },
+      getNativeProjectDirs: (appDir, getPlatformEnv, warn) =>
+        resolveNativeProjectDirs(getProjectToolExtensions(), appDir, getPlatformEnv, warn),
+
+      // Build plugins can keep generated trees outside app source and asset discovery.
+      excludeAppDirectories(directories) {
+        for (const directory of directories) {
+          const dir = files.convertToStandardPath(directory);
+          isopack.sourceProcessors.compiler.excludedAppDirectories.add(dir);
+          isopack.sourceProcessors.linter.excludedAppDirectories.add(dir);
+        }
+      },
+
+      // Generic build output context for build plugins that need to react
+      // after an app bundle has been written.
+      getBuildOutputContext: getCurrentBuildOutputContext,
+      onBuildOutputReady,
 
       // Share functions to get the dev bundle context
       getDevBundle,
@@ -945,6 +977,7 @@ Object.assign(Isopack.prototype, {
       self.metadata = {
         summary: mainJson.summary
       };
+      self.toolExtensions = mainJson.toolExtensions || [];
       self.version = mainJson.version;
       self.isTest = mainJson.isTest;
       self.debugOnly = !!mainJson.debugOnly;
@@ -1092,6 +1125,7 @@ Object.assign(Isopack.prototype, {
         summary: self.metadata.summary,
         version: self.version,
         isTest: self.isTest,
+        toolExtensions: self.toolExtensions || [],
         builds: [],
         plugins: []
       };

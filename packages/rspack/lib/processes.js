@@ -31,6 +31,7 @@ const {
   isMeteorAppRun,
   isMeteorAppBuild,
   isMeteorAppNative,
+  getMeteorAppNativeMode,
   isMeteorBlazeProject,
   isMeteorBlazeHotProject,
   getMeteorInitialAppEntrypoints,
@@ -453,6 +454,7 @@ export function getRspackEnv({ isClient, isServer, arch, isTest: inIsTest, isTes
     ["isRun", isMeteorAppRun()],
     ["isBuild", isMeteorAppBuild()],
     ["isNative", isMeteorAppNative()],
+    ...((isMeteorAppNative() && [["nativeMode", getMeteorAppNativeMode()]]) || []),
     ["isClient", isClient],
     ["isServer", isServer],
     ...(arch ? [["arch", arch], ["isLegacy", architectureEntry.isLegacy]] : []),
@@ -535,8 +537,9 @@ export function getRspackEnv({ isClient, isServer, arch, isTest: inIsTest, isTes
       []),
   ].filter(Boolean);
 
-  // Create environment variables object with bannerOutput
+  // Pass structured values in the environment so shell wrappers preserve JSON.
   const envs = {
+    RSPACK_NATIVE_PROJECT_DIRS: JSON.stringify(getGlobalState(GLOBAL_STATE_KEYS.NATIVE_PROJECT_DIRS, [])),
     RSPACK_BANNER: JSON.stringify(getBuildFileContent({ ...module, ...env, ...side, role: FILE_ROLE.output }))
   };
 
@@ -568,9 +571,15 @@ export function startRspackClientServe(options = {}) {
   const appDir = getMeteorAppDir();
   const configFile = getConfigFilePath();
   const { params, envs } = getRspackEnv({ isClient: true, isServer: false });
-  const { command, args } = getRspackCliCommand(['serve', '--config', configFile, ...params]);
+  const devServerPort = process.env.RSPACK_DEVSERVER_PORT;
+  const { command, args } = getRspackCliCommand([
+    'serve',
+    '--config',
+    configFile,
+    ...(devServerPort ? ['--port', devServerPort] : []),
+    ...params,
+  ]);
   const sawPanic = createPanicDetector();
-
   const newClientProcess = spawnProcess(
     command,
     args, {

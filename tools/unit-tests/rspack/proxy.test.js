@@ -159,7 +159,20 @@ describe('Rspack development proxy error diagnostics', () => {
 
   test('successful proxy traffic and clean WebSocket closures stay quiet', () => {
     const { proxies: [assets, ws] } = loadRuntime();
-    assets.emit('proxyRes', { statusCode: 200 });
+    const response = {
+      statusCode: 200,
+      headers: {
+        'cache-control': 'public, max-age=31536000',
+        'content-type': 'application/javascript',
+      },
+    };
+    assets.emit('proxyRes', response);
+    expect(response.headers).toEqual({
+      'cache-control': 'no-store, no-cache, must-revalidate',
+      pragma: 'no-cache',
+      expires: '0',
+      'content-type': 'application/javascript',
+    });
     ws.emit('open', {});
     ws.emit('close', {});
     jest.advanceTimersByTime(10000);

@@ -2,6 +2,17 @@ const { spawn } = require('child_process');
 const net = require('net');
 const { logError } = require('./log');
 
+export function buildProcessEnv(extraEnv = {}) {
+  const env = {
+    ...process.env,
+    ...extraEnv,
+    FORCE_COLOR: '1',
+    TERM: 'xterm-256color',
+  };
+  delete env.NO_COLOR;
+  return env;
+}
+
 /**
  * Determines whether a spawned command should run through a shell.
  *
@@ -42,13 +53,8 @@ export function shouldUseShell(command, options = {}) {
  * @returns {Object} The spawned process with additional utility methods
  */
 export function spawnProcess(command, args, options = {}) {
-  const childEnv = {
-    ...process.env,
-    ...options.env,
-    FORCE_COLOR: '1',
-    TERM: 'xterm-256color',
-  };
-
+  const stdio = options.stdio || ['pipe', 'pipe', 'pipe'];
+  const childEnv = buildProcessEnv(options.env);
   for (const name of options.unsetEnv || []) {
     delete childEnv[name];
   }
@@ -56,7 +62,7 @@ export function spawnProcess(command, args, options = {}) {
   const proc = spawn(command, args, {
     env: childEnv,
     cwd: options.cwd || process.cwd(),
-    stdio: ['pipe', 'pipe', 'pipe'],
+    stdio,
     detached: options.detached || false,
     shell: shouldUseShell(command, options),
   });
@@ -70,19 +76,18 @@ export function spawnProcess(command, args, options = {}) {
   // Add a reference to track if the process is running
   proc.isRunning = true;
 
-  // Handle stdout
-  proc.stdout.on('data', (buf) => {
-    if (options.onStdout) {
-      options.onStdout(buf.toString());
-    }
-  });
-
-  // Handle stderr
-  proc.stderr.on('data', (buf) => {
-    if (options.onStderr) {
-      options.onStderr(buf.toString());
-    }
-  });
+  // Only wire stdio listeners when we actually piped (inherit hands the
+  // child the parent's tty directly, so proc.stdout/stderr/stdin are null).
+  if (proc.stdout) {
+    proc.stdout.on('data', (buf) => {
+      if (options.onStdout) options.onStdout(buf.toString());
+    });
+  }
+  if (proc.stderr) {
+    proc.stderr.on('data', (buf) => {
+      if (options.onStderr) options.onStderr(buf.toString());
+    });
+  }
 
   // Handle process exit
   proc.on('close', (code, signal) => {
@@ -100,7 +105,7 @@ export function spawnProcess(command, args, options = {}) {
   // This happens sometimes when we write to stdin after the app
   // is dead. If we don't register a handler, we get a top level
   // exception and the whole app dies.
-  proc.stdin.on('error', () => {});
+  if (proc.stdin) proc.stdin.on('error', () => {});
 
   if (options.detached) proc.unref();
   return proc;

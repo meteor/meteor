@@ -16,12 +16,14 @@ const { capitalizeFirstLetter } = require('meteor/tools-core/lib/string');
 
 const {
   getMeteorAppDir,
+  getMeteorToolsRequire,
   getMeteorInitialAppEntrypoints,
   isMeteorAppDevelopment,
   isMeteorAppRun,
   isMeteorAppBuild,
   isMeteorBlazeProject,
   isMeteorAppNative,
+  isMeteorAppNativeLivereload,
   isMeteorAppTest,
   isMeteorAppTestFullApp,
 } = require('meteor/tools-core/lib/meteor');
@@ -273,7 +275,8 @@ export function ensureModuleFilesExist() {
 }
 
 export function bumpServerRuntimeBuildId() {
-  if (!isMeteorAppRun() || !isMeteorAppDevelopment() || isMeteorAppNative()) {
+  if (!isMeteorAppRun() || !isMeteorAppDevelopment() ||
+      (isMeteorAppNative() && !isMeteorAppNativeLivereload())) {
     return;
   }
 
@@ -315,7 +318,10 @@ export function bumpServerRuntimeBuildId() {
       : `${contentsWithoutMarker.trimEnd()}\n${marker}\n`;
 
     if (nextContents !== contents) {
-      fs.writeFileSync(filePath, nextContents, 'utf8');
+      // Meteor caches file hashes while rebuilding clients. Its filesystem
+      // writer invalidates that cache so the server watcher sees this change.
+      const files = getMeteorToolsRequire('fs/files');
+      files.writeFile(files.convertToStandardPath(filePath), nextContents, 'utf8');
     }
   } catch (err) {
     logError(`Failed to update server runtime build id: ${err.message}`);
@@ -668,7 +674,7 @@ function getHmrCode(config, role) {
     !config?.isTest &&
     isMeteorAppRun() &&
     isMeteorAppDevelopment() &&
-    !isMeteorAppNative()
+    (!isMeteorAppNative() || isMeteorAppNativeLivereload())
   ) {
     return `/* Enables HMR */
 if (module.hot) {
@@ -722,7 +728,7 @@ import '../../${config?.entryFile}';`;
       config?.isServer &&
       config?.isDevelopment &&
       !config?.isTest &&
-      !config?.isNative
+      (!config?.isNative || isMeteorAppNativeLivereload())
     ) {
       const serverBundlePath = path.resolve(
         getMeteorAppDir(),

@@ -1,4 +1,4 @@
-name: Native mobile smoke tests
+name: Native mobile tests
 
 on:
   schedule:
@@ -12,19 +12,32 @@ concurrency:
 
 jobs:
   android:
+    name: ${{ matrix.scenario == 'run' && 'android' || 'android (blaze livereload)' }}
     if: github.event_name == 'schedule' || github.event.label.name == 'mobile'
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - scenario: run
+            command: npm run test:native -- --platform=android
+          - scenario: livereload-blaze
+            command: npm run test:native:capacitor:android:livereload:blaze
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "21"
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666"' \
@@ -39,7 +52,7 @@ jobs:
         run: npm ci
       - name: Install native-tests deps
         run: npm run install:native
-      - name: Run smoke flow on Android emulator
+      - name: Run native tests on Android emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -47,24 +60,40 @@ jobs:
           target: default
           force-avd-creation: false
           emulator-options: -no-window -no-audio -gpu swiftshader_indirect
-          script: npm run test:native -- --platform=android
+          script: ${{ matrix.command }}
       - name: Upload JUnit and device logs
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: native-android-${{ github.run_id }}
+          name: ${{ matrix.scenario == 'run' && 'native-android' || 'native-android-blaze-livereload' }}-${{ github.run_id }}
           path: tools/native-tests/junit/
 
   ios:
+    name: ${{ matrix.scenario == 'run' && 'ios' || 'ios (blaze livereload)' }}
     if: github.event_name == 'schedule' || github.event.label.name == 'mobile'
-    runs-on: macos-14
+    runs-on: macos-15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - scenario: run
+            command: npm run test:native -- --platform=ios
+          - scenario: livereload-blaze
+            command: npm run test:native:capacitor:ios:livereload:blaze
     timeout-minutes: 30
+    env:
+      MAESTRO_IOS_DEVICE: iPhone 17
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '26.3'
       - name: Install Maestro
         run: |
           curl -fsSL "https://get.maestro.mobile.dev" | bash
@@ -75,13 +104,13 @@ jobs:
         run: npm run install:native
       - name: Pre-boot iOS Simulator
         run: |
-          xcrun simctl boot "iPhone 15" || true
-          xcrun simctl bootstatus "iPhone 15" -b
-      - name: Run smoke flow on iOS Simulator
-        run: npm run test:native -- --platform=ios
+          xcrun simctl boot "iPhone 17" || true
+          xcrun simctl bootstatus "iPhone 17" -b
+      - name: Run native tests on iOS Simulator
+        run: ${{ matrix.command }}
       - name: Upload JUnit and device logs
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: native-ios-${{ github.run_id }}
+          name: ${{ matrix.scenario == 'run' && 'native-ios' || 'native-ios-blaze-livereload' }}-${{ github.run_id }}
           path: tools/native-tests/junit/

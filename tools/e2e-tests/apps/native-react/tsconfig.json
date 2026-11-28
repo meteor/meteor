@@ -1,0 +1,17 @@
+{
+  "files": [
+    ".meteor/types/packages.d.ts",
+    "imports/native.ts",
+    "native-types.test-d.ts"
+  ],
+  "compilerOptions": {
+    "target": "es2020",
+    "module": "esnext",
+    "moduleResolution": "node",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": ["node"],
+    "lib": ["esnext", "dom"]
+  }
+}

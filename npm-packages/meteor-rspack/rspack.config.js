@@ -228,6 +228,15 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   const isTestLike = !!Meteor.isTestLike;
   const swcExternalHelpers = !!Meteor.swcExternalHelpers;
   const isNative = !!Meteor.isNative;
+  const isRspackServe = !!Meteor.RSPACK_SERVE;
+  const nativeMode =
+    Meteor.nativeMode ||
+    process.env.METEOR_NATIVE_MODE ||
+    process.env.METEOR_CAPACITOR_MODE ||
+    '';
+  const isNativeLivereload = isNative && nativeMode === 'livereload';
+  const isClientDevServe =
+    isRspackServe && !!Meteor.isRun && !!Meteor.isClient && !Meteor.isTest;
   const devServerPort = Meteor.devServerPort || 8080;
 
   const projectDir = process.cwd();
@@ -307,6 +316,9 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     ? initialCurrentMode === "development"
     : !!Meteor.isDevelopment || !initialIsProd;
   const initialMode = initialIsProd ? "production" : "development";
+  const initialIsDevEnvironment =
+    (isRun && initialIsDev && !isTest && !arch && (!isNative || isNativeLivereload)) ||
+    (initialIsDev && isClientDevServe && !arch);
 
   // Initialized with pre-load values so helpers work during the first config load;
   // reassigned after load once mode is fully resolved.
@@ -321,7 +333,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     isJsxEnabled,
     isTsxEnabled,
     externalHelpers: enableSwcExternalHelpers,
-    isDevEnvironment: isRun && initialIsDev && !isTest && !isNative && !arch,
+    isDevEnvironment: initialIsDevEnvironment,
     isClient,
     isLegacy,
     isAngularEnabled,
@@ -429,7 +441,6 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   // Additional ignore entries
   const additionalEntries = [
     "**/.meteor/local/**",
-    path.join(projectDir, "dist", "**").replace(/\\/g, "/"),
     ...(isTest && isTestEager
       ? [`**/${buildContext}/**`, "**/.meteor/local/**", "node_modules/**"]
       : []),
@@ -439,6 +450,11 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   const watchOptions = {
     ignored: [
       ...createIgnoreGlobConfig([...meteorIgnoreEntries, ...additionalEntries]),
+      ...['dist', ...JSON.parse(process.env.RSPACK_NATIVE_PROJECT_DIRS || '[]')].map(dir =>
+        // Watchpack treats strings as globs, even the literal app directory.
+        path.resolve(projectDir, dir).split(path.sep).join('/')
+          .replace(/[?*{}[\]]/g, char => '\\x' + char.charCodeAt(0).toString(16))
+      ),
     ],
   };
 
@@ -447,7 +463,19 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     console.log("[i] Meteor flags:", Meteor);
   }
 
-  const isDevEnvironment = isRun && isDev && !isTest && !isNative && !arch;
+  const isDevEnvironment =
+    (isRun && isDev && !isTest && !arch && (!isNative || isNativeLivereload)) ||
+    (isDev && isClientDevServe && !arch);
+  if (Meteor.isDebug || Meteor.isVerbose) {
+    console.log("[i] Rspack serve flags:", {
+      isNative,
+      nativeMode,
+      isNativeLivereload,
+      isRspackServe,
+      isClientDevServe,
+      isDevEnvironment,
+    });
+  }
   swcConfigRule = createSwcConfig({
     isTypescriptEnabled,
     isReactEnabled,
@@ -494,7 +522,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     ...(Meteor.isBlazeEnabled && {
       externals: /\.html$/,
       isEagerImport: (module) => module.endsWith(".html"),
-      ...((isProd || arch || (isTest && isClient)) && {
+      ...((isProd || arch || (isTest && isClient) || (isClient && isNative && !isNativeLivereload)) && {
         lastImports: [`./${outputFilename}`],
       }),
     }),

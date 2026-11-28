@@ -111,6 +111,24 @@ export declare namespace WebApp {
 }
 
 export declare namespace WebAppInternals {
+  type ClientArchDetectorResult =
+    | string
+    | { arch: string; path?: string | undefined }
+    | null
+    | false
+    | undefined;
+
+  type ClientArchDetector = (
+    request: http.IncomingMessage,
+    categorizedRequest: CategorizedRequest,
+  ) => ClientArchDetectorResult;
+
+  /** Register a detector, or pass null to remove it. Returns the previous detector. */
+  function registerClientArchDetector(
+    key: string,
+    detector: ClientArchDetector | null,
+  ): ClientArchDetector | null;
+
   var NpmModules: {
     [key: string]: {
       version: string;
