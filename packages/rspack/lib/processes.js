@@ -537,14 +537,9 @@ export function getRspackEnv({ isClient, isServer, arch, isTest: inIsTest, isTes
       []),
   ].filter(Boolean);
 
-  const toolExtensions = typeof Plugin !== 'undefined' ? Plugin.getToolExtensions?.() : [];
-  const nativeProjectDirs = new Set((toolExtensions || []).flatMap(extension =>
-    (extension.platforms || []).map(platform => platform.nativeProjectDir).filter(Boolean)
-  ));
-
   // Pass structured values in the environment so shell wrappers preserve JSON.
   const envs = {
-    RSPACK_NATIVE_PROJECT_DIRS: JSON.stringify([...nativeProjectDirs]),
+    RSPACK_NATIVE_PROJECT_DIRS: JSON.stringify(getGlobalState(GLOBAL_STATE_KEYS.NATIVE_PROJECT_DIRS, [])),
     RSPACK_BANNER: JSON.stringify(getBuildFileContent({ ...module, ...env, ...side, role: FILE_ROLE.output }))
   };
 

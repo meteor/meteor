@@ -81,20 +81,8 @@ export function ensureCapacitorBuildContextExists() {
  */
 export function ensureCapacitorConfigExists() {
   const appDir = getMeteorAppDir();
-  const candidates = [
-    'capacitor.config.ts',
-    'capacitor.config.js',
-    'capacitor.config.mjs',
-    'capacitor.config.cjs',
-    'capacitor.config.json',
-  ];
-
-  for (const candidate of candidates) {
-    const candidatePath = path.join(appDir, candidate);
-    if (fs.existsSync(candidatePath)) {
-      return candidatePath;
-    }
-  }
+  const existing = Plugin.projectConfig.findProjectConfig(appDir, 'capacitor.config');
+  if (existing) return existing;
 
   const pkgJson = getMeteorAppPackageJson() || {};
   // Java package segment: [a-zA-Z][a-zA-Z0-9_]+, no dashes.
@@ -141,15 +129,6 @@ module.exports = defineConfig(Meteor => ({
   return target;
 }
 
-const CAPACITOR_CONFIG_LOOKUP = [
-  'capacitor.config.ts',
-  'capacitor.config.js',
-  'capacitor.config.cjs',
-  'capacitor.config.mjs',
-  'capacitor.config.json',
-];
-let configImportVersion = 0;
-
 export function formatCapacitorConfigError({ appDir, configPath, error }) {
   const displayPath = path.relative(appDir, configPath) || path.basename(configPath);
   return [
@@ -179,56 +158,13 @@ export function validateResolvedCapacitorConfig(resolved, { appDir, configPath }
  * @returns {Promise<object|null>}
  */
 export async function loadResolvedCapacitorConfig({ appDir = getMeteorAppDir() } = {}) {
-  let configPath;
-  for (const candidate of CAPACITOR_CONFIG_LOOKUP) {
-    const candidatePath = path.join(appDir, candidate);
-    if (fs.existsSync(candidatePath)) {
-      configPath = candidatePath;
-      break;
-    }
-  }
+  const configPath = Plugin.projectConfig.findProjectConfig(appDir, 'capacitor.config');
 
   if (!configPath) return null;
 
   let resolved;
   try {
-    if (configPath.endsWith('.mjs')) {
-      const { pathToFileURL } = require('url');
-      const url = pathToFileURL(configPath);
-      url.searchParams.set('meteor_config', String(++configImportVersion));
-      const mod = await import(url.href);
-      resolved = mod && mod.default ? mod.default : mod;
-    } else if (configPath.endsWith('.json')) {
-      resolved = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-    } else {
-      // Meteor's build-plugin require can't resolve arbitrary file paths;
-      // createRequire anchors a real Node require at the user's config.
-      const { createRequire } = require('module');
-      const nodeRequire = createRequire(configPath);
-      delete nodeRequire.cache[nodeRequire.resolve(configPath)];
-      let mod;
-      if (configPath.endsWith('.ts')) {
-        // Capacitor also requires the app's TypeScript installation for TS config.
-        const ts = nodeRequire('typescript');
-        const previous = nodeRequire.extensions['.ts'];
-        try {
-          nodeRequire.extensions['.ts'] = (configModule, filename) => {
-            const result = ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
-              compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2017, esModuleInterop: true },
-              fileName: filename,
-            });
-            configModule._compile(result.outputText, filename);
-          };
-          mod = nodeRequire(configPath);
-        } finally {
-          if (previous) nodeRequire.extensions['.ts'] = previous;
-          else delete nodeRequire.extensions['.ts'];
-        }
-      } else {
-        mod = nodeRequire(configPath);
-      }
-      resolved = await (mod && mod.default ? mod.default : mod);
-    }
+    resolved = await Plugin.projectConfig.readProjectConfig(configPath);
   } catch (error) {
     const message = formatCapacitorConfigError({ appDir, configPath, error });
     logError(isVerbose() && error.stack ? error.stack : message);

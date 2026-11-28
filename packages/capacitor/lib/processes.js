@@ -21,13 +21,12 @@ const {
 } = require('meteor/tools-core/lib/npm');
 const {
   getMeteorAppDir,
+  getNativeCommandEnv,
   inheritMeteorToolNodeFlags,
   isMeteorAppDevelopment,
   isMeteorAppProduction,
   isMeteorAppDebug,
   isMeteorAppConfigModernVerbose,
-  isMeteorAppRun,
-  isMeteorAppBuild,
   isMeteorAppNativeAndroid,
   isMeteorAppNativeIos,
 } = require('meteor/tools-core/lib/meteor');
@@ -97,8 +96,7 @@ export function getCapacitorRunMode({
  * Meteor flag object handed to the user's capacitor.config.js factory.
  */
 export function getCapacitorEnv({ platform, mode, mobileServerUrl } = {}) {
-  const isAndroid = isMeteorAppNativeAndroid();
-  const isIos = isMeteorAppNativeIos();
+  const nativePlatform = platform || (isMeteorAppNativeAndroid() ? 'android' : isMeteorAppNativeIos() ? 'ios' : '');
   const isDev = isMeteorAppDevelopment();
   const isProd = isMeteorAppProduction();
   const webDir = getCapacitorWebDir({ isDevelopment: isDev, isProduction: isProd });
@@ -108,16 +106,10 @@ export function getCapacitorEnv({ platform, mode, mobileServerUrl } = {}) {
     METEOR_CAPACITOR: 'true',
     METEOR_CAPACITOR_MODE: capacitorMode,
     METEOR_NATIVE_MODE: capacitorMode,
-    METEOR_CAPACITOR_PLATFORM: platform || (isAndroid ? 'android' : isIos ? 'ios' : ''),
+    METEOR_CAPACITOR_PLATFORM: nativePlatform,
     METEOR_BUILD_CONTEXT: CAPACITOR_BUILD_CONTEXT,
     METEOR_CAPACITOR_WEB_DIR: webDir,
-    METEOR_RUN: isMeteorAppRun() ? 'true' : 'false',
-    METEOR_BUILD: isMeteorAppBuild() ? 'true' : 'false',
-    METEOR_DEBUG: isMeteorAppDebug() ? 'true' : 'false',
-    METEOR_VERBOSE: isMeteorAppConfigModernVerbose() ? 'true' : 'false',
-    METEOR_NATIVE_ANDROID: isAndroid ? 'true' : 'false',
-    METEOR_NATIVE_IOS: isIos ? 'true' : 'false',
-    NODE_ENV: isProd ? 'production' : (process.env.NODE_ENV || 'development'),
+    ...getNativeCommandEnv(nativePlatform),
     ...(normalizedMobileServerUrl ? {
       MOBILE_ROOT_URL: normalizedMobileServerUrl,
       MOBILE_DDP_URL: normalizedMobileServerUrl,
@@ -243,22 +235,18 @@ function spawnCap(args, { cwd, label, env, onExit, onError, mode, platform, inte
   return proc;
 }
 
-/**
- * Runs `npx cap add <platform>`. Used internally by the run-time
- * auto-bootstrap and the add-platform branch so a freshly cloned project
- * doesn't need an explicit add-platform step. Skips if
- * `<appDir>/<platform>` already exists on disk.
- *
- * @returns {Promise<number>} Exit code (0 = success or already-present).
- */
-function runCapAdd({ appDir = getMeteorAppDir(), platform } = {}) {
-  if (!platform) return Promise.resolve(0);
-
-  const path = require('path');
-  const fs = require('fs');
-  const nativeDir = path.join(appDir, platform);
+/** Create the configured native project once across add, run, and build. */
+export async function addNativePlatformIfMissing({ appDir = getMeteorAppDir(), platform, nativeDir } = {}) {
+  if (!platform) return 0;
+  if (!nativeDir) {
+    const reader = Plugin.projectConfig;
+    const file = reader.findProjectConfig(appDir, 'capacitor.config');
+    const configured = file && await reader.readPlatformPath(file, [platform, 'path'], getCapacitorEnv({ platform }));
+    nativeDir = path.resolve(appDir, configured || platform);
+  }
   if (fs.existsSync(nativeDir)) {
-    return Promise.resolve(0);
+    if (isVerbose()) logInfo(`[Capacitor] Native project already exists at ${nativeDir}, skipping cap add`);
+    return 0;
   }
 
   return new Promise(resolve => {
@@ -278,27 +266,6 @@ function runCapAdd({ appDir = getMeteorAppDir(), platform } = {}) {
 }
 
 /**
- * `meteor add-platform <platform>` core: runs `npx cap add` if the native
- * dir is missing, no-ops if it exists. cap sync is intentionally skipped -
- * meteor run / meteor build handle that via transformAndSync (sync needs a
- * populated webDir that add-platform can't produce on its own).
- * @returns {Promise<number>}
- */
-export async function addNativePlatformIfMissing({ appDir = getMeteorAppDir(), platform, nativeDir } = {}) {
-  if (!platform) return 0;
-  const path = require('path');
-  const fs = require('fs');
-  nativeDir = nativeDir || path.join(appDir, platform);
-  if (fs.existsSync(nativeDir)) {
-    if (isVerbose()) {
-      logInfo(`[Capacitor] ${platform}: native project already exists at ./${platform}/, skipping cap add`);
-    }
-    return 0;
-  }
-  return runCapAdd({ appDir, platform });
-}
-
-/**
  * Ensures the native project for the currently-targeted platform exists.
  * Resolves the platform from the run-target args (android/ios/*-device).
  * For `meteor build`, selected project creation belongs to the build scenario.
@@ -309,8 +276,7 @@ export function ensureNativePlatformAdded({ appDir = getMeteorAppDir() } = {}) {
   const platform = isMeteorAppNativeAndroid() ? 'android'
     : isMeteorAppNativeIos() ? 'ios'
     : null;
-  if (!platform) return Promise.resolve(0);
-  return runCapAdd({ appDir, platform });
+  return addNativePlatformIfMissing({ appDir, platform });
 }
 
 /**

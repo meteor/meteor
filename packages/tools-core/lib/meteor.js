@@ -341,6 +341,19 @@ export function isMeteorAppBuild() {
   return ['build', 'deploy'].includes(Package?.meteor?.global?.currentCommand?.name);
 }
 
+// Flags used when evaluating native project configs and starting their CLI.
+export function getNativeCommandEnv(platform) {
+  return {
+    METEOR_NATIVE_ANDROID: String(platform === 'android'),
+    METEOR_NATIVE_IOS: String(platform === 'ios'),
+    METEOR_RUN: String(isMeteorAppRun()),
+    METEOR_BUILD: String(isMeteorAppBuild()),
+    METEOR_DEBUG: String(!!isMeteorAppDebug()),
+    METEOR_VERBOSE: String(!!isMeteorAppConfigModernVerbose()),
+    NODE_ENV: isMeteorAppProduction() ? 'production' : (process.env.NODE_ENV || 'development'),
+  };
+}
+
 /**
  * Checks if the current Meteor command is 'update'.
  * @returns {boolean} True if the current command is 'update', false otherwise.

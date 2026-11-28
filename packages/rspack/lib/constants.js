@@ -45,6 +45,7 @@ export const DEFAULT_RSDOCTOR_RSPACK_PLUGIN_VERSION = '1.6.4';
  * @property {string} BUILD_CONTEXT_FILES_CLEANED - Key for tracking if build context files have been cleaned
  */
 export const GLOBAL_STATE_KEYS = {
+  NATIVE_PROJECT_DIRS: 'rspack.nativeProjectDirs',
   CLIENT_PROCESS: 'rspack.clientProcess',
   SERVER_PROCESS: 'rspack.serverProcess',
   BUILD_PROCESSES: 'rspack.buildProcesses',

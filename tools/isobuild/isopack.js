@@ -6,6 +6,9 @@ import {
   onBuildOutputReady,
 } from "../tool-env/meteor-config";
 
+const { findProjectConfig, readProjectConfig, readPlatformPath } = require('../tool-extensions/project-config.cjs');
+const { resolveNativeProjectDirs } = require('../tool-extensions/native-project-dirs');
+
 var compiler = require('./compiler.js');
 var archinfo = require('../utils/archinfo');
 var _ = require('underscore');
@@ -555,6 +558,9 @@ Object.assign(Isopack.prototype, {
       // Project platforms from .meteor/platforms (set during prepareProjectForBuild)
       getPlatforms: getProjectPlatforms,
       getToolExtensions: getProjectToolExtensions,
+      projectConfig: { findProjectConfig, readProjectConfig, readPlatformPath },
+      getNativeProjectDirs: (appDir, getPlatformEnv, warn) =>
+        resolveNativeProjectDirs(getProjectToolExtensions(), appDir, getPlatformEnv, warn),
 
       // Generic build output context for build plugins that need to react
       // after an app bundle has been written.

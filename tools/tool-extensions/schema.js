@@ -14,12 +14,25 @@ export function normalizeToolExtension(input, { packageName } = {}) {
     throw schemaError(`unsupported tool extension apiVersion: ${input.apiVersion}`);
   }
 
+  const config = input.nativeProjectConfig;
+  if (config != null && (
+    typeof config.file !== 'string' || !config.file ||
+    (config.platformEnv != null && (typeof config.platformEnv !== 'string' || !config.platformEnv)) ||
+    !config.paths || typeof config.paths !== 'object' || Array.isArray(config.paths) ||
+    Object.values(config.paths).some(keys =>
+      !Array.isArray(keys) || !keys.length || keys.some(key => typeof key !== 'string' || !key)
+    )
+  )) {
+    throw schemaError('nativeProjectConfig requires a config file base name and a key path for each configured platform');
+  }
+
   const normalized = {
     id: input.id,
     label: input.label || input.id,
     apiVersion: input.apiVersion,
     packageName: input.packageName || packageName,
     fallback: input.fallback === true,
+    ...(config && { nativeProjectConfig: config }),
     platforms: normalizePlatforms(input.platforms || []),
     buildTargets: normalizeBuildTargets(input.buildTargets || []),
     commands: Array.isArray(input.commands)

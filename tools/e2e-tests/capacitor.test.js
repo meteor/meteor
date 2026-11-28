@@ -1089,15 +1089,24 @@ describe('Capacitor App Web Lifecycle / Blaze', () => {
     await assertFileExist(appDir, '_build/native-dev/index.html');
   });
 
-  test('plain web development ignores native projects and generated webDirs after native generation', async () => {
+  test.each(['ios', 'native/ios'])('plain web development ignores native projects at %s and generated webDirs', async nativeDir => {
     const generatedHtml = '<!doctype html><html><body>Generated native app</body></html>';
-    await fs.outputFile(path.join(appDir, 'ios/App/App/public/index.html'), generatedHtml);
+    const nativeHtml = nativeDir + '/App/App/public/index.html';
     await fs.outputFile(path.join(appDir, '_build/native-dev/index.html'), generatedHtml);
     await fs.outputFile(path.join(appDir, '_build/native-prod/index.html'), generatedHtml);
-    const nativeFile = 'ios/App/App/public/watch-probe.json';
+    const nativeFile = nativeDir + '/App/App/public/watch-probe.json';
     const sourceFile = 'imports/ios/watch-probe.json';
-    const probes = await snapshotFiles(appDir, [nativeFile, sourceFile]);
+    const probes = await snapshotFiles(appDir, [nativeFile, nativeHtml, sourceFile, 'capacitor.config.js']);
     try {
+      if (nativeDir !== 'ios') {
+        await fs.writeFile(path.join(appDir, 'capacitor.config.js'), [
+          "const { defineConfig } = require('@meteorjs/capacitor');",
+          "module.exports = defineConfig(Meteor => ({",
+          "  ios: { path: Meteor.isRun && Meteor.isNativeIos ? 'native/ios' : 'ios' },",
+          "}));",
+        ].join('\n'));
+      }
+      await fs.outputFile(path.join(appDir, nativeHtml), generatedHtml);
       await fs.outputJson(path.join(appDir, nativeFile), 'native-before');
       await fs.outputJson(path.join(appDir, sourceFile), 'source-before');
       await fs.appendFile(path.join(appDir, 'client/main.js'),

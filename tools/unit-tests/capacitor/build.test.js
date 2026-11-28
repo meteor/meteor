@@ -10,6 +10,8 @@ jest.mock('meteor/tools-core/lib/meteor', () => ({
   isMeteorAppConfigModernVerbose: () => false,
 }), { virtual: true });
 jest.mock('meteor/tools-core/lib/log', () => ({ logInfo() {}, logError() {} }), { virtual: true });
+beforeAll(() => { global.Plugin = { projectConfig: require('../../tool-extensions/project-config.cjs') }; });
+afterAll(() => { delete global.Plugin; });
 jest.mock('meteor/tools-core/lib/git', () => ({}), { virtual: true });
 jest.mock('meteor/tools-core/lib/global-state', () => ({}), { virtual: true });
 

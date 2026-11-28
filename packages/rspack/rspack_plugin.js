@@ -68,6 +68,8 @@ const {
   isMeteorAppBuild,
   isMeteorAppUpdate,
   getMeteorInitialAppEntrypoints,
+  getMeteorAppDir,
+  getNativeCommandEnv,
   isMeteorAppTest,
   isMeteorAppTestWatch,
   isMeteorAppTestFullApp,
@@ -82,6 +84,7 @@ const {
 
 const {
   logInfo,
+  logWarn,
   logError,
 } = require('meteor/tools-core/lib/log');
 
@@ -180,6 +183,15 @@ if (isMeteorAppRun() || isMeteorAppBuild() || isMeteorAppTest()) {
 
     // Configure Meteor settings for Rspack
     configureMeteorForRspack();
+
+    if (isMeteorAppRun() || isMeteorAppTestWatch()) {
+      const nativeProjectDirs = Plugin.getNativeProjectDirs
+        ? await Plugin.getNativeProjectDirs(getMeteorAppDir(), getNativeCommandEnv, logWarn)
+        : (Plugin.getToolExtensions?.() || []).flatMap(extension =>
+          (extension.platforms || []).map(platform => platform.nativeProjectDir).filter(Boolean)
+        );
+      setGlobalState(GLOBAL_STATE_KEYS.NATIVE_PROJECT_DIRS, nativeProjectDirs);
+    }
 
     const useNativeDevServer = isMeteorAppNativeLivereload();
 

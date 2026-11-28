@@ -11,11 +11,14 @@ jest.mock('meteor/tools-core/lib/meteor', () => ({
   getMeteorAppDir: () => process.cwd(), inheritMeteorToolNodeFlags: env => env,
   isMeteorAppDevelopment: () => false, isMeteorAppProduction: () => true,
   isMeteorAppDebug: () => false, isMeteorAppConfigModernVerbose: () => true,
-  isMeteorAppRun: () => false, isMeteorAppBuild: () => true,
+  getNativeCommandEnv: () => ({ NODE_ENV: 'production' }),
   isMeteorAppNativeAndroid: () => false, isMeteorAppNativeIos: () => false,
 }), { virtual: true });
-const { runCapBuild } = require('../../../packages/capacitor/lib/processes');
+const { addNativePlatformIfMissing, runCapBuild } = require('../../../packages/capacitor/lib/processes');
 const { logRaw } = require('meteor/tools-core/lib/log');
+beforeAll(() => { global.Plugin = { projectConfig: require('../../tool-extensions/project-config.cjs') }; });
+afterAll(() => { delete global.Plugin; });
+
 let appDir;
 beforeEach(() => { appDir = fs.mkdtempSync(path.join(os.tmpdir(), 'native-build-process-')); logRaw.mockClear(); });
 afterEach(() => { fs.rmSync(appDir, { recursive: true, force: true }); });
@@ -39,6 +42,18 @@ test('native builder exit status reaches the package and split signing output is
 
 test('a missing native builder rejects instead of leaving Meteor waiting', async () => {
   await expect(runCapBuild({ appDir, request: { platform: 'ios', args: ['build', 'ios'] } })).rejects.toMatchObject({ code: 'ENOENT' });
+});
+
+test('platform creation checks the configured directory even when the default directory exists', async () => {
+  const project = path.join(appDir, 'native/ios');
+  fs.mkdirSync(path.join(appDir, 'ios'));
+  fs.writeFileSync(path.join(appDir, 'capacitor.config.js'),
+    "module.exports = { ios: { path: 'native/' + process.env.METEOR_CAPACITOR_PLATFORM } };");
+  executable(path.join(appDir, 'node_modules/.bin/cap'), "require('fs').mkdirSync('native/ios', { recursive: true });");
+  expect(await addNativePlatformIfMissing({ appDir, platform: 'ios' })).toBe(0);
+  expect(fs.statSync(project).isDirectory()).toBe(true);
+  executable(path.join(appDir, 'node_modules/.bin/cap'), "process.exit(23);");
+  expect(await addNativePlatformIfMissing({ appDir, platform: 'ios' })).toBe(0);
 });
 
 test('Android debug runs the application Gradle wrapper with its selected task', async () => {

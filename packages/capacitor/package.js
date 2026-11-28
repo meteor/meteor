@@ -6,6 +6,11 @@ Package.describe({
 Package.registerToolExtension({
   id: 'meteor:capacitor',
   label: 'Meteor Capacitor',
+  nativeProjectConfig: {
+    file: 'capacitor.config',
+    platformEnv: 'METEOR_CAPACITOR_PLATFORM',
+    paths: { android: ['android', 'path'], ios: ['ios', 'path'] },
+  },
   apiVersion: '1.0',
   platforms: [
     {

@@ -28,7 +28,7 @@ jest.mock('meteor/tools-core/lib/meteor', () => ({
   getMeteorAppDir: () => process.cwd(), inheritMeteorToolNodeFlags: env => env,
   isMeteorAppDevelopment: () => true, isMeteorAppProduction: () => false,
   isMeteorAppDebug: () => false, isMeteorAppConfigModernVerbose: () => false,
-  isMeteorAppRun: () => true, isMeteorAppBuild: () => false,
+  getNativeCommandEnv: () => ({ NODE_ENV: 'development' }),
   isMeteorAppNativeAndroid: () => false, isMeteorAppNativeIos: () => false,
 }), { virtual: true });
 const { resolveCapTarget, listCapTargets } = require('../../../packages/capacitor/lib/processes');
