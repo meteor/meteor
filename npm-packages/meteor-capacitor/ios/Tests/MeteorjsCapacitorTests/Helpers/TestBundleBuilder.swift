@@ -54,7 +54,7 @@ final class TestBundleBuilder {
 
     // MARK: - Manifest & index HTML generation
 
-    func buildManifestJson() -> String {
+    func buildManifestJson(urlPrefix: String = "") -> String {
         var sb = "{\"version\":\"\(version)\","
         sb += "\"cordovaCompatibilityVersions\":{\"ios\":\"\(compatibility)\"},"
         sb += "\"manifest\":["
@@ -63,13 +63,13 @@ final class TestBundleBuilder {
             if i > 0 { sb += "," }
             sb += "{\"where\":\"client\","
             sb += "\"path\":\"\(asset.path)\","
-            sb += "\"url\":\"/\(asset.path)\","
+            sb += "\"url\":\"\(urlPrefix)/\(asset.path)\","
             sb += "\"type\":\"\(asset.type)\","
             sb += "\"cacheable\":\(asset.cacheable),"
             sb += "\"hash\":\"\(asset.hash)\""
             if let sourceMapPath = asset.sourceMapPath {
                 sb += ",\"sourceMap\":\"\(sourceMapPath)\""
-                sb += ",\"sourceMapUrl\":\"/\(sourceMapPath)\""
+                sb += ",\"sourceMapUrl\":\"\(urlPrefix)/\(sourceMapPath)\""
             }
             sb += "}"
         }

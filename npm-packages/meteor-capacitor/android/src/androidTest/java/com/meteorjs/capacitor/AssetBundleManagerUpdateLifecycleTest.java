@@ -110,11 +110,12 @@ public class AssetBundleManagerUpdateLifecycleTest {
     }
 
     @Test
-    public void downloadNewVersion_storesBundleAndNotifies() throws Exception {
+    public void downloadNewVersion_storesPrefixedAndUnprefixedAssets() throws Exception {
         String newVersion = "v-new-1";
+        String script = "console.log('v1');";
 
         TestBundleBuilder serverBuilder = new TestBundleBuilder(newVersion, appId, rootUrl, compatibility)
-            .addAsset("app/main.js", "js", "console.log('v1');")
+            .addAssetWithUrl("app/main.js", "/__cordova/app/main.js", "js", script)
             .addAsset("app/style.css", "css", "body{}");
         server.setDispatcher(serverBuilder.buildDispatcher());
 
@@ -156,7 +157,7 @@ public class AssetBundleManagerUpdateLifecycleTest {
         assertEquals(newVersion, result.getVersion());
 
         File mainJs = new File(versionsDirectory, newVersion + "/app/main.js");
-        assertTrue("Downloaded asset should exist on disk", mainJs.exists());
+        assertEquals(script, new String(java.nio.file.Files.readAllBytes(mainJs.toPath()), StandardCharsets.UTF_8));
 
         File styleCss = new File(versionsDirectory, newVersion + "/app/style.css");
         assertTrue("Downloaded asset should exist on disk", styleCss.exists());

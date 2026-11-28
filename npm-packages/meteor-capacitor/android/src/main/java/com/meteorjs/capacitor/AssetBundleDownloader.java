@@ -192,7 +192,11 @@ final class AssetBundleDownloader {
 
     private URL downloadUrlForAsset(Asset asset) throws IOException {
         String urlPath = asset.urlPath;
-        if (urlPath.startsWith("/")) {
+        // The HCP base URL already includes the architecture directory for this manifest.
+        String archPrefix = "/__cordova/";
+        if (urlPath.startsWith(archPrefix)) {
+            urlPath = "./" + urlPath.substring(archPrefix.length());
+        } else if (urlPath.startsWith("/")) {
             urlPath = urlPath.substring(1);
         }
 

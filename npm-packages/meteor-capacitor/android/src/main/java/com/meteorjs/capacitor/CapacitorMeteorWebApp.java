@@ -7,6 +7,7 @@ package com.meteorjs.capacitor;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
@@ -123,8 +124,9 @@ final class CapacitorMeteorWebApp implements AssetBundleManager.Callback {
                 return;
             }
 
-            URL rootUrl = new URL(rootUrlString);
-            URL baseUrl = new URL(rootUrl, "__cordova/");
+            Uri updateDir = Uri.parse(rootUrlString).buildUpon()
+                .appendEncodedPath("__cordova/").clearQuery().fragment(null).build();
+            URL baseUrl = new URL(updateDir.toString());
             assetBundleManager.checkForUpdates(baseUrl);
             callback.onComplete(null);
         } catch (MalformedURLException e) {

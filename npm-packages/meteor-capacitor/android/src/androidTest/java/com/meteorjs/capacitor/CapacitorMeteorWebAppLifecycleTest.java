@@ -27,6 +27,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 
 @RunWith(AndroidJUnit4.class)
@@ -159,6 +160,26 @@ public class CapacitorMeteorWebAppLifecycleTest {
     @FunctionalInterface
     private interface Condition {
         boolean check() throws Exception;
+    }
+
+    @Test
+    public void checkForUpdates_preservesRootUrlPathWithoutTrailingSlash() throws Exception {
+        rootUrl = server.url("/tenant").toString();
+        AssetBundle initial = createBundle("initial");
+        WebAppConfiguration configuration = createConfiguration();
+        CapacitorMeteorWebApp app = new CapacitorMeteorWebApp(
+            context, new Handler(Looper.getMainLooper()), Executors.newSingleThreadExecutor(),
+            configuration, createManager(configuration, initial), initial, initial, versionsDirectory, servingDirectory
+        );
+        try {
+            server.enqueue(new MockResponse().setBody(
+                new TestBundleBuilder("initial", appId, rootUrl, compatibility).buildManifestJson()
+            ));
+            app.checkForUpdates(error -> assertNull(error));
+            assertEquals("/tenant/__cordova/manifest.json", server.takeRequest(10, TimeUnit.SECONDS).getPath());
+        } finally {
+            app.handleOnDestroy();
+        }
     }
 
     @Test

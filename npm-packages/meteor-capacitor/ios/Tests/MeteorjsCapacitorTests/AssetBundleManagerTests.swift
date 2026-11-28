@@ -63,14 +63,21 @@ final class AssetBundleManagerTests: XCTestCase {
 
     // MARK: - Tests
 
-    func testDownloadNewVersion_storesBundleAndNotifies() throws {
+    func testDownloadNewVersion_storesAssetsFromArchitecturePrefixedManifest() throws {
         let newVersion = "v-new-1"
+        let basePath = "/tenant/__cordova"
+        let baseURL = URL(string: "\(rootUrl)\(basePath)/")!
+        let script = "console.log('v1');"
+        let sourceMap = #"{"version":3,"sources":["main.js"]}"#
 
         let serverBuilder = TestBundleBuilder(
             version: newVersion, appId: appId, rootUrl: rootUrl, compatibility: compatibility)
-            .addAsset("app/main.js", type: "js", content: "console.log('v1');")
+            .addAssetWithSourceMap("app/main.js", type: "js", content: script, sourceMapPath: "app/main.js.map")
             .addAsset("app/style.css", type: "css", content: "body{}")
-        MockURLProtocol.routes = serverBuilder.buildRoutes(basePath: basePath)
+        var routes = serverBuilder.buildRoutes(basePath: basePath)
+        routes[basePath + "/manifest.json"] = .init(statusCode: 200, body: serverBuilder.buildManifestJson(urlPrefix: "/__cordova"))
+        routes[basePath + "/app/main.js.map"] = .init(statusCode: 200, body: sourceMap)
+        MockURLProtocol.routes = routes
 
         let initial = try createInitialBundle()
         let manager = createManager(initial: initial)
@@ -101,8 +108,8 @@ final class AssetBundleManagerTests: XCTestCase {
 
         // Verify asset files exist on disk
         let mainJs = versionsDir.appendingPathComponent("\(newVersion)/app/main.js")
-        XCTAssertTrue(FileManager.default.fileExists(atPath: mainJs.path),
-            "Downloaded asset should exist on disk")
+        XCTAssertEqual(try String(contentsOf: mainJs, encoding: .utf8), script)
+        XCTAssertEqual(try String(contentsOf: mainJs.appendingPathExtension("map"), encoding: .utf8), sourceMap)
 
         let styleCss = versionsDir.appendingPathComponent("\(newVersion)/app/style.css")
         XCTAssertTrue(FileManager.default.fileExists(atPath: styleCss.path),
