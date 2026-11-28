@@ -2,6 +2,8 @@ import { Tinytest } from 'meteor/tinytest';
 import { Meteor } from 'meteor/meteor';
 import { Instrumentation } from 'meteor/instrumentation';
 import { makeTestConnection } from 'meteor/test-helpers';
+import { Mongo } from 'meteor/mongo';
+import { DDPServer } from 'meteor/ddp-server';
 import { previewError, previewValue } from './preview.js';
 
 // What the instr_test.mutate handler actually SAW — proves projector mutations
@@ -15,6 +17,13 @@ Meteor.methods({
   'instr_test.ctx': function () { return Instrumentation.currentContext(); },
   'instr_test.mutate': async (obj) => { mutateSeen.push(obj.value); return { value: obj.value }; },
   'instr_test.captured': function (data) { return data; },
+  // Holds the method's write fence open past the handler's return, as a polling
+  // observer does until its next poll: 'result' then goes out before 'updated'.
+  'instr_test.heldFence': () => {
+    const write = DDPServer._getCurrentFence().beginWrite();
+    setTimeout(() => write.committed(), 30);
+    return 'ok';
+  },
   // An application error whose `reason` getter throws: building its preview must
   // not break the reply path (the caller still gets THIS error, not the getter's).
   'instr_test.evilError': () => {
@@ -331,6 +340,96 @@ Tinytest.addAsync('instrumentation - DDP client method error emits method.error 
     test.equal(ev.error && ev.error.error, 'nope');
     clientConn.disconnect();
   } finally { c.stop(); }
+});
+
+// method.updated marks the write fence of a DDP method call: it fires once the
+// 'updated' message is out. Nothing holds the fence here, so 'updated' goes out
+// before 'result' and the event lands between method.start and method.end.
+// handlerMs isolates the handler's own time.
+Tinytest.addAsync('instrumentation - method.updated lands between start and end when nothing holds the fence', async function (test) {
+  const events = [];
+  const a = collect('method.start', events);
+  const b = collect('method.updated', events);
+  const c = collect('method.end', events);
+  try {
+    const [clientConn, serverConn] = await connect(test);
+    test.equal(await clientConn.callAsync('instr_test.echo', 21), 42);
+    const mine = events.filter((e) => e.name === 'instr_test.echo' && e.connectionId === serverConn.id);
+    test.equal(mine.map((e) => e.type), ['method.start', 'method.updated', 'method.end']);
+    const [start, updated] = mine;
+    test.equal(updated.traceId, start.traceId);
+    test.equal(updated.argsCount, 1);
+    test.isUndefined(updated.args, 'args not captured by default');
+    test.equal(typeof updated.durationMs, 'number');
+    test.equal(typeof updated.handlerMs, 'number');
+    test.isTrue(updated.handlerMs <= updated.durationMs, 'the handler time is part of the total');
+    clientConn.disconnect();
+  } finally { a.stop(); b.stop(); c.stop(); }
+});
+
+// When an observer still holds the fence after the handler returned (the polling
+// driver until its next poll, an oplog or change stream observer still catching
+// up), 'result' goes out first and method.updated lands AFTER method.end. A
+// write held open by hand reproduces that order whatever the driver.
+Tinytest.addAsync('instrumentation - method.updated lands after method.end when the fence is still held', async function (test) {
+  const events = [];
+  const a = collect('method.start', events);
+  const b = collect('method.updated', events);
+  const c = collect('method.end', events);
+  try {
+    const [clientConn, serverConn] = await connect(test);
+    const updatedSeen = new Promise((resolve) => {
+      const h = Instrumentation.on('method.updated', (e) => {
+        if (e.name === 'instr_test.heldFence' && e.connectionId === serverConn.id) { h.stop(); resolve(); }
+      });
+    });
+    test.equal(await clientConn.callAsync('instr_test.heldFence'), 'ok');
+    await updatedSeen;
+    const mine = events.filter((e) => e.name === 'instr_test.heldFence' && e.connectionId === serverConn.id);
+    test.equal(mine.map((e) => e.type), ['method.start', 'method.end', 'method.updated']);
+    const [start, end, updated] = mine;
+    test.equal(updated.traceId, start.traceId);
+    test.isTrue(updated.handlerMs <= end.durationMs, 'the handler had returned when the result went out');
+    test.isTrue(updated.durationMs >= end.durationMs, 'the fence outlived the result');
+    clientConn.disconnect();
+  } finally { a.stop(); b.stop(); c.stop(); }
+});
+
+Tinytest.addAsync('instrumentation - a server-side call emits no method.updated', async function (test) {
+  const updates = [];
+  const b = collect('method.updated', updates);
+  try {
+    test.equal(await Meteor.callAsync('instr_test.echo', 2), 4);
+    test.equal(updates.filter((e) => e.name === 'instr_test.echo').length, 0, 'no updated message, no event');
+  } finally { b.stop(); }
+});
+
+const Items = new Mongo.Collection('instr_test_items');
+Meteor.publish('instr_test.items', function () { return Items.find(); });
+
+// ddp.message.out reports each message written to the socket — kind, size and
+// collection only. The document itself must never reach a listener.
+Tinytest.addAsync('instrumentation - ddp.message.out reports every outbound message without its documents', async function (test) {
+  await Items.removeAsync({});
+  await Items.insertAsync({ _id: 'item1', secret: 'do not leak' });
+  const out = [];
+  const a = collect('ddp.message.out', out);
+  try {
+    const [clientConn, serverConn] = await connect(test);
+    test.equal(await clientConn.callAsync('instr_test.echo', 21), 42);
+    await new Promise((resolve) => clientConn.subscribe('instr_test.items', { onReady: resolve }));
+    const mine = out.filter((e) => e.connectionId === serverConn.id);
+    const kinds = mine.map((e) => e.msg);
+    test.isTrue(kinds.includes('updated') && kinds.includes('result'), 'method replies are reported');
+    test.isTrue(kinds.includes('ready'), 'subscription replies are reported');
+    const added = mine.find((e) => e.msg === 'added');
+    test.isTrue(!!added, 'document messages are reported');
+    test.equal(added.collection, 'instr_test_items');
+    test.equal(Object.keys(added).sort(), ['bytes', 'collection', 'connectionId', 'eventName', 'msg', 'ts', 'type']);
+    test.isTrue(added.bytes > 0, 'bytes is the serialized size');
+    test.isUndefined(mine.find((e) => e.msg === 'result').collection, 'collection only on document messages');
+    clientConn.disconnect();
+  } finally { a.stop(); }
 });
 
 // A publication whose handler calls this.error(). On the error path the

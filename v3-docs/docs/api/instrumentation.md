@@ -53,19 +53,21 @@ call. A payload is built only when at least one listener is registered for that
 type, so events you don't listen to cost nothing — and with the package not
 added, the hooks don't exist at all.
 
-There are nine event types:
+There are eleven event types:
 
 | Event | Fires when |
 | --- | --- |
 | `method.start` | a method invocation begins (before the handler runs) |
 | `method.end` | a method invocation resolves successfully |
 | `method.error` | a method invocation throws |
+| `method.updated` | a DDP client's method has its writes committed, as `updated` goes out |
 | `publication.start` | a publication's handler begins |
 | `publication.ready` | a publication signals it is ready (`this.ready()`) |
 | `publication.stop` | a subscription is torn down |
 | `publication.error` | a publication errors (`this.error()`) |
 | `ddp.connection.open` | a client opens a DDP connection |
 | `ddp.connection.close` | a DDP connection closes |
+| `ddp.message.out` | a DDP message is written to a client's socket |
 
 A method or publication event looks like this:
 
@@ -86,7 +88,7 @@ A method or publication event looks like this:
 The `traceId` is shared between an invocation's `start` and its `end`/`error`, so
 you can correlate them. Beyond the fields above:
 
-- `durationMs` is added on `method.end`, `method.error`, `publication.ready`,
+- `durationMs` is added on `method.end`, `method.error`, `method.updated`, `publication.ready`,
   `publication.stop` and `publication.error`.
 - `subscriptionId` is added on every `publication.*` event.
 - `args` and `result` appear only if you opt in — see [configuration](#configuration).
@@ -97,6 +99,28 @@ Connection events are lighter — there is no invocation behind them. They carry
 `type`, `eventName`, `ts` and `connectionId`, plus `durationMs` (the connection's
 lifetime) on close. The client IP is **opt-in** — `clientAddress` appears on
 `ddp.connection.open` only after `configure({ captureClientAddress: true })`.
+
+`method.updated` exists only for methods called over DDP: a server-side
+`Meteor.callAsync` sends no `updated` message. It fires once the method's writes
+have been committed and every observer has reacted to them, right after the
+`updated` message has been written. Do not rely on its position relative to
+`method.end` or `method.error`: when nothing holds the write fence once the
+handler returns, `updated` goes out before `result` and `method.updated` lands
+before `method.end`; when an observer still holds it, as the polling driver does
+until its next poll, or an oplog or change stream observer still catching up,
+`result` goes out first and `method.updated` arrives after `method.end`. It
+carries the invocation's `traceId`, `durationMs` since `method.start`, and
+`handlerMs`, how long the method function itself ran; the difference is the time
+the write fence took, a classic Meteor latency signal.
+
+`ddp.message.out` fires once per DDP message written to a client's socket, after
+serialization, so a message queued while its session waits for a reconnection is
+reported when it is actually sent. It carries `connectionId`, `msg` (the DDP
+message kind: `added`, `changed`, `removed`, `ready`, `result`, `updated`,
+`nosub`, ...), `bytes` (the UTF-8 size of the serialized message) and, on
+document messages only, `collection`. It never carries document ids, fields or
+values. Aggregate it (counters and histograms by `msg` and `collection`) rather
+than turning each message into a span.
 
 ## Reading the current context
 

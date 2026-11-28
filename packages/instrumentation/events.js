@@ -25,6 +25,7 @@ function methodPayload(type, raw) {
     argsCount: raw.args ? raw.args.length : 0,
   };
   if (raw.durationMs !== undefined) event.durationMs = raw.durationMs;
+  if (raw.handlerMs !== undefined) event.handlerMs = raw.handlerMs;
 
   const args = captureArgs(raw.name, raw.args);
   if (args !== undefined) event.args = args;
@@ -70,9 +71,24 @@ function connectionPayload(type, raw) {
   return event;
 }
 
+// One event per message written to a socket: the DDP `msg` kind, the collection
+// for document messages, and the serialized size. Never the document id, fields
+// or values. `bytes` is computed here, so it costs nothing without a listener.
+function messagePayload(type, raw) {
+  const event = {
+    ...envelope(type),
+    connectionId: raw.connectionId,
+    msg: raw.msg.msg,
+    bytes: Buffer.byteLength(raw.stringMsg),
+  };
+  if (raw.msg.collection !== undefined) event.collection = raw.msg.collection;
+  return event;
+}
+
 function buildPayload(type, raw) {
   if (type.startsWith('method.')) return methodPayload(type, raw);
   if (type.startsWith('publication.')) return publicationPayload(type, raw);
+  if (type === 'ddp.message.out') return messagePayload(type, raw);
   return connectionPayload(type, raw);
 }
 
