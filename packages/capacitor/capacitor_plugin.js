@@ -74,18 +74,19 @@ const {
 } = require('./lib/command');
 const { getCapacitorHcpMode } = require('./lib/hcp');
 
-// A web-only command can encounter files left by an earlier native build.
-const nativeProjectDirs = await Plugin.getNativeProjectDirs(
-  getMeteorAppDir(), getNativeCommandEnv, logWarn
-);
-Plugin.excludeAppDirectories(getCapacitorIgnoreCandidates(nativeProjectDirs));
-
 if (isMeteorAppUpdate() && Package.meteor.global.currentCommand.options.npm) {
   // Updating npm dependencies must not scaffold projects, sync, or launch a device.
   await ensureCapacitorInstalled({ platforms: getMeteorAppPlatforms() });
 } else if (isCapacitorOptIn()) {
   await runCapacitorPlugin();
 }
+
+// Configs can import npm dependencies installed during setup. Web-only commands
+// also need the resolved directories when an earlier native build left files there.
+const nativeProjectDirs = await Plugin.getNativeProjectDirs(
+  getMeteorAppDir(), getNativeCommandEnv, logWarn
+);
+Plugin.excludeAppDirectories(getCapacitorIgnoreCandidates(nativeProjectDirs));
 
 async function runCapacitorPlugin() {
   try {

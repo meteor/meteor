@@ -483,12 +483,23 @@ describe('Capacitor App Web Lifecycle /', () => {
   });
 
   test('"meteor add-platform ios" installs deps and creates native context', async () => {
-    const result = await runMeteorCommand('add-platform', ['ios'], tempDir, {
-      captureOutput: true,
-      checkExitCode: true,
-      env: e2eEnv(),
-    });
+    const config = path.join(tempDir, 'capacitor.config.js');
+    const originalConfig = await fs.readFile(config, 'utf8');
+    let result;
+    try {
+      await assertPathNotExist(tempDir, 'node_modules/@capacitor/ios');
+      // The config can import metadata from the platform being added.
+      await fs.writeFile(config, "require('@capacitor/ios/package.json');\n" + originalConfig);
+      result = await runMeteorCommand('add-platform', ['ios'], tempDir, {
+        captureOutput: true,
+        checkExitCode: true,
+        env: e2eEnv(),
+      });
+    } finally {
+      await fs.writeFile(config, originalConfig);
+    }
 
+    expectOutputNotContains(result.outputLines, /Could not read capacitor\.config\.js/);
     expectOutputContains(result.outputLines, /Capacitor: updating npm dependencies/);
     expectOutputContains(result.outputLines, /Capacitor dependencies are up to date/);
     expectOutputContains(result.outputLines, /Capacitor: added ios platform|ios: added platform/);
