@@ -93,9 +93,8 @@ Here's a sample _index.html_ you might use to get started:
 ```javascript [index.js]
 /* global WebApp Assets */
 import crypto from "crypto";
-import express from "express";
 
-const router = express.Router();
+const router = WebApp.express.Router();
 
 router.get("/", async function (req, res, next) {
   const buf = await Assets.getTextAsync("index.html");
@@ -128,7 +127,7 @@ There are a couple things to think about with this approach.
 
 We're reading the contents of index.html using the [Assets](../api/assets.md) module that makes it really easy to read files out of the _private_ root folder.
 
-We're using the [connect-route](https://www.npmjs.com/package/connect-route) NPM package to simplify WebApp route processing. But you can use any package you want to understand what is being requested.
+We're using the router of the Meteor's bundled Express to simplify WebApp route processing. But you can use any package you want to understand what is being requested.
 
 And finally, if you decide to use this technique you'll want to make sure you understand how conflicting client side routing will affect user experience.
 
