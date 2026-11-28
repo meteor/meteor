@@ -124,7 +124,9 @@ exports.hasScheme = function (str) {
 };
 
 exports.isIPv4Address = function (str) {
-  return REGEX_IPV4_ADDRESS.test(str);
+  // The regex checks the shape; each of the four parts must also be 0-255.
+  return REGEX_IPV4_ADDRESS.test(str) &&
+    str.split('.').every(part => Number(part) <= 255);
 };
 
 // XXX: Move to e.g. formatters.js?
