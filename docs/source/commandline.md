@@ -60,7 +60,7 @@ Run the project, but suspend the server process for debugging.
 > `test`, or `test-packages` command.
 >
 > The syntax of these flags is the same as the equivalent Node.js
-> [flags](https://nodejs.org/en/docs/inspector/#command-line-options),
+> [flags](https://nodejs.org/en/learn/getting-started/debugging#command-line-options),
 > with two notable differences:
 >
 > * The flags affect the server process spawned by the build process,

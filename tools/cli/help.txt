@@ -125,7 +125,7 @@ The 'meteor debug' command is deprecated in favor of 'meteor --inspect-brk'.
 
 The syntax of the --inspect and --inspect-brk flags is the same as the
 corresponding Node.js options:
-https://nodejs.org/en/docs/inspector/#command-line-options
+https://nodejs.org/en/learn/getting-started/debugging#command-line-options
 
 Two notable differences from the Node.js behavior:
 
