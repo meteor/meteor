@@ -2002,6 +2002,35 @@ Tinytest.addAsync('livedata connection - reset waits for the current subscriptio
   test.isTrue(sub.ready());
 });
 
+// A new session resets the stores once its subscriptions are answered. If the
+// connection drops before that and the server resumes that session, the reset
+// is still owed: the stores still hold the previous session's data.
+Tinytest.addAsync('livedata connection - a resumed session keeps the reset it still owes', async function (test) {
+  const stream = new StubStream();
+  const conn = newConnection(stream);
+  await startAndConnect(test, stream);
+  const collName = Random.id();
+  const coll = new Mongo.Collection(collName, { connection: conn });
+  const sub = conn.subscribe('my_data');
+  stream.sent.length = 0;
+  await stream.receive({ msg: 'added', collection: collName, id: 'gone', fields: { a: 1 } });
+  await stream.receive({ msg: 'ready', subs: [sub.subscriptionId] });
+  test.isTrue(sub.ready());
+
+  // The connection drops and the server starts a new session.
+  await stream.reset();
+  await stream.receive({ msg: 'connected', session: SESSION_ID + 1 });
+  // It drops again before the subscription is answered, and the server
+  // resumes the new session.
+  await stream.reset();
+  await stream.receive({ msg: 'connected', session: SESSION_ID + 1 });
+  test.equal(Object.keys(conn._subsBeingRevived), [sub.subscriptionId], 'still waited for');
+  await stream.receive({ msg: 'added', collection: collName, id: 'new', fields: { a: 2 } });
+  await stream.receive({ msg: 'ready', subs: [sub.subscriptionId] });
+  const ids = (await coll.find({}).fetchAsync()).map((doc) => doc._id);
+  test.equal(ids, ['new'], 'the reset the new session asked for is applied');
+});
+
 Tinytest.addAsync(
   'livedata connection - version negotiation requires renegotiating',
   function (test, onComplete) {

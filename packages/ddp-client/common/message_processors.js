@@ -32,6 +32,9 @@ export class MessageProcessors {
       self._heartbeat.start();
     }
 
+    // A reset a new session asked for and that has not run yet: the stores
+    // still hold the data it replaces.
+    const resetPending = self._resetStores;
     // If this is a reconnect, we'll have to reset all stores. So do stores
     // filled before the first connection (_reviveAllSubscriptions).
     if (self._lastSessionId || self._reviveAllSubscriptions) self._resetStores = true;
@@ -44,8 +47,9 @@ export class MessageProcessors {
 
     if (reconnectedToPreviousSession) {
       // Successful reconnection -- pick up where we left off.
-      // Don't reset stores since we're continuing the same session.
-      self._resetStores = false;
+      // Don't reset stores since we're continuing the same session, unless
+      // that session still owes its own reset.
+      self._resetStores = resetPending;
       return;
     }
 
