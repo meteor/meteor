@@ -126,6 +126,18 @@ Meteor is made possible by our amazing sponsors. Support the project and get you
 
 If you’ve run into a bug, check the [issue tracker](https://github.com/meteor/meteor/issues). To propose a feature, [start a discussion](https://github.com/meteor/meteor/discussions/).
 
+<hr>
+
+# 🤝 Help maintain Meteor
+
+Try a reported issue in your app, review a change in a package you know, or improve a guide you found hard to follow. [Find an area to help with](MAINTAINERS.md).
+
+Core Maintainers choose the areas they look after and help prioritize issues and reviews. The Technical Steering Committee makes the final call on major changes and publishes official releases. [How Meteor is governed](GOVERNANCE.md)
+
+* [Core development guide](DEVELOPMENT.md)
+* [Contribution guidelines](CONTRIBUTING.md)
+* [Release milestones](https://github.com/meteor/meteor/milestones)
+
 # 🤝 Help with an upcoming release
 
 For the goals behind each release and what comes next, see the [Meteor roadmap](https://docs.meteor.com/about/roadmap.html).
