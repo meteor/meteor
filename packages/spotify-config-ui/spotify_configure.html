@@ -1,0 +1,31 @@
+<template name="configureLoginServiceDialogForSpotify">
+  <p>
+    First, you'll need to register your application on the
+    <a href="https://developer.spotify.com/dashboard" target="_blank">Spotify Developer Dashboard</a>.
+  </p>
+  <ol>
+    <li>
+      Visit <a href="https://developer.spotify.com/dashboard" target="_blank">developer.spotify.com/dashboard</a>
+      and create a new app.
+    </li>
+    <li>
+      Set the App name and description.
+    </li>
+    <li>
+      Add <span class="url">{{siteUrl}}_oauth/spotify</span> to the
+      Redirect URIs field.
+    </li>
+    <li>
+      Check the "Web API" option under "Which API/SDKs are you planning to use?".
+    </li>
+    <li>
+      Save your app, then go to Settings to find your Client ID and Client Secret.
+    </li>
+  </ol>
+  <p>
+    <b>Note:</b> Spotify does not allow <code>localhost</code> in redirect URIs.
+    For local development, set the redirect URI to
+    <code>http://127.0.0.1:3000/_oauth/spotify</code> and start your app with:
+  </p>
+  <pre>ROOT_URL=http://127.0.0.1:3000 meteor</pre>
+</template>
