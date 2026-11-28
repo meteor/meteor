@@ -32,8 +32,12 @@ export class MessageProcessors {
       self._heartbeat.start();
     }
 
-    // If this is a reconnect, we'll have to reset all stores.
-    if (self._lastSessionId) self._resetStores = true;
+    // A reset a new session asked for and that has not run yet: the stores
+    // still hold the data it replaces.
+    const resetPending = self._resetStores;
+    // If this is a reconnect, we'll have to reset all stores. So do stores
+    // filled before the first connection (_resetStoresOnConnect).
+    if (self._lastSessionId || self._resetStoresOnConnect) self._resetStores = true;
 
     let reconnectedToPreviousSession;
     if (typeof msg.session === 'string') {
@@ -43,8 +47,9 @@ export class MessageProcessors {
 
     if (reconnectedToPreviousSession) {
       // Successful reconnection -- pick up where we left off.
-      // Don't reset stores since we're continuing the same session.
-      self._resetStores = false;
+      // Don't reset stores since we're continuing the same session, unless
+      // that session still owes its own reset.
+      self._resetStores = resetPending;
       return;
     }
 
@@ -74,6 +79,7 @@ export class MessageProcessors {
         self._subsBeingRevived[id] = true;
       }
     });
+    self._resetStoresOnConnect = false;
 
     // Arrange for "half-finished" methods to have their callbacks run, and
     // track methods that were sent on this connection so that we don't
@@ -127,6 +133,21 @@ export class MessageProcessors {
   }
 
   /**
+   * @summary Apply the data messages buffered until quiescence, in order
+   */
+  async _processBufferedMessages() {
+    const self = this._connection;
+    const bufferedMessages = self._messagesBufferedUntilQuiescence;
+    for (const bufferedMessage of Object.values(bufferedMessages)) {
+      await this._processOneDataMessage(
+        bufferedMessage,
+        self._bufferedWrites
+      );
+    }
+    self._messagesBufferedUntilQuiescence = [];
+  }
+
+  /**
    * @summary Process various data messages from the server
    * @param {Object} msg The data message
    */
@@ -159,14 +180,7 @@ export class MessageProcessors {
       // No methods or subs are blocking quiescence!
       // We'll now process and all of our buffered messages, reset all stores,
       // and apply them all at once.
-      const bufferedMessages = self._messagesBufferedUntilQuiescence;
-      for (const bufferedMessage of Object.values(bufferedMessages)) {
-        await this._processOneDataMessage(
-          bufferedMessage,
-          self._bufferedWrites
-        );
-      }
-      self._messagesBufferedUntilQuiescence = [];
+      await this._processBufferedMessages();
     } else {
       await this._processOneDataMessage(msg, self._bufferedWrites);
     }

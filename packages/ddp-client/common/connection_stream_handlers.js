@@ -148,7 +148,9 @@ export class ConnectionStreamHandlers {
    */
   _buildConnectMessage() {
     const msg = { msg: 'connect' };
-    if (this._connection._lastSessionId) {
+    // Stores filled before the connection (_resetStoresOnConnect) are replaced
+    // by a new session's data: resuming the previous session would not send it.
+    if (this._connection._lastSessionId && !this._connection._resetStoresOnConnect) {
       msg.session = this._connection._lastSessionId;
       msg.receivedCount = this._connection._receivedCount;
     }

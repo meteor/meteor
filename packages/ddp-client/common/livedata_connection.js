@@ -197,6 +197,11 @@ export class Connection {
     // map from sub ID -> true for subs that were ready (ie, called the sub
     // ready callback) before reconnect but haven't become ready again yet
     self._subsBeingRevived = {}; // map from sub._id -> true
+    // If true, the 'connected' message of the next new session resets the
+    // stores, as a reconnection does: the reset waits for the subscriptions
+    // that are ready. Raised by code that filled the stores before the first
+    // connection (the offline package); cleared once applied.
+    self._resetStoresOnConnect = false;
     // if true, the next data update should reset all stores. (set during
     // reconnect.)
     self._resetStores = false;
@@ -1144,6 +1149,22 @@ export class Connection {
       ! isEmpty(this._subsBeingRevived) ||
       ! isEmpty(this._methodsBlockingQuiescence)
     );
+  }
+
+  // Stops waiting for the given revived subscriptions, as if the server had
+  // answered them, and applies the buffered data once nothing else blocks.
+  // For code that marked subscriptions ready before the server did (the
+  // offline package) and gives up on a publication that never answers; a
+  // subscription revived by an ordinary reconnection is not its business.
+  async _stopWaitingForSubscriptions(ids) {
+    const revived = ids.filter((id) => hasOwn.call(this._subsBeingRevived, id));
+    if (revived.length === 0) return;
+    revived.forEach((id) => {
+      delete this._subsBeingRevived[id];
+    });
+    if (this._waitingForQuiescence()) return;
+    await this._messageProcessors._processBufferedMessages();
+    await this._flushBufferedWrites();
   }
 
   // Returns true if any method whose message has been sent to the server has
