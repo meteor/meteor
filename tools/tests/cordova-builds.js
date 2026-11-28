@@ -7,19 +7,19 @@ const relBuildDir = "../build";
 const isOSX = async () => (await host()).split(".", 2).join(".") === "os.osx";
 
 var checkMobileServer = selftest.markStack(async function (s, expected) {
-  function checkIndexHtml(path) {
+  async function checkIndexHtml(path) {
     const output = s.read(path);
     const mrc = testUtils.getMeteorRuntimeConfigFromHTML(output);
-    selftest.expectEqual(mrc.DDP_DEFAULT_CONNECTION_URL, expected);
+    await selftest.expectEqual(mrc.DDP_DEFAULT_CONNECTION_URL, expected);
   }
 
-  checkIndexHtml(files.pathJoin(
+  await checkIndexHtml(files.pathJoin(
     relBuildDir,
     "android/project/app/src/main/assets/www/application/index.html"
   ));
 
   if (await isOSX()) {
-    checkIndexHtml(files.pathJoin(
+    await checkIndexHtml(files.pathJoin(
       relBuildDir,
       "ios/project/www/application/index.html"
     ));
@@ -38,15 +38,12 @@ selftest.define("cordova builds with server options", ["cordova"], async functio
   await s.createApp("myapp", "standard-app");
   s.cd("myapp");
 
-  run = s.run("add-platform", "android");
+  const platforms = await isOSX() ? ["android", "ios"] : ["android"];
+  run = s.run("add-platform", ...platforms);
   run.waitSecs(90);
-  await run.match("added");
   await run.expectExit(0);
-
-  if (await isOSX()) {
-    run = s.run("add-platform", "ios");
-    await run.match("added");
-    await run.expectExit(0);
+  for (const platform of platforms) {
+    await run.match(platform + ": added platform");
   }
 
   run = s.run("build", relBuildDir);
