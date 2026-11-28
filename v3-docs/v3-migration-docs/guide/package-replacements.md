@@ -39,6 +39,8 @@ When a package doesn't have a Meteor 3-compatible version:
 |---|---|---|
 | `percolate:synced-cron` | `quave:synced-cron` | Community-maintained fork with async support |
 
+For other job packages and libraries and how they behave with several app instances, see [Background Jobs](https://docs.meteor.com/tutorials/background-jobs/background-jobs).
+
 ## HTTP & APIs
 
 | Old Package | Replacement | Notes |

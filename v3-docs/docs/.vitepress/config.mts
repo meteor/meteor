@@ -681,6 +681,10 @@ export default defineConfig({
                 text: "Deployment",
                 link: "/tutorials/deployment/deployment",
               },
+              {
+                text: "Background Jobs",
+                link: "/tutorials/background-jobs/background-jobs",
+              },
             ]
           },
           {
