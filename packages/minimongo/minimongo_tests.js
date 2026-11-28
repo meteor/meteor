@@ -549,3 +549,20 @@ if (Meteor.isClient) {
     );
   });
 }
+// A multi-document update must recompute every skip/limit observe that one of
+// its documents touches, not only the ones the last document touches.
+Tinytest.addAsync('minimongo - multi update reports changes to a limited observe', async test => {
+  const collection = new LocalCollection();
+  await collection.insertAsync({ _id: 'a', tag: 'x' });
+  await collection.insertAsync({ _id: 'b', tag: 'y' });
+  const changes = [];
+  const handle = await collection.find({ tag: 'x' }, { limit: 2 }).observeChangesAsync({
+    addedBefore() {},
+    changed(id, fields) {
+      changes.push([id, fields]);
+    },
+  });
+  await collection.updateAsync({}, { $set: { n: 1 } }, { multi: true });
+  test.equal(changes, [['a', { n: 1 }]]);
+  handle.stop();
+});
