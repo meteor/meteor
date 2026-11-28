@@ -28,12 +28,21 @@ const findUserWithOptions = async ({ selector }) => {
   );
 };
 // Handler to login with an ott.
-Accounts.registerLoginHandler('passwordless', async options => {
+/** An invalid context is dropped. `localStorage.getItem` returns null when nothing is stored. */
+const clientContextOrNull = value =>
+  Accounts._isValid2faClientContext?.(value) ? value : null;
+
+Accounts.registerLoginHandler('passwordless', async function (options) {
   if (!options.token) return undefined; // don't handle
 
   check(options, {
     token: tokenValidator(),
-    code: Match.Optional(Match.NonEmptyString),
+    code: Match.Optional(Match.Where(value => {
+      const pattern = Accounts._2faCodeMatch || Match.NonEmptyString;
+      return Match.test(value, pattern);
+    })),
+    twoFactorMethod: Match.Optional(Match.OneOf('otp', 'email')),
+    twoFactorContext: Match.Optional(Match.Any),
     selector: Accounts._userQueryValidator,
   });
 
@@ -60,8 +69,25 @@ Accounts.registerLoginHandler('passwordless', async options => {
   // The user-level token (the one given to Accounts.onCreateLoginToken) is
   // subject to the same 2FA check and single use as the email code.
   if (!error) {
-    // This method is added by the package accounts-2fa
-    if (Accounts._check2faEnabled?.(user)) {
+    // Email alone cannot be the second factor of an email login.
+    if (Accounts._enforce2faOnLogin) {
+      const twoFactorError = await Accounts._enforce2faOnLogin({
+        user,
+        code: options.code,
+        method: options.twoFactorMethod,
+        context: {
+          loginMethod: 'passwordless',
+          connection: this.connection,
+          clientContext: clientContextOrNull(options.twoFactorContext),
+        },
+      });
+      if (twoFactorError) {
+        if (!Accounts._2faPolicyOptedIn?.()) {
+          throw twoFactorError;
+        }
+        return { userId: user._id, error: twoFactorError };
+      }
+    } else if (Accounts._check2faEnabled?.(user)) {
       if (!options.code) {
         Accounts._handleError('2FA code must be informed', true, 'no-2fa-code');
         return;

@@ -9,6 +9,7 @@ import type {
   AccountsClientOptions,
   Header,
   EmailTemplates,
+  TwoFactorPolicyContext,
 } from "./accounts-base.native";
 import type { Meteor } from "meteor/meteor";
 import type { DDP } from "meteor/ddp";
@@ -106,6 +107,24 @@ Accounts.config({
 });
 
 Accounts.config({ httpOnlyCookieRateLimit: false });
+Accounts.config({ require2fa: true });
+Accounts.emailTemplates.twoFactorCode = {
+  subject: () => "Your code",
+  text: (user, url, extra) => `Code: ${extra.code}`,
+};
+Accounts.config({
+  require2fa: async (userId, context) => {
+    expectTypeOf(userId).toBeString();
+    expectTypeOf(context).toEqualTypeOf<TwoFactorPolicyContext>();
+    return context.clientContext?.trustedDeviceToken === undefined;
+  },
+});
+expectTypeOf<TwoFactorPolicyContext>().toEqualTypeOf<{
+  loginMethod: string;
+  connection: Meteor.Connection | null;
+  clientContext: Record<string, string> | null;
+  availableMethods: Array<"otp" | "email">;
+}>();
 
 // @ts-expect-error Cookie origins must be an array of strings.
 Accounts.config({ httpOnlyCookieAllowedOrigins: "https://app.example.com" });

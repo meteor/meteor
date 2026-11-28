@@ -476,8 +476,14 @@ When 2FA is enabled, completing a password reset (`Accounts.resetPassword`) or e
 Accounts.config({
   loginTokenExpirationHours: 1, // how long a TOTP window stays valid (default: 1 hour)
   tokenSequenceLength: 6, // TOTP code length (default: 6)
+  // Server only. Omit it to require a second factor only for users who have one.
+  // isTrustedDevice is your own server-side check of a token your app issued.
+  // require2fa: async (userId, context) =>
+  //   !(await isTrustedDevice(userId, context.clientContext?.trustedDeviceToken)),
 });
 ```
+
+`require2fa` accepts `true`, `false`, or a function `(userId, context) => boolean`. The function is how an app skips the second factor for a trusted browser or limits it to some roles. See the [`accounts-2fa` policy section](../../packages/accounts-2fa.md#policy).
 
 ## OAuth login
 

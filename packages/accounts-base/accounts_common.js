@@ -26,6 +26,7 @@ const VALID_CONFIG_KEYS = [
   'collection',
   'loginTokenExpirationHours',
   'tokenSequenceLength',
+  'require2fa',
   'clientStorage',
   'useHttpOnlyCookies',
   'httpOnlyCookieAllowedOrigins',
@@ -239,6 +240,7 @@ export class AccountsCommon {
    * @param {String|Mongo.Collection} options.collection A collection name or a Mongo.Collection object to hold the users. When set, `Meteor.users` is automatically updated to point to the new collection, and the default indexes (username, emails.address, login tokens, etc.) are created on it. This is useful when connecting to a remote users collection from another Meteor instance, or when storing users in a collection with a custom name. Should be set early in the startup sequence, before any clients connect or subscriptions are established, similar to other config options. Example: `Accounts.config({ collection: 'app_users' })` or `Accounts.config({ collection: new Mongo.Collection('users', { _driver: remoteDriver }) })`.
    * @param {Number} options.loginTokenExpirationHours When using the package `accounts-2fa`, use this to set the amount of time a token sent is valid. As it's just a number, you can use, for example, 0.5 to make the token valid for just half hour. The default is 1 hour.
    * @param {Number} options.tokenSequenceLength When using the package `accounts-2fa`, use this to the size of the token sequence generated. The default is 6.
+   * @param {Boolean|Function} options.require2fa Server only. When `accounts-2fa` is installed, decides whether a login must present a second factor. `undefined` (default): required for users who turned on TOTP, and, when the email factor is enabled, for users who have a usable second factor. Users with no factor can still sign in. `true`: required for every user. `false`: required only for users who turned on TOTP. A function `(userId, context) => boolean | Promise<boolean>` lets the app decide (roles, trusted browser). If the function throws, a second factor is required. `context` is `{ loginMethod, connection, clientContext, availableMethods }`. Ignored, with a warning, when `accounts-2fa` is not installed.
    * @param {'session' | 'local'} options.clientStorage By default login credentials are stored in local storage, setting this to true will switch to using session storage.
    * @param {Boolean} options.useHttpOnlyCookies Keep the persistent copy of the resume token in an HttpOnly cookie instead of Web Storage. The client still loads it into memory to authenticate DDP. Must be enabled on the server for the `/_accounts/cookie/*` endpoints to respond, and mirrored to the client through `Meteor.settings.public.packages.accounts.useHttpOnlyCookies`.
    * @param {String[]} options.httpOnlyCookieAllowedOrigins Additional origins (`scheme://host[:port]`) allowed to call the cookie set and clear endpoints with credentialed CORS. The origin of `ROOT_URL` and of the request `Host` are always allowed. `SameSite=Strict` and browser cookie policy still apply. Server only.
@@ -265,6 +267,16 @@ export class AccountsCommon {
     // having their full effects.
     if (Meteor.isServer) {
       __meteor_runtime_config__.accountsConfigCalled = true;
+      if (options.require2fa !== undefined) {
+        // accounts-2fa may load after this call, so check once packages are ready.
+        Meteor.startup(() => {
+          if (!Package['accounts-2fa']) {
+            console.warn(
+              'Accounts.config: `require2fa` has no effect unless the accounts-2fa package is installed.'
+            );
+          }
+        });
+      }
     } else if (!__meteor_runtime_config__.accountsConfigCalled) {
       // XXX would be nice to "crash" the client and replace the UI with an error
       // message, but there's no trivial way to do this.
@@ -306,7 +318,8 @@ export class AccountsCommon {
     for (const key of VALID_CONFIG_KEYS) {
       if (key in options) {
         if (key in this._options) {
-          if (key !== 'collection' && (Meteor.isTest && key !== 'clientStorage')) {
+          // require2fa is a policy the app (and the tests) may replace.
+          if (key !== 'collection' && (Meteor.isTest && key !== 'clientStorage' && key !== 'require2fa')) {
             throw new Meteor.Error(`Can't set \`${key}\` more than once`);
           }
         }
