@@ -56,9 +56,11 @@ public protocol CapacitorBridge: AnyObject {
     /// Timer used to wait for startup to complete after a reload
     private var startupTimer: Timer?
 
+    static let defaultStartupTimeoutInterval: TimeInterval = 30
+
     /// The number of seconds to wait for startup to complete, after which
     /// we revert to the last known good version
-    private var startupTimeoutInterval: TimeInterval = 30.0
+    private let startupTimeoutInterval: TimeInterval
 
     /// Serial queue to prevent concurrent bundle switches
     private let bundleSwitchQueue = DispatchQueue(
@@ -88,7 +90,8 @@ public protocol CapacitorBridge: AnyObject {
 
     // MARK: - Initialization
 
-    init(capacitorBridge: CapacitorBridge? = nil) {
+    init(capacitorBridge: CapacitorBridge?, startupTimeoutInterval: TimeInterval) {
+        self.startupTimeoutInterval = startupTimeoutInterval
         super.init()
 
         self.capacitorBridge = capacitorBridge
@@ -138,15 +141,15 @@ public protocol CapacitorBridge: AnyObject {
         currentAssetBundle: AssetBundle,
         pendingAssetBundle: AssetBundle? = nil,
         servingDirectoryURL: URL,
-        startupTimeoutInterval: TimeInterval = 30.0
+        startupTimeoutInterval: TimeInterval = CapacitorMeteorWebApp.defaultStartupTimeoutInterval
     ) {
+        self.startupTimeoutInterval = startupTimeoutInterval
         super.init()
 
         self.capacitorBridge = capacitorBridge
         self.configuration = configuration
         self.assetBundleManager = assetBundleManager
         self.servingDirectoryURL = servingDirectoryURL
-        self.startupTimeoutInterval = startupTimeoutInterval
 
         self.currentAssetBundle = currentAssetBundle
         self.pendingAssetBundle = pendingAssetBundle
@@ -662,13 +665,6 @@ public protocol CapacitorBridge: AnyObject {
             }
             self.startStartupTimer()
         }
-    }
-
-    // MARK: - Testing Helpers
-
-    /// Triggers the same recovery flow used by startup timeout handling.
-    func triggerStartupTimeoutForTesting() {
-        revertToLastKnownGoodVersion()
     }
 
     // MARK: - AssetBundleManagerDelegate

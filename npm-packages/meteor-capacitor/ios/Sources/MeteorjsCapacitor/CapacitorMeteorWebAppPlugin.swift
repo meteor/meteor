@@ -54,9 +54,16 @@ public class CapacitorMeteorWebAppPlugin: CAPPlugin, CAPBridgedPlugin {
     private var implementation: CapacitorMeteorWebApp!
     private var bridgeAdapter: CapacitorBridgeAdapter!
 
+    static func startupTimeoutInterval(from config: PluginConfig) -> TimeInterval {
+        let milliseconds = config.getInt("startupTimeout", 0)
+        return milliseconds > 0 ? TimeInterval(milliseconds) / 1000 : CapacitorMeteorWebApp.defaultStartupTimeoutInterval
+    }
+
     override public func load() {
         bridgeAdapter = CapacitorBridgeAdapter(bridge: self.bridge)
-        implementation = CapacitorMeteorWebApp(capacitorBridge: bridgeAdapter)
+        implementation = CapacitorMeteorWebApp(
+            capacitorBridge: bridgeAdapter,
+            startupTimeoutInterval: Self.startupTimeoutInterval(from: getConfig()))
 
         // Listen for update notifications from the implementation
         NotificationCenter.default.addObserver(

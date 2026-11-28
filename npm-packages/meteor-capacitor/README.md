@@ -204,6 +204,25 @@ To disable Meteor-managed HCP and keep a static bundled app, use either `false` 
 
 With HCP disabled, Meteor injects a no-op `WebAppLocalServer` shim so native startup calls still succeed.
 
+### Native startup timeout
+
+Set `plugins.CapacitorMeteorWebApp.startupTimeout` in `capacitor.config.js` to
+set how long Android and iOS wait for a new bundle to report a successful startup.
+
+```js
+plugins: {
+  CapacitorMeteorWebApp: {
+    startupTimeout: 60000,
+  },
+},
+```
+
+Use a positive number of milliseconds. A missing, zero or negative value uses
+the 30-second default. The timer pauses in the background. If the deadline
+expires, Meteor reverts to the last known good bundle. Sync and rebuild the
+native app after changing the setting. Apps migrating from Cordova can copy
+their `WebAppStartupTimeout` value here.
+
 ## Client runtime
 
 This package also exports a small client runtime:

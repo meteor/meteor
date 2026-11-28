@@ -9,11 +9,12 @@ import androidx.test.platform.app.InstrumentationRegistry;
 
 import org.junit.After;
 import org.junit.Before;
+import com.getcapacitor.CapConfig;
+import org.json.JSONObject;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.io.File;
-import java.lang.reflect.Method;
 import java.net.URL;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -366,8 +367,24 @@ public class CapacitorMeteorWebAppLifecycleTest {
         app.handleOnDestroy();
     }
 
+    private int startupTimeoutMs(JSONObject settings) throws Exception {
+        CapConfig config = new CapConfig.Builder(context)
+            .setPluginsConfiguration(new JSONObject().put("CapacitorMeteorWebApp", settings))
+            .create();
+        return CapacitorMeteorWebAppPlugin.startupTimeoutMs(config.getPluginConfiguration("CapacitorMeteorWebApp"));
+    }
+
     @Test
-    public void startupTimeout_revertsToLastKnownGoodVersionAndFlagsCurrentForRetry() throws Exception {
+    public void startupTimeoutConfig_usesPositiveMillisecondsOrTheDefault() throws Exception {
+        JSONObject settings = new JSONObject();
+        assertEquals(30_000, startupTimeoutMs(settings));
+        assertEquals(30_000, startupTimeoutMs(settings.put("startupTimeout", 0)));
+        assertEquals(30_000, startupTimeoutMs(settings.put("startupTimeout", -1)));
+        assertEquals(60_000, startupTimeoutMs(settings.put("startupTimeout", 60_000)));
+    }
+
+    @Test
+    public void configuredStartupTimeout_revertsToLastKnownGoodVersionAndFlagsCurrentForRetry() throws Exception {
         String v1 = "v-timeout-good";
         String v2 = "v-timeout-bad";
 
@@ -391,14 +408,22 @@ public class CapacitorMeteorWebAppLifecycleTest {
             configuration,
             manager,
             initialBundle,
-            badCurrentBundle,
+            manager.downloadedAssetBundleWithVersion(v1),
             versionsDirectory,
-            servingDirectory
+            servingDirectory,
+            startupTimeoutMs(new JSONObject().put("startupTimeout", 250))
         );
 
-        Method timeoutMethod = CapacitorMeteorWebApp.class.getDeclaredMethod("onStartupTimeout");
-        timeoutMethod.setAccessible(true);
-        timeoutMethod.invoke(app);
+        app.onFinishedDownloadingAssetBundle(badCurrentBundle);
+        awaitCondition("Pending bundle should become available", 5000, app::isUpdateAvailable);
+        CountDownLatch reloadLatch = new CountDownLatch(1);
+        AtomicReference<Throwable> reloadError = new AtomicReference<>();
+        app.reload(error -> {
+            reloadError.set(error);
+            reloadLatch.countDown();
+        });
+        assertTrue("reload timed out", reloadLatch.await(10, TimeUnit.SECONDS));
+        assertNull("reload should succeed", reloadError.get());
 
         awaitCondition("App should revert to last known good version", 10000, () -> v1.equals(app.getCurrentVersion()));
 

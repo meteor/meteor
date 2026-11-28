@@ -417,13 +417,10 @@ Android and iOS default to 30000 milliseconds. Positive integers override that
 default; zero or negative values retain it. The timer pauses while the app is in
 the background. Sync and rebuild both native apps after changing the setting.
 
-:::warning
-The `startupTimeout` option requires the matching native-plugin implementation.
-Earlier experimental runtimes hardcode a 30-second deadline and do not consume
-this setting. The reference example's 60-second validation used a local native
-follow-up that is not yet published; check the selected runtime before relying
-on this mapping.
-:::
+The integration checkout supports this option. The published
+`@meteorjs/capacitor@0.2.0-alpha.1` uses a fixed 30-second deadline.
+When testing from source, link the checkout's native package into the app
+before syncing the native projects.
 
 Cordova's `LoadUrlTimeoutValue` is a separate WebView setting and does not map to
 this deadline. Review whether its original purpose still applies when the app

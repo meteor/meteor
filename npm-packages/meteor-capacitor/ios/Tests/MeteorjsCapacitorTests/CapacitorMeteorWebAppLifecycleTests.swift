@@ -1,3 +1,5 @@
+import class Capacitor.InstanceConfiguration
+import class Capacitor.InstanceDescriptor
 import WebKit
 import XCTest
 
@@ -243,7 +245,21 @@ final class CapacitorMeteorWebAppLifecycleTests: XCTestCase {
         XCTAssertTrue(configuration.versionsToRetry.contains(badVersion))
     }
 
-    func testStartupTimeout_revertsToLastKnownGoodVersionAndMarksRetry() throws {
+    private func startupTimeoutInterval(_ settings: [String: Int]) -> TimeInterval {
+        let descriptor = InstanceDescriptor(at: rootDir, configuration: nil, cordovaConfiguration: nil)
+        descriptor.pluginConfigurations = ["CapacitorMeteorWebApp": settings]
+        let config = InstanceConfiguration(with: descriptor, isDebug: false)
+        return CapacitorMeteorWebAppPlugin.startupTimeoutInterval(from: config.getPluginConfig("CapacitorMeteorWebApp"))
+    }
+
+    func testStartupTimeoutConfig_usesPositiveMillisecondsOrTheDefault() {
+        XCTAssertEqual(startupTimeoutInterval([:]), 30)
+        XCTAssertEqual(startupTimeoutInterval(["startupTimeout": 0]), 30)
+        XCTAssertEqual(startupTimeoutInterval(["startupTimeout": -1]), 30)
+        XCTAssertEqual(startupTimeoutInterval(["startupTimeout": 60_000]), 60)
+    }
+
+    func testConfiguredStartupTimeout_revertsToLastKnownGoodVersionAndMarksRetry() throws {
         let goodVersion = "v-good"
         let badVersion = "v-bad"
 
@@ -266,16 +282,23 @@ final class CapacitorMeteorWebAppLifecycleTests: XCTestCase {
             capacitorBridge: bridge,
             configuration: configuration,
             assetBundleManager: manager,
-            currentAssetBundle: badBundle,
-            servingDirectoryURL: servingDir)
+            currentAssetBundle: try XCTUnwrap(manager.downloadedAssetBundleWithVersion(goodVersion)),
+            pendingAssetBundle: badBundle,
+            servingDirectoryURL: servingDir,
+            startupTimeoutInterval: startupTimeoutInterval(["startupTimeout": 250]))
 
-        app.triggerStartupTimeoutForTesting()
+        let reloadDone = expectation(description: "reload callback")
+        app.reload { error in
+            XCTAssertNil(error)
+            reloadDone.fulfill()
+        }
+        wait(for: [reloadDone], timeout: 5)
 
         assertEventually("Expected app to revert to last known good version") {
             app.getCurrentVersion() == goodVersion
         }
         assertEventually("Expected bridge reload to be triggered") {
-            bridge.reloadCount == 1
+            bridge.reloadCount == 2
         }
         XCTAssertTrue(configuration.versionsToRetry.contains(badVersion))
         XCTAssertFalse(app.isUpdateAvailable())

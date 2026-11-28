@@ -8,6 +8,7 @@ package com.meteorjs.capacitor;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
+import com.getcapacitor.PluginConfig;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
@@ -17,11 +18,16 @@ public class CapacitorMeteorWebAppPlugin extends Plugin {
     private CapacitorMeteorWebApp implementation;
     private Throwable initializationError;
 
+    static int startupTimeoutMs(PluginConfig config) {
+        int timeout = config.getInt("startupTimeout", 0);
+        return timeout > 0 ? timeout : CapacitorMeteorWebApp.DEFAULT_STARTUP_TIMEOUT_MS;
+    }
+
     @Override
     public void load() {
         super.load();
         try {
-            implementation = new CapacitorMeteorWebApp(getBridge());
+            implementation = new CapacitorMeteorWebApp(getBridge(), startupTimeoutMs(getConfig()));
             implementation.setEventCallback(new CapacitorMeteorWebApp.EventCallback() {
                 @Override
                 public void onUpdateAvailable(String version) {

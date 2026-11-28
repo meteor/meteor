@@ -38,7 +38,9 @@ final class CapacitorMeteorWebApp implements AssetBundleManager.Callback {
     }
 
     private static final String PREFERENCES_NAME = "MeteorWebApp";
-    private static final long STARTUP_TIMEOUT_MS = 30_000L;
+    static final int DEFAULT_STARTUP_TIMEOUT_MS = 30_000;
+
+    private final long startupTimeoutMs;
 
     private final Bridge bridge;
     private final Context context;
@@ -66,8 +68,9 @@ final class CapacitorMeteorWebApp implements AssetBundleManager.Callback {
 
     private EventCallback eventCallback;
 
-    CapacitorMeteorWebApp(Bridge bridge) throws WebAppError {
+    CapacitorMeteorWebApp(Bridge bridge, long startupTimeoutMs) throws WebAppError {
         this.bridge = bridge;
+        this.startupTimeoutMs = startupTimeoutMs;
         this.context = bridge.getContext().getApplicationContext();
         this.mainHandler = new Handler(Looper.getMainLooper());
         this.bundleSwitchExecutor = Executors.newSingleThreadExecutor();
@@ -91,7 +94,25 @@ final class CapacitorMeteorWebApp implements AssetBundleManager.Callback {
         File versionsDirectory,
         File servingDirectory
     ) throws WebAppError {
+        this(context, mainHandler, bundleSwitchExecutor, configuration, assetBundleManager,
+            initialAssetBundle, currentAssetBundle, versionsDirectory, servingDirectory,
+            DEFAULT_STARTUP_TIMEOUT_MS);
+    }
+
+    CapacitorMeteorWebApp(
+        Context context,
+        Handler mainHandler,
+        ExecutorService bundleSwitchExecutor,
+        WebAppConfiguration configuration,
+        AssetBundleManager assetBundleManager,
+        AssetBundle initialAssetBundle,
+        AssetBundle currentAssetBundle,
+        File versionsDirectory,
+        File servingDirectory,
+        long startupTimeoutMs
+    ) throws WebAppError {
         this.bridge = null;
+        this.startupTimeoutMs = startupTimeoutMs;
         this.context = context.getApplicationContext();
         this.mainHandler = mainHandler;
         this.bundleSwitchExecutor = bundleSwitchExecutor;
@@ -373,7 +394,7 @@ final class CapacitorMeteorWebApp implements AssetBundleManager.Callback {
         mainHandler.post(() -> {
             stopStartupTimerOnMainThread();
 
-            startupRemainingMs = STARTUP_TIMEOUT_MS;
+            startupRemainingMs = startupTimeoutMs;
             if (isPaused) {
                 return;
             }
