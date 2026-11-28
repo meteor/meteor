@@ -64,6 +64,7 @@ Package.registerBuildPlugin({
     'lib/hcp.js',
     'lib/dependencies.js',
     'lib/build-context.js',
+    'lib/android-bundle.js',
     'lib/build.js',
     'lib/transforms.js',
     'lib/readiness.js',

@@ -751,8 +751,9 @@ meteor build ../build-output --server=https://your-server-url.com --platforms=io
 ```
 
 The Capacitor package transforms the native web bundle into `_build/native-prod`,
-runs `cap sync`, then runs the app's installed `cap build` for each selected
-platform. Native artifacts are written to `../build-output/android/` or
+runs `cap sync`, then packages each selected platform. Android App Bundles
+use the app's Gradle wrapper. Release APKs and iOS archives use the app's
+installed `cap build`. Native artifacts are written to `../build-output/android/` or
 `../build-output/ios/`, and Meteor prints their paths. If you omit `--platforms`,
 Meteor builds the configured native platforms. It creates missing native projects
 and reuses existing ones.
@@ -783,10 +784,14 @@ Native compilation, signing, or missing artifacts cause `meteor build` to fail.
 See the [`meteor build` reference](../../cli/index.md#meteorbuild) for the shared
 build options, including `--mobile-settings` and `--server-only`.
 
-Capacitor 8.6.3 uses SHA-1 when signing with `jarsigner`. JDK 21 does not accept
-these signatures, so AAB release verification fails. For APK releases, set
-`android.buildOptions.signingType` to `'apksigner'`. See the
-[upstream signing issue](https://github.com/ionic-team/capacitor/issues/8428) for details.
+For a release AAB, configure the selected variant's `signingConfig` in Gradle.
+Meteor builds that variant and verifies the exported bundle with the JDK against
+Gradle's signing certificate. Alternatively, supply `keystorePath`,
+`keystoreAlias`, `keystorePassword` and, if different, `keystoreAliasPassword`
+in `android.buildOptions`. Meteor passes these settings to Gradle when the
+variant has no signer. If both configurations select a certificate, they must
+agree. A missing signer or failed verification stops the build before export.
+For APK releases, set `android.buildOptions.signingType` to `'apksigner'`.
 
 The `capacitor` package enables this build flow. Cordova apps keep their existing
 build flow, including the iOS project export.

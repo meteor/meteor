@@ -42,11 +42,20 @@ export function getNativeBuildRequest({ appDir, platform, config = {}, options =
   const directory = format === 'AAB'
     ? (flavor ? `${flavor}${options.debug ? 'Debug' : 'Release'}` : variant)
     : path.join(flavor, variant);
-  const name = `app${flavor ? `-${flavor}` : ''}-${variant}${options.debug ? '' : '-signed'}.${extension}`;
+  const releaseBundle = !options.debug && format === 'AAB';
+  const baseName = `app${flavor ? `-${flavor}` : ''}-${variant}`;
+  const name = `${baseName}${options.debug || releaseBundle ? '' : '-signed'}.${extension}`;
   request.artifactPaths = [path.join(nativeDir, 'app', 'build', 'outputs', format === 'AAB' ? 'bundle' : 'apk', directory, name)];
-  if (options.debug) {
+  if (releaseBundle) {
+    request.bundleVariant = flavor ? `${flavor}Release` : 'release';
+    request.signingOptions = config.android?.buildOptions || {};
+    request.outputName = `${baseName}-signed.aab`;
+  }
+  if (options.debug || releaseBundle) {
     const taskFlavor = flavor ? flavor[0].toUpperCase() + flavor.slice(1) : '';
-    request.gradleTask = format === 'AAB' ? `:app:bundle${taskFlavor}Debug` : `assemble${taskFlavor}Debug`;
+    request.gradleTask = format === 'AAB'
+      ? `:app:bundle${taskFlavor}${options.debug ? 'Debug' : 'Release'}`
+      : `assemble${taskFlavor}Debug`;
   }
   return request;
 }
@@ -69,7 +78,7 @@ export async function prepareNativeArtifacts(request) {
   }
 }
 
-export async function collectNativeArtifacts(request) {
+export async function collectNativeArtifacts(request, verify) {
   const artifacts = await getArtifactPaths(request);
   if (!artifacts.length) throw new Error(`Capacitor ${request.platform} build did not produce a native artifact.`);
   for (const file of artifacts) {
@@ -84,8 +93,20 @@ export async function collectNativeArtifacts(request) {
   await fs.mkdir(request.outputDir, { recursive: true });
   const outputs = [];
   for (const file of artifacts) {
-    const output = path.join(request.outputDir, path.basename(file));
-    if (path.resolve(file) !== path.resolve(output)) await fs.copyFile(file, output);
+    const output = path.join(request.outputDir, request.outputName || path.basename(file));
+    if (request.bundleVariant) {
+      const dir = await fs.mkdtemp(path.join(request.outputDir, '.verify-'));
+      try {
+        const staged = path.join(dir, path.basename(output));
+        await fs.copyFile(file, staged);
+        await verify(staged);
+        await fs.rename(staged, output);
+      } finally {
+        await fs.rm(dir, { recursive: true, force: true });
+      }
+    } else if (path.resolve(file) !== path.resolve(output)) {
+      await fs.copyFile(file, output);
+    }
     outputs.push(output);
   }
   return outputs;

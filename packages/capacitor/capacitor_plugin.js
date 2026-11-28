@@ -51,6 +51,7 @@ const {
   loadResolvedCapacitorConfig,
 } = require('./lib/build-context');
 const { getNativeBuildPlatforms, getNativeBuildRequest, prepareNativeArtifacts, collectNativeArtifacts } = require('./lib/build');
+const { resolveBundleSigning } = require('./lib/android-bundle');
 const { runCapacitorTransforms } = require('./lib/transforms');
 const {
   runCapSync,
@@ -60,6 +61,7 @@ const {
   addNativePlatformIfMissing,
   cleanup,
   getCapacitorEnv,
+  getNativeProcessEnv,
   getCapacitorRunMode,
 } = require('./lib/processes');
 const {
@@ -189,9 +191,14 @@ async function runCapacitorPlugin() {
                     mobileServerUrl: getContextMobileServerUrl(context),
                   });
                   await prepareNativeArtifacts(request);
-                  const code = await runCapBuild({ appDir: context.appDir, request, mode: context.state.mode });
-                  if (code !== 0) throw new Error(`cap build ${platform} exited with code ${code}`);
-                  for (const artifact of await collectNativeArtifacts(request)) {
+                  const signing = request.bundleVariant
+                    ? await resolveBundleSigning(request, getNativeProcessEnv({ platform, mode: context.state.mode }))
+                    : null;
+                  const code = await runCapBuild({ appDir: context.appDir, request, mode: context.state.mode, env: signing?.gradleEnv });
+                  if (code !== 0) throw new Error(`${request.gradleTask || 'cap build ' + platform} exited with code ${code}`);
+                  const artifacts = await collectNativeArtifacts(request, signing?.verify);
+                  logSuccess(`=> Capacitor: built ${platform}`);
+                  for (const artifact of artifacts) {
                     logSuccess(`=> Capacitor ${platform} artifact: ${artifact}`);
                   }
                 });

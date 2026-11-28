@@ -6,6 +6,8 @@ module.exports = defineConfig(Meteor => ({
   android: {
     buildOptions: {
       releaseType: process.env.CAPACITOR_E2E_ANDROID_FORMAT || 'AAB',
+      keystorePath: '../.meteor/local/fixture-upload.p12',
+      keystoreAlias: 'fixture-upload',
       keystorePassword: 'e2e-signing-secret',
     },
   },

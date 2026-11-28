@@ -400,7 +400,8 @@ React app using both Rspack and Capacitor, with web-only native lifecycle covera
 | Client and server rebuilds work during native dev run | Run |
 | `meteor run android --production` prepares `_build/native-prod` and syncs Android assets | Prod |
 | Production client and server rebuilds work with the native run target | Prod |
-| Native directory and tarball builds transform and sync Meteor assets, run the selected Capacitor builder, and collect native artifacts in the output directory | Build |
+| Native directory and tarball builds transform and sync Meteor assets, run the selected native builder, and collect native artifacts in the output directory | Build |
+| Release AAB export preserves the Gradle bundle byte for byte. JDK verification rejects an unsigned bundle or one signed by a different alias in the same keystore. | Build |
 | `--packageType` overrides the configured Android format; omitting the flag keeps the configured value | Build |
 | Builds for multiple platforms run sequentially; omitted selection builds configured platforms and leaves other native directories alone | Build |
 | Signing passwords reach the builder and are excluded from generated runtime configuration and captured build output | Build |

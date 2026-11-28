@@ -37,6 +37,7 @@ const {
   setGlobalState,
 } = require('meteor/tools-core/lib/global-state');
 const { waitForMeteorIndexReady, getMeteorIndexUrl } = require('./readiness');
+const { gradleWrapper } = require('./android-bundle');
 
 const {
   CAPACITOR_BUILD_CONTEXT,
@@ -151,11 +152,24 @@ export function _ensureCapacitorWebDirIndex({
   return indexPath;
 }
 
-function spawnCap(args, { cwd, label, env, onExit, onError, mode, platform, interactive, secrets = [] }) {
-  const { command, args: cmdArgs } = _getCapCommand(args, { cwd });
+function spawnCap(args, options) {
+  const { command, args: cmdArgs } = _getCapCommand(args, { cwd: options.cwd });
   // Capacitor reports the plugins it selected and their native setup warnings
   // during add and sync, before the next Xcode or Gradle build.
   const showOutput = isVerbose() || args[0] === 'add' || args[0] === 'sync';
+  return spawnNative(command, cmdArgs, { ...options, showOutput });
+}
+
+export function getNativeProcessEnv({ platform, mode, env }) {
+  return inheritMeteorToolNodeFlags({
+    ...process.env,
+    ...getNodeBinEnv(),
+    ...getCapacitorEnv({ platform, mode }),
+    ...env,
+  });
+}
+
+function spawnNative(command, cmdArgs, { cwd, label, env, onExit, onError, mode, platform, interactive, showOutput, secrets = [] }) {
   const stderrLines = [];
   const redact = value => secrets.reduce((text, secret) => text.split(secret).join('[redacted]'), value);
   const outputBuffers = new Map();
@@ -182,12 +196,7 @@ function spawnCap(args, { cwd, label, env, onExit, onError, mode, platform, inte
   if (interactive) {
     return spawnProcess(command, cmdArgs, {
       cwd,
-      env: inheritMeteorToolNodeFlags({
-        ...process.env,
-        ...getNodeBinEnv(),
-        ...getCapacitorEnv({ platform, mode }),
-        ...(env || {}),
-      }),
+      env: getNativeProcessEnv({ platform, mode, env }),
       stdio: 'inherit',
       onError: err => {
         logError(`Capacitor ${label} error: ${redact(err.message)}`);
@@ -210,12 +219,7 @@ function spawnCap(args, { cwd, label, env, onExit, onError, mode, platform, inte
   };
   return spawnProcess(command, cmdArgs, {
     cwd,
-    env: inheritMeteorToolNodeFlags({
-      ...process.env,
-      ...getNodeBinEnv(),
-      ...getCapacitorEnv({ platform, mode }),
-      ...(env || {}),
-    }),
+    env: getNativeProcessEnv({ platform, mode, env }),
     onStdout: data => {
       if (showOutput) logOutput(data, logRaw);
     },
@@ -312,24 +316,15 @@ export function runCapSync({ appDir = getMeteorAppDir(), platform, mode } = {}) 
 }
 
 /** Package selected native projects after Meteor has transformed and synced them. */
-export function runCapBuild({ appDir = getMeteorAppDir(), request, mode } = {}) {
+export function runCapBuild({ appDir = getMeteorAppDir(), request, mode, env } = {}) {
   const { platform } = request;
   logProgress(`=> Capacitor: building ${platform}`);
   return new Promise((resolve, reject) => {
-    const callbacks = {
-      onError: reject,
-      onExit: code => {
-        if (code === 0) logSuccess(`=> Capacitor: built ${platform}`);
-        resolve(code);
-      },
-    };
+    const callbacks = { onError: reject, onExit: resolve };
     if (request.gradleTask) {
-      const wrapper = path.join(request.nativeDir, process.platform === 'win32' ? 'gradlew.bat' : 'gradlew');
-      spawnProcess(wrapper, [request.gradleTask], {
-        cwd: request.nativeDir,
-        env: { ...process.env, ...getCapacitorEnv({ platform, mode }) },
-        stdio: 'inherit',
-        ...callbacks,
+      spawnNative(gradleWrapper(request.nativeDir), [request.gradleTask], {
+        cwd: request.nativeDir, label: 'Gradle build', env, mode, platform,
+        secrets: request.secrets, showOutput: isVerbose(), interactive: !request.bundleVariant, ...callbacks,
       });
     } else {
       spawnCap(request.args, { cwd: appDir, label: 'Build', platform, mode, secrets: request.secrets, ...callbacks });

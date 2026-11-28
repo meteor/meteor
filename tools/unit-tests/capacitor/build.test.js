@@ -48,8 +48,9 @@ test('Android keeps the configured format unless Meteor explicitly overrides it'
   expect(configured.args).toEqual(['build', 'android']);
   expect(configured.artifactPaths).toEqual([path.join(appDir, 'mobile/android/app/build/outputs/apk/demo/release/app-demo-release-signed.apk')]);
   const overridden = request('android', config, { packageType: 'bundle' });
-  expect(overridden.args).toEqual(['build', 'android', '--androidreleasetype', 'AAB']);
-  expect(overridden.artifactPaths[0]).toBe(path.join(appDir, 'mobile/android/app/build/outputs/bundle/demoRelease/app-demo-release-signed.aab'));
+  expect(overridden.gradleTask).toBe(':app:bundleDemoRelease');
+  expect(overridden.bundleVariant).toBe('demoRelease');
+  expect(overridden.artifactPaths[0]).toBe(path.join(appDir, 'mobile/android/app/build/outputs/bundle/demoRelease/app-demo-release.aab'));
 });
 
 test('TypeScript configuration takes precedence and retains native build settings', async () => {
@@ -88,9 +89,15 @@ test('a stale Android artifact cannot satisfy a new build, and a fresh artifact 
   await prepareNativeArtifacts(build);
   await expect(collectNativeArtifacts(build)).rejects.toThrow(/did not produce/);
   fs.writeFileSync(build.artifactPaths[0], 'fresh');
-  const outputs = await collectNativeArtifacts(build);
+  const verify = jest.fn(async file => expect(fs.readFileSync(file, 'utf8')).toBe('fresh'));
+  const outputs = await collectNativeArtifacts(build, verify);
+  expect(verify).toHaveBeenCalledTimes(1);
   expect(outputs).toEqual([path.join(appDir, 'output/android/app-release-signed.aab')]);
   expect(fs.readFileSync(outputs[0], 'utf8')).toBe('fresh');
+  fs.writeFileSync(build.artifactPaths[0], 'invalid');
+  await expect(collectNativeArtifacts(build, async () => { throw new Error('wrong signer'); })).rejects.toThrow('wrong signer');
+  expect(fs.readFileSync(outputs[0], 'utf8')).toBe('fresh');
+  expect(fs.readdirSync(build.outputDir)).toEqual(['app-release-signed.aab']);
 });
 
 test('iOS clears only generated IPAs and collects fresh exports without removing project files', async () => {
