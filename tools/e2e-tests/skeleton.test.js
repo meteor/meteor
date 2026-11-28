@@ -362,6 +362,23 @@ describe('Meteor Skeletons /', () => {
         server: 'server/main.js',
         test: 'tests/main.js',
       },
+      customAssertions: {
+        async afterRun() {
+          await page.click('nav a[href="/about"]');
+          await page.waitForFunction(
+            () => document.querySelector('h1')?.textContent === 'About Page',
+            null,
+            { timeout: 15_000 },
+          );
+          expect(await page.textContent('p')).toBe('This is the about page.');
+          await page.click('nav a[href="/"]');
+          await page.waitForFunction(
+            () => document.querySelector('h1')?.textContent === 'Welcome to Meteor!',
+            null,
+            { timeout: 15_000 },
+          );
+        },
+      },
     }),
   );
 
@@ -397,7 +414,20 @@ describe('Meteor Skeletons /', () => {
         null,
         { timeout: 15_000 },
       );
-      console.log(`✅ Client code running under the prefix (${url})`);
+      await page.click(`nav a[href="${prefix}/about"]`);
+      await page.waitForFunction(
+        () => document.querySelector('h1')?.textContent === 'About Page',
+        null,
+        { timeout: 15_000 },
+      );
+      expect(await page.textContent('p')).toBe('This is the about page.');
+      await page.click(`nav a[href="${prefix}"]`);
+      await page.waitForFunction(
+        () => document.querySelector('h1')?.textContent === 'Welcome to Meteor!',
+        null,
+        { timeout: 15_000 },
+      );
+      console.log(`✅ Client code and routes running under the prefix (${url})`);
     }
 
     beforeAll(async () => {

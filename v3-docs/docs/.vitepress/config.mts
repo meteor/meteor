@@ -664,6 +664,10 @@ export default defineConfig({
                 text: "Accounts",
                 link: "/tutorials/accounts/accounts",
               },
+              {
+                text: "Routing",
+                link: "/tutorials/routing/routing",
+              },
             ]
           },
           {
