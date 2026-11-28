@@ -1,0 +1,60 @@
+name: Prepare Meteor E2E dependencies
+description: Restore dependencies and prepare the ci-e2e checkout for browser tests.
+
+outputs:
+  cache-paths:
+    description: Fixed dependency paths under the job checkout to restore and save.
+    value: ${{ steps.configure.outputs.cache-paths }}
+  save-key:
+    description: Primary cache key to save after a miss or a fallback restore.
+    value: ${{ steps.cache.outputs.cache-hit != 'true' && steps.cache.outputs.cache-primary-key || '' }}
+
+runs:
+  using: composite
+  steps:
+    - name: Configure the test environment
+      id: configure
+      shell: bash
+      env:
+        BRANCH: ${{ github.head_ref || github.ref_name }}
+        CACHE_PATHS: |-
+          ci-e2e/.cache/npm/_cacache
+          ci-e2e/.cache/ms-playwright
+          ci-e2e/dev_bundle
+          ci-e2e/.babel-cache
+          ci-e2e/.meteor
+          ci-e2e/node_modules
+          ci-e2e/tools/e2e-tests/node_modules
+      run: |
+        printf 'cache-paths<<PATHS\n%s\nPATHS\n' "$CACHE_PATHS" >> "$GITHUB_OUTPUT"
+        # Generated apps can change HOME. Use one browser installation for all of them.
+        echo "PLAYWRIGHT_BROWSERS_PATH=$GITHUB_WORKSPACE/ci-e2e/.cache/ms-playwright" >> "$GITHUB_ENV"
+        echo "npm_config_cache=$GITHUB_WORKSPACE/ci-e2e/.cache/npm" >> "$GITHUB_ENV"
+        if [[ "$BRANCH" == release-* ]]; then
+          echo "NPM_LINK_RSPACK=false" >> "$GITHUB_ENV"
+          echo "::warning::Release branches install @meteorjs/rspack from npm. Verify the expected version is published."
+        fi
+
+    - name: Restore E2E dependencies
+      id: cache
+      uses: actions/cache/restore@v4
+      with:
+        path: ${{ steps.configure.outputs.cache-paths }}
+        key: e2e-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('ci-e2e/package-lock.json', 'ci-e2e/meteor', 'ci-e2e/tools/e2e-tests/package-lock.json') }}
+        restore-keys: |
+          e2e-${{ runner.os }}-${{ runner.arch }}-
+
+    - name: Install dependencies and the pinned Playwright browsers
+      shell: bash
+      working-directory: ci-e2e
+      run: |
+        npm install
+        npm run install:e2e
+
+    - name: Bootstrap Meteor and refresh the package catalog
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      working-directory: ci-e2e
+      # Populate the catalog before the app startup timeout begins. Test apps
+      # build their own packages. Using --get-ready here would build every local package.
+      run: ./meteor refresh --allow-superuser

@@ -19,16 +19,11 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: v3-docs/docs
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24.x
-          cache: npm
-          cache-dependency-path: v3-docs/docs/package-lock.json
-      - run: npm ci
-      - run: npm run test:links
+    uses: ./.github/workflows/run-linux-check-in-docker.yml
+    with:
+      image: node:24-bookworm
+      directory: v3-docs/docs
+      npm-lockfile: v3-docs/docs/package-lock.json
+      command: |
+        npm ci
+        npm run test:links

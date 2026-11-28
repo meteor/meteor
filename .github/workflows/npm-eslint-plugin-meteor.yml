@@ -12,16 +12,11 @@ permissions:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: npm-packages/eslint-plugin-meteor
-    steps:
-      - uses: actions/checkout@v4
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: 26.x
-          cache: npm
-      - run: npm ci
-      - run: npm test
+    uses: ./.github/workflows/run-linux-check-in-docker.yml
+    with:
+      image: node:26-bookworm
+      directory: npm-packages/eslint-plugin-meteor
+      npm-lockfile: npm-packages/eslint-plugin-meteor/package-lock.json
+      command: |
+        npm ci
+        npm test

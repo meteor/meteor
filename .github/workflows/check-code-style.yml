@@ -11,16 +11,18 @@ on:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
   check-code-style:
-    runs-on: oss-vm
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 26.x
-      - run: npm ci
-      - name: Check formatting with oxfmt
-        run: npx oxfmt --ignore-path .fmtignore --check .
-      - name: Run lint with oxlint
-        run: npm run lint
+    uses: ./.github/workflows/run-linux-check-in-docker.yml
+    with:
+      self-hosted-in-public: true
+      image: node:26-bookworm
+      npm-lockfile: package-lock.json
+      command: |
+        npm ci --prefer-offline
+        npx oxfmt --ignore-path .fmtignore --check .
+        npm run lint

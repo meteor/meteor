@@ -21,7 +21,6 @@ const HCP_FLOW_PATH = path.resolve(
   "hcp-updated.yaml"
 );
 const JUNIT_DIR = path.resolve(__dirname, "..", "junit");
-const HARD_TIMEOUT_MS = 8 * 60 * 1000;
 
 const EXIT_PASS = 0;
 const EXIT_FLOW_FAIL = 1;
@@ -89,10 +88,12 @@ async function run(argv) {
     }
   };
 
+  // A cold iOS run also compiles the Xcode simulator project.
+  const timeoutMs = (args.platform === "ios" ? 20 : 8) * 60_000;
   const hardTimeout = setTimeout(() => {
-    console.error(`Hard timeout (${HARD_TIMEOUT_MS}ms) reached. Aborting.`);
+    console.error(`Hard timeout (${timeoutMs}ms) reached. Aborting.`);
     cleanupAll().finally(() => process.exit(EXIT_INFRA));
-  }, HARD_TIMEOUT_MS);
+  }, timeoutMs);
   hardTimeout.unref();
 
   try {

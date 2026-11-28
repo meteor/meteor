@@ -3,30 +3,59 @@ on:
   pull_request:
     paths:
       - 'docs/**/*'
+
+permissions:
+  contents: read
+  deployments: write
+  statuses: write
+
 jobs:
+  build:
+    if: github.event.pull_request.head.repo.full_name != github.repository
+    permissions:
+      contents: read
+    uses: ./.github/workflows/run-linux-check-in-docker.yml
+    with:
+      image: node:12-bullseye
+      directory: docs
+      command: npm ci && npm run build
+
   preview:
-    runs-on: ubuntu-latest
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: >-
+      ${{ github.repository == 'meteor/meteor' && 'ubuntu-latest'
+          || fromJSON(format('["self-hosted","linux",{0}]', toJSON(vars.METEOR_CI_LINUX_RUNNER || 'oss-vm'))) }}
     defaults:
       run:
-        working-directory: docs/
+        working-directory: ci-docs-preview/docs
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: ci-docs-preview
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 12.x
       - name: Build the Docs
+        env:
+          npm_config_cache: ${{ runner.temp }}/docs-preview-npm
         run: npm ci && npm run build
       - name: Deploy to Netlify for preview
         uses: nwtgck/actions-netlify@v4.0.0
         with:
-          publish-dir: './docs/public/'
+          publish-dir: './ci-docs-preview/docs/public/'
           production-branch: devel
           github-token: ${{ secrets.GITHUB_TOKEN }}
           deploy-message: Deploy from GitHub Actions ${{ github.event.pull_request.title }}
-          netlify-config-path: './docs/netlify.toml'
+          netlify-config-path: './ci-docs-preview/docs/netlify.toml'
           alias: deploy-preview-${{ github.event.number }}
           enable-pull-request-comment: false
           enable-commit-comment: false
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_DOCS_SITE_ID }}
+
+      - name: Remove preview checkout
+        if: always()
+        working-directory: ${{ github.workspace }}
+        run: rm -rf -- ci-docs-preview

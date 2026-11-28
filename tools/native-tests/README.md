@@ -57,7 +57,7 @@ changes still requires publishing that plugin version and then updating
 ## CI
 
 See [native.yml](../../.github/workflows/native.yml). It runs nightly at 06:00 UTC
-and when the `mobile` label is added to a PR. Subsequent pushes to an already
+and when a maintainer adds the `area: mobile` label to a PR. Subsequent pushes to an already
 labeled PR do not automatically rerun this workflow; check the tested commit
 before treating a previous run as evidence for new changes.
 

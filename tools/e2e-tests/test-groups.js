@@ -1,4 +1,9 @@
 const EXPLICIT_TEST_GROUPS = Object.freeze({
+  // The CI matrix follows this order. Put the longest group in the first batch.
+  regressions: {
+    label: 'Regressions',
+    pattern: '^(?:Regressions / (?!Server Runtime)|Regression /|Rspack bundle probe)',
+  },
   cli: {
     label: 'CLI',
     pattern: '^CLI /',
@@ -50,10 +55,6 @@ const EXPLICIT_TEST_GROUPS = Object.freeze({
   server_runtime: {
     label: 'Server Runtime',
     pattern: '^Regressions / Server Runtime',
-  },
-  regressions: {
-    label: 'Regressions',
-    pattern: '^(?:Regressions / (?!Server Runtime)|Regression /|Rspack bundle probe)',
   },
   solid_svelte: {
     label: 'Solid & Svelte',

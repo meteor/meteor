@@ -3,30 +3,59 @@ on:
   pull_request:
     paths:
       - 'guide/**/*'
+
+permissions:
+  contents: read
+  deployments: write
+  statuses: write
+
 jobs:
+  build:
+    if: github.event.pull_request.head.repo.full_name != github.repository
+    permissions:
+      contents: read
+    uses: ./.github/workflows/run-linux-check-in-docker.yml
+    with:
+      image: node:26-bookworm
+      directory: guide
+      command: npm ci && npm run build
+
   preview:
-    runs-on: ubuntu-latest
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: >-
+      ${{ github.repository == 'meteor/meteor' && 'ubuntu-latest'
+          || fromJSON(format('["self-hosted","linux",{0}]', toJSON(vars.METEOR_CI_LINUX_RUNNER || 'oss-vm'))) }}
     defaults:
       run:
-        working-directory: guide/
+        working-directory: ci-guide-preview/guide
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: ci-guide-preview
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 26.x
       - name: Build the Guide
+        env:
+          npm_config_cache: ${{ runner.temp }}/guide-preview-npm
         run: npm ci && npm run build
       - name: Deploy to Netlify for preview
         uses: nwtgck/actions-netlify@v4.0.0
         with:
-          publish-dir: './guide/public'
+          publish-dir: './ci-guide-preview/guide/public'
           production-branch: devel
           github-token: ${{ secrets.GITHUB_TOKEN }}
           deploy-message: Deploy from GitHub Actions ${{ github.event.pull_request.title }}
-          netlify-config-path: './guide/netlify.toml'
+          netlify-config-path: './ci-guide-preview/guide/netlify.toml'
           alias: deploy-preview-${{ github.event.number }}
           enable-pull-request-comment: false
           enable-commit-comment: false
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_GUIDE_SITE_ID }}
+
+      - name: Remove preview checkout
+        if: always()
+        working-directory: ${{ github.workspace }}
+        run: rm -rf -- ci-guide-preview

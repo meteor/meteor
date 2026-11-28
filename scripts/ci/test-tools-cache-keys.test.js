@@ -99,14 +99,14 @@ test('dev bundle caches use dependency keys with fallback restores', () => {
 test('Node 26 workflows do not restore caches created by older Node majors', () => {
   assert.match(
     ddpWorkflow,
-    /key: \$\{\{ runner\.os \}\}-node-26-\$\{\{ hashFiles\('meteor', '\*\*\/package-lock\.json'\) \}\}/,
+    /key: \$\{\{ runner\.os \}\}-node-26-\$\{\{ hashFiles\('\.ci-ddp\/meteor', '\.ci-ddp\/\*\*\/package-lock\.json'\) \}\}/,
   );
   assert.match(ddpWorkflow, /\$\{\{ runner\.os \}\}-node-26-/);
   assert.doesNotMatch(ddpWorkflow, /\$\{\{ runner\.os \}\}-node-24-/);
 
   assert.match(
     packagesWorkflow,
-    /key: \$\{\{ runner\.os \}\}-node-26-meteor-\$\{\{ hashFiles\('meteor', '\*\*\/package-lock\.json'\) \}\}/,
+    /key: \$\{\{ runner\.os \}\}-node-26-meteor-\$\{\{ hashFiles\('\.ci-packages\/meteor', '\.ci-packages\/\*\*\/package-lock\.json'\) \}\}/,
   );
   assert.match(packagesWorkflow, /\$\{\{ runner\.os \}\}-node-26-meteor-/);
   assert.doesNotMatch(packagesWorkflow, /\$\{\{ runner\.os \}\}-node-24-meteor-/);

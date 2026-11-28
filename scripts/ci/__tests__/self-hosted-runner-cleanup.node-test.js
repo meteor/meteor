@@ -6,151 +6,201 @@ const path = require("node:path");
 
 const cleanup = require("../self-hosted-runner-cleanup.js");
 
-function createFixture(t) {
-  const runnerWorkspace = fs.mkdtempSync(
-    path.join(os.tmpdir(), "runner-workspace-")
+function fixture(t, { workspaceGiB = [30], dockerGiB = [30], fail = [] } = {}) {
+  const parent = fs.realpathSync(
+    fs.mkdtempSync(path.join(os.tmpdir(), "runner-cleanup-")),
   );
-  const workspace = path.join(runnerWorkspace, "meteor", "meteor");
-  const siblingWorkspace = path.join(
-    runnerWorkspace,
-    "other-repo",
-    "other-repo"
-  );
-
-  fs.mkdirSync(path.join(workspace, "nested"), { recursive: true });
-  fs.mkdirSync(siblingWorkspace, { recursive: true });
-
-  fs.writeFileSync(path.join(workspace, "root.txt"), "root");
-  fs.writeFileSync(path.join(workspace, "nested", "child.txt"), "child");
-  fs.writeFileSync(path.join(siblingWorkspace, "keep.txt"), "keep");
-
-  t.after(() => {
-    fs.rmSync(runnerWorkspace, { recursive: true, force: true });
+  t.after(() => fs.rmSync(parent, { recursive: true, force: true }));
+  const workspace = path.join(parent, "meteor", "meteor");
+  const sibling = path.join(parent, "other-repo");
+  const summary = path.join(parent, "summary");
+  fs.mkdirSync(path.join(workspace, ".ci-linux-check", "source"), {
+    recursive: true,
   });
+  fs.mkdirSync(sibling);
+  fs.writeFileSync(
+    path.join(workspace, ".ci-linux-check", "npm-downloads.tar"),
+    "downloads",
+  );
+  fs.writeFileSync(path.join(sibling, "keep"), "keep");
+  fs.symlinkSync(sibling, path.join(workspace, "link"), "dir");
 
-  return { runnerWorkspace, workspace, siblingWorkspace };
-}
-
-function createExecStub({ availableKiB = 30 * 1024 * 1024 } = {}) {
-  const calls = [];
-
-  const execFileSyncImpl = (command, args, options = {}) => {
-    calls.push([command, ...args]);
-
-    if (command === "df" && args[0] === "-Pk") {
-      const output = [
-        "Filesystem 1024-blocks Used Available Capacity Mounted on",
-        `/dev/test 1000000 0 ${availableKiB} 0% ${args[1]}`,
-      ].join("\n");
-
-      return options.encoding === "utf8" ? output : Buffer.from(output);
-    }
-
-    return options.encoding === "utf8" ? "" : Buffer.alloc(0);
-  };
-
-  return { calls, execFileSyncImpl };
-}
-
-function createEnv({ workspace, runnerWorkspace }) {
-  return {
+  const env = {
     GITHUB_WORKSPACE: workspace,
-    RUNNER_WORKSPACE: runnerWorkspace,
+    RUNNER_WORKSPACE: parent,
+    RUNNER_NAME: "worker-1",
+    GITHUB_STEP_SUMMARY: summary,
+  };
+  const commands = [];
+  const dockerRoot = path.join(parent, "docker");
+  const fsImpl = {
+    ...fs,
+    readFileSync(file, options) {
+      if (file === "/proc/self/mountinfo")
+        return "1 0 0:1 / / rw - tmpfs tmpfs rw\n";
+      return fs.readFileSync(file, options);
+    },
+    statfsSync(file) {
+      assert.ok([workspace, parent, dockerRoot].includes(file));
+      const values = file === dockerRoot ? dockerGiB : workspaceGiB;
+      const available = values.length > 1 ? values.shift() : values[0];
+      return { bsize: 1024, bavail: available * 1024 ** 2 };
+    },
+  };
+  const deps = {
+    env,
+    fsImpl,
+    logger: { log() {} },
+    execFileSyncImpl(command, args) {
+      assert.equal(command, "docker");
+      const operation = args.slice(0, 2).join(" ");
+      commands.push(operation);
+      if (fail.includes(operation))
+        throw new Error("daemon diagnostic, omit from reports");
+      if (args[0] === "info") return dockerRoot;
+      if (args[0] === "system")
+        assert.deepEqual(args, ["system", "prune", "-af", "--volumes"]);
+      if (args[0] === "builder")
+        assert.deepEqual(args, ["builder", "prune", "-af"]);
+    },
+  };
+  return {
+    workspace,
+    parent,
+    sibling,
+    env,
+    fsImpl,
+    deps,
+    commands,
+    run: (options = {}) => cleanup(options, deps),
+    report: () => fs.readFileSync(summary, "utf8"),
   };
 }
 
-function isDockerPruneCall(call) {
-  return (
-    call[0] === "docker" &&
-    ((call[1] === "system" && call[2] === "prune") ||
-      (call[1] === "builder" && call[2] === "prune"))
-  );
-}
-
-test("removes all contents from GITHUB_WORKSPACE and leaves sibling workspaces untouched", async (t) => {
-  const { runnerWorkspace, workspace, siblingWorkspace } = createFixture(t);
-  const { calls, execFileSyncImpl } = createExecStub();
-  const env = createEnv({ workspace, runnerWorkspace });
-
-  await cleanup(
-    { workspace, runnerWorkspace, thresholdGiB: 0 },
-    { env, execFileSyncImpl, logger: { log() {} } }
-  );
-
-  assert.deepEqual(fs.readdirSync(workspace), []);
-  assert.equal(
-    fs.readFileSync(path.join(siblingWorkspace, "keep.txt"), "utf8"),
-    "keep"
-  );
-  assert.deepEqual(
-    calls.filter(isDockerPruneCall),
-    [],
-    "docker prune commands should not run when free space is above the threshold"
-  );
+test("cleans the whole checkout, leaves symlink targets and siblings intact, and skips Docker when the target is met", async (t) => {
+  const f = fixture(t, { workspaceGiB: [5, 20] });
+  await f.run();
+  assert.deepEqual(fs.readdirSync(f.workspace), []);
+  assert.equal(fs.readFileSync(path.join(f.sibling, "keep"), "utf8"), "keep");
+  assert.deepEqual(f.commands, ["info --format"]);
+  assert.match(f.report(), /worker-1/);
+  assert.match(f.report(), /5.00 GiB before, 20.00 GiB after/);
+  assert.match(f.report(), /20 GiB\): met/);
 });
 
-test("rejects cleaning RUNNER_WORKSPACE itself", async (t) => {
-  const { runnerWorkspace } = createFixture(t);
-  const { execFileSyncImpl } = createExecStub();
-  const env = createEnv({ workspace: runnerWorkspace, runnerWorkspace });
+test("zero uses the GITHUB_WORKSPACE fallback and cleans without contacting Docker", async (t) => {
+  const f = fixture(t);
+  delete f.env.RUNNER_WORKSPACE;
+  await f.run({ thresholdGiB: 0 });
+  await f.run({ thresholdGiB: 0 });
+  assert.deepEqual(fs.readdirSync(f.workspace), []);
+  assert.deepEqual(f.commands, []);
+});
 
+test("rejects the runner root, redirected checkouts and blank thresholds before cleanup", async (t) => {
+  const f = fixture(t);
   await assert.rejects(
-    cleanup(
-      { workspace: runnerWorkspace, runnerWorkspace, thresholdGiB: 0 },
-      { env, execFileSyncImpl, logger: { log() {} } }
-    ),
-    /outside RUNNER_WORKSPACE|unsafe path/
+    f.run({ workspace: f.parent }),
+    /outside RUNNER_WORKSPACE/,
   );
+  await assert.rejects(f.run({ thresholdGiB: " " }), /Invalid SELF_HOSTED/);
+  fs.renameSync(f.workspace, f.workspace + "-old");
+  fs.symlinkSync(f.sibling, f.workspace, "dir");
+  await assert.rejects(f.run(), /redirected workspace/);
+  assert.deepEqual(fs.readdirSync(f.sibling), ["keep"]);
+  assert.deepEqual(f.commands, []);
 });
 
-test("prunes docker only when free space is below the threshold", async (t) => {
-  const { runnerWorkspace, workspace } = createFixture(t);
-  const { calls, execFileSyncImpl } = createExecStub({
-    availableKiB: 5 * 1024 * 1024,
+test("refuses to delete across a mount inside the checkout", async (t) => {
+  const f = fixture(t, { workspaceGiB: [1] });
+  const mount = path
+    .join(f.workspace, "..mounted cache")
+    .replaceAll(" ", "\\040");
+  f.fsImpl.readFileSync = () => `1 0 0:1 / ${mount} rw - tmpfs tmpfs rw\n`;
+  await assert.rejects(f.run(), /mount in the workspace/);
+  assert.ok(fs.existsSync(path.join(f.workspace, ".ci-linux-check")));
+  assert.deepEqual(f.commands, ["info --format"]);
+  assert.match(f.report(), /Repository workspace: Incomplete/);
+});
+
+test("reclaims container-owned files inside the validated checkout on a permission failure", async (t) => {
+  const f = fixture(t);
+  f.fsImpl.rmSync = () => {
+    throw Object.assign(new Error(), { code: "EACCES" });
+  };
+  f.deps.execFileSyncImpl = (cmd, args, options) => {
+    assert.equal(cmd, "/usr/bin/sudo");
+    assert.deepEqual(args, [
+      "-n",
+      "--",
+      "/usr/bin/find",
+      ".",
+      "-xdev",
+      "-depth",
+      "-mindepth",
+      "1",
+      "-delete",
+    ]);
+    assert.equal(options.cwd, f.workspace);
+    // Exercise the actual unprivileged find in this disposable directory.
+    require("node:child_process").execFileSync(args[2], args.slice(3), options);
+  };
+  await f.run({ thresholdGiB: 0 });
+  assert.deepEqual(fs.readdirSync(f.workspace), []);
+  assert.deepEqual(fs.readdirSync(f.sibling), ["keep"]);
+});
+
+test("prunes when only the Docker filesystem is low and verifies recovered space on both disks", async (t) => {
+  const f = fixture(t, { dockerGiB: [4, 4, 23] });
+  await f.run();
+  assert.deepEqual(f.commands, [
+    "info --format",
+    "system prune",
+    "builder prune",
+  ]);
+  assert.match(
+    f.report(),
+    /Docker free space: 4.00 GiB before, 23.00 GiB after/,
+  );
+  assert.match(f.report(), /20 GiB\): met/);
+});
+
+test("attempts both prunes and fails when a required prune fails even if free space recovered", async (t) => {
+  const f = fixture(t, {
+    workspaceGiB: [4, 5, 24],
+    fail: ["system prune", "builder prune"],
   });
-  const env = createEnv({ workspace, runnerWorkspace });
-
-  await cleanup(
-    { workspace, runnerWorkspace, thresholdGiB: 20 },
-    { env, execFileSyncImpl, logger: { log() {} } }
-  );
-
-  assert.ok(
-    calls.some(
-      (call) =>
-        call[0] === "docker" &&
-        call[1] === "system" &&
-        call[2] === "prune" &&
-        call.includes("--volumes")
-    ),
-    "expected docker system prune when free space is low"
-  );
-  assert.ok(
-    calls.some(
-      (call) =>
-        call[0] === "docker" && call[1] === "builder" && call[2] === "prune"
-    ),
-    "expected docker builder prune when free space is low"
-  );
+  await assert.rejects(f.run(), (error) => {
+    assert.match(error.message, /system prune.*failed/);
+    assert.match(error.message, /builder prune.*failed/);
+    assert.doesNotMatch(error.message, /daemon diagnostic/);
+    return true;
+  });
+  assert.deepEqual(f.commands, [
+    "info --format",
+    "system prune",
+    "builder prune",
+  ]);
+  assert.match(f.report(), /Docker prune: Failed/);
+  assert.match(f.report(), /20 GiB\): met/);
 });
 
-test("falls back to GITHUB_WORKSPACE when RUNNER_WORKSPACE is not set", async (t) => {
-  const { workspace } = createFixture(t);
-  const { calls, execFileSyncImpl } = createExecStub();
+test("fails when successful pruning leaves the disk below target", async (t) => {
+  const f = fixture(t, { workspaceGiB: [4, 5, 8] });
+  await assert.rejects(f.run(), /Could not confirm 20 GiB/);
+  assert.match(f.report(), /8.00 GiB after/);
+  assert.match(f.report(), /20 GiB\): unmet or unverified/);
+});
 
-  await cleanup(
-    { thresholdGiB: 0 },
-    {
-      env: { GITHUB_WORKSPACE: workspace },
-      execFileSyncImpl,
-      logger: { log() {} },
-    }
+test("cleans the workspace and reports an unverified Docker disk when the daemon is unavailable", async (t) => {
+  const f = fixture(t, { fail: ["info --format"] });
+  await assert.rejects(
+    f.run(),
+    /Could not determine the Docker data directory/,
   );
-
-  assert.deepEqual(fs.readdirSync(workspace), []);
-  assert.deepEqual(
-    calls.filter(isDockerPruneCall),
-    [],
-    "docker prune commands should not run when free space is above the threshold"
+  assert.deepEqual(fs.readdirSync(f.workspace), []);
+  assert.match(
+    f.report(),
+    /Docker free space: unmeasured before, unmeasured after/,
   );
 });

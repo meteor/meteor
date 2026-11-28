@@ -13,6 +13,8 @@ on:
       - 'npm-packages/meteor-rspack/**'
       - 'package.json'
       - '.github/workflows/unit-tests.yml'
+      - '.github/workflows/cleanup-runners.yml'
+      - '.github/scripts/run-self-hosted-runner-cleanup.js'
   push:
     branches:
       - devel
@@ -21,22 +23,16 @@ concurrency:
   group: unit-tests-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Unit Tests
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 26.x
-
-      - name: Install unit test deps
-        run: npm run install:unit
-
-      - name: Run unit tests
-        run: npm run test:unit
+    uses: ./.github/workflows/run-linux-check-in-docker.yml
+    with:
+      image: node:26-bookworm
+      command: |
+        npm run test:self-hosted-runner-cleanup
+        npm run install:unit
+        npm run test:unit

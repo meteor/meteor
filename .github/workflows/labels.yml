@@ -41,27 +41,44 @@ concurrency:
   group: ${{ github.event_name == 'pull_request' && format('labels-pr-{0}', github.ref) || 'labels-apply' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+env:
+  LABEL_SOURCE: .
+
 jobs:
   labels:
-    # Forks keep their own labels: this only runs in the main repository.
-    if: github.repository == 'meteor/meteor'
+    # Pull requests and dispatches outside devel only preview changes.
+    if: github.repository == 'meteor/meteor' && (github.event_name == 'pull_request' || github.ref != 'refs/heads/devel')
     runs-on: ubuntu-latest
-    # relabel.js stops after 5 hours, under the 6 hour limit of a job.
     timeout-minutes: 330
     permissions:
       contents: read
-      issues: write
-      pull-requests: write
-      discussions: write
+      issues: read
+      pull-requests: read
+      discussions: read
     env:
-      # Only devel applies; a pull request or a dispatch on another branch is a dry run.
-      APPLY: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/devel' }}
-    steps:
+      APPLY: 'false'
+    steps: &label-steps
+      - name: Allocate a fresh checkout for the preview
+        id: preview-source
+        if: env.APPLY != 'true'
+        run: |
+          source_dir=$(mktemp -d "$GITHUB_WORKSPACE/ci-labels-XXXXXXXX")
+          echo "LABEL_SOURCE=$source_dir" >> "$GITHUB_ENV"
+          echo "path=$source_dir" >> "$GITHUB_OUTPUT"
+
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          path: ${{ env.LABEL_SOURCE }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
 
       - name: Test the label scripts
         timeout-minutes: 5
+        working-directory: ${{ env.LABEL_SOURCE }}
         run: node --test --test-timeout=60000 .github/scripts/__tests__/relabel.test.js .github/scripts/__tests__/labels-preview.test.js .github/scripts/__tests__/inactive-issues.test.js
 
       # Every run exports before it writes. Re-running a run drops its artifacts, so keep the export
@@ -71,19 +88,21 @@ jobs:
         with:
           retries: 3
           script: |
-            await require('./.github/scripts/labels-preview.js')({ github, context, core })
+            process.chdir(process.env.LABEL_SOURCE)
+            await require(`${process.cwd()}/.github/scripts/labels-preview.js`)({ github, context, core })
 
       - name: Upload the preview and the export
         uses: actions/upload-artifact@v7
         with:
           name: labels-preview
           path: |
-            labels-before.json
-            labels-preview.csv
+            ${{ env.LABEL_SOURCE }}/labels-before.json
+            ${{ env.LABEL_SOURCE }}/labels-preview.csv
 
       - name: Create and rename labels
         uses: crazy-max/ghaction-github-labeler@v6
         with:
+          yaml-file: ${{ env.LABEL_SOURCE }}/.github/labels.yml
           skip-delete: ${{ env.APPLY == 'true' }}
           dry-run: ${{ env.APPLY != 'true' }}
 
@@ -106,3 +125,24 @@ jobs:
       - name: Delete labels missing from the manifest
         if: env.APPLY == 'true' && steps.relabel.outputs.left == '0'
         uses: crazy-max/ghaction-github-labeler@v6
+
+      - name: Remove temporary preview checkout
+        if: always() && steps.preview-source.outputs.path != ''
+        env:
+          PREVIEW_SOURCE: ${{ steps.preview-source.outputs.path }}
+        run: rm -rf -- "$PREVIEW_SOURCE"
+
+  apply:
+    # Take the label backup and apply changes on the same fresh runner.
+    if: github.repository == 'meteor/meteor' && github.event_name != 'pull_request' && github.ref == 'refs/heads/devel'
+    runs-on: ubuntu-latest
+    # relabel.js stops after 5 hours, under the 6 hour limit of a job.
+    timeout-minutes: 330
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+      discussions: write
+    env:
+      APPLY: 'true'
+    steps: *label-steps

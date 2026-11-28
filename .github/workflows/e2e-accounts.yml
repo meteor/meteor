@@ -16,9 +16,13 @@ on:
       - 'tools/e2e-tests/apps/accounts/**'
       - 'tools/e2e-tests/helpers/accounts-helpers.js'
       - '.github/workflows/e2e-accounts.yml'
+      - '.github/actions/prepare-e2e/**'
   push:
     branches:
       - 'release-*'
+
+permissions:
+  contents: read
 
 concurrency:
   group: meteor-e2e-accounts-${{ github.ref }}
@@ -26,7 +30,6 @@ concurrency:
 
 env:
   TOOL_NODE_FLAGS: "--max_old_space_size=12288"
-  PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.cache/ms-playwright
   # Force "localhost" to resolve to 127.0.0.1; runner prefers ::1, which
   # breaks local proxies to IPv4-only dev servers (ECONNREFUSED).
   NODE_OPTIONS: "--max_old_space_size=16384 --dns-result-order=ipv4first"
@@ -40,57 +43,37 @@ env:
 jobs:
   test:
     name: Accounts
-    runs-on: oss-vm
+    runs-on: >-
+      ${{ github.repository == 'meteor/meteor'
+          && (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository)
+          && 'ubuntu-latest'
+          || fromJSON(format('["self-hosted","linux",{0}]', toJSON(
+               (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository)
+               && (vars.METEOR_CI_FORK_LINUX_RUNNER || 'meteor-fork-ci')
+               || vars.METEOR_CI_LINUX_RUNNER || 'oss-vm'))) }}
     timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: ci-e2e
     container:
       image: node:22-bookworm
       # --init runs tini as PID 1 so orphaned processes get reaped. Without it
       # the container's PID 1 is `tail -f /dev/null`, which never calls wait(),
       # leaving every orphan (chrome, mongod, sh, ...) as a permanent zombie.
-      options: --init --cpus 6 --memory 16g --security-opt seccomp=unconfined
+      # A quota caps CPU time and lets Docker start the job on smaller runners.
+      options: --init --cpu-period 100000 --cpu-quota 600000 --memory 16g --security-opt seccomp=unconfined
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
         with:
+          path: ci-e2e
           submodules: recursive
+          persist-credentials: false
 
-      - name: Cache dependencies
-        id: deps-cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            /root/.npm
-            ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
-            dev_bundle
-            .babel-cache
-            .meteor
-            node_modules
-            tools/e2e-tests/node_modules
-          key: e2e-${{ runner.os }}-${{ hashFiles('package-lock.json', 'meteor', 'tools/e2e-tests/package-lock.json') }}
-          restore-keys: |
-            e2e-${{ runner.os }}-
-
-      - name: Install deps
-        run: npm install
-
-      - name: Install test deps
-        run: npm run install:e2e
-
-      - name: Set NPM_LINK_RSPACK=false for release branches
-        shell: bash
-        env:
-          BRANCH: ${{ github.head_ref || github.ref_name }}
-        run: |
-          echo "Current branch: $BRANCH"
-          if [[ "$BRANCH" == release-* ]]; then
-            echo "NPM_LINK_RSPACK=false" >> "$GITHUB_ENV"
-            echo "::warning::NPM_LINK_RSPACK=false on release branch. E2E tests will install @meteorjs/rspack from npm; make sure the latest version is published or tests may fail."
-          fi
-
-      - name: Prepare Meteor
-        if: steps.deps-cache.outputs.cache-hit != 'true'
-        run: ./meteor --get-ready --allow-superuser
+      - name: Prepare E2E dependencies
+        id: prepare
+        uses: ./ci-e2e/.github/actions/prepare-e2e
 
       - name: Run Accounts E2E
         id: test-run
@@ -104,3 +87,16 @@ jobs:
         run: |
           echo "::warning::First attempt failed, retrying..."
           METEOR_ALLOW_SUPERUSER=1 npm run test:e2e:group -- accounts
+
+      # Save only successful runs, while the checkout and browser cache still exist.
+      - name: Save E2E dependencies
+        if: success() && steps.prepare.outputs.save-key != ''
+        uses: actions/cache/save@v4
+        with:
+          key: ${{ steps.prepare.outputs.save-key }}
+          path: ${{ steps.prepare.outputs.cache-paths }}
+
+      - name: Remove E2E checkout
+        if: always()
+        working-directory: .
+        run: rm -rf -- ci-e2e
