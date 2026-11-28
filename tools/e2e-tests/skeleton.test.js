@@ -584,11 +584,9 @@ describe('Meteor Skeletons /', () => {
   );
 
   // A path-prefixed ROOT_URL (https://example.com/app) serves everything under
-  // the prefix, so every PWA URL has to follow. Production only: in development
-  // the boilerplate injects the Rspack client script without the prefix
-  // (packages/boilerplate-generator/template-web.browser.js), so no app code
-  // runs under a prefix until that is fixed. The rest of the lifecycle is
-  // prefix-agnostic and already covered above.
+  // the prefix, so every PWA URL has to follow: the manifest and icon links,
+  // the worker URL and scope, the worker's own precache paths. The rest of the
+  // lifecycle is prefix-agnostic and already covered above.
   describe('PWA Skeleton / path prefix /', () => {
     const port = 3215;
     const prefix = '/app';
@@ -613,6 +611,25 @@ describe('Meteor Skeletons /', () => {
       await killMeteorProcess(meteorProcess);
       meteorProcess = null;
       await killProcessByPort(port);
+    });
+
+    // Since #14719 the dev boilerplate injects the Rspack client script under
+    // the prefix, so the app code runs: it rewrites the manifest link and
+    // registers `/app/sw.js?dev=1` with the `/app/` scope.
+    test('"meteor run" / serves the installable PWA under the prefix', async () => {
+      ({ meteorProcess } = await runMeteorApp(tempDir, port, {
+        waitForOutput: '=> App running at',
+        // The helper's readiness probe hits `/`, which is a 404 under a prefix.
+        skipWaitOn: true,
+        env,
+      }));
+      await waitOn({
+        resources: [`http-get://localhost:${port}${prefix}/`],
+        timeout: process.env.CI ? 300_000 : 90_000,
+      });
+      await page.goto(`http://localhost:${port}${prefix}/`);
+      await page.waitForSelector('h1');
+      await assertPwaInstallable({ port, prefix, swPath: `${prefix}/sw.js?dev=1` });
     });
 
     test('"meteor run --production" / serves the PWA under the prefix', async () => {
