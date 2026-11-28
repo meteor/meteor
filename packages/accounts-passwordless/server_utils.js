@@ -41,8 +41,8 @@ export const checkToken = ({
   if (selector.email) {
     const foundTokenEmail = user.services.passwordless.tokens.find(
       ({ email: tokenEmail, token }) =>
-        SHA256(selector.email + sequence) === token &&
-        selector.email === tokenEmail
+        SHA256(tokenEmail + sequence) === token &&
+        selector.email.toLowerCase() === tokenEmail.toLowerCase()
     );
     if (foundTokenEmail) {
       return { ...result, verifiedEmail: foundTokenEmail.email };
