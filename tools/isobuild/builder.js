@@ -13,6 +13,11 @@ import {
   optimisticHashOrNull,
 } from "../fs/optimistic";
 
+// Node's synchronous fs.readFileSync refuses to read files larger than this
+// (it throws ERR_FS_FILE_TOO_LARGE), so files above it must be copied without
+// being read into a Buffer.
+const MAX_READABLE_FILE_SIZE = 2 ** 31 - 1;
+
 // Builder is in charge of writing "bundles" to disk, which are
 // directory trees such as site archives, programs, and packages.  In
 // addition to writing data to files, it can copy or link in existing
@@ -837,7 +842,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
             from: thisAbsFrom,
             resolved: dereferencedExternalPath,
             to: thisRelTo,
-            mode: fileStatus.mode,
+            stat: fileStatus,
             onlyIfCopied: pendingCopiedLink,
           });
           this.usedAsFile[thisRelTo] = true;
@@ -886,34 +891,33 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
         // could not be created above.
         fileStatus = optimisticStatOrNull(thisAbsFrom);
         if (fileStatus && fileStatus.isFile()) {
-          const hash = optimisticHashOrNull(thisAbsFrom);
-
-          if (this.previousWrittenHashes[thisRelTo] !== hash) {
-            const content = optimisticReadFile(thisAbsFrom);
-
-            files.writeFile(
-                files.pathResolve(this.buildPath, thisRelTo),
-                // The reason we call files.writeFile here instead of
-                // files.copyFile is so that we can read the file using
-                // optimisticReadFile instead of files.createReadStream.
-                content,
-                // Logic borrowed from files.copyFile: "Create the file as
-                // readable and writable by everyone, and executable by everyone
-                // if the original file is executably by owner. (This mode will be
-                // modified by umask.) We don't copy the mode *directly* because
-                // this function is used by 'meteor create' which is copying from
-                // the read-only tools tree into a writable app."
-                { mode: (fileStatus.mode & 0o100) ? 0o777 : 0o666 },
-            );
-          }
-
-          this.writtenHashes[thisRelTo] = hash;
-          this.usedAsFile[thisRelTo] = true;
+          await this._copyFile(thisAbsFrom, thisRelTo, fileStatus);
         }
       }
     };
 
     await walk(rootDir, to);
+  }
+
+  // Shared by ordinary copies and deferred external-link fallbacks.
+  async _copyFile(from, to, fileStatus, forceCopy = false) {
+    const absTo = files.pathResolve(this.buildPath, to);
+    if (fileStatus.size > MAX_READABLE_FILE_SIZE) {
+      // Neither whole-file hashing nor reading fits in a Buffer. Recopy on
+      // rebuild: matching size/mtime does not establish matching contents.
+      // Replace the directory entry atomically so a former symlink is not
+      // followed and existing readers retain the previous complete file.
+      await atomicallyReplaceFile(absTo, temporary => files.copyFile(from, temporary));
+    } else {
+      const hash = optimisticHashOrNull(from);
+      if (forceCopy || this.previousWrittenHashes[to] !== hash) {
+        files.writeFile(absTo, optimisticReadFile(from), {
+          mode: (fileStatus.mode & 0o100) ? 0o777 : 0o666,
+        });
+      }
+      this.writtenHashes[to] = hash;
+    }
+    this.usedAsFile[to] = true;
   }
 
   // Returns a new Builder-compatible object that works just like a
@@ -1016,12 +1020,15 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
         }
       }
 
-      // An in-place rebuild may have left a symlink at this path. Remove it
-      // before falling back to a file copy so the write cannot follow it.
-      try {
-        files.unlink(absTo);
-      } catch (e) {
-        if (e.code !== "ENOENT") throw e;
+      // Buffered writes must not follow a former symlink. Large-file copies
+      // replace it by rename after the temporary copy is complete.
+      if (pending.stat.size <= MAX_READABLE_FILE_SIZE ||
+          (pending.onlyIfCopied && !copiedTarget)) {
+        try {
+          files.unlink(absTo);
+        } catch (e) {
+          if (e.code !== "ENOENT") throw e;
+        }
       }
 
       if (pending.onlyIfCopied && !copiedTarget) {
@@ -1031,10 +1038,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
       // The external target was not copied into the bundle, or symlinks are
       // unavailable. Preserve the previous behavior by copying the file.
-      files.writeFile(absTo, optimisticReadFile(pending.from), {
-        mode: (pending.mode & 0o100) ? 0o777 : 0o666,
-      });
-      this.writtenHashes[pending.to] = optimisticHashOrNull(pending.from);
+      await this._copyFile(pending.from, pending.to, pending.stat, true);
     }
 
     if (this.previousUsedAsFile) {
@@ -1102,21 +1106,31 @@ function jsToTs(path) {
 }
 
 async function atomicallyRewriteFile(path, data, options) {
+  await atomicallyReplaceFile(path, temporary => files.writeFile(temporary, data, options));
+}
+
+async function atomicallyReplaceFile(path, writeTemporaryFile) {
   // create a different file with a random name and then rename over atomically
   const rname = '.builder-tmp-file.' + Math.floor(Math.random() * 999999);
   const rpath = files.pathJoin(files.pathDirname(path), rname);
-  files.writeFile(rpath, data, options);
   try {
-    files.rename(rpath, path);
-  } catch (e) {
-    if (e.code === 'EISDIR') {
-      // replacing a directory with a file; this is rare (so it can
-      // be a slow path) but can legitimately happen if e.g. a developer
-      // puts a file where there used to be a directory in their app.
-      await files.rm_recursive_deferred(path);
-      files.rename(rpath, path);
-    } else {
-      throw e;
+    writeTemporaryFile(rpath);
+    try {
+      await files.rename(rpath, path);
+    } catch (e) {
+      if (e.code === 'EISDIR') {
+        // Replacing a previous directory with a file is a rare slow path.
+        await files.rm_recursive_deferred(path);
+        await files.rename(rpath, path);
+      } else {
+        throw e;
+      }
+    }
+  } finally {
+    try {
+      files.unlink(rpath);
+    } catch (e) {
+      if (e.code !== 'ENOENT') throw e;
     }
   }
 }

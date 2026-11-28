@@ -1797,13 +1797,14 @@ export function copyFile(from: string, to: string, flags = 0) {
   const stat = statOrNull(from);
   if (stat && stat.isFile()) {
     // Create the file as readable and writable by everyone, and executable by
-    // everyone if the original file is executably by owner. (This mode will be
-    // modified by umask.) We don't copy the mode *directly* because this function
+    // everyone if the original file is executably by owner, subject to umask.
+    // chmod does not apply umask, so mask the final mode explicitly.
+    // We don't copy the mode *directly* because this function
     // is used by 'meteor create' which is copying from the read-only tools tree
     // into a writable app.
 
     // @ts-ignore
-    chmod(to, (stat.mode & 0o100) ? 0o777 : 0o666);
+    chmod(to, ((stat.mode & 0o100) ? 0o777 : 0o666) & ~process.umask());
   }
 }
 
