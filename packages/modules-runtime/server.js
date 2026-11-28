@@ -1,5 +1,7 @@
 // Options that will be populated below and then passed to makeInstaller.
-var makeInstallerOptions = {};
+var makeInstallerOptions = {
+  conditions: ["node-addons", "node", "require", "import", "module-sync", "default"]
+};
 
 // RegExp matching strings that don't start with a `.` or a `/`.
 var topLevelIdPattern = /^[^./]/;
