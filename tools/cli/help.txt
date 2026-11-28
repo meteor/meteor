@@ -369,16 +369,20 @@ List the packages explicitly used by your project.
 Usage: meteor list
        meteor list --tree [--weak]
        meteor list --json [--weak] [--details]
+       meteor list --why <package-name>
 
 Lists the packages that you have explicitly added to your project.
 Transitive dependencies are not listed unless you use the --tree option,
 which outputs a tree showing how packages are referenced.
 
-Use the --json option to output the tree in JSON format.
+Use the --json option to output the tree in JSON format. Use the --why
+option to show one shortest strong dependency chain from each direct
+application dependency that reaches the selected package.
 
 Options:
   --weak           Show weakly referenced dependencies in the tree.
   --details        Adds more package details to the JSON output.
+  --why            Explain why an installed package is in the app.
 
 >>> add-platform
 Add a platform to this project.
