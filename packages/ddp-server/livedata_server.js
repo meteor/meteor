@@ -289,9 +289,17 @@ Object.assign(Session.prototype, {
     // Make a shallow copy of the set of universal handlers and start them. If
     // additional universal publishers start while we're running them (due to
     // yielding), they will run separately as part of Server.publish.
-    for (const handler of [...self.server.universal_publish_handlers]) {
-      self._startSubscription(handler);
-    }
+    //
+    // Return the handlers' promises so callers that need the initial documents
+    // published (currently _setUserId) can wait for them. Without this the
+    // diff that follows _setUserId sees an empty collection view for the
+    // documents universal publications are still publishing, and the client is
+    // told to remove and then re-add them.
+    return Promise.all(
+      [...self.server.universal_publish_handlers].map((handler) =>
+        self._startSubscription(handler)
+      )
+    );
   },
 
   // Stop heartbeat if running
@@ -801,9 +809,11 @@ Object.assign(Session.prototype, {
 
       // Allow newly-created universal subs to be started on our connection in
       // parallel with the ones we're spinning up here, and spin up universal
-      // subs.
+      // subs. Wait for their handlers, like the named subs above: the diff
+      // after this block compares collection views, so it must run only once
+      // the universal publications have published their documents.
       self._dontStartNewUniversalSubs = false;
-      self.startUniversalSubs();
+      await self.startUniversalSubs();
     }, { name: '_setUserId' });
 
     // Start sending messages again, beginning with the diff from the previous

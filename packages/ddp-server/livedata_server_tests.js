@@ -1605,3 +1605,70 @@ Tinytest.addAsync(
     }
   }
 );
+
+// Regression test for #15001: a universal publication whose handler yields
+// before publishing must not make _setUserId's diff report its documents as
+// removed. That diff compares collection views, so it must run only after the
+// universal handlers have published, just like the named subs it awaits.
+Tinytest.addAsync(
+  "livedata server - setUserId keeps documents of universal publications",
+  async function (test) {
+    const collectionName = `universal_sub_${Random.id()}`;
+    const docId = Random.id();
+    let completions = 0;
+
+    const handler = async function () {
+      // Yield before publishing, so the handler is still running when the
+      // diff runs unless _setUserId waited for it.
+      await sleep(50);
+      this.added(collectionName, docId, { title: "kept" });
+      this.ready();
+      completions += 1;
+    };
+
+    const { conn, messages, cleanup } = await captureConnectionMessages(test);
+
+    try {
+      // Registering a universal publication also starts it on the sessions
+      // that already exist, including the one captured above.
+      Meteor.publish(null, handler);
+
+      await waitUntil(
+        () => messages.some((msg) => msg.msg === "added" && msg.id === docId),
+        { description: "universal publication publishes the document" }
+      );
+
+      messages.length = 0;
+      const beforeRerun = completions;
+
+      await conn.callAsync("livedata_server_test_setuserid", "someUserId");
+
+      await waitUntil(() => completions > beforeRerun, {
+        description: "universal publication reran for the new user id",
+      });
+
+      // Let messages sent after the rerun reach the capture hook.
+      await sleep(100);
+
+      test.equal(
+        messages
+          .filter((msg) => msg.id === docId)
+          .map((msg) => msg.msg),
+        [],
+        "setUserId must not remove and re-add unchanged universal documents"
+      );
+      test.equal(
+        messages.filter((msg) => msg.collection === collectionName).length,
+        0,
+        "setUserId must not send anything for an unchanged collection"
+      );
+    } finally {
+      Meteor.server.universal_publish_handlers =
+        Meteor.server.universal_publish_handlers.filter(
+          (registered) => registered !== handler
+        );
+      cleanup();
+      conn.disconnect();
+    }
+  }
+);
