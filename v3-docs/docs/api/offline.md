@@ -30,7 +30,7 @@ Call `Offline.start` once, at client startup, before the first subscription:
 import { Links } from '/imports/api/links/links.js';
 import '/imports/api/links/methods.js';
 
-Offline.start({ collections: [Links], methods: ['links.insert'] });
+Offline.start({ collections: [Links], methods: ['links.insert'], subscriptions: ['links'] });
 Meteor.subscribe('links');
 ```
 
@@ -38,6 +38,8 @@ Meteor.subscribe('links');
   and loaded back on the next start.
 - `methods`: the names of the Methods whose calls are recorded until the server
   answers.
+- `subscriptions`: the names of the publications whose subscriptions are ready
+  from the copy while the connection is down.
 
 On start, the connection is held back, the copy is loaded into Minimongo, the
 recorded calls are issued again through Meteor (their stubs put the optimistic
@@ -54,12 +56,19 @@ reconnection. To keep a set of documents on the device, keep its subscription
 active for the whole session rather than tied to a route: a board kept offline
 is a board whose subscription stays up.
 
-A subscription made while the connection is down is ready as soon as the copy
-is in Minimongo, as long as the copy holds documents: `ready()`, `onReady`,
-`Template.subscriptionsReady` and `useSubscribe` see it, its documents are the
-copy's until the server's data replaces them, in one batch, and it stays ready
-then, as any subscription does across a reconnection. On a first start, with
-nothing on the device, the subscriptions wait for the server as usual.
+A subscription to a publication listed in `subscriptions`, made while the
+connection is down, is ready as soon as the copy is in Minimongo, as long as the
+copy holds documents: `ready()`, `onReady`, `Template.subscriptionsReady` and
+`useSubscribe` see it, its documents are the copy's until the server's data
+replaces them, in one batch, and it stays ready then, as any subscription does
+across a reconnection. On a first start, with nothing on the device, the
+subscriptions wait for the server as usual. The subscriptions to the other
+publications always wait for the server: their data is not in the copy, and a
+screen that reads "ready and no document" as "not found" would be wrong.
+
+Without a listed subscription when the connection is up, the copy is replaced
+without waiting for any subscription, and its documents come back with their
+subscriptions.
 
 ## Recorded calls
 

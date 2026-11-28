@@ -19,7 +19,7 @@ subscription:
 import { Offline } from 'meteor/offline';
 import { Links } from '/imports/api/links/links.js';
 
-Offline.start({ collections: [Links], methods: ['links.insert'] });
+Offline.start({ collections: [Links], methods: ['links.insert'], subscriptions: ['links'] });
 ```
 
 The `meteor create --pwa` skeleton ships with it and shows a links list that

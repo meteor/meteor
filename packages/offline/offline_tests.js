@@ -28,6 +28,7 @@ const started = () => {
     startedOnce = Offline.start({
       collections: [Items],
       methods: ['offline_test.insert', 'offline_test.setValue', 'offline_test.fail', 'offline_test.ping'],
+      subscriptions: ['offline_test.items'],
     }).then(() => new Promise((resolve) => Meteor.subscribe('offline_test.items', { onReady: resolve })));
   }
   return startedOnce;
@@ -475,6 +476,55 @@ Tinytest.addAsync('offline - a subscription made without connection is ready fro
   } finally {
     Meteor.reconnect();
     if (computation) computation.stop();
+    handles.forEach((handle) => handle.stop());
+  }
+});
+
+// For what waits on the server after a reconnection: no 10-second deadline (a
+// new session first publishes again every subscription the test page holds,
+// which takes minutes in some CI modes), but a failure rather than a hang.
+const within = (promise, description, timeout = 600_000) =>
+  Promise.race([
+    promise,
+    new Promise((resolve, reject) => setTimeout(() => reject(new Error(`timed out waiting for ${description}`)), timeout)),
+  ]);
+
+const held = async () => {
+  await Meteor.callAsync('offline_test.insert', { _id: Random.id(), value: 'held' });
+  await until(() => Items.find().count() > 0, 'a published document');
+};
+
+Tinytest.addAsync('offline - only a listed publication is ready from the copy', async function (test) {
+  await started();
+  await held();
+  const handles = [];
+  Meteor.disconnect();
+  try {
+    const listed = Meteor.subscribe('offline_test.items', 'listed');
+    let unlisted;
+    const unlistedAnswered = new Promise((resolve) => {
+      unlisted = Meteor.subscribe('offline_test.unlisted', { onReady: resolve });
+    });
+    handles.push(listed, unlisted);
+    await until(() => listed.ready(), 'the listed subscription to be ready from the copy');
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    test.isFalse(unlisted.ready(), 'its data is not in the copy: it waits for the server');
+    Meteor.reconnect();
+    await within(unlistedAnswered, 'the server to answer the unlisted subscription');
+    // Until the session starts, the status may already say connected: a
+    // subscription made then is still made as without connection, ready from
+    // the copy after a microtask, long before the server could answer it.
+    Meteor.connection._resetStoresOnConnect = true;
+    try {
+      const early = Meteor.subscribe('offline_test.items', 'before the session');
+      handles.push(early);
+      await Promise.resolve();
+      test.isTrue(early.ready(), 'made as without connection');
+    } finally {
+      Meteor.connection._resetStoresOnConnect = false;
+    }
+  } finally {
+    Meteor.reconnect();
     handles.forEach((handle) => handle.stop());
   }
 });

@@ -23,14 +23,18 @@ const currentUserId = () => (typeof Meteor.userId === 'function' ? Meteor.userId
 let collections = [];
 let handles = [];
 let started = false;
+let listed = new Set(); // publication names
 
-// The subscriptions made while the connection is down: on boot, the ones the
-// app makes before the connection is up; later, the ones made offline. They
-// become ready as soon as the copy is in Minimongo, if it holds documents:
-// their data is the copy's until the server's replaces it in one batch, and
-// they stay ready then, as any subscription does across a reconnection. On a
-// first start, with nothing on the device, they wait for the server as usual.
+// The subscriptions to the listed publications made while the connection is
+// down: on boot, the ones the app makes before the connection is up; later,
+// the ones made offline. They become ready as soon as the copy is in
+// Minimongo, if it holds documents: their data is the copy's until the
+// server's replaces it in one batch, and they stay ready then, as any
+// subscription does across a reconnection. On a first start, with nothing on
+// the device, they wait for the server as usual, as the subscriptions to the
+// other publications always do: their data is not in the copy.
 const made = new Set(); // subscription ids
+let activating = false; // the boot copy is being loaded
 let loaded = false; // the boot copy is in Minimongo
 
 const holdsDocuments = () => collections.some((collection) => collection.find({}, { reactive: false }).count() > 0);
@@ -54,10 +58,16 @@ function readyFromCopy() {
   made.clear();
 }
 
+// The status says connected as soon as the socket opens, a round trip before
+// the server's `connected` message that starts the session: until then, a
+// subscription is made as without connection.
+const beforeSession = (connection) =>
+  !Tracker.nonreactive(() => connection.status().connected) || connection._resetStoresOnConnect;
+
 const subscribing = (subscribe) =>
   function (...args) {
     const handle = subscribe.apply(this, args);
-    if (!Tracker.nonreactive(() => Meteor.connection.status().connected)) {
+    if (listed.has(args[0]) && (activating || loaded) && beforeSession(Meteor.connection)) {
       made.add(handle.subscriptionId);
       // Never ready synchronously: the server's answer is not either.
       Promise.resolve().then(readyFromCopy);
@@ -98,16 +108,20 @@ export const Offline = {
   // Call it once, at client startup, before subscribing. Resolves once the
   // copy is in Minimongo and the recorded calls are queued; the connection is
   // held back until then so the first server data replaces the copy.
-  async start({ collections: mirrored = [], methods = [] } = {}) {
+  async start({ collections: mirrored = [], methods = [], subscriptions = [] } = {}) {
     if (started) throw new Error('Offline.start() has already been called');
     started = true;
     collections = mirrored;
+    listed = new Set(subscriptions);
     queue.configure(methods, emit);
     const connection = Meteor.connection;
     connection.disconnect();
+    activating = true;
     try {
       await activate(currentUserId(), { boot: true });
     } finally {
+      activating = false;
+      if (!loaded) made.clear();
       // The copy is replaced by the server's documents the way a reconnection
       // replaces the previous session's: on the `connected` message, the
       // stores are reset together with the data of the subscriptions made

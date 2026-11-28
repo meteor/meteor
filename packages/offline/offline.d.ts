@@ -7,6 +7,11 @@ export namespace Offline {
     collections?: Mongo.Collection<any>[];
     /** Names of the Methods whose calls are recorded until the server answers. They must be idempotent. */
     methods?: string[];
+    /**
+     * Names of the publications whose subscriptions are ready from the copy while the connection is down. They must always
+     * become ready: return a cursor or `[]`, or call `this.ready()`, `this.stop()` or `this.error()`.
+     */
+    subscriptions?: string[];
   }
 
   /** The server's error as stored on the device, and the shape of the error a listener receives (a `Meteor.Error` fits). */

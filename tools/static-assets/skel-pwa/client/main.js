@@ -12,8 +12,9 @@ import './main.html';
 // Keeps the published links and the calls to `links.insert` on the device: the
 // list is there on the next load even without network, and a link added while
 // offline reaches the server once the connection is back. Started before the
-// first subscription, as the `offline` package requires.
-Offline.start({ collections: [Links], methods: ['links.insert'] });
+// first subscription, as the `offline` package requires; the `links`
+// subscription is ready from the device copy while the connection is down.
+Offline.start({ collections: [Links], methods: ['links.insert'], subscriptions: ['links'] });
 Meteor.subscribe('links');
 
 const pendingCalls = new ReactiveVar(0);

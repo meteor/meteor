@@ -57,6 +57,7 @@ Meteor.methods({
 
 if (Meteor.isServer) {
   Meteor.publish('offline_test.items', () => Items.find());
+  Meteor.publish('offline_test.unlisted', () => Items.find());
   Meteor.methods({
     async 'offline_test.clear'() {
       await Items.removeAsync({});

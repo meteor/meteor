@@ -9,7 +9,7 @@ server has answered them.
 import { Offline } from 'meteor/offline';
 import { Links } from '/imports/api/links/links.js';
 
-Offline.start({ collections: [Links], methods: ['links.insert'] });
+Offline.start({ collections: [Links], methods: ['links.insert'], subscriptions: ['links'] });
 ```
 
 Call `start` once, at client startup, before subscribing. It holds the
@@ -27,10 +27,14 @@ The copy follows the subscriptions of the session. On the first data from the
 server, the documents the current subscriptions do not publish leave Minimongo
 and the copy, as on any reconnection: to keep a set of documents on the device,
 keep its subscription active for the whole session rather than tied to a route.
-A subscription made while the connection is down is ready as soon as the copy
-is in Minimongo, as long as the copy holds documents, and stays ready once the
-server's data has replaced the copy; on a first start, with nothing on the
-device, it waits for the server as usual.
+A subscription to a publication listed in `subscriptions`, made while the
+connection is down, is ready as soon as the copy is in Minimongo, as long as the
+copy holds documents, and stays ready once the server's data has replaced the
+copy; on a first start, with nothing on the device, it waits for the server as
+usual. The subscriptions to the other publications always wait for the server:
+their data is not in the copy. Without a listed subscription when the
+connection is up, the copy is replaced without waiting for any subscription and
+its documents come back with their subscriptions.
 
 A recorded call goes through Meteor as usual: its stub writes the optimistic
 document, Meteor keeps the call in its own queue while the connection is down
