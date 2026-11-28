@@ -84,12 +84,16 @@ A local collection is a convenient way to use the full power of the Minimongo li
 
 Although MongoDB is a schema-less database, which allows maximum flexibility in data structuring, it is generally good practice to use a schema to constrain the contents of your collection to conform to a known format. If you don't, then you tend to end up needing to write defensive code to check and confirm the structure of your data as it *comes out* of the database, instead of when it *goes into* the database. As in most things, you tend to *read data more often than you write it*, and so it's usually easier, and less buggy to use a schema when writing.
 
-In Meteor, the pre-eminent schema package is the npm [simpl-schema](https://www.npmjs.com/package/simpl-schema) package. It's an expressive, MongoDB based schema that's used to insert and update documents. Another alternative is [jagi:astronomy](https://atmospherejs.com/jagi/astronomy) which is a full Object Model (OM) layer offering schema definition, server/client side validators, object methods and event handlers.
+Schema validation is opt-in: Meteor doesn't require a schema, and you can pick the validator that fits your app. Common options are [`aldeed:simple-schema`](https://atmospherejs.com/aldeed/simple-schema) (the Meteor fork of the npm [simpl-schema](https://www.npmjs.com/package/simpl-schema) package), [Zod](https://zod.dev/) and AJV-style JSON schemas. [`aldeed:collection2`](#schemas-on-write) can check writes to a collection with any of them, though how much it checks depends on the validator.
 
-Let's assume that we have a `Lists` collection. To define a schema for this collection using `simpl-schema`, you can create a new instance of the `SimpleSchema` class and attach it to the `Lists` object:
+Let's assume that we have a `Lists` collection. To define a schema for this collection using `aldeed:simple-schema`, add the package, then create a new instance of the `SimpleSchema` class and attach it to the `Lists` object:
+
+```bash
+meteor add aldeed:simple-schema
+```
 
 ```js
-import SimpleSchema from 'simpl-schema';
+import SimpleSchema from 'meteor/aldeed:simple-schema';
 
 Lists.schema = new SimpleSchema({
   name: { type: String },
@@ -104,17 +108,17 @@ This example from the Todos app defines a schema with a few simple rules:
 2. We specify the `incompleteCount` is a number, which on insertion is set to `0` if not otherwise specified.
 3. We specify that the `userId`, which is optional, must be a string that looks like the ID of a user document.
 
-We're using the SimpleSchema for Meteor related functionality, like IDs, but we encourage you to create custom regEx expressions for security reasons, for fields like `email` or `name`. Check out the [Simple Schema docs](https://github.com/longshotlabs/simpl-schema#regex) for more information.
+We're using the SimpleSchema for Meteor related functionality, like IDs, but we encourage you to create custom regEx expressions for security reasons, for fields like `email` or `name`. Check out the [`aldeed:simple-schema` docs](https://github.com/Meteor-Community-Packages/meteor-simple-schema) for more information.
 
 We attach the schema to the namespace of `Lists` directly, which allows us to check objects against this schema directly whenever we want, such as in a form or [Method](/tutorials/methods/methods). In the [next section](#schemas-on-write) we'll see how to use this schema automatically when writing to the collection.
 
-You can see that with relatively little code we've managed to restrict the format of a list significantly. You can read more about more complex things that can be done with schemas in the [Simple Schema docs](https://www.npmjs.com/package/simpl-schema).
+You can see that with relatively little code we've managed to restrict the format of a list significantly. You can read more about more complex things that can be done with schemas in the [`aldeed:simple-schema` docs](https://github.com/Meteor-Community-Packages/meteor-simple-schema).
 
 ### Validating against a schema
 
 Now we have a schema, how do we use it?
 
-It's pretty straightforward to validate a document with a schema. We can write:
+It's pretty straightforward to validate a document with a schema. In `aldeed:simple-schema` 3, `validate()` is asynchronous, so we await it:
 
 ```js
 const list = {
@@ -122,7 +126,7 @@ const list = {
   incompleteCount: 3
 };
 
-Lists.schema.validate(list);
+await Lists.schema.validate(list);
 ```
 
 In this case, as the list is valid according to the schema, the `validate()` line will run without problems. If however, we wrote:
@@ -134,10 +138,10 @@ const list = {
   madeUpField: 'this should not be here'
 };
 
-Lists.schema.validate(list);
+await Lists.schema.validate(list);
 ```
 
-Then the `validate()` call will throw a `ValidationError` which contains details about what is wrong with the `list` document.
+Then the awaited `validate()` call will throw a validation error (its `error` property is `'validation-error'`) with a `details` array describing what is wrong with the `list` document. `SimpleSchema.defineValidationErrorTransform()` lets you turn it into a `ValidationError`.
 
 ### The `ValidationError`
 
@@ -183,19 +187,31 @@ The amount of foresight you bake into your schema design will depend on your app
 
 ### Schemas on write
 
-Although there are a variety of ways that you can run data through a Simple Schema before sending it to your collection (for instance you could check a schema in every method call), the simplest and most reliable is to use the [`aldeed:collection2`](https://atmospherejs.com/aldeed/collection2) package to run every mutator (`insert/update/upsert` call) through the schema.
+Although there are a variety of ways that you can run data through a Simple Schema before sending it to your collection (for instance you could check a schema in every method call), the simplest and most reliable is to use the [`aldeed:collection2`](https://atmospherejs.com/aldeed/collection2) package to validate every insert, update and upsert against the schema.
 
-To do so, we use `attachSchema()`:
+Since 4.2, Collection2 doesn't bundle a validator: add the one you plan to use next to it. It can validate with `aldeed:simple-schema`, Zod, or AJV-style JSON schemas. Collection2 5 requires Meteor 3.1.2+; if you use `aldeed:simple-schema` it must be version 3, and if you use Zod it must be version 4. With Collection2 5 and `aldeed:simple-schema`:
+
+```bash
+meteor add aldeed:collection2 aldeed:simple-schema@3.0.0
+```
+
+For Zod, run `meteor add aldeed:collection2` and `meteor npm install zod@4`. For AJV-style JSON schemas, run `meteor add aldeed:collection2` and `meteor npm install ajv`. See the [Collection2 README](https://github.com/Meteor-Community-Packages/meteor-collection2#installation) for older versions and for loading it with dynamic imports.
+
+What Collection2 checks depends on the validator. With AJV-style JSON schemas, Collection2 5 checks inserts only for top-level `required` fields and top-level `string`, `number` and `boolean` types. It doesn't check other JSON Schema keywords, such as `minimum`, and doesn't validate update modifiers. Installing `ajv` doesn't add these checks, so validate other rules yourself. The cleaning described [below](#defaultvalue-and-data-cleaning) is SimpleSchema behavior; Zod schemas support defaults and Collection2's experimental autoValues, and AJV-style schemas aren't cleaned.
+
+Import Collection2 once, for example in a file your client and server both load, then attach the schema with `attachSchema()`:
 
 ```js
+import 'meteor/aldeed:collection2/static';
+
 Lists.attachSchema(Lists.schema);
 ```
 
-What this means is that now every time we call `Lists.insertAsync()`, `Lists.updateAsync()`, `Lists.upsertAsync()`, first our document or modifier will be automatically checked against the schema (in subtly different ways depending on the exact mutator).
+With this SimpleSchema schema attached, every time we call `Lists.insertAsync()`, `Lists.updateAsync()`, `Lists.upsertAsync()`, first our document or modifier will be automatically checked against the schema (in subtly different ways depending on the exact mutator). With `aldeed:simple-schema` 3, Collection2 5 supports only these async methods: the synchronous `insert()`, `update()` and `upsert()` throw.
 
 ### `defaultValue` and data cleaning
 
-One thing that Collection2 does is ["clean" the data](https://www.npmjs.com/package/simpl-schema#cleaning-objects) before sending it to the database. This includes but is not limited to:
+With SimpleSchema, one thing that Collection2 does is ["clean" the data](https://github.com/Meteor-Community-Packages/meteor-simple-schema) before sending it to the database. This includes but is not limited to:
 
 1. Coercing types - converting strings to numbers
 2. Removing attributes not in the schema
@@ -555,9 +571,9 @@ console.log(`The first list has ${todoCount} todos`);
 
 Here's a summary of best practices when working with collections and schemas:
 
-1. **Always define schemas** for your collections using `simpl-schema` or `jagi:astronomy`.
+1. **Consider a schema** for your collections. Validation is opt-in; `aldeed:simple-schema`, Zod and AJV-style JSON schemas are common choices.
 
-2. **Use Collection2** to automatically validate documents on write operations.
+2. **Use Collection2** to automatically validate documents on write operations if you use a schema. What it checks depends on the validator: with AJV-style JSON schemas it validates inserts only, not update modifiers.
 
 3. **Consider DDP efficiency** when designing your schema—avoid large nested arrays that change frequently.
 

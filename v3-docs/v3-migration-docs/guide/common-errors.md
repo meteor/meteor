@@ -65,23 +65,37 @@ If a package does not support async callbacks, consider lazy-loading it inside `
 
 **Why this happens:**
 
-`aldeed:collection2` v4 (the Meteor 3-compatible version) now bundles `aldeed:simple-schema` internally as an Atmosphere package. This replaces the previous setup where you installed the `simpl-schema` npm package separately. The npm `simpl-schema` v3+ actually dropped all Meteor support, so the Atmosphere package is a hard-fork that maintains Meteor-specific features like Tracker reactivity.
+`aldeed:collection2` 4.0 and 4.1 (the first Meteor 3-compatible versions) bundle `aldeed:simple-schema` internally as an Atmosphere package. From 4.2, Collection2 no longer bundles it: add the validation package you plan to use (`aldeed:simple-schema`, Zod, or AJV-style JSON schemas). Collection2 5 requires Meteor 3.1.2+; with it, `aldeed:simple-schema` must be version 3 and Zod version 4 if you use them. Either way, this replaces the previous setup where you installed the `simpl-schema` npm package separately for Collection2. The npm `simpl-schema` v3+ actually dropped all Meteor support, so the Atmosphere package is a hard-fork that maintains Meteor-specific features like Tracker reactivity.
 
 **Common issues and solutions:**
 
-1. **Do not use the npm `simpl-schema` v3+ with Collection2 v4** — they conflict. Collection2 v4 bundles the compatible `aldeed:simple-schema` automatically:
-
-```bash
-# Remove the npm package if present
-meteor npm remove simpl-schema # [!code highlight]
-# Collection2 v4 bundles aldeed:simple-schema — no separate install needed
-```
-
-2. **Static vs. dynamic loading** — Collection2 v4 offers two import modes:
+1. **Do not attach npm `simpl-schema` v3+ schemas with Collection2** — they conflict. If you validate collections with SimpleSchema, use the compatible `aldeed:simple-schema` instead. First change the import in your schema files:
 
 ```js
-// Static loading (default) — loaded immediately, increases initial bundle size
-import 'meteor/aldeed:collection2'; // [!code highlight]
+import SimpleSchema from 'simpl-schema'; // [!code --]
+import SimpleSchema from 'meteor/aldeed:simple-schema'; // [!code ++]
+```
+
+If your app uses AutoForm 8.x or earlier, keep `aldeed:simple-schema` below 3.0.0 until you upgrade AutoForm: [SimpleSchema 3 isn't compatible with it](https://github.com/Meteor-Community-Packages/meteor-simple-schema#readme). Otherwise, on Collection2 5, swap the packages:
+
+```bash
+# Remove the npm package if nothing else in your app imports it
+meteor npm remove simpl-schema # [!code highlight]
+# Collection2 5: add aldeed:simple-schema 3
+meteor add aldeed:simple-schema@3.0.0 # [!code highlight]
+```
+
+In `aldeed:simple-schema` 3, `validate()` (on a schema or a validation context) returns a promise: await it before you write, for example `await schema.validate(doc);`. `clean()` also returns a promise, so await it before you use its result, for example `const cleaned = await schema.clean(doc);` (see the [SimpleSchema 3.0.0 README](https://github.com/Meteor-Community-Packages/meteor-simple-schema/blob/v3.0.0/README.md?plain=1#L332)). `isValid()` and `validationErrors()` stay synchronous. With SimpleSchema 3, Collection2 5 supports only `insertAsync`, `updateAsync` and `upsertAsync`: synchronous `insert`, `update` and `upsert` calls throw, so replace them.
+
+Collection2 4.0 and 4.1 bundle `aldeed:simple-schema`, so no separate install is needed. From Collection2 4.2 to 4.x, `aldeed:simple-schema` is optional; if you use it, install 1.13.1 or 2.x instead of 3: see the [Collection2 README](https://github.com/Meteor-Community-Packages/meteor-collection2#installation) for that version.
+
+If you validate with Zod or AJV-style JSON schemas instead, install that package (`meteor npm install zod@4` with Collection2 5, or `meteor npm install ajv`); see the [Collection2 README](https://github.com/Meteor-Community-Packages/meteor-collection2#installation).
+
+2. **Static vs. dynamic loading** — Collection2 offers two import modes:
+
+```js
+// Static loading — loaded immediately, increases initial bundle size
+import 'meteor/aldeed:collection2/static'; // [!code highlight]
 
 // Dynamic loading — deferred, reduces initial bundle size
 import 'meteor/aldeed:collection2/dynamic'; // [!code highlight]
