@@ -562,6 +562,15 @@ Object.assign(Isopack.prototype, {
       getNativeProjectDirs: (appDir, getPlatformEnv, warn) =>
         resolveNativeProjectDirs(getProjectToolExtensions(), appDir, getPlatformEnv, warn),
 
+      // Build plugins can keep generated trees outside app source and asset discovery.
+      excludeAppDirectories(directories) {
+        for (const directory of directories) {
+          const dir = files.convertToStandardPath(directory);
+          isopack.sourceProcessors.compiler.excludedAppDirectories.add(dir);
+          isopack.sourceProcessors.linter.excludedAppDirectories.add(dir);
+        }
+      },
+
       // Generic build output context for build plugins that need to react
       // after an app bundle has been written.
       getBuildOutputContext: getCurrentBuildOutputContext,

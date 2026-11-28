@@ -1157,6 +1157,10 @@ Object.assign(PackageSource.prototype, {
             watchSet,
             sourceArch: this,
             ignoreFiles,
+            excludedDirectories: new Set(Array.from(sourceProcessorSet.excludedAppDirectories, dir => {
+              const absolute = files.pathResolve(self.sourceRoot, dir);
+              return files.pathRelative(self.sourceRoot, absolute) + "/";
+            })),
             isApp: true,
             mainModule,
             testModule,
@@ -1372,6 +1376,7 @@ Object.assign(PackageSource.prototype, {
     sourceArch,
     mainModule,
     testModule,
+    excludedDirectories,
     nodeModulesToRecompile = new Set,
     loopChecker = new SymlinkLoopChecker(this.sourceRoot),
     ignoreFiles = []
@@ -1496,6 +1501,7 @@ Object.assign(PackageSource.prototype, {
       isApp,
       sourceRoot: self.sourceRoot,
       excludes: anyLevelExcludes,
+      excludedDirectories: excludedDirectories && [...excludedDirectories],
       names: sourceReadOptions.names,
       include: sourceReadOptions.include,
       // stringify does not work on Set
@@ -1647,6 +1653,7 @@ Object.assign(PackageSource.prototype, {
       let nodeModulesDir;
 
       subdirectories.forEach(subdir => {
+        if (excludedDirectories?.has(subdir)) return;
         if (/(^|\/)node_modules\/$/.test(subdir)) {
           // Defer handling node_modules until after we handle all other
           // subdirectories, so that we know whether we need to descend
@@ -1694,6 +1701,7 @@ Object.assign(PackageSource.prototype, {
   }),
 
   _findAssets({
+    excludedDirectories,
     sourceProcessorSet,
     watchSet,
     isApp,
@@ -1717,6 +1725,7 @@ Object.assign(PackageSource.prototype, {
 
       while (!_.isEmpty(assetDirs)) {
         var dir = assetDirs.shift();
+        if (excludedDirectories?.has(dir)) continue;
         // remove trailing slash
         dir = dir.substr(0, dir.length - 1);
 

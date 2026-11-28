@@ -38,7 +38,7 @@ export function getCapacitorWebDir({ isDevelopment, isProduction } = {}) {
 
 /**
  * All possible capacitor webDir paths (both env defaults + override).
- * Used to feed setMeteorAppIgnore covering dev↔prod switches.
+ * Both modes can leave generated files in the app between builds.
  * @returns {string[]}
  */
 export function getCapacitorWebDirCandidates() {
@@ -60,10 +60,11 @@ export const CAPACITOR_CORDOVA_OUTPUT_DIR = `${
 
 export const CAPACITOR_PLATFORMS = ['android', 'ios'];
 
-export function getCapacitorIgnoreCandidates() {
+export function getCapacitorIgnoreCandidates(nativeProjectDirs = []) {
   return Array.from(new Set([
     ...getCapacitorWebDirCandidates(),
     ...CAPACITOR_PLATFORMS,
+    ...nativeProjectDirs,
   ]));
 }
 

@@ -21,7 +21,8 @@ const {
   isMeteorAppConfigModernVerbose,
   getMeteorAppPlatforms,
   isMeteorAppUpdate,
-  setMeteorAppIgnore,
+  getMeteorAppDir,
+  getNativeCommandEnv,
 } = require('meteor/tools-core/lib/meteor');
 const {
   createMeteorToolContext,
@@ -30,6 +31,7 @@ const {
 } = require('meteor/tools-core/lib/lifecycle');
 const {
   logInfo,
+  logWarn,
   logError,
   logProgress,
   logSuccess,
@@ -72,9 +74,11 @@ const {
 } = require('./lib/command');
 const { getCapacitorHcpMode } = require('./lib/hcp');
 
-// Native outputs remain generated sources when the next command is web-only.
-// Exclude their app-root directories before any application source scan.
-setMeteorAppIgnore(getCapacitorIgnoreCandidates().join(' '), { root: true });
+// A web-only command can encounter files left by an earlier native build.
+const nativeProjectDirs = await Plugin.getNativeProjectDirs(
+  getMeteorAppDir(), getNativeCommandEnv, logWarn
+);
+Plugin.excludeAppDirectories(getCapacitorIgnoreCandidates(nativeProjectDirs));
 
 if (isMeteorAppUpdate() && Package.meteor.global.currentCommand.options.npm) {
   // Updating npm dependencies must not scaffold projects, sync, or launch a device.

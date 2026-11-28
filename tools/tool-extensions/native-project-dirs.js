@@ -15,12 +15,12 @@ export async function resolveNativeProjectDirs(extensions, appDir, getPlatformEn
           if (settings.platformEnv) platformEnv[settings.platformEnv] = platform.name;
           dir = await readPlatformPath(file, keys, platformEnv) || dir;
         } catch {
-          warn(`Could not read ${path.basename(file)} for the ${platform.name} watcher. Using the default native project directory.`);
+          warn(`Could not read ${path.basename(file)} for ${platform.name}. Using the default native project directory.`);
         }
       }
       if (!dir) continue;
       const nativeDir = path.resolve(appDir, dir);
-      // Never exclude the app itself or one of its parents from file watching.
+      // A native project can share the app root. Keep its sources visible in that case.
       const relative = path.relative(nativeDir, appDir);
       if (relative === '..' || relative.startsWith('..' + path.sep) || path.isAbsolute(relative)) {
         dirs.add(nativeDir);

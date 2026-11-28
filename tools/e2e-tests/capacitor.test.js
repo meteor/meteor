@@ -698,17 +698,29 @@ describe('Capacitor App Web Lifecycle /', () => {
   });
 
   test('web-only builds do not require a mobile server or synchronize native projects', async () => {
+    const config = 'capacitor.config.js';
+    const nativeAsset = 'apple shell [v1]/probe.txt';
+    const appAsset = 'apple shell v/probe.txt';
+    const saved = await snapshotFiles(tempDir, [config, 'public/' + nativeAsset, 'public/' + appAsset]);
     let output;
     try {
+      await fs.writeFile(path.join(tempDir, config),
+        "module.exports = { ios: { path: 'public/apple shell [v1]' } };");
+      await fs.outputFile(path.join(tempDir, 'public', nativeAsset), 'native');
+      await fs.outputFile(path.join(tempDir, 'public', appAsset), 'application');
       const result = await buildMeteorApp(tempDir, {
         commandOptions: ['--directory', '--platforms=web.browser'],
         captureOutput: true, env: e2eEnv({ ROOT_URL: '', MOBILE_ROOT_URL: '' }),
       });
       output = result.buildOutputDir;
-      await assertFileExist(output, 'bundle/programs/web.browser/program.json');
+      const program = await readJson(output, 'bundle/programs/web.browser/program.json');
+      const paths = program.manifest.map(entry => entry.path);
+      expect(paths).toContain('app/' + appAsset);
+      expect(paths).not.toContain('app/' + nativeAsset);
       await assertPathNotExist(output, 'bundle/programs/web.cordova');
       expectOutputNotContains(result.processResult.outputLines, /Capacitor: syncing/);
     } finally {
+      await restoreFiles(saved);
       await cleanupTempDir(output);
     }
   });
@@ -1089,7 +1101,7 @@ describe('Capacitor App Web Lifecycle / Blaze', () => {
     await assertFileExist(appDir, '_build/native-dev/index.html');
   });
 
-  test.each(['ios', 'native/ios'])('plain web development ignores native projects at %s and generated webDirs', async nativeDir => {
+  test.each(['ios', 'native/apple shell [v1]'])('plain web development ignores native projects at %s and generated webDirs', async nativeDir => {
     const generatedHtml = '<!doctype html><html><body>Generated native app</body></html>';
     const nativeHtml = nativeDir + '/App/App/public/index.html';
     await fs.outputFile(path.join(appDir, '_build/native-dev/index.html'), generatedHtml);
@@ -1102,7 +1114,7 @@ describe('Capacitor App Web Lifecycle / Blaze', () => {
         await fs.writeFile(path.join(appDir, 'capacitor.config.js'), [
           "const { defineConfig } = require('@meteorjs/capacitor');",
           "module.exports = defineConfig(Meteor => ({",
-          "  ios: { path: Meteor.isRun && Meteor.isNativeIos ? 'native/ios' : 'ios' },",
+          `  ios: { path: Meteor.isRun && Meteor.isNativeIos ? ${JSON.stringify(nativeDir)} : 'ios' },`,
           "}));",
         ].join('\n'));
       }

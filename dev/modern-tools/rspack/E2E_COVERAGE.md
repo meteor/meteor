@@ -414,8 +414,9 @@ React app using both Rspack and Capacitor, with web-only native lifecycle covera
 The Capacitor suite also reuses the Blaze fixture to check helpers and click
 handlers during bundled native development, followed by a plain web run with
 generated native HTML present. Editing `imports/ios/` updates the running client.
-Writes inside the default `ios/` project and a project selected at `native/ios/`
-by the iOS run flags stay out of the rebuild.
+Writes inside the default `ios/` project and a project selected at `native/apple shell [v1]/`
+by the iOS run flags stay out of the rebuild. A web-only production build also
+omits native files under `public/` and includes a similarly named sibling asset.
 A livereload case selects the mobile client without
 the optional HMR packages,
 edits a Blaze template, and checks the updated content and working click handler

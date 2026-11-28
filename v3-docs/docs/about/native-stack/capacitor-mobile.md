@@ -240,6 +240,11 @@ The integration adds or uses these files and folders:
 
 The `_build` output and the synced native asset folders are generated and ignored by Git. The `android/` and `ios/` native projects are normal Capacitor projects and should be managed like application source.
 
+Set `android.path` or `ios.path` in the Capacitor configuration to use a different
+native project directory. Meteor skips those directories when collecting app
+sources and assets. Rspack also skips them when watching for changes, so editing
+a native project does not trigger a web rebuild.
+
 ## Migrate from Cordova
 
 Migrate an existing app in a separate branch or copy so you can compare its

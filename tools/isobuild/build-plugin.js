@@ -86,6 +86,7 @@ export class SourceProcessorSet {
     // This is just an duplicate-free list of all SourceProcessors in
     // byExtension or byFilename.
     this.allSourceProcessors = [];
+    this.excludedAppDirectories = new Set();
     // extension -> { handler, packageDisplayName, isTemplate, archMatching }
     this._legacyHandlers = {};
   }
@@ -162,6 +163,9 @@ export class SourceProcessorSet {
   merge(otherSet, options = {}) {
     const { arch } = options;
     buildmessage.assertInJob();
+    for (const dir of otherSet.excludedAppDirectories) {
+      this.excludedAppDirectories.add(dir);
+    }
     otherSet.allSourceProcessors.forEach((sourceProcessor) => {
       if (! arch || sourceProcessor.relevantForArch(arch)) {
         this.addSourceProcessor(sourceProcessor);

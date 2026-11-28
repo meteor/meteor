@@ -130,7 +130,9 @@ function evaluateWebAppLocalServerShim() {
 }
 
 Tinytest.add('capacitor - ignore candidates include native project directories', test => {
-  const candidates = getCapacitorIgnoreCandidates();
+  const candidates = getCapacitorIgnoreCandidates(['android', 'native/apple shell']);
+
+  test.isTrue(candidates.includes('native/apple shell'));
 
   test.isTrue(candidates.includes('android'));
   test.isTrue(candidates.includes('ios'));
