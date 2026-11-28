@@ -110,15 +110,15 @@ export const Offline = {
     } finally {
       // The copy is replaced by the server's documents the way a reconnection
       // replaces the previous session's: on the `connected` message, the
-      // current subscriptions are treated as revived and the stores are reset
-      // together with their data, in one paused batch. Not before: a reset
-      // asked for earlier would run with the first stub and empty the copy.
-      // Without a subscription yet the reset is immediate, as on a
-      // reconnection, and the subscriptions made later fill the stores again:
-      // a copy nothing replaces would keep the documents deleted while the app
-      // was away. Nothing to replace when the stores are empty; whatever they
-      // hold is replaced, even if the start failed halfway.
-      if (holdsDocuments()) connection._reviveAllSubscriptions = true;
+      // stores are reset together with the data of the subscriptions made
+      // ready from the copy, in one paused batch. Not before: a reset asked
+      // for earlier would run with the first stub and empty the copy. Without
+      // such a subscription the reset is immediate, as on a reconnection, and
+      // the subscriptions fill the stores again: a copy nothing replaces would
+      // keep the documents deleted while the app was away. Nothing to replace
+      // when the stores are empty; whatever they hold is replaced, even if the
+      // start failed halfway.
+      if (holdsDocuments()) connection._resetStoresOnConnect = true;
       connection.reconnect();
     }
     // Another user means another copy; the previous one is deleted. Changes
