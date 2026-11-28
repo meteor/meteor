@@ -243,6 +243,7 @@ export default defineConfig({
               { text: "Methods", link: "/api/meteor#methods" },
               { text: "Publish and Subscribe", link: "/api/meteor#pubsub" },
               { text: "Server connections", link: "/api/meteor#connections" },
+              { text: "Custom stores", link: "/api/meteor#ddp-stores" },
               { text: "Timers", link: "/api/meteor#timers" },
             ],
           },
