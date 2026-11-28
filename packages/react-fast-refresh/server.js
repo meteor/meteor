@@ -6,8 +6,7 @@ if (enabled) {
     const semverGte = require('semver/functions/gte');
     const pkg = require('react/package.json');
 
-    enabled = pkg && pkg.version &&
-      semverGte(pkg.version, '16.9.0');
+    enabled = pkg?.version && semverGte(pkg.version, '16.9.0');
   } catch (e) {
     // If the app doesn't directly depend on react, leave react-refresh
     // enabled in case a package or indirect dependency uses react.
@@ -26,20 +25,13 @@ const babelPlugin = enabled ?
 // Babel plugin that adds a call to global.___INIT_METEOR_FAST_REFRESH()
 // at the start of every file compiled with react-refresh to ensure the runtime
 // is enabled if it is used.
-function enableReactRefreshBabelPlugin(babel) {
-  const { types: t } = babel;
-
+function enableReactRefreshBabelPlugin({ types: t }) {
   return {
     name: "meteor-enable-react-fast-refresh",
     post(state) {
-      // This is the path for the Program node
-      let path = state.path;
-      let method = t.identifier("___INIT_METEOR_FAST_REFRESH");
-      let call = t.callExpression(
-        method,
-        [t.identifier("module")]
-      );
-      path.unshiftContainer("body", t.expressionStatement(call));
+      state.path.unshiftContainer("body", t.expressionStatement(
+        t.callExpression(t.identifier("___INIT_METEOR_FAST_REFRESH"), [t.identifier("module")])
+      ));
     },
   };
 }
