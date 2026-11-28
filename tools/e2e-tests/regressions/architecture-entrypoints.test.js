@@ -92,6 +92,13 @@ describe('Regressions / Architecture-specific entrypoints /', () => {
       });
     }
 
+    if (mode === 'production') {
+      // Browsers served the legacy bundle predate async functions, so one
+      // untranspiled `async` in any package makes them reject the whole file.
+      const legacySource = await readProgramJavaScript(buildOutputDir, 'web.browser.legacy');
+      expect(() => parse(legacySource, { ecmaVersion: 2016 })).not.toThrow();
+    }
+
     if (mode === 'debug') {
       // Debug builds keep app code separate from Meteor packages, so this checks
       // the fixture's downlevel compilation without auditing every dependency.

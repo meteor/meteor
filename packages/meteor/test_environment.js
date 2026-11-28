@@ -41,7 +41,7 @@ Meteor.isAppTest = !!TEST_METADATA.isAppTest;
 Meteor.isPackageTest = !!testDriverPackageName && !Meteor.isTest && !Meteor.isAppTest; 
 
 if (typeof testDriverPackageName === "string") {
-  Meteor.startup(async function() {
+  Meteor.startup(function() {
     var testDriverPackage = Package[testDriverPackageName];
     if (! testDriverPackage) {
       throw new Error("Can't find test driver package: " + testDriverPackageName);
@@ -55,9 +55,11 @@ if (typeof testDriverPackageName === "string") {
       }
       testDriverPackage.runTests();
     } else {
-      // The server can optionally define `start`
+      // The server can optionally define `start`. Its promise is returned so
+      // startup waits for it: this file is not transpiled, and legacy browsers
+      // reject the whole bundle on `async` syntax.
       if (typeof testDriverPackage.start === "function") {
-        await testDriverPackage.start();
+        return testDriverPackage.start();
       }
     }
   });
