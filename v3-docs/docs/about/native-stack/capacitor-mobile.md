@@ -480,11 +480,19 @@ cover. Keep Android and iOS results separate:
 | Existing installation | Install the correctly signed successor over the Cordova app without uninstalling; verify identity, stored data, authentication, permissions and platform registrations. |
 | Release | Verify the actual APK/AAB/IPA format, identity and signatures independently of debug or Simulator builds. |
 
-The Cordova and Capacitor WebView origins and storage locations can differ.
-Inventory local storage, files, preferences and keychain use, then test a
-deliberate transfer or reauthentication path. Keep the original native build
-available for comparison. Replacing the installed native shell requires a native
-release; an HCP-only update cannot perform that migration.
+Write a test value from the installed Cordova WebView before upgrading. Read
+the same key from the Capacitor WebView and compare `location.origin` on both
+builds. Check app-private files separately. In the worked example below,
+Android kept its `http://localhost` origin and could read the value. On iOS,
+the app-private file survived, but the new `capacitor://localhost` origin
+could not read local storage written at Cordova's `http://localhost:<port>`.
+
+Identify which records can be restored from the server after sign-in and
+which exist only on the device. For device-only records, test transferring
+them while the old origin can still read them and restoring them on first
+launch. Include users upgrading directly from older Cordova builds if the
+transfer depends on an intermediate release. Replacing the installed native
+shell requires a native release.
 
 Record missing signing infrastructure or unavailable original builds as pending
 validation. A successful fresh installation or a stateless example cannot prove
