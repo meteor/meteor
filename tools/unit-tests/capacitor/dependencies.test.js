@@ -66,11 +66,11 @@ describe('Capacitor host dependencies', () => {
     const result = await ensureCapacitorInstalled({ platforms: ['android'] });
     expect(result.installed).toBe(true);
     expect(installNpmDependency).toHaveBeenCalledWith(
-      expect.arrayContaining(['@capacitor/cli@8.6.2', '@meteorjs/capacitor@0.2.0-alpha.1']),
+      expect.arrayContaining(['@capacitor/cli@8.6.3', '@meteorjs/capacitor@0.2.0-alpha.1']),
       expect.objectContaining({ dev: true, includeDev: true, packageManager: 'npm' }),
     );
     expect(installNpmDependency).toHaveBeenCalledWith(
-      expect.arrayContaining(['@capacitor/core@8.6.2', '@capacitor/android@8.6.2']),
+      expect.arrayContaining(['@capacitor/core@8.6.3', '@capacitor/android@8.6.3']),
       expect.objectContaining({ dev: false, includeDev: true, packageManager: 'npm' }),
     );
   });
@@ -80,7 +80,7 @@ describe('Capacitor host dependencies', () => {
     const result = await ensureCapacitorInstalled({ platforms: ['android'] });
     expect(result.mode).toBe('auto-install');
     expect(installNpmDependency).toHaveBeenCalledWith(
-      expect.arrayContaining(['@capacitor/core@8.6.2', '@capacitor/android@8.6.2']),
+      expect.arrayContaining(['@capacitor/core@8.6.3', '@capacitor/android@8.6.3']),
       expect.objectContaining({ dev: false, includeDev: true }),
     );
   });
@@ -88,7 +88,7 @@ describe('Capacitor host dependencies', () => {
   test('manual mode reports older installed Capacitor 8 packages without rewriting the app', async () => {
     const manifest = { meteor: { autoInstallDeps: false }, dependencies: {}, devDependencies: {} };
     for (const dep of getCapacitorDependenciesForPlatforms(['android'])) {
-      const version = dep.name.startsWith('@capacitor/') ? '8.0.0' : dep.version;
+      const version = dep.name.startsWith('@capacitor/') ? '8.6.2' : dep.version;
       manifest[dep.dev ? 'devDependencies' : 'dependencies'][dep.name] = `^${version}`;
       installFixture(dep.name, version);
     }
@@ -96,9 +96,9 @@ describe('Capacitor host dependencies', () => {
     const before = fs.readFileSync('package.json', 'utf8');
     const result = await ensureCapacitorInstalled({ platforms: ['android'] });
     expect(result.mode).toBe('manual-warning');
-    expect(result.installCommands.join('\n')).toContain('@capacitor/core@8.6.2');
-    expect(result.installCommands.join('\n')).toContain('@capacitor/cli@8.6.2');
-    expect(result.installCommands.join('\n')).toContain('@capacitor/android@8.6.2');
+    expect(result.installCommands.join('\n')).toContain('@capacitor/core@8.6.3');
+    expect(result.installCommands.join('\n')).toContain('@capacitor/cli@8.6.3');
+    expect(result.installCommands.join('\n')).toContain('@capacitor/android@8.6.3');
     expect(installNpmDependency).not.toHaveBeenCalled();
     expect(fs.readFileSync('package.json', 'utf8')).toBe(before);
   });
@@ -138,10 +138,10 @@ describe('Capacitor host dependencies', () => {
   });
 
   test('accepts a correctly declared runtime hoisted to the workspace node_modules', () => {
-    installFixture('@capacitor/core', '8.6.2');
+    installFixture('@capacitor/core', '8.6.3');
     const nestedApp = path.join(appDir, 'apps', 'native');
     fs.mkdirSync(nestedApp, { recursive: true });
-    fs.writeFileSync(path.join(nestedApp, 'package.json'), JSON.stringify({ dependencies: { '@capacitor/core': '^8.6.2' } }));
+    fs.writeFileSync(path.join(nestedApp, 'package.json'), JSON.stringify({ dependencies: { '@capacitor/core': '^8.6.3' } }));
     const dependency = getCapacitorDependenciesForPlatforms([]).filter(dep => dep.name === '@capacitor/core');
     expect(detectMissingOrOutdatedDeps(dependency, { cwd: nestedApp })[0].status).toBe('ok');
   });
@@ -149,7 +149,7 @@ describe('Capacitor host dependencies', () => {
   test.each(['^7.6.7', '>=8.0.0', '^8.0.0 || ^9.0.0', '^9.0.0'])(
     'rejects unsupported declarations (%s) before installing missing dependencies', async version => {
       writeManifest({ dependencies: { '@capacitor/core': version } });
-      installFixture('@capacitor/core', '8.6.2');
+      installFixture('@capacitor/core', '8.6.3');
       const before = fs.readFileSync('package.json', 'utf8');
       await expect(ensureCapacitorInstalled({ platforms: ['android'] })).rejects.toThrow(/Capacitor 8 only/);
       expect(installNpmDependency).not.toHaveBeenCalled();
@@ -159,7 +159,7 @@ describe('Capacitor host dependencies', () => {
 
   test('rejects an installed mixed-major stack before auto-installing anything', async () => {
     writeManifest({ dependencies: { '@capacitor/core': '^8.0.0', '@capacitor/android': '^8.0.0' } });
-    installFixture('@capacitor/core', '8.6.2');
+    installFixture('@capacitor/core', '8.6.3');
     installFixture('@capacitor/android', '7.6.7');
     await expect(ensureCapacitorInstalled({ platforms: ['android'] })).rejects.toThrow(/@capacitor\/android has installed version 7/);
     expect(installNpmDependency).not.toHaveBeenCalled();
@@ -173,7 +173,7 @@ describe('Capacitor host dependencies', () => {
     fs.writeFileSync(pluginPath, JSON.stringify({ version: '3.0.0', peerDependencies: { '@capacitor/core': '^7.0.0' } }));
     await expect(ensureCapacitorInstalled({ platforms: ['android'] })).rejects.toThrow(/scanner-plugin requires @capacitor\/core/);
     expect(installNpmDependency).not.toHaveBeenCalled();
-    fs.writeFileSync(pluginPath, JSON.stringify({ version: '3.0.0', peerDependencies: { '@capacitor/core': '^8.6.2' } }));
+    fs.writeFileSync(pluginPath, JSON.stringify({ version: '3.0.0', peerDependencies: { '@capacitor/core': '^8.6.3' } }));
     expect((await ensureCapacitorInstalled({ platforms: ['android'] })).installed).toBe(true);
   });
 
@@ -197,11 +197,11 @@ describe('Capacitor host dependencies', () => {
     if (installed) installFixture('@capacitor/core', '8.0.0');
     await ensureCapacitorInstalled({ platforms: ['android'] });
     expect(installNpmDependency).toHaveBeenCalledWith(
-      expect.arrayContaining(['@capacitor/core@8.6.2', '@capacitor/android@8.6.2']),
+      expect.arrayContaining(['@capacitor/core@8.6.3', '@capacitor/android@8.6.3']),
       expect.objectContaining({ dev: false }),
     );
     expect(installNpmDependency).toHaveBeenCalledWith(
-      expect.arrayContaining(['@capacitor/cli@8.6.2']),
+      expect.arrayContaining(['@capacitor/cli@8.6.3']),
       expect.objectContaining({ dev: true }),
     );
     expect(installNpmDependency.mock.calls.flatMap(([packages]) => packages)).not.toContain('@capacitor/core@8.0.0');

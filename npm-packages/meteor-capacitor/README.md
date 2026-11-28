@@ -9,7 +9,7 @@ use Swift Package Manager. Existing Capacitor 7 apps must follow the
 
 Meteor's shared dependency manager automatically installs missing packages and
 raises older Capacitor 8 core, CLI and selected platform packages to its minimum
-baseline, currently 8.6.2, while keeping newer compatible versions. Set
+baseline, currently 8.6.3, while keeping newer compatible versions. Set
 `meteor.autoInstallDeps` to `false` for manual commands, or use
 `meteor update --npm` to explicitly align dependencies.
 

@@ -57,7 +57,7 @@ On first use, Meteor prepares the Capacitor project:
 
 ### Prepare Android and iOS tooling
 
-This integration supports Capacitor 8 only, with a minimum version of 8.6.2.
+This integration supports Capacitor 8 only, with a minimum version of 8.6.3.
 New apps install that baseline automatically on their first native command.
 Use Node.js 22+, JDK 21, Android Studio 2025.2.1+ with Android SDK 36, and
 Xcode 26+ for iOS. Native deployment targets are Android API 24+ and iOS 15+.
@@ -85,7 +85,7 @@ does not create native projects or run `cap sync`.
 
 As with Rspack, the shared manager uses a minimum-version check: missing
 packages and older Capacitor 8 core, CLI, or selected platform packages are
-installed or upgraded to 8.6.2. Newer compatible 8.x installations are kept.
+installed or upgraded to 8.6.3. Newer compatible 8.x installations are kept.
 Future increases to the integration's minimum use the same mechanism. Upgrading
 an existing Capacitor 7 native project still requires the explicit migration below.
 
@@ -132,8 +132,8 @@ Commit or back up your native projects first. Update core, CLI, and the selected
 platform packages together, and choose compatible releases of each plugin:
 
 ```bash
-meteor npm install @capacitor/core@^8.6.2 @capacitor/android@^8.6.2 @capacitor/ios@^8.6.2
-meteor npm install --save-dev @capacitor/cli@^8.6.2
+meteor npm install @capacitor/core@^8.6.3 @capacitor/android@^8.6.3 @capacitor/ios@^8.6.3
+meteor npm install --save-dev @capacitor/cli@^8.6.3
 npx cap migrate
 npx cap sync
 ```
@@ -773,7 +773,7 @@ Native compilation, signing, or missing artifacts cause `meteor build` to fail.
 See the [`meteor build` reference](../../cli/index.md#meteorbuild) for the shared
 build options, including `--mobile-settings` and `--server-only`.
 
-Capacitor 8.6.2 uses SHA-1 when signing with `jarsigner`. JDK 21 does not accept
+Capacitor 8.6.3 uses SHA-1 when signing with `jarsigner`. JDK 21 does not accept
 these signatures, so AAB release verification fails. For APK releases, set
 `android.buildOptions.signingType` to `'apksigner'`. See the
 [upstream signing issue](https://github.com/ionic-team/capacitor/issues/8428) for details.

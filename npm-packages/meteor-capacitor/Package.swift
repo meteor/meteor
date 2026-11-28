@@ -10,7 +10,7 @@ let package = Package(
             targets: ["MeteorjsCapacitor"])
     ],
     dependencies: [
-        .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", from: "8.0.0")
+        .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", from: "8.6.3")
     ],
     targets: [
         .target(
