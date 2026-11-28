@@ -28,7 +28,7 @@ const started = () => {
     startedOnce = Offline.start({
       collections: [Items],
       methods: ['offline_test.insert', 'offline_test.setValue', 'offline_test.fail', 'offline_test.ping'],
-      subscriptions: ['offline_test.items'],
+      subscriptions: ['offline_test.items', 'offline_test.never_ready', 'offline_test.ready_on_demand', 'offline_test.ready_after'],
     }).then(() => new Promise((resolve) => Meteor.subscribe('offline_test.items', { onReady: resolve })));
   }
   return startedOnce;
@@ -480,6 +480,17 @@ Tinytest.addAsync('offline - a subscription made without connection is ready fro
   }
 });
 
+// The messages of the package, counted while a test runs.
+const counting = (fragment) => {
+  const original = Meteor._debug;
+  const seen = [];
+  Meteor._debug = (message, ...rest) => {
+    if (typeof message === 'string' && message.includes(fragment)) seen.push(message);
+    else original(message, ...rest);
+  };
+  return { seen, stop: () => (Meteor._debug = original) };
+};
+
 // For what waits on the server after a reconnection: no 10-second deadline (a
 // new session first publishes again every subscription the test page holds,
 // which takes minutes in some CI modes), but a failure rather than a hang.
@@ -488,6 +499,20 @@ const within = (promise, description, timeout = 600_000) =>
     promise,
     new Promise((resolve, reject) => setTimeout(() => reject(new Error(`timed out waiting for ${description}`)), timeout)),
   ]);
+
+// Resolves once handle.ready() is the given value.
+const readyIs = (handle, value, description) =>
+  within(
+    new Promise((resolve) => {
+      const watching = Tracker.autorun((current) => {
+        if (handle.ready() !== value) return;
+        current.stop();
+        resolve();
+      });
+      if (watching.stopped) resolve();
+    }),
+    description,
+  );
 
 const held = async () => {
   await Meteor.callAsync('offline_test.insert', { _id: Random.id(), value: 'held' });
@@ -526,5 +551,140 @@ Tinytest.addAsync('offline - only a listed publication is ready from the copy', 
   } finally {
     Meteor.reconnect();
     handles.forEach((handle) => handle.stop());
+  }
+});
+
+Tinytest.addAsync('offline - a listed publication that never answers is not waited for forever', async function (test) {
+  await started();
+  await held();
+  const previous = Offline._setReadyTimeout(500);
+  const messages = counting('[offline] no answer from');
+  const handles = [];
+  Meteor.disconnect();
+  try {
+    const handle = Meteor.subscribe('offline_test.never_ready');
+    handles.push(handle);
+    await until(() => handle.ready(), 'the subscription to be ready from the copy');
+    Meteor.reconnect();
+    // Answered once the copy is replaced: DDP holds the result's data until
+    // every revived subscription is answered, and this one never is.
+    const _id = Random.id();
+    await within(Meteor.callAsync('offline_test.ping', _id), 'the call to be answered');
+    test.equal(messages.seen.length, 1, 'given up once, and said so');
+    test.isTrue(messages.seen[0].includes('offline_test.never_ready'));
+    test.isFalse(handle.ready(), 'not ready: the server never said it was');
+    // The same publication made again offline is not ready from the copy, and
+    // the next session does not wait for either.
+    Meteor.disconnect();
+    const again = Meteor.subscribe('offline_test.never_ready');
+    handles.push(again);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    test.isFalse(again.ready(), 'given up on: not made ready from the copy again');
+    Meteor.reconnect();
+    await within(Meteor.callAsync('offline_test.ping', _id), 'the second call to be answered');
+    test.equal(await Meteor.callAsync('offline_test.executions', _id), 2);
+    test.equal(messages.seen.length, 1, 'not waited for again');
+  } finally {
+    Meteor.reconnect();
+    messages.stop();
+    Offline._setReadyTimeout(previous);
+    handles.forEach((handle) => handle.stop());
+  }
+});
+
+Tinytest.addAsync('offline - a listed publication that answers after the wait is ready again, onReady called once', async function (test) {
+  await started();
+  await held();
+  const previous = Offline._setReadyTimeout(300);
+  const messages = counting('[offline] no answer from');
+  const key = Random.id();
+  let handle;
+  let readyCalls = 0;
+  Meteor.disconnect();
+  try {
+    handle = Meteor.subscribe('offline_test.ready_on_demand', key, { onReady: () => readyCalls++ });
+    await until(() => handle.ready(), 'the subscription to be ready from the copy');
+    test.equal(readyCalls, 1);
+    Meteor.reconnect();
+    await readyIs(handle, false, 'the wait to be given up');
+    test.equal(messages.seen.length, 1);
+    await within(Meteor.callAsync('offline_test.make_ready', key), 'the publication to be made ready');
+    await readyIs(handle, true, 'the server to say the subscription is ready');
+    test.equal(readyCalls, 1, 'the server ready does not call onReady again');
+  } finally {
+    Meteor.reconnect();
+    messages.stop();
+    Offline._setReadyTimeout(previous);
+    if (handle) handle.stop();
+  }
+});
+
+Tinytest.addAsync('offline - a subscription the server answered is not given up on in a later session', async function (test) {
+  await started();
+  await held();
+  const messages = counting('[offline] no answer from');
+  const key = Random.id();
+  let handle;
+  let stuck;
+  let previous;
+  Meteor.disconnect();
+  try {
+    handle = Meteor.subscribe('offline_test.ready_on_demand', key);
+    await until(() => handle.ready(), 'the subscription to be ready from the copy');
+    Meteor.reconnect();
+    // Answered in this session, within the default wait.
+    await within(Meteor.callAsync('offline_test.make_ready', key), 'the publication to be made ready');
+    // The next session runs the publication again, and it holds the data back
+    // longer than the wait: an ordinary slow reconnection, not the package's.
+    // A subscription made ready from the copy meanwhile, whose publication
+    // never answers, is not given up on while the other holds the data back:
+    // that would not release anything.
+    previous = Offline._setReadyTimeout(300);
+    Meteor.disconnect();
+    stuck = Meteor.subscribe('offline_test.never_ready', 'behind an ordinary wait');
+    await until(() => stuck.ready(), 'the other subscription to be ready from the copy');
+    Meteor.reconnect();
+    await until(() => Meteor.status().connected, 'the connection');
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    test.equal(messages.seen.length, 0, 'nothing given up on yet');
+    test.isTrue(handle.ready());
+    test.isTrue(stuck.ready(), 'still ready while another subscription holds the data back');
+    await within(Meteor.callAsync('offline_test.make_ready', key), 'the publication to be made ready again');
+    test.equal(messages.seen.length, 1, 'given up on once alone');
+    test.isTrue(messages.seen[0].includes('offline_test.never_ready'));
+    test.isFalse(messages.seen[0].includes('offline_test.ready_on_demand'));
+    test.isFalse(stuck.ready());
+  } finally {
+    Meteor.reconnect();
+    messages.stop();
+    if (previous !== undefined) Offline._setReadyTimeout(previous);
+    if (handle) handle.stop();
+    if (stuck) stuck.stop();
+  }
+});
+
+Tinytest.addAsync('offline - the wait starts once only the copy holds the data back', async function (test) {
+  await started();
+  await held();
+  // Checks every second: a check falls between the end of the slow call and
+  // the publication's answer, which comes before the wait counted from there.
+  const previous = Offline._setReadyTimeout(2000);
+  const messages = counting('[offline] no answer from');
+  let handle;
+  Meteor.disconnect();
+  try {
+    handle = Meteor.subscribe('offline_test.ready_after', 1500);
+    await until(() => handle.ready(), 'the subscription to be ready from the copy');
+    Meteor.reconnect();
+    // Sent before the subscription, run first on the server: the publication
+    // starts once the call is over, 3 seconds after the socket opens.
+    await within(Meteor.callAsync('offline_test.sleep', 3000), 'the slow call');
+    test.equal(messages.seen.length, 0, 'the publication had not started: not given up on');
+    test.isTrue(handle.ready());
+  } finally {
+    Meteor.reconnect();
+    messages.stop();
+    Offline._setReadyTimeout(previous);
+    if (handle) handle.stop();
   }
 });

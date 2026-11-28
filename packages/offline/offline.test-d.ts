@@ -10,6 +10,7 @@ expectTypeOf<Offline.StartOptions>().toEqualTypeOf<{
   collections?: Mongo.Collection<any>[];
   methods?: string[];
   subscriptions?: string[];
+  readyTimeout?: number;
 }>();
 expectTypeOf(Offline.start).parameters.toEqualTypeOf<[options?: Offline.StartOptions]>();
 expectTypeOf(Offline.start).returns.toEqualTypeOf<Promise<void>>();

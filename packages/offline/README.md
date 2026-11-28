@@ -34,7 +34,21 @@ copy; on a first start, with nothing on the device, it waits for the server as
 usual. The subscriptions to the other publications always wait for the server:
 their data is not in the copy. Without a listed subscription when the
 connection is up, the copy is replaced without waiting for any subscription and
-its documents come back with their subscriptions.
+its documents come back with their subscriptions; in development, the package
+says so in the console once the connection has been up for half of
+`readyTimeout`.
+
+A listed publication must always become ready: return a cursor or `[]`, or call
+`this.ready()`, `this.stop()` or `this.error()`, never a bare `return` (write
+`if (!this.userId) return this.ready();`). After a reconnection, DDP holds back
+every data message, and so the callback of every Method, until the server has
+answered the subscriptions that were ready. The subscriptions made ready from
+the copy are waited for at least `readyTimeout` milliseconds (30 seconds by
+default) once they are all that holds the data back: then the copy is replaced
+without their documents, they are not ready until the server says so, the
+package logs the publications' names, and until the page reloads those
+publications with the same arguments are no longer ready from the copy.
+`Infinity` waits forever.
 
 A recorded call goes through Meteor as usual: its stub writes the optimistic
 document, Meteor keeps the call in its own queue while the connection is down
@@ -55,7 +69,10 @@ Events: `method.queued`, `method.done`, `method.failed`, `method.dropped` and
 `ready` (the copy is loaded; `calls` and `documents` carry the counts).
 
 The copy belongs to one user: a database per `Meteor.userId()`, deleted when
-that user logs out or another one logs in. Nothing that was not published to
+that user logs out or another one logs in. A session the server refuses when
+the app comes back (an expired token, or a password changed on another device)
+is a logout: the copy is deleted with the recorded calls, and the calls already
+handed to Meteor are sent without a user. Nothing that was not published to
 the user is ever kept.
 
 Listed Methods must be idempotent. Meteor re-sends a call that was sent but

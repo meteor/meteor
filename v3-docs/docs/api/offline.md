@@ -40,6 +40,9 @@ Meteor.subscribe('links');
   answers.
 - `subscriptions`: the names of the publications whose subscriptions are ready
   from the copy while the connection is down.
+- `readyTimeout`: how long, in milliseconds, a subscription made ready from the
+  copy is waited for once the connection is back. 30000 by default; `Infinity`
+  waits forever.
 
 On start, the connection is held back, the copy is loaded into Minimongo, the
 recorded calls are issued again through Meteor (their stubs put the optimistic
@@ -68,7 +71,29 @@ screen that reads "ready and no document" as "not found" would be wrong.
 
 Without a listed subscription when the connection is up, the copy is replaced
 without waiting for any subscription, and its documents come back with their
-subscriptions.
+subscriptions. In development, the package says so in the console once the
+connection has been up for half of `readyTimeout`.
+
+### A listed publication always becomes ready
+
+After a reconnection, DDP holds back every data message, and so the callback of
+every Method, until the server has answered the subscriptions that were ready.
+A listed publication must therefore always become ready: return a cursor or
+`[]`, or call `this.ready()`, `this.stop()` or `this.error()`, never a bare
+`return`.
+
+```js
+Meteor.publish('myLinks', function () {
+  if (!this.userId) return this.ready();
+  return Links.find({ owner: this.userId });
+});
+```
+
+The subscriptions made ready from the copy are waited for at least
+`readyTimeout` milliseconds once they are all that holds the data back. Then the
+copy is replaced without their documents, they are not ready until the server
+says so, the package logs the publications' names, and until the page reloads
+those publications with the same arguments are no longer ready from the copy.
 
 ## Recorded calls
 
@@ -131,6 +156,10 @@ The copy belongs to the user it was published to: one database per
 `Meteor.userId()`, deleted when that user logs out or another one logs in.
 Without a known session when the app starts offline, there is no copy. Nothing
 that was not published to the user is ever kept.
+
+A session the server refuses when the app comes back (an expired token, or a
+password changed on another device) is a logout: the copy is deleted with the
+recorded calls, and the calls already handed to Meteor are sent without a user.
 
 `Offline.clear()` empties the current user's copy, documents and recorded calls.
 

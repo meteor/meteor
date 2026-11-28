@@ -58,9 +58,43 @@ Meteor.methods({
 if (Meteor.isServer) {
   Meteor.publish('offline_test.items', () => Items.find());
   Meteor.publish('offline_test.unlisted', () => Items.find());
+  // Neither a cursor nor this.ready(): the server never answers it.
+  Meteor.publish('offline_test.never_ready', function () {});
+  // Ready when a test says so, in whatever session it runs. On a reconnection
+  // the client sends its Methods before its subscriptions, so a request can
+  // come before the run it is meant for: that run is then ready at once.
+  const waiting = new Map(); // key -> ready functions
+  const early = new Map(); // key -> requests made while nothing was waiting
+  Meteor.publish('offline_test.ready_on_demand', function (key) {
+    if (early.get(key) > 0) {
+      early.set(key, early.get(key) - 1);
+      this.ready();
+      return;
+    }
+    const ready = () => this.ready();
+    if (!waiting.has(key)) waiting.set(key, new Set());
+    waiting.get(key).add(ready);
+    this.onStop(() => waiting.get(key)?.delete(ready));
+  });
+  Meteor.publish('offline_test.ready_after', function (delay) {
+    const timer = Meteor.setTimeout(() => this.ready(), delay);
+    this.onStop(() => Meteor.clearTimeout(timer));
+  });
   Meteor.methods({
     async 'offline_test.clear'() {
       await Items.removeAsync({});
+    },
+    async 'offline_test.sleep'(delay) {
+      await new Promise((resolve) => Meteor.setTimeout(resolve, delay));
+    },
+    'offline_test.make_ready'(key) {
+      const runs = waiting.get(key);
+      if (!runs || runs.size === 0) {
+        early.set(key, (early.get(key) || 0) + 1);
+        return;
+      }
+      runs.forEach((ready) => ready());
+      runs.clear();
     },
   });
 }

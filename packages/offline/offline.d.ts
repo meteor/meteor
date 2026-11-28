@@ -12,6 +12,8 @@ export namespace Offline {
      * become ready: return a cursor or `[]`, or call `this.ready()`, `this.stop()` or `this.error()`.
      */
     subscriptions?: string[];
+    /** How long, in milliseconds, a subscription made ready from the copy is waited for once the connection is back. Defaults to 30000; `Infinity` waits forever. */
+    readyTimeout?: number;
   }
 
   /** The server's error as stored on the device, and the shape of the error a listener receives (a `Meteor.Error` fits). */
