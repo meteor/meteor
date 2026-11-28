@@ -323,6 +323,32 @@ behavior, no longer needed, or requiring additional migration work. Check
 Capacitor 8 compatibility, platform minimums and any required native settings.
 See [Capacitor's Cordova plugin support](https://capacitorjs.com/docs/plugins/cordova).
 
+Capacitor looks for plugins in both `dependencies` and `devDependencies`.
+A Cordova plugin kept in npm for the old app can therefore enter the new native
+build. Meteor displays Capacitor's plugin list and warnings when it creates or
+syncs a native project. Once the platform exists, run `npx cap ls ios` or
+`npx cap ls android` to check what the next sync will include.
+
+To keep a plugin installed for Cordova while excluding it from an iOS build,
+set `ios.includePlugins` in your existing `capacitor.config.js` before adding
+or syncing the platform. This example retains Meteor Hot Code Push and
+InAppBrowser.
+
+```js
+const { defineConfig } = require('@meteorjs/capacitor');
+
+module.exports = defineConfig(() => ({
+  appId: 'com.company.existingapp',
+  appName: 'Existing App',
+  ios: {
+    includePlugins: ['@meteorjs/capacitor', 'cordova-plugin-inappbrowser'],
+  },
+}));
+```
+
+Add each other plugin the iOS app uses. A platform's list takes precedence over
+the top-level `includePlugins`. See the [Capacitor configuration reference](https://capacitorjs.com/docs/config).
+
 Install a retained Cordova plugin through npm. Capacitor does not install it from
 Meteor's `.meteor/cordova-plugins` list. For example, an app retaining
 InAppBrowser 6 can use:
@@ -339,8 +365,13 @@ in-app browser changes that behavior.
 Cordova installation variables, hooks and automatic native configuration are
 not applied by Capacitor. Port the required settings from the plugin's
 `plugin.xml` and instructions into the maintained native projects. New iOS
-projects use Swift Package Manager; verify the chosen plugin under that setup,
-or use a supported CocoaPods project when its requirements call for it. See
+projects use Swift Package Manager (SPM). Check whether a retained plugin
+declares native libraries through CocoaPods in its iOS `plugin.xml`. For example,
+`cordova-plugin-purchases@8.0.0` declares `PurchasesHybridCommon` as a pod.
+Capacitor can sync it successfully and Xcode can still fail to resolve that
+module. Version 9.0.4 supplies a Swift package dependency for this library.
+For a plugin that still requires pods, use a CocoaPods project or select an
+SPM-compatible replacement. See
 [Capacitor's SPM guidance](https://capacitorjs.com/docs/ios/spm).
 
 ### Translate mobile configuration

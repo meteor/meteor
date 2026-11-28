@@ -153,21 +153,20 @@ export function _ensureCapacitorWebDirIndex({
 
 function spawnCap(args, { cwd, label, env, onExit, onError, mode, platform, interactive, secrets = [] }) {
   const { command, args: cmdArgs } = _getCapCommand(args, { cwd });
-  const verbose = isVerbose();
+  // Capacitor reports the plugins it selected and their native setup warnings
+  // during add and sync, before the next Xcode or Gradle build.
+  const showOutput = isVerbose() || args[0] === 'add' || args[0] === 'sync';
   const stderrLines = [];
   const redact = value => secrets.reduce((text, secret) => text.split(secret).join('[redacted]'), value);
   const outputBuffers = new Map();
+  const logLine = (line, logger) => {
+    if (!line.trim()) return;
+    logger(`=> ${redact(line.trimEnd())}`);
+  };
   const logOutput = (data, logger) => {
-    if (!secrets.length) {
-      const trimmed = data.replace(/\s+$/, '');
-      if (trimmed) trimmed.split(/\r?\n/).forEach(line => {
-        if (line) logger(`=> ${line}`);
-      });
-      return;
-    }
     const lines = ((outputBuffers.get(logger) || '') + data).split(/\r?\n/);
     outputBuffers.set(logger, lines.pop());
-    for (const line of lines) if (line.trim()) logger(`=> ${redact(line.trimEnd())}`);
+    for (const line of lines) logLine(line, logger);
   };
   const rememberStderr = data => {
     const trimmed = data.replace(/\s+$/, '');
@@ -201,15 +200,15 @@ function spawnCap(args, { cwd, label, env, onExit, onError, mode, platform, inte
   }
   const finish = code => {
     for (const [logger, buffered] of outputBuffers) {
-      if (buffered.trim()) logger(`=> ${redact(buffered.trimEnd())}`);
+      logLine(buffered, logger);
     }
-    if (code !== 0 && !verbose && stderrLines.length) {
+    if (code !== 0 && !showOutput && stderrLines.length) {
       const stderr = stderrLines.join(secrets.length ? '' : '\n');
       logError(`=> Capacitor ${label} failed: ${redact(stderr).trimEnd().split(/\r?\n/).pop()}`);
     }
     if (typeof onExit === 'function') onExit(code);
   };
-  const proc = spawnProcess(command, cmdArgs, {
+  return spawnProcess(command, cmdArgs, {
     cwd,
     env: inheritMeteorToolNodeFlags({
       ...process.env,
@@ -218,21 +217,18 @@ function spawnCap(args, { cwd, label, env, onExit, onError, mode, platform, inte
       ...(env || {}),
     }),
     onStdout: data => {
-      if (verbose) logOutput(data, logRaw);
+      if (showOutput) logOutput(data, logRaw);
     },
     onStderr: data => {
-      if (verbose) logOutput(data, logError);
+      if (showOutput) logOutput(data, logError);
       else rememberStderr(data);
     },
     onError: err => {
       logError(`Capacitor ${label} error: ${redact(err.message)}`);
       if (onError) onError(err);
     },
-    onExit: secrets.length ? undefined : finish,
+    onExit: finish,
   });
-  // Drain signing output before redaction, including chunks received after exit.
-  if (secrets.length) proc.once('close', finish);
-  return proc;
 }
 
 /** Create the configured native project once across add, run, and build. */

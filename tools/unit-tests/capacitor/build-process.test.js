@@ -4,23 +4,29 @@ const os = require('node:os');
 
 jest.mock('meteor/tools-core/lib/log', () => ({ logError: jest.fn(), logRaw: jest.fn(), logInfo() {}, logProgress() {}, logSuccess() {} }), { virtual: true });
 jest.mock('meteor/tools-core/lib/process', () => require('../../../packages/tools-core/lib/process'), { virtual: true });
-jest.mock('meteor/tools-core/lib/global-state', () => require('../../../packages/tools-core/lib/global-state'), { virtual: true });
+jest.mock('meteor/tools-core/lib/global-state', () => ({ getGlobalState: () => null, setGlobalState() {} }), { virtual: true });
 jest.mock('meteor/tools-core/lib/readiness', () => require('../../../packages/tools-core/lib/readiness'), { virtual: true });
 jest.mock('meteor/tools-core/lib/npm', () => ({ getNodeBinEnv: () => ({}), getNpxCommand: args => ({ command: '/missing/native-builder', args }) }), { virtual: true });
 jest.mock('meteor/tools-core/lib/meteor', () => ({
+  getNativeCommandEnv: () => ({ NODE_ENV: 'production' }),
   getMeteorAppDir: () => process.cwd(), inheritMeteorToolNodeFlags: env => env,
   isMeteorAppDevelopment: () => false, isMeteorAppProduction: () => true,
-  isMeteorAppDebug: () => false, isMeteorAppConfigModernVerbose: () => true,
-  getNativeCommandEnv: () => ({ NODE_ENV: 'production' }),
+  isMeteorAppDebug: () => false, isMeteorAppConfigModernVerbose: jest.fn(() => true),
   isMeteorAppNativeAndroid: () => false, isMeteorAppNativeIos: () => false,
 }), { virtual: true });
-const { addNativePlatformIfMissing, runCapBuild } = require('../../../packages/capacitor/lib/processes');
-const { logRaw } = require('meteor/tools-core/lib/log');
+const { addNativePlatformIfMissing, runCapBuild, runCapSync } = require('../../../packages/capacitor/lib/processes');
+const { isMeteorAppConfigModernVerbose } = require('meteor/tools-core/lib/meteor');
+const { logError, logRaw } = require('meteor/tools-core/lib/log');
 beforeAll(() => { global.Plugin = { projectConfig: require('../../tool-extensions/project-config.cjs') }; });
 afterAll(() => { delete global.Plugin; });
 
 let appDir;
-beforeEach(() => { appDir = fs.mkdtempSync(path.join(os.tmpdir(), 'native-build-process-')); logRaw.mockClear(); });
+beforeEach(() => {
+  appDir = fs.mkdtempSync(path.join(os.tmpdir(), 'native-build-process-'));
+  isMeteorAppConfigModernVerbose.mockReturnValue(true);
+  logError.mockClear();
+  logRaw.mockClear();
+});
 afterEach(() => { fs.rmSync(appDir, { recursive: true, force: true }); });
 function executable(file, body) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -54,6 +60,21 @@ test('platform creation checks the configured directory even when the default di
   expect(fs.statSync(project).isDirectory()).toBe(true);
   executable(path.join(appDir, 'node_modules/.bin/cap'), "process.exit(23);");
   expect(await addNativePlatformIfMissing({ appDir, platform: 'ios' })).toBe(0);
+});
+
+test.each([
+  ['add', addNativePlatformIfMissing],
+  ['sync', runCapSync],
+])('cap %s reports discovered Cordova plugins during a normal run', async (_command, run) => {
+  isMeteorAppConfigModernVerbose.mockReturnValue(false);
+  executable(path.join(appDir, 'node_modules/.bin/cap'), `
+    process.stdout.write('[info] Found 1 Cordova plugin for \\x1b[1mios\\x1b[0m:\\n       cordova-plugin-');
+    process.stderr.write('[warn] Plugin requires additional native setup');
+    setTimeout(() => process.stdout.write('purchases@8.0.0'), 10);
+  `);
+  expect(await run({ appDir, platform: 'ios' })).toBe(0);
+  expect(logRaw.mock.calls.flat().join('\n')).toContain('cordova-plugin-purchases@8.0.0');
+  expect(logError.mock.calls.flat().join('\n')).toContain('[warn] Plugin requires additional native setup');
 });
 
 test('Android debug runs the application Gradle wrapper with its selected task', async () => {
